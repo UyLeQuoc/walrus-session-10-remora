@@ -8,8 +8,11 @@ import { LabPage } from "../features/lab/lab-page";
 import { MePage } from "../features/me/me-page";
 import { MemoryInspectorPage } from "../features/memory-inspector/memory-page";
 import { OnboardingPage } from "../features/onboarding/onboarding-page";
+import { NewRemoraPage } from "../features/remoras/new-remora-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
+import { SettingsPage } from "../features/settings/settings-page";
+import { VerifyPage } from "../features/verify/verify-page";
 
 export interface AppRoute {
   /** Omit for the index route. */
@@ -35,4 +38,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "remoras/:id", element: <RemoraPage /> },
   { path: "memory", element: <MemoryInspectorPage /> },
   { path: "approvals", element: <ApprovalsPage /> },
+  { path: "remoras/new", element: <NewRemoraPage /> },
+  { path: "settings", element: <SettingsPage /> },
+  { path: "verify", element: <VerifyPage /> },
+  { path: "verify/:ref", element: <VerifyPage /> },
 ];

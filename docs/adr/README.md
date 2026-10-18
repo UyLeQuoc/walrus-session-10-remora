@@ -50,3 +50,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0031](0031-e4-owner-payment-and-merchants.md) | Over-limit approvals are a one-off owner payment; demo merchants accept any exact payment | Accepted |
 | [0032](0032-w2-runtime-api-and-channels.md) | W2 runtime wiring, API and Telegram: who may act, and how | Accepted |
 | [0033](0033-w2-api-contract.md) | The W2 API shapes are a contract in `packages/schema` | Accepted |
+| [0034](0034-w2-web-live-pages.md) | W2 web pages run on the live API behind a wallet session | Accepted |

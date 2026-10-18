@@ -1,6 +1,6 @@
 /**
- * W1 pages (U4): the fixture skeletons paint, the network store drives the API header, and the
- * funds page shows the split. Wallets and the chain are stubbed; the e2e suite covers the real ones.
+ * The W2 pages on a fake API that answers from the contract fixtures, the network store driving the
+ * API header, and the funds split. Wallets and the chain are stubbed; the e2e suite covers the real ones.
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,8 +13,21 @@ import { ApprovalsPage } from "./approvals/approvals-page";
 import { FundsPage } from "./funds/funds-page";
 import { MemoryInspectorPage } from "./memory-inspector/memory-page";
 import { OnboardingPage } from "./onboarding/onboarding-page";
+import {
+  FIXTURE_APPROVAL,
+  FIXTURE_FEED,
+  FIXTURE_INSPECTOR,
+  FIXTURE_METER,
+  FIXTURE_PREVIEW,
+  FIXTURE_SCOUT,
+  FIXTURE_SETTINGS,
+  FIXTURE_VERIFY,
+  FIXTURE_WAKE,
+} from "./remoras/fixtures";
 import { RemoraPage } from "./remoras/remora-page";
 import { RemorasPage } from "./remoras/remoras-page";
+import { SettingsPage } from "./settings/settings-page";
+import { VerifyPage } from "./verify/verify-page";
 
 const OWNER = `0x${"3d".repeat(32)}`;
 let account: { address: string; chains: string[] } | null = null;
@@ -27,6 +40,7 @@ vi.mock("@mysten/dapp-kit", () => ({
   useConnectWallet: () => ({ mutateAsync: vi.fn() }),
   useCurrentWallet: () => ({ currentWallet: null, isConnected: false }),
   useSignPersonalMessage: () => ({ mutateAsync: vi.fn() }),
+  useSignTransaction: () => ({ mutateAsync: vi.fn() }),
 }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
@@ -84,43 +98,160 @@ describe("network store (A9·ui)", () => {
   });
 });
 
-describe("W1 skeleton pages (fixtures)", () => {
-  it("lists the sample remoras with their budgets", () => {
+/** A fake W2 API answering from the contract fixtures; `owner` decides whether the session has a wallet. */
+function fakeApi(owner: string | null, extra: Record<string, unknown> = {}) {
+  const calls: { method: string; url: string; body: unknown }[] = [];
+  const answers: Record<string, unknown> = {
+    "GET /api/me": owner
+      ? { mode: "owned", signedIn: true, walletAddress: owner }
+      : { mode: "guest" },
+    "GET /api/me/memories": { memories: [] },
+    "GET /api/remoras": { remoras: [FIXTURE_SCOUT] },
+    [`GET /api/remoras/${FIXTURE_SCOUT.id}`]: { remora: FIXTURE_SCOUT },
+    "GET /api/feed": { events: FIXTURE_FEED },
+    "GET /api/approvals": { approvals: [FIXTURE_APPROVAL] },
+    [`GET /api/remoras/${FIXTURE_SCOUT.id}/budget`]: { meter: FIXTURE_METER },
+    [`GET /api/remoras/${FIXTURE_SCOUT.id}/sources`]: {
+      sources: [{ payee: "reef:sui-risk", calls: 9, useful: 8, noise: 1, spent: "90000" }],
+    },
+    [`GET /api/remoras/${FIXTURE_SCOUT.id}/schedules`]: { schedules: [] },
+    [`GET /api/remoras/${FIXTURE_SCOUT.id}/memory`]: FIXTURE_INSPECTOR,
+    "POST /api/schedule/preview": FIXTURE_PREVIEW,
+    [`GET /api/events/${FIXTURE_FEED[0]?.id}/why`]: {
+      event: FIXTURE_FEED[0],
+      remora: "Scout",
+      wake: {
+        id: FIXTURE_FEED[0]?.receiptId,
+        intentHash: "ab".repeat(32),
+        txDigest: null,
+        anchored: true,
+        wakeBlobId: null,
+        wake: FIXTURE_WAKE,
+      },
+    },
+    [`POST /api/remoras/${FIXTURE_SCOUT.id}/ask`]: {
+      answer: "0x2 is the Sui framework.",
+      eventId: "e1",
+      receiptId: null,
+      outcomes: [],
+    },
+    "GET /api/verify/8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ": FIXTURE_VERIFY,
+    "GET /api/settings": { settings: FIXTURE_SETTINGS },
+    "POST /api/telegram/link": {
+      code: "ABC234",
+      url: "https://t.me/remora_bot?start=link_ABC234",
+      expiresInMinutes: 10,
+    },
+    ...extra,
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input).split("?")[0] ?? "";
+      const method = init?.method ?? "GET";
+      calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      const hit = answers[`${method} ${url}`];
+      return hit === undefined
+        ? Response.json({ error: { code: "x", message: "nope" } }, { status: 404 })
+        : Response.json(hit);
+    }),
+  );
+  return calls;
+}
+
+describe("W2 pages on the live API (contract fixtures)", () => {
+  it("asks for a wallet session before showing remoras", async () => {
+    fakeApi(null);
     at("/remoras", "/remoras", <RemorasPage />);
-    expect(screen.getByText("Scout")).toBeDefined();
-    expect(screen.getByText(/Budget 20.00 USDC per month, at most 0.50 a payment/)).toBeDefined();
+    expect(await screen.findByText(/Sign in with your wallet to see your remoras/)).toBeDefined();
   });
 
-  it("shows a remora's activity and opens the Why drawer on a payment", async () => {
-    at("/remoras/scout", "/remoras/:id", <RemoraPage />);
-    expect(screen.getByText(/Paid 0.05 USDC to reef:sui-risk/)).toBeDefined();
-    await userEvent.click(screen.getAllByRole("button", { name: "Why?" })[0] as HTMLElement);
+  it("dashboard: remoras, what's waiting, and the feed across all (H4, N1, N2)", async () => {
+    fakeApi(OWNER);
+    at("/remoras", "/remoras", <RemorasPage />);
+    expect(await screen.findByText("1 waiting for you")).toBeDefined();
+    expect(screen.getByTestId("remora-card").textContent).toMatch(
+      /Up to 20.00 USDC a month, at most 0.50 a payment/,
+    );
+    expect(await screen.findByText(/Paid 0.01 USDC to reef:sui-risk/)).toBeDefined();
+    expect(screen.getByText(/0x2 is the Sui framework/)).toBeDefined();
+  });
+
+  it("remora page: budget forecast, ask, schedule preview, and Why? on a payment (N4, N5, N12, C1)", async () => {
+    const calls = fakeApi(OWNER);
+    at(`/remoras/${FIXTURE_SCOUT.id}`, "/remoras/:id", <RemoraPage />);
+    expect((await screen.findByTestId("budget-meter")).textContent).toMatch(
+      /0.97 USDC left this month.*runs out on 2027-02-10/,
+    );
+    expect((await screen.findByTestId("schedule-preview")).textContent).toMatch(
+      /weekdays at 8am UTC/,
+    );
+    await userEvent.type(screen.getByLabelText("Question"), "Is 0x2 safe?");
+    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+    expect((await screen.findByTestId("answer")).textContent).toBe("0x2 is the Sui framework.");
+    expect(calls.find((c) => c.url.endsWith("/ask"))?.body).toEqual({ question: "Is 0x2 safe?" });
+    await userEvent.click(
+      (await screen.findAllByRole("button", { name: "Why?" }))[0] as HTMLElement,
+    );
     expect(
       await screen.findByText(/sui-risk answered 8 of 9 risk questions usefully/),
     ).toBeDefined();
-    expect(screen.getByText("anchored onchain")).toBeDefined();
   });
 
-  it("renders the memory inspector, approvals and onboarding", () => {
-    at("/memory", "/memory", <MemoryInspectorPage />);
-    expect(screen.getByText(/sui-risk: 9 calls, 8 useful/)).toBeDefined();
+  it("approvals: an over-limit payment offers to pay once (N2, E4)", async () => {
+    fakeApi(OWNER);
     at("/approvals", "/approvals", <ApprovalsPage />);
-    expect(screen.getByText(/Pay 2.00 USDC to reef:odds/)).toBeDefined();
+    expect(
+      await screen.findByText(/Pay 2.00 USDC to reef:odds, over its per-payment cap/),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /Pay once \(2.00 USDC\)/ })).toBeDefined();
+  });
+
+  it("memory inspector warns when the relayer has fewer than we wrote (F3, F6)", async () => {
+    fakeApi(OWNER);
+    at("/memory", "/memory", <MemoryInspectorPage />);
+    expect((await screen.findByTestId("index-warning")).textContent).toMatch(
+      /receipts has 3 of the 4 we wrote/,
+    );
+    expect(screen.getByText(/SOURCE reef:sui-risk · 9 calls/)).toBeDefined();
+  });
+
+  it("verify page checks a digest without signing in (G3)", async () => {
+    fakeApi(null);
+    at("/verify/8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ", "/verify/:ref", <VerifyPage />);
+    expect((await screen.findByTestId("verify-verdict")).textContent).toMatch(
+      /verified.*anchored onchain/,
+    );
+    expect(screen.getByText("Paid.intent matches")).toBeDefined();
+  });
+
+  it("settings: policy loads, Telegram gives a deep link (A7, H5, A5)", async () => {
+    fakeApi(OWNER);
+    at("/settings", "/settings", <SettingsPage />);
+    expect(((await screen.findByLabelText("Timezone")) as HTMLInputElement).value).toBe(
+      "Asia/Ho_Chi_Minh",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Link Telegram" }));
+    expect((await screen.findByTestId("telegram-code")).textContent).toMatch(/\/link ABC234/);
+  });
+
+  it("onboarding ticks sign-in and the first remora from live state (A6)", async () => {
+    fakeApi(OWNER);
     account = { address: OWNER, chains: ["sui:testnet"] };
     at("/onboarding", "/onboarding", <OnboardingPage />);
-    expect(screen.getByText("Sign in with your wallet")).toBeDefined();
-    expect(screen.getByText("done")).toBeDefined();
+    await waitFor(() => expect(screen.getAllByText("done").length).toBe(3));
   });
 });
 
 describe("funds page (A4·ui)", () => {
-  it("asks for a wallet first", () => {
+  it("asks for a wallet first", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json({ mode: "guest" })),
     );
     at("/funds", "/funds", <FundsPage />);
-    expect(screen.getByText(/Connect your wallet to see your funds/)).toBeDefined();
+    // `/api/me` is one shared snapshot; an earlier test's wallet clears once this one's guest loads.
+    expect(await screen.findByText(/Connect your wallet to see your funds/)).toBeDefined();
   });
 
   it("shows the address-balance / coins split from /api/funds", async () => {

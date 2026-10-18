@@ -347,6 +347,11 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     return c.json(await addSchedule(rt, r, b.when, b.question.trim()), 201);
   });
 
+  app.get("/api/remoras/:id/schedules", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ schedules: (r.config as { schedules?: unknown[] }).schedules ?? [] });
+  });
+
   app.delete("/api/remoras/:id/schedules/:scheduleId", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     await removeSchedule(rt, r, c.req.param("scheduleId"));

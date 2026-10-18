@@ -8,6 +8,8 @@ import {
   Rocket,
   Search,
   Send,
+  Settings,
+  ShieldCheck,
   SquarePen,
   Trash2,
   Wallet,
@@ -86,6 +88,8 @@ export function AppSidebar({
                   ["/funds", "Funds", Wallet],
                   ["/memory", "Memory", Brain],
                   ["/approvals", "Approvals", Inbox],
+                  ["/verify", "Verify", ShieldCheck],
+                  ["/settings", "Settings", Settings],
                 ] as const
               ).map(([to, label, Icon]) => (
                 <SidebarMenuItem key={to}>

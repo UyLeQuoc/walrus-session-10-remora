@@ -91,8 +91,12 @@ export async function onChainEvent(
       text: `${r.name}: ${what}`,
       urgent: true,
       buttons: [
-        { label: "Why?", url: `${deps.webBase}/remoras/${r.id}?event=${ev?.id}` },
-        { label: "Noise", data: `fb:${ev?.id}:noise` },
+        {
+          label: "Why?",
+          url: `${deps.webBase}/remoras/${r.id}?event=${ev?.id}`,
+          data: `why:${ev?.id}`,
+        },
+        { label: "🔕 Noise", data: `fb:${ev?.id}:n` },
       ],
     });
   } else {

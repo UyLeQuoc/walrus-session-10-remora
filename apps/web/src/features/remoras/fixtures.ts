@@ -1,21 +1,35 @@
 /**
- * W1 page skeletons run on the `packages/schema` fixtures (H0). Parsing them here means a contract
- * change that breaks a page fails the build, not the demo. Real data replaces these in W2.
+ * The `packages/schema` W2 API fixtures (ADR-0033), parsed, for the page tests. Parsing here means a
+ * contract change that breaks a page fails the build, not the demo.
  */
-import { ApprovalRequest, MemoryRow, RemoraConfig, RemoraEvent, WakeView } from "@remora/schema";
+import {
+  ApprovalRequest,
+  BudgetMeter,
+  FeedItem,
+  InspectorResponse,
+  OwnerSettings,
+  RemoraView,
+  SchedulePreview,
+  VerifyResult,
+  Wake,
+} from "@remora/schema";
 import approval from "@remora/schema/fixtures/approval.over-limit.json";
-import events from "@remora/schema/fixtures/events.feed.json";
-import memoryRows from "@remora/schema/fixtures/memory.rows.json";
-import scout from "@remora/schema/fixtures/remora-config.scout.json";
-import sentinel from "@remora/schema/fixtures/remora-config.sentinel.json";
-import wakeView from "@remora/schema/fixtures/wake-view.payment.json";
+import meter from "@remora/schema/fixtures/budget-meter.json";
+import feed from "@remora/schema/fixtures/feed.items.json";
+import inspector from "@remora/schema/fixtures/inspector.json";
+import settings from "@remora/schema/fixtures/owner-settings.json";
+import scout from "@remora/schema/fixtures/remora-view.scout.json";
+import preview from "@remora/schema/fixtures/schedule-preview.json";
+import verify from "@remora/schema/fixtures/verify-result.payment.json";
+import wake from "@remora/schema/fixtures/wake.payment.json";
 import { z } from "zod";
 
-export const FIXTURE_REMORAS = [RemoraConfig.parse(scout), RemoraConfig.parse(sentinel)];
-export const FIXTURE_EVENTS = z.array(RemoraEvent).parse(events);
-export const FIXTURE_APPROVALS = [ApprovalRequest.parse(approval)];
-export const FIXTURE_MEMORY = z.array(MemoryRow).parse(memoryRows);
-export const FIXTURE_WAKE = WakeView.parse(wakeView);
-
-/** Events use the template slug ("scout"); configs carry an id and a display name. */
-export const remoraSlug = (r: RemoraConfig) => r.template;
+export const FIXTURE_SCOUT = RemoraView.parse(scout);
+export const FIXTURE_FEED = z.array(FeedItem).parse(feed);
+export const FIXTURE_APPROVAL = ApprovalRequest.parse(approval);
+export const FIXTURE_METER = BudgetMeter.parse(meter);
+export const FIXTURE_SETTINGS = OwnerSettings.parse(settings);
+export const FIXTURE_PREVIEW = SchedulePreview.parse(preview);
+export const FIXTURE_VERIFY = VerifyResult.parse(verify);
+export const FIXTURE_INSPECTOR = InspectorResponse.parse(inspector);
+export const FIXTURE_WAKE = Wake.parse(wake);

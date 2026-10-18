@@ -110,7 +110,7 @@ export async function approveSchedule(deps: RuntimeDeps, owner: string, approval
 export const answerButtons = (webBase: string, r: Remora, eventId: string): Button[] => [
   { label: "👍", data: `fb:${eventId}:u` },
   { label: "👎", data: `fb:${eventId}:n` },
-  { label: "Why?", url: `${webBase}/remoras/${r.id}?event=${eventId}` },
+  { label: "Why?", url: `${webBase}/remoras/${r.id}?event=${eventId}`, data: `why:${eventId}` },
 ];
 
 async function askAndTell(
