@@ -1,0 +1,21 @@
+Goal U0: Bootstrap the Remora monorepo.
+
+Source of truth: docs/goals/uy-00-bootstrap.md. Read it fully and follow its steps in order. Also read AGENTS.md, docs/reuse-from-hippo.md, docs/team-split.md (§2, §4, §6, §9, §10) and docs/remora-spec.md §5.
+
+Time check first: if the current time in Asia/Ho_Chi_Minh is before 2026-10-20 07:00, stop and tell me. The hackathon build window hasn't opened yet.
+
+Guardrails:
+- The first commit is a labeled import from reference/hippo (commit 66fb33a): verbatim copy plus the @hippo -> @remora rename only. Message: "chore: import shared libraries from hippo (prior work, Walrus Sessions 8, 66fb33a)". Remove hippo-only features (teams, documents) in a separate commit.
+- reference/hippo is read-only. Don't overwrite our .gitignore, AGENTS.md, CLAUDE.md or docs/; merge into them.
+- Never commit secrets, deploy, publish Move, push the DB schema anywhere except local Docker, or force-push.
+- Any decision you make goes in an ADR in docs/adr, in the same commit.
+
+Done when (the full list is in the goal file):
+- root typecheck, lint and test are green, and CHANNELS=off bun run dev boots;
+- packages/schema has the v1 contracts, fixtures and a fixture test;
+- every directory in spec §5 exists with an owner README;
+- CODEOWNERS and CI are committed, and CI is green;
+- root README has a "Built on prior work" section;
+- everything is pushed to main (pull --rebase, run the checks, push origin HEAD:main) in 4-6 clear commits.
+
+Work autonomously through every step. If something blocks you, write docs/handoffs/<YYYY-MM-DD>-uy-<topic>.md and carry on with the rest. Finish with a short summary: what was ported, what was removed, what's open.

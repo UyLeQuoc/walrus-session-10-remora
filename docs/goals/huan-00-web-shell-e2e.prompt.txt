@@ -1,0 +1,18 @@
+Goal H0: Web shell rebrand, ship-set page skeletons, E2E harness.
+
+Source of truth: docs/goals/huan-00-web-shell-e2e.md. Read it fully and follow its steps. Also read AGENTS.md, docs/team-split.md (§2, §7, §8), docs/remora-features.md §0 and §2.1, and docs/remora-spec.md §12.1 and §12.12.
+
+Prerequisite: U0 is on main. Work in worktree ../remora-H0 (branch huanng/H0-web-shell).
+
+Allowed paths: apps/web/** (except features/lab), apps/server/src/copy/** (strings only), e2e/**, docs/ux/**, docs/e2e/**. Treat packages/schema as read-only: build against its fixtures.
+
+Steps:
+1. rebrand hippo -> Remora;
+2. add ship-set routes and page skeletons with fixture data: /onboarding, /funds (Detect funds split view: coins vs address balance, Move, settling, Withdraw under Advanced), /remoras, /remoras/:id (activity feed), /memory (inspector: hidden, expiry, used-in), /approvals, a "Why?" drawer, the panic button and an empty /lab slot. Register them in the append-only routes.tsx;
+3. write first-draft copy text for the copy keys;
+4. build the Playwright E2E harness: an injected test wallet reading a burner key from env, a smoke test, and the bun run e2e / e2e:main scripts;
+5. write docs/e2e/README.md.
+
+Never edit backend code or packages/schema; send requests through docs/handoffs/<date>-huanng-to-uy-<topic>.md. Never commit the burner key, use real owner accounts, or deploy.
+
+Done when: typecheck, lint and test are green; bun run e2e passes; every page renders on desktop and mobile with fixtures; the work is rebased and pushed to main (your paths only); screenshots are posted.

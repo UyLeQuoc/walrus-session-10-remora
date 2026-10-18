@@ -1,0 +1,23 @@
+Goal U1: Spike address balances + app-bound Allowances via Tatum (go/no-go).
+
+Source of truth: docs/goals/uy-01-spike-allowance.md. Read it fully and follow its steps. Also read docs/tech-reference.md §2.2 and §3.1-3.3, docs/remora-spec.md §6 and §12.1, and docs/adr/0003, 0004 and 0015.
+
+Prerequisite: U0 is on main. Work in worktree ../remora-U1 (branch uy/U1-spike). Allowed paths: spikes/allowance/**, packages/chain/**, packages/move/remora/** (stub only), docs/spikes/**, docs/tech-reference.md, docs/adr/**.
+
+Run order:
+1. record versions (@mysten/sui, Sui CLI);
+2. a seed Tatum client, plus finding which call returns the address-balance part;
+3. on testnet: deposit coin -> address balance (measure settlement), stub DISC module, owner propose_for_app + issue, a different key spends via tx.withdrawal from the allowance with sponsored gas (dry-run, then execute via Tatum), and negative cases (over cap, bad payee, expired, revoked) that must abort;
+4. on mainnet, only with tiny amounts.
+
+Hard rules:
+- Ask me before EVERY mainnet transaction, including the package publish. Max 0.10 USDC each.
+- Read keys from env only; never commit them. No product features: this is a throwaway spike.
+
+Done when:
+- docs/spikes/2026-10-21-allowance.md records versions, digests, settlement delay, the address-balance read method and abort codes;
+- tech-reference §3 is corrected;
+- ADR-0018 (go/no-go) is written and indexed;
+- checks plus sui move test are green, the work is pushed to main, and a PR is open for the Move stub.
+
+Finish with the go/no-go recommendation and its evidence.
