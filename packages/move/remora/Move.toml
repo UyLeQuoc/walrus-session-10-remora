@@ -1,0 +1,5 @@
+[package]
+name = "remora"
+edition = "2024"
+
+[dependencies]
