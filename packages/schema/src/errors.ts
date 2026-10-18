@@ -1,12 +1,18 @@
 /**
  * Stable error codes the backend returns and the UI turns into sentences (N6).
- * Move abort numbers map onto these once the Disc lands (E1); the copy text for
- * `error.<code>` lives in apps/server/src/copy/.
+ * `@remora/disc-sdk` `toDiscError` maps Move aborts and validator rejections onto these;
+ * the copy text for `error.<code>` lives in apps/server/src/copy/.
  */
 export const ERROR_CODES = [
   "disc.paused",
   "disc.payee_not_allowed",
   "disc.over_per_payment_cap",
+  "disc.not_owner",
+  "disc.not_spender",
+  "disc.wrong_disc",
+  "disc.exists",
+  "disc.bad_intent",
+  "disc.outdated",
   "allowance.over_window_limit",
   "allowance.over_lifetime_cap",
   "allowance.not_started",
