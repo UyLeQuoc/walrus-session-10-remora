@@ -80,10 +80,14 @@ export async function scoutAsk(
   const memories = await deps.memory.recall(r, question, ["me", "sources", "feedback"]);
   const outcomes: PayOutcome[] = [];
   const data: { source: string; content: string }[] = [];
+  const paidPayees: string[] = [];
   const buy = async (payee: string, url: string, reason: string) => {
     const o = await requestPayment(deps, r, { payee, url, reason, trigger, question, memories });
     outcomes.push(o);
-    if (o.kind === "paid") data.push({ source: payee, content: await o.response.clone().text() });
+    if (o.kind === "paid") {
+      paidPayees.push(payee);
+      data.push({ source: payee, content: await o.response.clone().text() });
+    }
     return o;
   };
   for (const b of planBuys(question, deps.reef(r.network))) await buy(b.entry.ref, b.url, b.reason);
@@ -139,10 +143,8 @@ export async function scoutAsk(
       payload: {
         question,
         answer,
-        sources: outcomes
-          .filter((o) => o.kind === "paid")
-          .map((o) => (o.kind === "paid" ? o.digest : null)),
-        payees: outcomes.map((o) => ("eventId" in o ? o.kind : "")),
+        paidPayees,
+        digests: outcomes.flatMap((o) => (o.kind === "paid" && o.digest ? [o.digest] : [])),
         outcomes: outcomes.map((o) => ({ kind: o.kind, eventId: o.eventId })),
       },
       receiptId: wake?.id ?? null,

@@ -22,10 +22,12 @@
     "@hono/node-server": "^1.19.0",
     "@mysten/sui": "^2.33.2",
     "@remora/chain": "workspace:*",
+    "@remora/core": "workspace:*",
     "@remora/disc-sdk": "workspace:*",
     "@remora/memory": "workspace:*",
     "@remora/merchant": "workspace:*",
     "@remora/schema": "workspace:*",
+    "ai": "^7.0.0",
     "hono": "^4.13.8"
   }
 }

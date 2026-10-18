@@ -193,10 +193,11 @@ describe("verify (E3)", () => {
       (await setup(fakeClient({ events: [] })).f.verify(payloadOf(p), requirements()))
         .invalidReason,
     ).toBe("not_a_disc_payment");
-    // Without Disc-aware mode a plain payment passes.
+    // Without Disc-aware mode a plain payment passes, and a Disc payment still reports its intent.
     expect(
       (await setup(fakeClient({ events: [] })).f.verify(payloadOf(p), requirements({}))).isValid,
     ).toBe(true);
+    expect((await setup().f.verify(payloadOf(p), requirements({}))).intent).toBe("09".repeat(32));
   });
 });
 

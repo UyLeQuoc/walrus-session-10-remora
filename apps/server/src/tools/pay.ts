@@ -212,6 +212,7 @@ export async function requestPayment(
               amount,
               url: p.url,
               reason: p.reason,
+              question: p.question,
             },
           })
           .returning({ id: approvals.id });

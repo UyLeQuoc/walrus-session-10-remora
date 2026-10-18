@@ -9,8 +9,18 @@ import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Transaction } from "@mysten/sui/transactions";
 import { normalizeSuiAddress, toBase64 } from "@mysten/sui/utils";
 import { createLogger } from "@remora/chain";
-import { approvals, createDb, eq, remoraEvents, remoras, sourceStats } from "@remora/db";
-import { DiscBcs } from "@remora/disc-sdk";
+import {
+  and,
+  approvals,
+  createDb,
+  eq,
+  receipts,
+  remoraEvents,
+  remoras,
+  sentinelRules,
+  sourceStats,
+} from "@remora/db";
+import { DiscBcs, PaidBcs } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
 import { type PaidContext, x402 } from "@remora/merchant";
 import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
@@ -18,14 +28,17 @@ import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
 import type { Brain } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { giveFeedback } from "./feedback.ts";
 import { SlidingLimiter } from "./limits.ts";
 import type { RemoraMemory } from "./memory.ts";
 import type { Notice } from "./notify.ts";
 import { createRemoraService, type Remora } from "./remoras.ts";
 import { planBuys, scoutAsk } from "./scout.ts";
 import { onChainEvent, teach } from "./sentinel.ts";
+import { verifyWake } from "./verify.ts";
 
 const PKG = normalizeSuiAddress("0xcc");
 const USDC = `${normalizeSuiAddress("0xa1ec")}::usdc::USDC`;
@@ -92,8 +105,14 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
   let digestN = 0;
 
   // The fake chain: one live Disc that allows PAYTO, 0.05 per payment.
+  const txs = new Map<string, unknown>();
   const client = {
     core: {
+      getTransaction: async ({ digest }: { digest: string }) => {
+        const t = txs.get(digest);
+        if (!t) throw new Error("not found");
+        return { Transaction: t };
+      },
       getObject: async ({ objectId }: { objectId: string }) => ({
         object: {
           objectId,
@@ -313,5 +332,141 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     await expect(teach(deps(), sentinel, "hello there")).rejects.toMatchObject({
       code: "rule.unparsed",
     });
+  });
+
+  it("the owner approves once: their own payment reaches the merchant and Scout answers (E4)", async () => {
+    const [pending] = await db
+      .select()
+      .from(approvals)
+      .where(and(eq(approvals.remoraId, scout.id), eq(approvals.status, "pending")));
+    if (!pending) throw new Error("no approval");
+    await expect(
+      approvalPay(deps(), ATTACKER, pending.id, { transaction: "dA==", signature: "cw==" }),
+    ).rejects.toMatchObject({ code: "remora.not_owner" });
+    const done = await approvalPay(deps(), OWNER, pending.id, {
+      transaction: "dA==",
+      signature: "cw==",
+    });
+    expect(done.digest).toMatch(/^Dg/);
+    expect(done.answer).toBe("answer from 1 source(s)");
+    await expect(
+      approvalPay(deps(), OWNER, pending.id, { transaction: "dA==", signature: "cw==" }),
+    ).rejects.toMatchObject({ code: "approval.decided" });
+    const [row] = await db.select().from(approvals).where(eq(approvals.id, pending.id));
+    expect(row?.status).toBe("approved");
+    // The owner's payment is a plain address-balance transfer to the merchant.
+    const tx = ownerPaymentTx(OWNER, USDC, { amount: "60000", payTo: PAYTO }).getData();
+    expect(
+      tx.commands.map((c) => c.MoveCall && `${c.MoveCall.module}::${c.MoveCall.function}`),
+    ).toEqual(["coin::redeem_funds", "coin::send_funds"]);
+  });
+
+  it("declining an approval records it and nothing is paid", async () => {
+    const [shadow] = await db
+      .update(remoras)
+      .set({ status: "active" })
+      .where(eq(remoras.id, scout.id))
+      .returning();
+    if (!shadow) throw new Error("no scout");
+    scout = shadow;
+    await scoutAsk(deps(), scout, "Odds for the match?");
+    const [pending] = await db
+      .select()
+      .from(approvals)
+      .where(and(eq(approvals.remoraId, scout.id), eq(approvals.status, "pending")));
+    if (!pending) throw new Error("no approval");
+    await rejectApproval(deps(), OWNER, pending.id);
+    const [row] = await db.select().from(approvals).where(eq(approvals.id, pending.id));
+    expect(row?.status).toBe("rejected");
+  });
+
+  it("👍 on an answer scores its sources (N19 → F2)", async () => {
+    const r = await scoutAsk(deps(), scout, "Is 0x2 safe to depend on?");
+    const [before] = await db.select().from(sourceStats).where(eq(sourceStats.remoraId, scout.id));
+    expect(await giveFeedback(deps(), OWNER, r.eventId, "useful")).toEqual({
+      learned: "scored 1 source(s)",
+    });
+    const [after] = await db.select().from(sourceStats).where(eq(sourceStats.remoraId, scout.id));
+    expect(after?.useful).toBe((before?.useful ?? 0) + 1);
+    await expect(giveFeedback(deps(), ATTACKER, r.eventId, "noise")).rejects.toMatchObject({
+      code: "remora.not_owner",
+    });
+  });
+
+  it("🔕 on a Sentinel ping becomes an ignore rule", async () => {
+    const e = {
+      address: OWNER,
+      direction: "out" as const,
+      coinType: "0x2::sui::SUI",
+      amount: 3_000_000n,
+      decimals: 9,
+      digest: "Dgout0001",
+    };
+    const first = await onChainEvent(deps(), sentinel, e);
+    expect(first?.verdict).toBe("ping");
+    const ping = (
+      await db
+        .select()
+        .from(remoraEvents)
+        .where(and(eq(remoraEvents.remoraId, sentinel.id), eq(remoraEvents.type, "ping")))
+    ).find((x) => (x.payload as { direction?: string }).direction === "out");
+    if (!ping) throw new Error("no ping");
+    const learned = await giveFeedback(deps(), OWNER, ping.id, "noise");
+    expect(learned.learned).toMatch(/^ignore outgoing SUI under/);
+    expect(
+      (await db.select().from(sentinelRules).where(eq(sentinelRules.remoraId, sentinel.id))).length,
+    ).toBeGreaterThan(1);
+    expect((await onChainEvent(deps(), sentinel, { ...e, digest: "Dgout0002" }))?.verdict).toBe(
+      "noise",
+    );
+  });
+
+  it("verifies a paid Wake against the chain (G3)", async () => {
+    const row = (await db.select().from(receipts).where(eq(receipts.remoraId, scout.id))).find(
+      (x) => x.txDigest,
+    );
+    if (!row?.txDigest) throw new Error("no paid Wake");
+    const wake = row.wake as {
+      agent: string;
+      intent: { decision: { payTo: string; amount: string } };
+    };
+    const paid = (intent: string) => ({
+      eventType: `${PKG}::disc::Paid`,
+      bcs: PaidBcs.serialize({
+        disc: normalizeSuiAddress("0xd1"),
+        payee: PAYTO,
+        amount: 10_000n,
+        intent: Array.from(Buffer.from(intent, "hex")),
+        ts_ms: 1n,
+      }).toBytes(),
+    });
+    const onchain = (intent: string, sender = wake.agent) => ({
+      effects: { status: { success: true } },
+      events: [paid(intent)],
+      balanceChanges: [
+        {
+          address: wake.intent.decision.payTo,
+          coinType: USDC,
+          amount: wake.intent.decision.amount,
+        },
+      ],
+      transaction: { sender },
+    });
+    txs.set(row.txDigest, onchain(row.intentHash));
+    const ok = await verifyWake({ db, networks }, row.txDigest);
+    expect(ok.checks.map((c) => [c.name, c.ok])).toEqual([
+      ["intent hash", true],
+      ["transaction succeeded", true],
+      ["Paid.intent matches", true],
+      ["payTo balance change", true],
+      ["signed by the remora", true],
+    ]);
+    txs.set(row.txDigest, onchain("00".repeat(32), ATTACKER));
+    const bad = await verifyWake({ db, networks }, row.id);
+    expect(bad.checks.filter((c) => c.ok === false).map((c) => c.name)).toEqual([
+      "Paid.intent matches",
+      "signed by the remora",
+    ]);
+    expect((await verifyWake({ db, networks }, "Dgnothing")).found).toBe(false);
   });
 });

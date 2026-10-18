@@ -1,7 +1,8 @@
 /**
  * E3: the x402 `exact` facilitator for Sui, plus the gas station (D8). Verify simulates through
  * Tatum and checks the `payTo` balance change; settle co-signs as sponsor (if sponsored) and executes
- * through Tatum. Disc-aware requirements also need a `remora::disc::pay` with a matching `Paid` event.
+ * through Tatum. Disc-aware requirements also need a `remora::disc::pay` with a matching `Paid` event;
+ * any payment that has one reports its intent.
  */
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions";
@@ -193,15 +194,17 @@ export function createFacilitator(deps: FacilitatorDeps) {
       );
       if (seen) return invalid("already_executed", payer);
 
+      // A Disc payment carries its Wake intent in `Paid`; report it whenever there is one (ADR-0031).
       let intent: string | undefined;
-      if (req.extra?.disc) {
-        if (!n.packageId) return invalid("disc_unavailable", payer);
+      if (n.packageId) {
         const cfg = { packageId: n.packageId, registryId: "", coinType: req.asset };
         const paid = paidEvents(cfg, t.events).find(
           (p) => normalizeSuiAddress(p.payee) === payTo && p.amount === BigInt(req.amount),
         );
-        if (!paid) return invalid("not_a_disc_payment", payer);
-        intent = hex(paid.intent);
+        if (paid) intent = hex(paid.intent);
+      }
+      if (req.extra?.disc && !intent) {
+        return invalid(n.packageId ? "not_a_disc_payment" : "disc_unavailable", payer);
       }
       return { isValid: true, payer, ...(intent ? { intent } : {}) };
     },
