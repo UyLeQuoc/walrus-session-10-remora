@@ -8,6 +8,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -97,3 +98,19 @@ export const indexerCursors = pgTable("indexer_cursors", {
   checkpoint: bigint("checkpoint", { mode: "bigint" }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** C1/F2: Scout's counters per source (memory holds the conclusions, Postgres the counts; spec §8). */
+export const sourceStats = pgTable(
+  "source_stats",
+  {
+    remoraId: text("remora_id").notNull(),
+    /** reef:<slug> */
+    payee: text("payee").notNull(),
+    calls: integer("calls").notNull().default(0),
+    useful: integer("useful").notNull().default(0),
+    noise: integer("noise").notNull().default(0),
+    spent: bigint("spent", { mode: "bigint" }).notNull().default(sql`0`),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.remoraId, t.payee] })],
+);

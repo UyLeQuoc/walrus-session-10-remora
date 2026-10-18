@@ -46,3 +46,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0027](0027-flex-takeover.md) | Uy's agent may take Huấn's open W1 items after finishing its own | Accepted |
 | [0028](0028-w1-rails-design.md) | W1 rails design (facilitator as sponsor, queue, keys, indexer) | Accepted |
 | [0029](0029-u4-web-and-e2e.md) | W1 web (U4) and the E2E harness | Accepted |
+| [0030](0030-w2-memory-mode.md) | In W2, remoras' memory lives in the operator's account, by namespace | Accepted |

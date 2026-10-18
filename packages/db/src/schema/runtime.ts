@@ -143,3 +143,112 @@ export const remoraKeys = pgTable(
   },
   (t) => [uniqueIndex("remora_keys_address_idx").on(t.address)],
 );
+
+const net = () => text("network", { enum: ["testnet", "mainnet"] }).notNull();
+
+/**
+ * B1/B3: a remora. Its key lives in `remora_keys` (B4), its money in its Disc (ADR-0025), its memory in
+ * namespaces of the operator's Walrus Memory account until the mainnet pass (ADR-0030).
+ */
+export const remoras = pgTable(
+  "remoras",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAddress: text("owner_address").notNull(),
+    network: net(),
+    template: text("template").notNull(),
+    name: text("name").notNull(),
+    /** `RemoraConfig` (packages/schema), minus status, which is its own column. */
+    config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+    status: text("status", { enum: ["creating", "shadow", "active", "paused", "retired"] })
+      .notNull()
+      .default("creating"),
+    /** The remora key's address (spender of its Disc). */
+    address: text("address").notNull(),
+    discName: text("disc_name"),
+    discId: text("disc_id"),
+    allowanceId: text("allowance_id"),
+    capId: text("cap_id"),
+    shadowUntil: timestamp("shadow_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("remoras_owner_idx").on(t.ownerAddress, t.network)],
+);
+
+/** N1: the activity feed, one row per thing a remora did or noticed; N19 feedback lands here. */
+export const remoraEvents = pgTable(
+  "remora_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    remoraId: uuid("remora_id")
+      .notNull()
+      .references(() => remoras.id, { onDelete: "cascade" }),
+    network: net(),
+    /** action | payment | ping | rule_learned | handoff | approval_needed | shadow | blocked | answer */
+    type: text("type").notNull(),
+    summary: text("summary").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    /** The Wake (G1) behind it, if any. */
+    receiptId: uuid("receipt_id"),
+    feedback: text("feedback", { enum: ["useful", "noise"] }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("remora_events_remora_idx").on(t.remoraId, t.createdAt)],
+);
+
+/** N2/E4: what a remora asked its owner to decide. */
+export const approvals = pgTable(
+  "approvals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    remoraId: uuid("remora_id")
+      .notNull()
+      .references(() => remoras.id, { onDelete: "cascade" }),
+    network: net(),
+    kind: text("kind", {
+      enum: ["over_limit_payment", "budget_change", "rule_conflict", "template_update"],
+    }).notNull(),
+    summary: text("summary").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    status: text("status", { enum: ["pending", "approved", "rejected", "expired"] })
+      .notNull()
+      .default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (t) => [index("approvals_remora_idx").on(t.remoraId, t.status)],
+);
+
+/** A7/H5: per-owner settings and notification policy. */
+export const ownerSettings = pgTable("owner_settings", {
+  ownerAddress: text("owner_address").primaryKey(),
+  timezone: text("timezone").notNull().default("UTC"),
+  /** "23:00"–"07:00": only urgent pings in between. */
+  quietStart: text("quiet_start"),
+  quietEnd: text("quiet_end"),
+  language: text("language", { enum: ["en", "vi"] }).notNull().default("en"),
+  /** all = every ping; important = urgent only, the rest in the digest; digest = digest only. */
+  notify: text("notify", { enum: ["all", "important", "digest"] }).notNull().default("important"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * C2/F2: Sentinel's learned rules. Walrus Memory (`remora:…:rules`) is the durable, owned record; this
+ * row is the fast copy triage reads on every event (spec §8: memory holds conclusions).
+ */
+export const sentinelRules = pgTable(
+  "sentinel_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    remoraId: uuid("remora_id")
+      .notNull()
+      .references(() => remoras.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    rule: jsonb("rule").$type<Record<string, unknown>>().notNull(),
+    blobId: text("blob_id"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sentinel_rules_remora_idx").on(t.remoraId)],
+);

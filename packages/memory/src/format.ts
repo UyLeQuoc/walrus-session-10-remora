@@ -1,3 +1,4 @@
+/** hippo's types plus Remora's (rule … wake); mirrors `@remora/schema` `MEMORY_TYPES`. */
 export const MEMORY_TYPES = [
   "profile",
   "decision",
@@ -5,6 +6,13 @@ export const MEMORY_TYPES = [
   "commitment",
   "correction",
   "style",
+  "rule",
+  "episode",
+  "source",
+  "feedback",
+  "budget",
+  "handoff",
+  "wake",
 ] as const;
 export type MemoryType = (typeof MEMORY_TYPES)[number];
 
