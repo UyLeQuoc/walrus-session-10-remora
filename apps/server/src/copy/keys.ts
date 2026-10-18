@@ -61,13 +61,6 @@ export const COPY_TEXT = {
   "error.sonar.blocked": "I stopped this: {reason}",
   "error.rate_limited": "Too many requests. Give it a moment.",
   "error.unknown": "Something went wrong. Nothing was paid.",
-} as const satisfies Record<CopyKey, string>;
-
-/**
- * Copy for codes proposed in contract PR #4 (network, funds, x402). Once #4 merges they're `CopyKey`s
- * and move into `COPY_TEXT`; the test fails until they do.
- */
-export const PENDING_COPY: Record<string, string> = {
   "error.network.unavailable": "{network} isn't available yet.",
   "error.funds.bad_address": "That doesn't look like a Sui address.",
   "error.funds.bad_request": "Something was missing from that request.",
@@ -75,15 +68,12 @@ export const PENDING_COPY: Record<string, string> = {
   "error.x402.no_matching_requirements": "That service doesn't accept payment on this network.",
   "error.x402.over_soft_budget": "That costs more than I'm allowed to spend on one call.",
   "error.x402.gas_station_refused": "The payment couldn't be sponsored: {reason}",
-};
+} as const satisfies Record<CopyKey, string>;
 
-const TEXT: Record<string, string> = { ...COPY_TEXT, ...PENDING_COPY };
+const TEXT: Record<string, string> = COPY_TEXT;
 
 /** Fills `{name}` placeholders. Throws on an unknown key or a missing value. */
-export function render(
-  key: CopyKey | keyof typeof PENDING_COPY,
-  vars: Record<string, string | number> = {},
-): string {
+export function render(key: CopyKey, vars: Record<string, string | number> = {}): string {
   const text = TEXT[key];
   if (text === undefined) throw new Error(`no copy for ${key}`);
   return text.replace(/\{(\w+)\}/g, (_, name: string) => {

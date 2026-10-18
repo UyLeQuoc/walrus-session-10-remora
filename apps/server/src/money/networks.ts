@@ -7,8 +7,8 @@ import { createTatumSuiClient, type SuiNetwork, type TatumSuiOptions } from "@re
 import { DEPLOYMENTS } from "@remora/schema";
 
 export const NETWORKS = ["testnet", "mainnet"] as const satisfies readonly SuiNetwork[];
-/** Sent by the web app on every API call (ADR-0026). Mirrors `NETWORK_HEADER` in the contract PR. */
-export const NETWORK_HEADER = "x-remora-network";
+/** Sent by the web app on every API call (ADR-0026); the contract lives in `@remora/schema`. */
+export { NETWORK_HEADER } from "@remora/schema";
 
 export interface NetworkEnv {
   SUI_NETWORK?: string;

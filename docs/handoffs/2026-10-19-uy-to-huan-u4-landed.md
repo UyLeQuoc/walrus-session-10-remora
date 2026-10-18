@@ -33,5 +33,5 @@ See [`docs/e2e/screenshots/`](../e2e/screenshots/):
 - Visual design: the real logo/mark, spacing, empty states, dark-mode checks.
 - The final copy voice: `keys.ts` is a first draft.
 - W2 pages with real data: onboarding steps A3/A5/B1, the activity feed (N1) and approvals (N2/E4) from the server instead of fixtures, and the memory inspector (F3) on live memory.
-- Once **contract PR #4** merges (it needs your approval): swap `apps/web/src/lib/contracts.ts` and `PENDING_COPY` to the `@remora/schema` exports.
+- ~~Swap `apps/web/src/lib/contracts.ts` and `PENDING_COPY` to the schema~~: **done** (Uy merged contract PR #4 on Oct 19, so please review it after the fact).
 - The server's sign-in message still says "Sign in to hippo". That's Uy's to rebrand (it's in `routes/auth.ts`).
