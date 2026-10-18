@@ -5,7 +5,7 @@ import { CHANNEL_COMMANDS } from "./command-catalog.ts";
 describe("CHANNEL_COMMANDS", () => {
   it("is exactly what the Slack manifest registers", () => {
     const manifest = readFileSync(
-      new URL("../../../docs/slack-manifest.yaml", import.meta.url),
+      new URL("../../../apps/server/slack-manifest.yaml", import.meta.url),
       "utf8",
     );
     const registered = [...manifest.matchAll(/- command: \/([a-z]+)/g)].map((m) => m[1]);

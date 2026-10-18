@@ -10,7 +10,7 @@
  */
 import { InputFile } from "grammy";
 import type { IncomingMessage, TurnReply } from "../chat/turn.ts";
-import { describeFailure } from "../copy.ts";
+import { describeFailure } from "../copy/index.ts";
 import { chunk } from "./chunk.ts";
 
 export type Handle = (msg: IncomingMessage) => Promise<TurnReply>;

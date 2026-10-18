@@ -5,7 +5,7 @@
  */
 import type { CommandTable } from "@remora/core/command-table";
 import { explorer } from "@remora/memory";
-import { HELP, PRIVACY, welcome } from "../copy.ts";
+import { HELP, PRIVACY, welcome } from "../copy/index.ts";
 
 export interface CommandView {
   text: string;

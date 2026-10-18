@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HELP, PRIVACY } from "../copy.ts";
+import { HELP, PRIVACY } from "../copy/index.ts";
 import {
   compareView,
   connectLinkView,

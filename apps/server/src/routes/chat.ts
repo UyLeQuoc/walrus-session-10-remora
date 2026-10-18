@@ -26,7 +26,7 @@ import { checkRate, noteCommand, noteModelCall } from "../chat/ratelimit.ts";
 import { followUpRequest, parseSuggestions } from "../chat/suggestions.ts";
 import { startConnect, startDisconnect } from "../connect/tokens.ts";
 import { db, model } from "../context.ts";
-import { describeFailure } from "../copy.ts";
+import { describeFailure } from "../copy/index.ts";
 import { env } from "../env/load.ts";
 import { personFromSession } from "../identity/auth.ts";
 import {

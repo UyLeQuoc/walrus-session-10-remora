@@ -6,7 +6,15 @@ import { defineConfig } from "drizzle-kit";
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../.env") });
 
 export default defineConfig({
-  schema: "./src/schema.ts",
+  schema: [
+    "./src/schema/identity.ts",
+    "./src/schema/memory.ts",
+    "./src/schema/runtime.ts",
+    "./src/schema/money.ts",
+    "./src/schema/hatchery.ts",
+  ],
   dialect: "postgresql",
-  dbCredentials: { url: process.env.DATABASE_URL ?? "postgres://hippo:hippo@localhost:5433/hippo" },
+  dbCredentials: {
+    url: process.env.DATABASE_URL ?? "postgres://remora:remora@localhost:5434/remora",
+  },
 });

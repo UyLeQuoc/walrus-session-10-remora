@@ -5,10 +5,7 @@ import "./index.css";
 import { AppLayout } from "./app/app-layout";
 import { NotFoundPage } from "./app/not-found";
 import { Providers } from "./app/providers";
-import { ChatPage } from "./features/chat/chat-page";
-import { ConnectPage } from "./features/connect/connect-page";
-import { GuidePage } from "./features/guide/guide-page";
-import { MePage } from "./features/me/me-page";
+import { APP_ROUTES } from "./app/routes";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("#root missing");
@@ -19,11 +16,13 @@ createRoot(root).render(
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route index element={<ChatPage />} />
-            <Route path="connect/:token" element={<ConnectPage kind="connect" />} />
-            <Route path="disconnect/:token" element={<ConnectPage kind="disconnect" />} />
-            <Route path="me" element={<MePage />} />
-            <Route path="guide" element={<GuidePage />} />
+            {APP_ROUTES.map((r) =>
+              r.path ? (
+                <Route key={r.path} path={r.path} element={r.element} />
+              ) : (
+                <Route key="index" index element={r.element} />
+              ),
+            )}
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

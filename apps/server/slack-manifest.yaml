@@ -1,0 +1,80 @@
+# Slack app manifest for hippo.
+#
+# Paste this at https://api.slack.com/apps → Create New App → From an app
+# manifest, instead of clicking through the scopes and events by hand. It sets
+# Socket Mode, so no public URL is needed.
+#
+# Afterwards, collect three values for .env:
+#   SLACK_BOT_TOKEN      Install to Workspace → Bot User OAuth Token (xoxb-…)
+#   SLACK_APP_TOKEN      Basic Information → App-Level Tokens → generate one
+#                        with connections:write (xapp-…)
+#   SLACK_SIGNING_SECRET Basic Information → Signing Secret
+#
+# The adapter starts only when all three are present, so a missing Slack config
+# leaves the rest of hippo running.
+display_information:
+  name: hippo
+  description: A chatbot that remembers you, and the memory is yours.
+  long_description: >-
+    hippo remembers what you tell it across conversations and across channels.
+    The memories are encrypted blobs on Walrus, and with /connect they move into
+    a Walrus Memory account owned by your own wallet, with hippo holding a
+    delegate key you can revoke on chain at any time. Try /memory to see what it
+    remembers, /proof to see the blobs behind an answer.
+  background_color: "#0a2540"
+features:
+  bot_user:
+    display_name: hippo
+    always_online: false
+  slash_commands:
+    - command: /memory
+      description: What I remember about you
+      usage_hint: "[search <question> | on | off | forget]"
+      should_escape: false
+    - command: /whoami
+      description: Your account and where the memory lives
+      should_escape: false
+    - command: /proof
+      description: The memories behind my last answer
+      should_escape: false
+    - command: /compare
+      description: My last answer again, without memory
+      should_escape: false
+    - command: /export
+      description: Your memory as a file you keep
+      should_escape: false
+    - command: /link
+      description: Use the same memory on another channel
+      usage_hint: "[code]"
+      should_escape: false
+    - command: /connect
+      description: Own your memory in your own Walrus account
+      should_escape: false
+    - command: /disconnect
+      description: Revoke my access on-chain
+      should_escape: false
+    - command: /privacy
+      description: What is stored, where, and for how long
+      should_escape: false
+    - command: /help
+      description: All commands
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - chat:write
+      - commands
+      - im:history
+      - im:read
+      - im:write
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.im
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

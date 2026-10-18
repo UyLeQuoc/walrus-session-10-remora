@@ -2,12 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: hippo
-      POSTGRES_PASSWORD: hippo
-      POSTGRES_DB: hippo
+      POSTGRES_USER: remora
+      POSTGRES_PASSWORD: remora
+      POSTGRES_DB: remora
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
-      - hippo_pg:/var/lib/postgresql/data
+      - remora_pg:/var/lib/postgresql/data
 volumes:
-  hippo_pg:
+  remora_pg:

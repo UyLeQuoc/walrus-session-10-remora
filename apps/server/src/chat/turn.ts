@@ -6,7 +6,7 @@
 import { completeTurn } from "@remora/core";
 import { startConnect, startDisconnect } from "../connect/tokens.ts";
 import { model } from "../context.ts";
-import { describeFailure } from "../copy.ts";
+import { describeFailure } from "../copy/index.ts";
 import {
   hasCorrections,
   knownSoFar,

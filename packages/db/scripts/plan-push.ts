@@ -19,7 +19,7 @@ import { config } from "dotenv";
 import { pushSchema } from "drizzle-kit/api";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "../src/schema.ts";
+import * as schema from "../src/schema/index.ts";
 import { isAdditive } from "./additive.ts";
 
 const [envFile, flag] = process.argv.slice(2);

@@ -7,7 +7,7 @@
  * said is on a public network for seven months.
  */
 import { describe, expect, it } from "vitest";
-import { describeFailure, HELP, PRIVACY, welcome } from "./copy.ts";
+import { describeFailure, HELP, PRIVACY, welcome } from "./index.ts";
 
 describe("first contact", () => {
   it("tells a new user their words go to a public network, before they speak", () => {

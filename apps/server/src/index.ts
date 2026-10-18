@@ -8,12 +8,7 @@ import { telegramAdapter } from "./channels/telegram.ts";
 import type { ChannelAdapter } from "./channels/types.ts";
 import { env } from "./env/load.ts";
 import { checkAddress, clientAddress, isUnmetered, refusal } from "./iplimit.ts";
-import { authRoutes } from "./routes/auth.ts";
-import { chatRoutes } from "./routes/chat.ts";
-import { connectRoutes } from "./routes/connect.ts";
-import { conversationRoutes } from "./routes/conversations.ts";
-import { healthRoutes } from "./routes/health.ts";
-import { memoryRoutes } from "./routes/memory.ts";
+import { registerRoutes } from "./routes/registry.ts";
 
 const app = new Hono();
 app.use(logger());
@@ -48,12 +43,7 @@ app.use("/api/*", async (c, next) => {
   return next();
 });
 
-app.route("/", healthRoutes);
-app.route("/", chatRoutes);
-app.route("/", conversationRoutes);
-app.route("/", memoryRoutes);
-app.route("/", connectRoutes);
-app.route("/", authRoutes);
+registerRoutes(app);
 
 // A stray rejection used to end the process, and with it every channel and the
 // web API: 22 times in a day from Telegram alone, against a restart policy that
@@ -62,14 +52,24 @@ process.on("unhandledRejection", (reason) =>
   console.error("[process] unhandled rejection", reason),
 );
 
-const adapters = [telegramAdapter(), discordAdapter(), slackAdapter()].filter(
-  (a): a is ChannelAdapter => a !== null,
-);
+// CHANNELS=off: only the web API. Telegram allows one poller per token, so extra
+// local servers and agent worktrees run with channels off (docs/team-split.md §7).
+const adapters =
+  env.CHANNELS === "off"
+    ? []
+    : [telegramAdapter(), discordAdapter(), slackAdapter()].filter(
+        (a): a is ChannelAdapter => a !== null,
+      );
 for (const a of adapters) a.start().catch((e) => console.error(`[${a.name}] failed to start`, e));
-if (!adapters.length) console.log("no channel tokens set; only the web API is running");
+if (!adapters.length)
+  console.log(
+    env.CHANNELS === "off"
+      ? "CHANNELS=off; only the web API is running"
+      : "no channel tokens set; only the web API is running",
+  );
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) =>
-  console.log(`hippo server on http://localhost:${info.port}`),
+  console.log(`remora server on http://localhost:${info.port}`),
 );
 
 const shutdown = async () => {

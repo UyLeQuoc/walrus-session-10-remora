@@ -17,6 +17,8 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   KEY_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/),
   /** Optional WalForm (or any) feedback survey, shown on /start and /me. */
   SURVEY_URL: z.string().url().optional(),
+  /** "off" starts only the web API, so several local servers never fight over one bot token. */
+  CHANNELS: z.enum(["on", "off"]).default("on"),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   DISCORD_TOKEN: z.string().optional(),
   DISCORD_CLIENT_ID: z.string().optional(),

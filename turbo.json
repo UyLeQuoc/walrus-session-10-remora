@@ -1,14 +1,24 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "push": { "cache": false },
-    "typecheck": { "dependsOn": ["^typecheck"] },
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
-    "test": { "dependsOn": ["^build"] },
+    "push": {
+      "cache": false
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "dependsOn": ["@remora/db#push"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["PORT", "WEB_PORT", "CHANNELS", "REMORA_API_URL"]
     }
   }
 }

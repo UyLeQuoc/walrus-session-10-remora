@@ -1,0 +1,2 @@
+/** @remora/chain: The typed Tatum client: Sui gRPC checkpoint stream, JSON-RPC, Data API, with retries and rate limits. All chain I/O goes through it (ADR-0015). Scaffold only (see README.md). */
+export {};
