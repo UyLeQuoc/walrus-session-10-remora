@@ -25,4 +25,12 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   SLACK_BOT_TOKEN: z.string().optional(),
   SLACK_APP_TOKEN: z.string().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
+  // Chain I/O per network (ADR-0015, ADR-0026). A network without its Tatum key is unavailable.
+  TATUM_API_KEY: z.string().optional(),
+  TATUM_API_KEY_TESTNET: z.string().optional(),
+  TATUM_SUI_GRPC: z.string().url().optional(),
+  TATUM_SUI_GRPC_TESTNET: z.string().url().optional(),
+  /** The x402 facilitator + gas station per network (E3, D8). */
+  FACILITATOR_URL: z.string().url().optional(),
+  FACILITATOR_URL_TESTNET: z.string().url().optional(),
 });

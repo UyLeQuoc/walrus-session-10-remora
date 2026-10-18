@@ -18,10 +18,15 @@
     "ops": "tsx scripts/ops.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "@mysten/sui": "^2.33.2",
+    "@remora/chain": "workspace:*",
     "@remora/core": "workspace:*",
     "@remora/db": "workspace:*",
+    "@remora/disc-sdk": "workspace:*",
     "@remora/memory": "workspace:*",
-    "@hono/node-server": "^1.19.0",
+    "@remora/schema": "workspace:*",
+    "@remora/signer": "workspace:*",
     "@slack/bolt": "^4.6.0",
     "ai": "^7.0.0",
     "discord.js": "^14.27.0",

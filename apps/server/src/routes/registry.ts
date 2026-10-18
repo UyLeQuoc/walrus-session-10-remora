@@ -1,4 +1,5 @@
 import type { Hono } from "hono";
+import { moneyRoutes } from "../money/index.ts";
 import { authRoutes } from "./auth.ts";
 import { chatRoutes } from "./chat.ts";
 import { connectRoutes } from "./connect.ts";
@@ -18,6 +19,7 @@ export const ROUTE_GROUPS = [
   memoryRoutes,
   connectRoutes,
   authRoutes,
+  moneyRoutes,
 ] as const;
 
 export function registerRoutes(app: Hono): void {

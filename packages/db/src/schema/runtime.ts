@@ -97,3 +97,49 @@ export const messages = pgTable(
     index("messages_conversation_seq_desc_idx").on(t.conversationId, t.seq),
   ],
 );
+
+/**
+ * D2: the durable job queue. Claimed with `FOR UPDATE SKIP LOCKED`; a failure re-queues with
+ * exponential backoff until `max_attempts`, then the row is dead (the dead-letter state).
+ * `idempotency_key` dedupes enqueues.
+ */
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").notNull(),
+    payload: jsonb("payload").$type<unknown>().notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    status: text("status", { enum: ["queued", "running", "done", "dead"] })
+      .notNull()
+      .default("queued"),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(8),
+    runAt: timestamp("run_at", { withTimezone: true }).notNull().defaultNow(),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("jobs_idempotency_key_idx").on(t.idempotencyKey),
+    index("jobs_ready_idx").on(t.status, t.runAt),
+  ],
+);
+
+/**
+ * B4: remora signing keys, envelope-encrypted (`@remora/signer`). Only the signer decrypts `sealed`;
+ * nothing else reads it. One key per remora, and a remora lives on one network (ADR-0026).
+ */
+export const remoraKeys = pgTable(
+  "remora_keys",
+  {
+    remoraId: text("remora_id").primaryKey(),
+    network: text("network", { enum: ["testnet", "mainnet"] }).notNull(),
+    address: text("address").notNull(),
+    sealed: jsonb("sealed").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("remora_keys_address_idx").on(t.address)],
+);

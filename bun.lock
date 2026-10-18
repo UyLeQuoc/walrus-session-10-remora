@@ -43,9 +43,14 @@
       "version": "0.0.1",
       "dependencies": {
         "@hono/node-server": "^1.19.0",
+        "@mysten/sui": "^2.33.2",
+        "@remora/chain": "workspace:*",
         "@remora/core": "workspace:*",
         "@remora/db": "workspace:*",
+        "@remora/disc-sdk": "workspace:*",
         "@remora/memory": "workspace:*",
+        "@remora/schema": "workspace:*",
+        "@remora/signer": "workspace:*",
         "@slack/bolt": "^4.6.0",
         "ai": "^7.0.0",
         "discord.js": "^14.27.0",
@@ -242,6 +247,9 @@
     "packages/signer": {
       "name": "@remora/signer",
       "version": "0.0.1",
+      "dependencies": {
+        "@mysten/sui": "^2.33.2",
+      },
       "devDependencies": {
         "@types/node": "^24.0.0",
         "typescript": "^5.9.3",
