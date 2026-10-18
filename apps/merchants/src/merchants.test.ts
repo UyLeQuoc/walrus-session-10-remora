@@ -1,6 +1,7 @@
 import type { PaidContext, X402Options } from "@remora/merchant";
+import { fetchPage, isPrivateAddress, textOf } from "@remora/merchant";
 import { describe, expect, it } from "vitest";
-import { createBriefApp, fetchPage, firstSentences, isPrivateAddress, textOf } from "./brief.ts";
+import { createBriefApp, firstSentences } from "./brief.ts";
 import { createOddsApp, oddsFor, SNAPSHOT } from "./odds.ts";
 
 const USDC = "0xa1ec::usdc::USDC";

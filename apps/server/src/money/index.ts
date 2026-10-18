@@ -2,7 +2,7 @@
 import { createLogger } from "@remora/chain";
 import { db } from "../context.ts";
 import { env } from "../env/load.ts";
-import { startWorker } from "../runtime/jobs.ts";
+import { type JobHandler, startWorker } from "../runtime/jobs.ts";
 import { startIndexer } from "../triggers/indexer.ts";
 import { createNetworks } from "./networks.ts";
 import { WAKE_ANCHOR, wakeAnchorHandler } from "./pay.ts";
@@ -12,12 +12,16 @@ export const log = createLogger({ service: "server" });
 export const networks = createNetworks(env);
 export const moneyRoutes = createMoneyRoutes({ networks, log });
 
-/** Starts the D2 worker and one indexer per available network. Returns a stop function. */
-export function startMoneyRuntime(): () => Promise<void> {
+/** Starts the D2 worker (plus `extraJobs`, e.g. the remora jobs) and one indexer per network. */
+export function startMoneyRuntime(extraJobs: Record<string, JobHandler> = {}): () => Promise<void> {
   const stops: (() => void | Promise<void>)[] = [];
   if (env.WORKER === "on") {
     stops.push(
-      startWorker(db, { [WAKE_ANCHOR]: wakeAnchorHandler({ db, networks, log }) }, { log }),
+      startWorker(
+        db,
+        { ...extraJobs, [WAKE_ANCHOR]: wakeAnchorHandler({ db, networks, log }) },
+        { log },
+      ),
     );
   }
   if (env.INDEXER === "on") {

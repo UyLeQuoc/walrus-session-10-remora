@@ -15,7 +15,8 @@
     "prune:people": "tsx scripts/prune.ts",
     "probe:header": "tsx scripts/archive/probe-header-identity.ts",
     "capacity": "tsx scripts/capacity.ts",
-    "ops": "tsx scripts/ops.ts"
+    "ops": "tsx scripts/ops.ts",
+    "verify": "tsx scripts/verify.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",

@@ -7,7 +7,7 @@ import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import type { Transaction } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { Logger, SuiNetwork } from "@remora/chain";
-import { and, type Db, desc, eq, remoraEvents, remoras } from "@remora/db";
+import { and, type Db, desc, eq, gt, remoraEvents, remoras } from "@remora/db";
 import {
   buildIssue,
   buildPause,
@@ -162,6 +162,35 @@ export function createRemoraService(deps: RemoraDeps) {
       throw new RemoraError("tx.not_owner", "That transaction wasn't sent by the owner.", 403);
     }
     return tx;
+  }
+
+  /** N5: at the last 7 days' pace, when the current window's budget runs out (null: not this window). */
+  async function forecast(r: Remora, window: { limit: bigint; spent: bigint } | null) {
+    if (!window) return null;
+    const since = new Date(now().getTime() - 7 * 86_400_000);
+    const rows = await db
+      .select({ payload: remoraEvents.payload })
+      .from(remoraEvents)
+      .where(
+        and(
+          eq(remoraEvents.remoraId, r.id),
+          eq(remoraEvents.type, "payment"),
+          gt(remoraEvents.createdAt, since),
+        ),
+      );
+    const spent7 = rows.reduce(
+      (s, x) => s + BigInt(String((x.payload as { amount?: string }).amount ?? 0)),
+      0n,
+    );
+    const perDay = Number(spent7) / 7;
+    const left = Number(window.limit - window.spent);
+    if (perDay <= 0) return { perDay: "0", runsOutOn: null };
+    return {
+      perDay: Math.round(perDay).toString(),
+      runsOutOn: new Date(now().getTime() + (left / perDay) * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    };
   }
 
   const config = (r: Remora) =>
@@ -457,6 +486,94 @@ export function createRemoraService(deps: RemoraDeps) {
       return updated;
     },
 
+    /** B6: edit name, persona or watched addresses. The previous config goes into the feed. */
+    async edit(
+      id: string,
+      owner: string,
+      patch: { name?: string; persona?: string; watch?: string[] },
+    ) {
+      const r = await mine(id, owner);
+      const prev = r.config as Record<string, unknown> & { revision?: number };
+      const next: Record<string, unknown> = { ...prev, revision: (prev.revision ?? 1) + 1 };
+      if (patch.name !== undefined) next.name = patch.name.trim().slice(0, 40);
+      if (patch.persona !== undefined) next.persona = patch.persona.trim().slice(0, 2_000);
+      if (patch.watch !== undefined) {
+        if (r.template !== "sentinel")
+          throw new RemoraError("remora.no_watch", "Only Sentinels watch addresses.");
+        next.triggers = [
+          {
+            kind: "chain",
+            addresses: patch.watch.map((a) => normalizeSuiAddress(a)),
+            objects: [],
+            eventTypes: [],
+          },
+        ];
+      }
+      RemoraConfig.parse({ ...next, status: "shadow" });
+      const updated = await setRow(id, {
+        config: next,
+        ...(typeof next.name === "string" ? { name: next.name } : {}),
+      });
+      await event(
+        updated,
+        "config_changed",
+        `${updated.name}'s settings changed (revision ${String(next.revision)}).`,
+        {
+          previous: prev,
+          revision: next.revision,
+        },
+      );
+      return updated;
+    },
+
+    /** N10: one owner transaction pauses every Disc on this network; Disc-less remoras pause on confirm. */
+    async panicTx(owner: string, network: SuiNetwork) {
+      const rows = await db
+        .select()
+        .from(remoras)
+        .where(
+          and(eq(remoras.ownerAddress, normalizeSuiAddress(owner)), eq(remoras.network, network)),
+        );
+      const discs = rows
+        .filter((r) => r.discId && r.status !== "retired")
+        .map((r) => r.discId as string);
+      if (!discs.length) return { transaction: null, discs: 0 };
+      const tx = buildPause(discCfg(network), discs, true);
+      tx.setSender(normalizeSuiAddress(owner));
+      return { transaction: await tx.toJSON(), discs: discs.length };
+    },
+
+    async confirmPanic(owner: string, network: SuiNetwork, digest?: string) {
+      const rows = await db
+        .select()
+        .from(remoras)
+        .where(
+          and(eq(remoras.ownerAddress, normalizeSuiAddress(owner)), eq(remoras.network, network)),
+        );
+      const withDisc = rows.find((r) => r.discId && r.status !== "retired");
+      if (withDisc) {
+        if (!digest) throw new RemoraError("tx.missing", "Send the pause transaction's digest.");
+        await ownerTx(withDisc, digest);
+      }
+      const paused: string[] = [];
+      for (const r of rows) {
+        if (r.status === "retired" || r.status === "paused") continue;
+        if (r.discId) {
+          const disc = await getDisc(deps.networks.client(r.network).core, r.discId);
+          if (!disc.paused) continue;
+        }
+        const updated = await setRow(r.id, { status: "paused" });
+        await event(
+          updated,
+          "action",
+          `${r.name} is paused (panic button).`,
+          digest ? { digest } : {},
+        );
+        paused.push(r.id);
+      }
+      return { paused };
+    },
+
     /** N5: budget meter straight from the allowance. */
     async budgetMeter(id: string, owner: string) {
       const r = await mine(id, owner);
@@ -479,6 +596,7 @@ export function createRemoraService(deps: RemoraDeps) {
         paused: disc.paused,
         expiresAt: allowance.expiryMs ? new Date(allowance.expiryMs).toISOString() : null,
         payees: disc.payees,
+        forecast: await forecast(r, allowance.rateLimit),
       };
     },
 

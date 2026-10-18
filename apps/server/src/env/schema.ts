@@ -36,4 +36,16 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   /** D2 worker and D1 checkpoint indexer; turn off for local runs that shouldn't spend Tatum calls. */
   WORKER: z.enum(["on", "off"]).default("on"),
   INDEXER: z.enum(["on", "off"]).default("on"),
+  /** The demo merchants behind the Reef (E7, E9). Without them Scout has nothing to buy. */
+  MERCHANTS_URL: z.string().url().optional(),
+  MERCHANTS_URL_TESTNET: z.string().url().optional(),
+  MERCHANT_PAYTO: z.string().optional(),
+  MERCHANT_PAYTO_TESTNET: z.string().optional(),
+  /** D9: the cheaper model for Sonar checks and rule parsing. */
+  LLM_SMALL_MODEL: z.string().optional(),
+  REMORA_DAILY_TOKENS: z.coerce.number().int().positive().default(200_000),
+  /** D1 chain trigger for Sentinels. */
+  WATCHER: z.enum(["on", "off"]).default("on"),
+  /** A5: the bot's @username, for the t.me deep link. */
+  TELEGRAM_BOT_USERNAME: z.string().optional(),
 });

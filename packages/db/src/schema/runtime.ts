@@ -207,7 +207,7 @@ export const approvals = pgTable(
       .references(() => remoras.id, { onDelete: "cascade" }),
     network: net(),
     kind: text("kind", {
-      enum: ["over_limit_payment", "budget_change", "rule_conflict", "template_update"],
+      enum: ["over_limit_payment", "budget_change", "rule_conflict", "template_update", "schedule"],
     }).notNull(),
     summary: text("summary").notNull(),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),

@@ -1,13 +1,16 @@
 /**
  * C1 Scout: answers the owner's questions by buying data from Reef services when it helps, then
  * replies with what it found and what it cost. Purchases are planned deterministically from the
- * question (and the model may ask for follow-ups); every one goes through `pay` (Sonar → Disc).
+ * question (and the model may ask for follow-ups); every one goes through `pay` (Sonar → Disc). The
+ * model also gets the D4 read tools and can propose a schedule or hand a question to another remora.
  * Source counters feed F2 (`source_stats` + `sources` memories via feedback).
  */
 
 import { remoraEvents } from "@remora/db";
 import type { ResolvedReef } from "../money/reef.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
+import { handoff, proposeSchedule } from "../tools/propose.ts";
+import { readTools } from "../tools/read.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { addUsage, REMORA_LIMITS, tokensToday } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -104,6 +107,16 @@ export async function scoutAsk(
       pay: async ({ payee, url, reason }) => {
         const o = await buy(payee, url, reason);
         return o.kind === "paid" ? await o.response.clone().text() : outcomeLine(o);
+      },
+      tools: {
+        ...readTools({
+          client: deps.networks.client(r.network),
+          memory: deps.memory,
+          remora: r,
+          ...(deps.fetch ? { fetch: deps.fetch } : {}),
+        }),
+        schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
+        handoff: ({ to, question: q }) => handoff(deps, r, to, q),
       },
     });
     answer = res.text;

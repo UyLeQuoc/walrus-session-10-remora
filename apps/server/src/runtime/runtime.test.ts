@@ -14,6 +14,10 @@ import {
   approvals,
   createDb,
   eq,
+  inArray,
+  jobs,
+  like,
+  ownerSettings,
   receipts,
   remoraEvents,
   remoras,
@@ -26,6 +30,7 @@ import { type PaidContext, x402 } from "@remora/merchant";
 import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createRemoraBot } from "../channels/remora-bot.ts";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
 import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
@@ -36,6 +41,8 @@ import { SlidingLimiter } from "./limits.ts";
 import type { RemoraMemory } from "./memory.ts";
 import type { Notice } from "./notify.ts";
 import { createRemoraService, type Remora } from "./remoras.ts";
+import { createRemoraRoutes } from "./routes.ts";
+import { approveSchedule, firstRun, JOB, remoraJobHandlers } from "./schedules.ts";
 import { planBuys, scoutAsk } from "./scout.ts";
 import { onChainEvent, teach } from "./sentinel.ts";
 import { verifyWake } from "./verify.ts";
@@ -263,6 +270,11 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     sentinel = t.remora;
   });
   afterAll(async () => {
+    // Fake digests must not reach a real worker's anchor queue, and neither must the remora jobs.
+    await db.delete(jobs).where(like(jobs.idempotencyKey, `%:Dg${process.pid}x%`));
+    await db
+      .delete(jobs)
+      .where(inArray(jobs.kind, ["remora.cron", "remora.ask", "remora.first_run"]));
     for (const id of created) await db.delete(remoras).where(eq(remoras.id, id));
   });
 
@@ -468,5 +480,198 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       "signed by the remora",
     ]);
     expect((await verifyWake({ db, networks }, "Dgnothing")).found).toBe(false);
+  });
+
+  it("schedules: the owner sets one, a remora only proposes; a cron run answers and queues the next (D1, N12)", async () => {
+    const h = remoraJobHandlers(deps());
+    const routes = createRemoraRoutes({
+      service,
+      runtime: deps(),
+      owner: async (c) => c.req.header("x-test-owner") ?? null,
+    });
+    const as = {
+      "x-test-owner": OWNER,
+      "content-type": "application/json",
+      "x-remora-network": "testnet",
+    };
+    const res = await routes.request(`/api/remoras/${scout.id}/schedules`, {
+      method: "POST",
+      headers: as,
+      body: JSON.stringify({ when: "weekdays at 8am", question: "Is 0x2 safe?" }),
+    });
+    expect(res.status).toBe(201);
+    const { schedule } = (await res.json()) as { schedule: { id: string; cron: string } };
+    expect(schedule.cron).toBe("0 8 * * 1-5");
+    const queued = await db.select().from(jobs).where(eq(jobs.kind, JOB.cron));
+    const mine = queued.filter((j) => (j.payload as { remoraId: string }).remoraId === scout.id);
+    expect(mine).toHaveLength(1);
+    const before = notices.length;
+    await h[JOB.cron]?.({ remoraId: scout.id, scheduleId: schedule.id }, mine[0] as never);
+    expect(notices.length).toBe(before + 1);
+    expect(notices.at(-1)?.buttons?.map((b) => b.label)).toEqual(["👍", "👎", "Why?"]);
+    const after = (await db.select().from(jobs).where(eq(jobs.kind, JOB.cron))).filter(
+      (j) => (j.payload as { remoraId: string }).remoraId === scout.id,
+    );
+    expect(after.length).toBe(2);
+    // A proposal from the model waits for the owner.
+    const { proposeSchedule } = await import("../tools/propose.ts");
+    expect(await proposeSchedule(deps(), scout, "every Sunday evening", "Weekly odds?")).toMatch(
+      /once the owner approves/,
+    );
+    const [proposal] = await db
+      .select()
+      .from(approvals)
+      .where(and(eq(approvals.remoraId, scout.id), eq(approvals.kind, "schedule")));
+    if (!proposal) throw new Error("no proposal");
+    const ok = await approveSchedule(deps(), OWNER, proposal.id);
+    expect(ok.schedule.cron).toBe("0 18 * * 0");
+    await db.delete(jobs).where(eq(jobs.kind, JOB.cron));
+  });
+
+  it("first run: Sentinel describes what it watches; Scout answers a first question (N13)", async () => {
+    const watching = {
+      ...client.core,
+      listBalances: async () => ({
+        balances: [
+          {
+            coinType: "0x2::sui::SUI",
+            balance: "1500000000",
+            coinBalance: "0",
+            addressBalance: "0",
+          },
+        ],
+        hasNextPage: false,
+        cursor: null,
+      }),
+    };
+    Object.assign(client.core, watching);
+    const s = (await firstRun(deps(), sentinel)) as { text: string };
+    expect(s.text).toMatch(/watching 1 address/);
+    expect(s.text).toMatch(/SUI 1500000000/);
+    const before = notices.length;
+    await firstRun(deps(), scout);
+    expect(notices.length).toBe(before + 1);
+    expect(notices.at(-1)?.text).toMatch(/first answer/);
+  });
+
+  it("the API answers for the signed-in wallet only (W2 routes)", async () => {
+    const routes = createRemoraRoutes({
+      service,
+      runtime: deps(),
+      owner: async (c) => c.req.header("x-test-owner") ?? null,
+    });
+    const as = (o = OWNER) => ({
+      "x-test-owner": o,
+      "content-type": "application/json",
+      "x-remora-network": "testnet",
+    });
+    expect((await routes.request("/api/remoras")).status).toBe(401);
+    const list = (await (await routes.request("/api/remoras", { headers: as() })).json()) as {
+      remoras: { id: string; config: { name: string } }[];
+    };
+    expect(list.remoras.map((r) => r.id)).toEqual(expect.arrayContaining([scout.id, sentinel.id]));
+    expect(
+      (await routes.request(`/api/remoras/${scout.id}`, { headers: as(ATTACKER) })).status,
+    ).toBe(403);
+    expect((await routes.request("/api/remoras/not-a-uuid", { headers: as() })).status).toBe(404);
+    // Teach + feed + Why?
+    const taught = await routes.request(`/api/remoras/${sentinel.id}/teach`, {
+      method: "POST",
+      headers: as(),
+      body: JSON.stringify({ text: "Always ping me for anything over 1 SUI" }),
+    });
+    expect(taught.status).toBe(200);
+    const bad = await routes.request(`/api/remoras/${scout.id}/teach`, {
+      method: "POST",
+      headers: as(),
+      body: JSON.stringify({ text: "x" }),
+    });
+    expect(((await bad.json()) as { error: { code: string } }).error.code).toBe(
+      "teach.unsupported",
+    );
+    const feed = (await (
+      await routes.request(`/api/feed?remora=${sentinel.id}&type=rule_learned`, { headers: as() })
+    ).json()) as { events: { id: string; type: string }[] };
+    expect(feed.events.length).toBeGreaterThan(0);
+    expect(feed.events.every((e) => e.type === "rule_learned")).toBe(true);
+    const why = await routes.request(`/api/events/${feed.events[0]?.id}/why`, { headers: as() });
+    expect(why.status).toBe(200);
+    expect(
+      (await routes.request(`/api/events/${feed.events[0]?.id}/why`, { headers: as(ATTACKER) }))
+        .status,
+    ).toBe(404);
+    // Settings (A7, H5) with validation.
+    expect(
+      (
+        await routes.request("/api/settings", {
+          method: "PUT",
+          headers: as(),
+          body: JSON.stringify({ quietStart: "25:00" }),
+        })
+      ).status,
+    ).toBe(400);
+    const set = await routes.request("/api/settings", {
+      method: "PUT",
+      headers: as(),
+      body: JSON.stringify({
+        timezone: "Asia/Ho_Chi_Minh",
+        quietStart: "23:00",
+        quietEnd: "07:00",
+        language: "vi",
+        notify: "all",
+      }),
+    });
+    expect(((await set.json()) as { settings: { language: string } }).settings.language).toBe("vi");
+    await db.delete(ownerSettings).where(eq(ownerSettings.ownerAddress, OWNER));
+    // N12 preview, N2 inbox, N10 panic, G3 verify.
+    const preview = (await (
+      await routes.request("/api/schedule/preview", {
+        method: "POST",
+        headers: as(),
+        body: JSON.stringify({ text: "every Sunday evening" }),
+      })
+    ).json()) as { human: string };
+    expect(preview.human).toBe("every Sunday at 6pm UTC");
+    const inbox = (await (
+      await routes.request("/api/approvals?status=all", { headers: as() })
+    ).json()) as { approvals: unknown[] };
+    expect(inbox.approvals.length).toBeGreaterThan(0);
+    expect((await routes.request("/api/verify/Dgnothing")).status).toBe(404);
+    // N6: a copy sentence replaces the raw message when one exists.
+    const rate = await routes.request(`/api/remoras/${scout.id}/ask`, {
+      method: "POST",
+      headers: as(),
+      body: JSON.stringify({ question: "" }),
+    });
+    expect(((await rate.json()) as { error: { code: string } }).error.code).toBe("ask.empty");
+  });
+
+  it("Telegram: commands act for the linked wallet; buttons give feedback (H1, A5)", async () => {
+    const linked = new Map<string, string>([["42", OWNER]]);
+    const bot = createRemoraBot({
+      runtime: deps(),
+      service,
+      ownerOf: async (id) => linked.get(id) ?? null,
+      link: async (id, _n, code) => {
+        linked.set(id, OWNER);
+        return `linked ${code}`;
+      },
+      network: "testnet",
+    });
+    const me = { id: "42", name: "uy" };
+    expect((await bot.command({ id: "7", name: "x" }, "/remoras"))?.text).toMatch(/isn't linked/);
+    expect((await bot.command({ id: "7", name: "x" }, "/start link_ABC234"))?.text).toBe(
+      "linked ABC234",
+    );
+    expect((await bot.command(me, "/remoras"))?.text).toMatch(/Scout \(scout\) is active/);
+    const answer = await bot.command(me, "Scout, is 0x2 safe to depend on?");
+    expect(answer?.buttons?.[0]?.data).toMatch(/^fb:/);
+    expect(await bot.callback(me, String(answer?.buttons?.[0]?.data))).toMatch(/Learned|noted/);
+    expect((await bot.command(me, "/teach ignore outgoing SUI under 0.001"))?.text).toMatch(
+      /learned/,
+    );
+    expect(await bot.command(me, "/help")).toBeNull();
+    expect(await bot.command(me, "hello there")).toBeNull();
+    expect((await bot.command(me, "/pause Scout"))?.text).toMatch(/needs your signature/);
   });
 });

@@ -49,15 +49,28 @@ export function nextRun(expr: string, from: Date): Date | null {
   return null;
 }
 
-/** N12: "every Monday 9am"-style text for a cron expression (falls back to the expression). */
+/** N12: "every Monday at 9am UTC"-style text for a cron expression (falls back to the expression). */
 export function human(expr: string): string {
   const p = expr.trim().split(/\s+/);
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   if (p.length !== 5) return expr;
-  const [m, h, dom, mon, dow] = p;
-  if (!/^\d+$/.test(m ?? "") || !/^\d+$/.test(h ?? "") || dom !== "*" || mon !== "*") return expr;
-  const time = `${Number(h) % 12 || 12}${Number(m) ? `:${String(m).padStart(2, "0")}` : ""}${Number(h) < 12 ? "am" : "pm"} UTC`;
+  const [m = "", h = "", dom, mon, dow = ""] = p;
+  if (dom !== "*" || mon !== "*") return expr;
+  if (h === "*" && dow === "*") {
+    if (m === "0") return "every hour";
+    if (/^\*\/\d+$/.test(m)) return `every ${m.slice(2)} minutes`;
+  }
+  if (m === "0" && /^\*\/\d+$/.test(h) && dow === "*") return `every ${h.slice(2)} hours`;
+  if (!/^\d+$/.test(m) || !/^\d+$/.test(h)) return expr;
+  const time = `${Number(h) % 12 || 12}${Number(m) ? `:${m.padStart(2, "0")}` : ""}${Number(h) < 12 ? "am" : "pm"} UTC`;
   if (dow === "*") return `every day at ${time}`;
-  if (/^\d$/.test(dow ?? "")) return `every ${days[Number(dow)]} at ${time}`;
+  if (dow === "1-5") return `weekdays at ${time}`;
+  if (dow === "0,6") return `weekends at ${time}`;
+  if (/^\d(,\d)*$/.test(dow)) {
+    const names = dow.split(",").map((d) => days[Number(d)] ?? d);
+    const list =
+      names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+    return `every ${list} at ${time}`;
+  }
   return expr;
 }
