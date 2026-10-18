@@ -10,6 +10,7 @@ export * from "./errors.ts";
 export * from "./events.ts";
 export * from "./funds.ts";
 export * from "./memory.ts";
+export * from "./network.ts";
 export * from "./remora.ts";
 export * from "./template.ts";
 export * from "./wake.ts";
