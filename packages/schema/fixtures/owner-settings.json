@@ -1,0 +1,8 @@
+{
+  "ownerAddress": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "quietStart": "23:00",
+  "quietEnd": "07:00",
+  "language": "vi",
+  "notify": "important"
+}

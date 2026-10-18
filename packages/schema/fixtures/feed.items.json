@@ -1,0 +1,51 @@
+[
+  {
+    "id": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a01",
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "remora": "Scout",
+    "network": "testnet",
+    "type": "payment",
+    "summary": "Paid 10000 to reef:sui-risk",
+    "payload": {
+      "payee": "reef:sui-risk",
+      "amount": "10000",
+      "digest": "8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ",
+      "status": 200
+    },
+    "receiptId": "9a7e1c44-0f1d-4f9a-8d55-3b2a1c0d9e88",
+    "feedback": null,
+    "createdAt": "2026-11-03T02:13:05.000Z"
+  },
+  {
+    "id": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a02",
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "remora": "Scout",
+    "network": "testnet",
+    "type": "blocked",
+    "summary": "Sonar stopped a payment to reef:sui-risk: payTo isn't the Reef's address for reef:sui-risk",
+    "payload": {
+      "code": "sonar.blocked",
+      "reasons": ["payTo isn't the Reef's address for reef:sui-risk"]
+    },
+    "receiptId": "9a7e1c44-0f1d-4f9a-8d55-3b2a1c0d9e89",
+    "feedback": null,
+    "createdAt": "2026-11-03T02:13:06.000Z"
+  },
+  {
+    "id": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a03",
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "remora": "Scout",
+    "network": "testnet",
+    "type": "answer",
+    "summary": "Is 0x2 safe to depend on?",
+    "payload": {
+      "question": "Is 0x2 safe to depend on?",
+      "answer": "0x2 is the Sui framework: immutable, upgraded only by the protocol. Cost: $0.01 (sui-risk).",
+      "paidPayees": ["reef:sui-risk"],
+      "digests": ["8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ"]
+    },
+    "receiptId": "9a7e1c44-0f1d-4f9a-8d55-3b2a1c0d9e90",
+    "feedback": "useful",
+    "createdAt": "2026-11-03T02:13:09.000Z"
+  }
+]

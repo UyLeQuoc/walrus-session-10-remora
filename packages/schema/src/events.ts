@@ -47,7 +47,13 @@ export const RemoraEvent = z.discriminatedUnion("type", [
 export const ApprovalRequest = z.object({
   id: z.string().min(1),
   remora: z.string().min(1),
-  kind: z.enum(["over_limit_payment", "budget_change", "rule_conflict", "template_update"]),
+  kind: z.enum([
+    "over_limit_payment",
+    "budget_change",
+    "rule_conflict",
+    "template_update",
+    "schedule",
+  ]),
   createdAt: IsoDateTime,
   summary: z.string().min(1),
   payload: z.record(z.string(), z.unknown()),

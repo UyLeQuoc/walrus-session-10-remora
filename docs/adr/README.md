@@ -49,3 +49,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0030](0030-w2-memory-mode.md) | In W2, remoras' memory lives in the operator's account, by namespace | Accepted |
 | [0031](0031-e4-owner-payment-and-merchants.md) | Over-limit approvals are a one-off owner payment; demo merchants accept any exact payment | Accepted |
 | [0032](0032-w2-runtime-api-and-channels.md) | W2 runtime wiring, API and Telegram: who may act, and how | Accepted |
+| [0033](0033-w2-api-contract.md) | The W2 API shapes are a contract in `packages/schema` | Accepted |

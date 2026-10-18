@@ -27,6 +27,7 @@ import {
 import { DiscBcs, PaidBcs } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
 import { type PaidContext, x402 } from "@remora/merchant";
+import { ApprovalRequest, FeedItem, OwnerSettings, RemoraView, WhyResponse } from "@remora/schema";
 import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -570,6 +571,8 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       remoras: { id: string; config: { name: string } }[];
     };
     expect(list.remoras.map((r) => r.id)).toEqual(expect.arrayContaining([scout.id, sentinel.id]));
+    // The responses are the W2 API contract (packages/schema api.ts).
+    for (const r of list.remoras) RemoraView.parse(r);
     expect(
       (await routes.request(`/api/remoras/${scout.id}`, { headers: as(ATTACKER) })).status,
     ).toBe(403);
@@ -593,9 +596,11 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       await routes.request(`/api/feed?remora=${sentinel.id}&type=rule_learned`, { headers: as() })
     ).json()) as { events: { id: string; type: string }[] };
     expect(feed.events.length).toBeGreaterThan(0);
+    for (const e of feed.events) FeedItem.parse(e);
     expect(feed.events.every((e) => e.type === "rule_learned")).toBe(true);
     const why = await routes.request(`/api/events/${feed.events[0]?.id}/why`, { headers: as() });
     expect(why.status).toBe(200);
+    WhyResponse.parse(await why.json());
     expect(
       (await routes.request(`/api/events/${feed.events[0]?.id}/why`, { headers: as(ATTACKER) }))
         .status,
@@ -621,7 +626,9 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
         notify: "all",
       }),
     });
-    expect(((await set.json()) as { settings: { language: string } }).settings.language).toBe("vi");
+    expect(
+      OwnerSettings.parse(((await set.json()) as { settings: unknown }).settings).language,
+    ).toBe("vi");
     await db.delete(ownerSettings).where(eq(ownerSettings.ownerAddress, OWNER));
     // N12 preview, N2 inbox, N10 panic, G3 verify.
     const preview = (await (
@@ -636,6 +643,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       await routes.request("/api/approvals?status=all", { headers: as() })
     ).json()) as { approvals: unknown[] };
     expect(inbox.approvals.length).toBeGreaterThan(0);
+    for (const a of inbox.approvals) ApprovalRequest.parse(a);
     expect((await routes.request("/api/verify/Dgnothing")).status).toBe(404);
     // N6: a copy sentence replaces the raw message when one exists.
     const rate = await routes.request(`/api/remoras/${scout.id}/ask`, {
