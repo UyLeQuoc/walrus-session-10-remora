@@ -269,7 +269,7 @@ prize requires the product to be built *primarily* with it.
 
 ### 3.1 Native Allowances (`sui::allowance`, mainnet since Oct 9, protocol v138)
 
-> **Verified in U1 (Oct 18)**, details in [docs/spikes/2026-10-18-allowance.md](spikes/2026-10-18-allowance.md):
+> **Verified in U1 (Oct 18)**, details in [docs/spikes/2026-10-21-allowance.md](spikes/2026-10-21-allowance.md):
 >
 > - It's enabled on both networks (`enable_allowances`, `enable_accumulators`; testnet is on protocol
 >   139).
@@ -335,7 +335,9 @@ public fun issue<T, A>(proposal: AllowanceProposal<T>, _: SettingsPermit<A>, ctx
 
 Failed pre-checks are rejected **before execution, with no gas charged**. The spender is the sender.
 Gas can come from a separate sponsor (`AllowanceWithdrawal.is_sponsor` concerns where the *funds* come
-from and is always false today). U1 confirms sponsored gas on testnet.
+from and is always false today). This was confirmed in the U1 localnet run, where a spender holding 0 SUI
+paid through `disc::pay` with sponsored gas. Every negative case (caps, payee, window, wrong spender,
+revoked) fails at build/simulate, so no gas is charged.
 
 **TS SDK:**
 
@@ -396,6 +398,9 @@ Spec: [scheme_exact_sui.md](https://github.com/x402-foundation/x402/blob/main/sp
 
 - **Sponsored transactions:** the sender and the sponsor both sign. Remora's runtime sponsors every
   remora transaction, so remoras hold no SUI.
+- **Gas from the address balance** (`enable_address_balance_gas_payments`, on both networks): the SDK
+  pays gas from the gas owner's address balance when it has one (U1). **Keep the sponsor wallet
+  separate from every funder**, or sponsoring eats the balance the allowances spend.
 - **Gasless stablecoin lane** (since May 20, 2026): only simple transfers of 7 approved stablecoins
   through address balances, with gas price and budget set to 0. It's capped at **about 300 transfers per
   second network-wide** (`gasless_max_tps`). **Allowance spends and app calls don't qualify.**

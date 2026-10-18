@@ -258,7 +258,9 @@
       "name": "@remora/spike-allowance",
       "version": "0.0.1",
       "dependencies": {
+        "@grpc/grpc-js": "^1.14.6",
         "@mysten/sui": "^2.33.2",
+        "@protobuf-ts/grpc-transport": "^2.11.1",
         "@remora/chain": "workspace:*",
       },
       "devDependencies": {

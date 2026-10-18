@@ -40,7 +40,7 @@ either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR
 4. **Mainnet:** prepare a script with tiny amounts (≤ 0.10 USDC). **Ask Uy before every mainnet
    transaction**, including publishing the stub package, then record the digests.
 5. **Write up:**
-   - `docs/spikes/2026-10-18-allowance.md`: versions, digests, settlement delay, the address-balance
+   - `docs/spikes/2026-10-21-allowance.md`: versions, digests, settlement delay, the address-balance
      read method, abort codes, gotchas;
    - corrections to `docs/tech-reference.md` §3 for anything verified differently;
    - **ADR-0020** (go/no-go, which client calls to use, and any spec changes), plus updates to

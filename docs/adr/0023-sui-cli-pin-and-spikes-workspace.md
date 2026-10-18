@@ -21,4 +21,4 @@ packages (`@remora/chain`, `@mysten/sui`), and bun doesn't hoist dependencies to
 - Spike code is linted and typechecked in CI like the rest.
 
 ## Links
-- [docs/spikes/2026-10-18-allowance.md](../spikes/2026-10-18-allowance.md) · [ADR-0021](0021-sui-grpc-only.md)
+- [docs/spikes/2026-10-21-allowance.md](../spikes/2026-10-21-allowance.md) · [ADR-0021](0021-sui-grpc-only.md)

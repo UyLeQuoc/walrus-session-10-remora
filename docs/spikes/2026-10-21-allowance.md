@@ -2,10 +2,11 @@
 
 - **Goal:** [uy-01-spike-allowance.md](../goals/uy-01-spike-allowance.md) · **Decision:** ADR-0020 (written
   when the on-chain runs are done)
-- **Status:** in progress. Steps 1–2 and the Move stub are done; the testnet and mainnet runs wait for
-  funding (the faucet API is disabled, so the owner key is funded through faucet.sui.io by hand).
+- **Status:** in progress. Steps 1–2, the Move stub and a full **localnet** dry run (§6) are done. The
+  testnet (Tatum) and mainnet runs wait for funding: the faucet API returns "CI compatibility is
+  disabled", so the owner key has to be funded by hand.
 - **Code:** `packages/chain` (seed client), `packages/move/remora` (stub `disc`), `spikes/allowance`
-  (`probe.ts`, `flow.ts`)
+  (`probe.ts`, `flow.ts`, which also takes `localnet`)
 
 ## 1. Versions (Oct 18, 2026)
 
@@ -81,13 +82,53 @@ cap, before start, after expiry, not the spender, a duplicate policy key, and re
 settled funds, ending the transaction after `send_funds` aborts with code 11 in `test_scenario`. Fund
 the funder first with `balance::create_for_testing<T>(n).send_funds(funder)`.
 
-## 6. Testnet run (pending funding)
+## 6. Localnet dry run (Oct 18: full flow, local `sui start` 1.82.1 node, native gRPC)
 
-`bun --env-file=.env spikes/allowance/flow.ts testnet <step>`: `deposit` (and timing the settlement) →
-`publish` → `issue` → `pay` (spender signs, sponsor pays gas) → `negatives` (simulate only) → `revoke`.
-Digests, settlement delay and abort codes go here.
+This is the same `flow.ts` against a local node (`127.0.0.1:9000`, insecure grpc-js transport) instead of
+Tatum. It proves the PTBs and the abort behaviour before any testnet SUI is spent.
 
-## 7. Mainnet run (pending, needs Uy's OK per transaction)
+| Step | Result | Digest (localnet, throwaway) |
+|---|---|---|
+| deposit 0.05 SUI `Coin` → address balance (`coin::send_funds`) | ok. **Address balance readable 1.7 s after submit**, on the first poll after `waitForTransaction` | `A2qpnr27…` |
+| publish stub | ok | `CY9XKabH…` |
+| owner `propose_for_app<Balance<SUI>, DISC>` → `disc::issue`, **one PTB** | ok. The `entry` result passes into the next command | `7KWTD1LL…` |
+| spender `tx.withdrawal({ from: 'allowance' })` → `disc::pay`, **gas sponsored**, spender holds 0 SUI | ok. Payee address balance +1,000,000 | `5pB7zQiF…` |
+| revoke (`disc::revoke` → `allowance::revoke`) | ok | `E9P6hy69…` |
+
+Negative cases. Every one failed, and all of them failed **before execution** (at build/simulate), so no
+gas was charged:
+
+| Case | Where it stops | Error |
+|---|---|---|
+| Over the per-payment cap | `disc::pay` | `EOverPaymentCap` (abort 4) |
+| Payee not on the allowlist | `disc::pay` | `EPayeeNotAllowed` (abort 3) |
+| Over the lifetime cap | `0x2::allowance::consume` | `EExceedsLifetimeCap` |
+| Before the start time | `0x2::allowance::consume` | `ENotStarted` |
+| After expiry (15 s allowance, paid at +20 s) | `0x2::allowance::consume` | `EExpired` |
+| Sender isn't the spender | input checks, before Move runs | "Invalid withdraw reservation: Transaction sender is not the spender of allowance …" |
+| After revoke | input resolution | "Object … not found" (the allowance is deleted) |
+
+Findings:
+
+- **The SDK pays gas from the address balance when it can** (`enable_address_balance_gas_payments`).
+  With owner = sponsor, the owner's *address balance* paid both the payment and the gas, while its coins
+  were untouched. **The runtime sponsor must be a separate wallet from any funder.** Otherwise sponsoring
+  gas eats the funds the allowances spend, at least for SUI-denominated allowances.
+- `tx.build` simulates for gas, so a doomed spend throws at build ("Transaction resolution failed:
+  MoveAbort … 'EOverPaymentCap'") with a clever-error name and source line. That's good enough for the
+  "Why?" drawer (N4).
+
+## 7. Testnet run via Tatum (pending funding)
+
+`bun --env-file=.env spikes/allowance/flow.ts testnet <step>`: `deposit` (timing the settlement) →
+`publish` → `issue` → `pay` (spender signs, sponsor pays gas) → `negatives` / `windows` (simulate only)
+→ `revoke`. Digests, settlement delay and abort codes go here.
+
+**Tatum rate limit:** a burst of `GetBalance` calls on testnet got **HTTP 429**, which grpc-js reports
+as `UNAVAILABLE`. `withRetry` now defaults to 4 attempts with a 500 ms base. The runtime needs a client
+side limiter.
+
+## 8. Mainnet run (pending, needs Uy's OK per transaction)
 
 `flow.ts mainnet <step>` only simulates unless `--execute` is passed. USDC amounts ≤ 0.10 per
 transaction.

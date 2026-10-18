@@ -1,4 +1,7 @@
-/** gRPC status codes worth retrying: the call never reached the chain, or was rate-limited. */
+/**
+ * gRPC status codes worth retrying: the call never reached the chain, or was rate-limited. Tatum's
+ * HTTP 429 arrives as UNAVAILABLE ("Received HTTP status code 429").
+ */
 const RETRYABLE = new Set(["UNAVAILABLE", "DEADLINE_EXCEEDED", "RESOURCE_EXHAUSTED", "ABORTED"]);
 
 export interface RetryOptions {
@@ -16,8 +19,8 @@ export function isRetryable(err: unknown): boolean {
  * submission can still land, so look the digest up before resubmitting.
  */
 export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Promise<T> {
-  const attempts = opts.attempts ?? 3;
-  const base = opts.baseDelayMs ?? 250;
+  const attempts = opts.attempts ?? 4;
+  const base = opts.baseDelayMs ?? 500;
   for (let i = 1; ; i++) {
     try {
       return await fn();

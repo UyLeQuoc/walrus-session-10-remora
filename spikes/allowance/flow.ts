@@ -1,16 +1,20 @@
 // U1 step 3/4: the allowance flow through Tatum gRPC, one step per run.
 //   bun --env-file=.env spikes/allowance/flow.ts <network> <step> [--execute]
-// Steps: status | deposit | publish | issue | pay | negatives | revoke
+// Steps: status | deposit | publish | issue | pay | negatives | windows | revoke
 // Testnet executes by default. Mainnet only simulates unless --execute is passed, and every
-// mainnet execution needs Uy's OK first (U1 goal).
+// mainnet execution needs Uy's OK first (U1 goal). `localnet` (`sui start --with-faucet`) is a dry run
+// of the whole flow against a local node instead of Tatum; it adds a `faucet` step.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ChannelCredentials } from "@grpc/grpc-js";
 import { bcs } from "@mysten/sui/bcs";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
+import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import {
   createTatumSuiClient,
   readFunds,
@@ -19,22 +23,24 @@ import {
 } from "@remora/chain";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const [network, step] = process.argv.slice(2) as [SuiNetwork, string];
-const execute = network === "testnet" || process.argv.includes("--execute");
-if (!["testnet", "mainnet"].includes(network) || !step) {
-  console.error("usage: flow.ts <testnet|mainnet> <step> [--execute]");
+const [network, step] = process.argv.slice(2) as [SuiNetwork | "localnet", string];
+const execute = network !== "mainnet" || process.argv.includes("--execute");
+if (!["testnet", "mainnet", "localnet"].includes(network) || !step) {
+  console.error("usage: flow.ts <testnet|mainnet|localnet> <step> [--execute]");
   process.exit(1);
 }
 
-// Testnet uses SUI; mainnet uses USDC with tiny amounts (≤ 0.10 USDC per transaction).
+// Testnet and localnet use SUI; mainnet uses USDC with tiny amounts (≤ 0.10 USDC per transaction).
+const SUI_PLAN = {
+  coinType: "0x2::sui::SUI",
+  deposit: 50_000_000n,
+  lifetimeCap: 3_000_000n,
+  perPayment: 1_000_000n,
+  pay: 1_000_000n,
+};
 const PLAN = {
-  testnet: {
-    coinType: "0x2::sui::SUI",
-    deposit: 50_000_000n,
-    lifetimeCap: 3_000_000n,
-    perPayment: 1_000_000n,
-    pay: 1_000_000n,
-  },
+  localnet: SUI_PLAN,
+  testnet: SUI_PLAN,
   mainnet: {
     coinType: process.env.USDC_COIN_TYPE ?? "",
     deposit: 100_000n,
@@ -75,7 +81,16 @@ function need(id: string | undefined): string {
 }
 const save = () => writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
 
-const client = createTatumSuiClient(tatumSuiOptionsFromEnv(network));
+const client =
+  network === "localnet"
+    ? new SuiGrpcClient({
+        network,
+        transport: new GrpcTransport({
+          host: "127.0.0.1:9000",
+          channelCredentials: ChannelCredentials.createInsecure(),
+        }),
+      })
+    : createTatumSuiClient(tatumSuiOptionsFromEnv(network));
 const include = { effects: true, objectTypes: true, balanceChanges: true } as const;
 
 /** Simulates through Tatum, then executes if allowed. Sponsored when `gasOwner` differs from the sender. */
@@ -147,32 +162,45 @@ async function funds(label: string, address: string) {
 const someU256 = (v: bigint) => bcs.option(bcs.u256()).serialize(v);
 const someU64 = (v: bigint | number) => bcs.option(bcs.u64()).serialize(BigInt(v));
 
-function allowanceWithdrawal(tx: Transaction, amount: bigint) {
-  if (!state.allowanceId) throw new Error("run issue first");
+function allowanceWithdrawal(tx: Transaction, amount: bigint, allowanceId: string) {
   return tx.withdrawal({
     from: "allowance",
-    allowance: state.allowanceId,
+    allowance: allowanceId,
     funder: OWNER,
     amount,
     type: PLAN.coinType,
   });
 }
 
-function payTx(amount: bigint, payee: string): Transaction {
+function payTx(amount: bigint, payee: string, allowanceId = need(state.allowanceId)): Transaction {
   const tx = new Transaction();
-  const w = allowanceWithdrawal(tx, amount);
+  const w = allowanceWithdrawal(tx, amount, allowanceId);
   tx.moveCall({
     target: `${state.packageId}::disc::pay`,
     typeArguments: [PLAN.coinType],
     arguments: [
       tx.object(need(state.registryId)),
-      tx.object(need(state.allowanceId)),
+      tx.object(allowanceId),
       w,
       tx.pure.address(payee),
       tx.object.clock(),
     ],
   });
   return tx;
+}
+
+/** Builds (which simulates) and simulates again; a negative case must fail at one of the two. */
+async function expectFailure(label: string, tx: Transaction, signer: Ed25519Keypair) {
+  tx.setSender(signer.toSuiAddress());
+  tx.setGasOwner(sponsor.toSuiAddress());
+  try {
+    const bytes = await tx.build({ client });
+    const sim = await client.core.simulateTransaction({ transaction: bytes, include });
+    const s = (sim.Transaction ?? sim.FailedTransaction).effects?.status;
+    console.log(`[${label}]`, s?.success ? "UNEXPECTED SUCCESS" : describe(s?.error));
+  } catch (err) {
+    console.log(`[${label}] rejected before execution:`, (err as Error).message.slice(0, 300));
+  }
 }
 
 function issueTx(name: string, startMs: number, expiryMs: number): Transaction {
@@ -211,6 +239,17 @@ console.log(
 );
 
 switch (step) {
+  case "faucet": {
+    if (network !== "localnet")
+      throw new Error("faucet is localnet only; use faucet.sui.io for testnet");
+    const res = await fetch("http://127.0.0.1:9123/v2/gas", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ FixedAmountRequest: { recipient: OWNER } }),
+    });
+    console.log("faucet", res.status, (await res.text()).slice(0, 200));
+    break;
+  }
   case "status": {
     await funds("owner  ", OWNER);
     await funds("spender", SPENDER);
@@ -247,11 +286,22 @@ switch (step) {
     break;
   }
   case "publish": {
-    const pkgDir = join(here, "../../packages/move/remora");
-    const out = execFileSync("sui", ["move", "build", "--dump-bytecode-as-base64", "-e", network], {
-      cwd: pkgDir,
-      encoding: "utf8",
-    });
+    // SPIKE_MOVE_DIR lets the run use the stub from the open Move PR before it merges.
+    const pkgDir = process.env.SPIKE_MOVE_DIR ?? join(here, "../../packages/move/remora");
+    const out = execFileSync(
+      "sui",
+      [
+        "move",
+        "build",
+        "--dump-bytecode-as-base64",
+        "-e",
+        network === "mainnet" ? "mainnet" : "testnet",
+      ],
+      {
+        cwd: pkgDir,
+        encoding: "utf8",
+      },
+    );
     const { modules, dependencies } = JSON.parse(out.slice(out.indexOf("{")));
     const tx = new Transaction();
     const upgradeCap = tx.publish({ modules, dependencies });
@@ -290,24 +340,32 @@ switch (step) {
   }
   case "negatives": {
     // Simulate only: each must abort with a known code.
-    const cases: [string, Transaction, Ed25519Keypair][] = [
-      ["over per-payment cap", payTx(PLAN.perPayment + 1n, PAYEE), spender],
-      ["payee not allowlisted", payTx(1n, STRANGER), spender],
-      ["over lifetime cap", payTx(PLAN.lifetimeCap + 1n, PAYEE), spender],
-      ["not the spender", payTx(1n, PAYEE), owner],
-    ];
-    for (const [label, tx, signer] of cases) {
-      tx.setSender(signer.toSuiAddress());
-      tx.setGasOwner(sponsor.toSuiAddress());
-      try {
-        const bytes = await tx.build({ client });
-        const sim = await client.core.simulateTransaction({ transaction: bytes, include });
-        const s = (sim.Transaction ?? sim.FailedTransaction).effects?.status;
-        console.log(`[${label}]`, s?.success ? "UNEXPECTED SUCCESS" : describe(s?.error));
-      } catch (err) {
-        console.log(`[${label}] rejected before execution:`, (err as Error).message.slice(0, 300));
-      }
+    await expectFailure("over per-payment cap", payTx(PLAN.perPayment + 1n, PAYEE), spender);
+    await expectFailure("payee not allowlisted", payTx(1n, STRANGER), spender);
+    await expectFailure("over lifetime cap", payTx(PLAN.lifetimeCap + 1n, PAYEE), spender);
+    await expectFailure("not the spender", payTx(1n, PAYEE), owner);
+    break;
+  }
+  case "windows": {
+    // Two more allowances: one that starts in an hour, one that expires 15 s after issue.
+    const issued: string[] = [];
+    for (const [suffix, start, expiry] of [
+      ["future", Date.now() + 3600_000, Date.now() + 7 * 24 * 3600_000],
+      ["short", 0, Date.now() + 15_000],
+    ] as const) {
+      const r = await run(
+        `issue ${suffix}`,
+        issueTx(`spike-${suffix}-${Date.now()}`, start, expiry),
+        owner,
+      );
+      const id = r.tx && created(r.tx, "::allowance::Allowance<");
+      if (!id) throw new Error(`issue ${suffix} failed`);
+      issued.push(id);
     }
+    const [future, short] = issued as [string, string];
+    await expectFailure("before start", payTx(1n, PAYEE, future), spender);
+    await new Promise((res) => setTimeout(res, 20_000));
+    await expectFailure("after expiry", payTx(1n, PAYEE, short), spender);
     break;
   }
   case "revoke": {
@@ -325,20 +383,7 @@ switch (step) {
     const r = await run("revoke", tx, owner);
     if (!r.ok) break;
     // A spend against the deleted allowance must now fail.
-    try {
-      const after = payTx(1n, PAYEE);
-      after.setSender(SPENDER);
-      after.setGasOwner(sponsor.toSuiAddress());
-      const bytes = await after.build({ client });
-      const sim = await client.core.simulateTransaction({ transaction: bytes, include });
-      const s = (sim.Transaction ?? sim.FailedTransaction).effects?.status;
-      console.log("[pay after revoke]", s?.success ? "UNEXPECTED SUCCESS" : describe(s?.error));
-    } catch (err) {
-      console.log(
-        "[pay after revoke] rejected before execution:",
-        (err as Error).message.slice(0, 300),
-      );
-    }
+    await expectFailure("pay after revoke", payTx(1n, PAYEE, state.allowanceId), spender);
     state.allowanceId = undefined;
     state.capId = undefined;
     save();
