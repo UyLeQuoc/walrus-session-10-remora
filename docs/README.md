@@ -17,6 +17,7 @@ track only: Smart Agents for Real Life**.
 | Doc | What's inside |
 |---|---|
 | [remora-spec.md](remora-spec.md) | **Product & technical design:** the gap, positioning against Grok Bot/Dots/Muse, what a remora is, architecture, the Disc Move module, x402 facilitator, memory design, Wake receipts, safety model, Tatum usage |
+| [goals/](goals/README.md) | **Paste-ready agent goals:** U0 bootstrap (Mon Oct 20, from 07:00 VN), U1 allowance spike (Oct 21), H0 web shell + E2E harness (Huấn) |
 | [adr/](adr/README.md) | **Architecture Decision Records:** every decision and change of direction (17 so far). New decisions must add one here, agents included |
 | [remora-features.md](remora-features.md) | **Scope:** the **MVP ship set (68)** + backlog (132 total), review of gaps, the **address-balance funds model**, 132 features in 14 epics (including **Hatchery**: share, duplicate, publish, and **UX**) with waves, workstreams, scope rules |
 | [remora-plan.md](remora-plan.md) | **Build plan:** week 0 prep, waves W1–W4 by workstream with exit criteria, demo script, blog outline, scoring map, risks, submission checklist |
