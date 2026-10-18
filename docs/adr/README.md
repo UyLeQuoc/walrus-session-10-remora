@@ -34,3 +34,5 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0015](0015-tatum-for-all-chain-io.md) | Route all chain I/O through Tatum | Accepted |
 | [0016](0016-record-decisions-as-adrs.md) | Record every decision as an ADR | Accepted |
 | [0017](0017-github-repo-private-until-submission.md) | GitHub repo stays private until submission | Accepted |
+| [0018](0018-bootstrap-before-window.md) | Run the U0 bootstrap before the build window | Accepted |
+| [0019](0019-bootstrap-structure-decisions.md) | Structure decisions made during the bootstrap | Accepted |

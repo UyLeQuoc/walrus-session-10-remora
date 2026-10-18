@@ -308,16 +308,16 @@ Huấn holds is the capped E2E burner.
 - [x] Docs + `.gitignore` committed (the planning written before the window).
 - [x] GitHub repo created, **private until submission**: `UyLeQuoc/walrus-session-10-remora`
       ([ADR-0017](adr/0017-github-repo-private-until-submission.md)).
-- [ ] **Labeled import commit** from hippo (`66fb33a`):
+- [x] **Labeled import commit** from hippo (`66fb33a`), done as `cd9acfd` (Oct 18, [ADR-0018](adr/0018-bootstrap-before-window.md)):
   - the toolchain, `packages/memory`, `packages/db`, channels, identity/connect, and the web shell + UI
     kit;
   - rename `@hippo/*` → `@remora/*`;
   - drop or flag off hippo-only features (teams, documents, chat UX).
-- [ ] Scaffold every directory in the spec's repo layout with a `README.md` stub naming its owner. Add
-      `apps/web/src/features/lab/` and `apps/server/src/copy/`.
-- [ ] `packages/schema` with the v1 contracts + fixtures (§4); the typed API client stub; append-only
-      web routes.
-- [ ] `.github/CODEOWNERS` (§2, an ownership map; reviews are only auto-requested on PRs). `main` needs
+- [x] Scaffold every directory in the spec's repo layout with a `README.md` stub naming its owner. Add
+      `apps/web/src/features/lab/` and `apps/server/src/copy/` (done as `ae9b13f`).
+- [x] `packages/schema` with the v1 contracts + fixtures (§4, `2831fd3`); append-only web routes
+      (`ae9b13f`). The typed API client stub comes with the first new route.
+- [x] `.github/CODEOWNERS` (§2, an ownership map; reviews are only auto-requested on PRs). `main` needs
       CI to pass but **allows direct pushes** from both people. CI (§6), Vercel previews.
 - [ ] **The `main` environment** (the only one):
   - Railway project with server, facilitator, Reef and merchants: one server replica, monorepo watch

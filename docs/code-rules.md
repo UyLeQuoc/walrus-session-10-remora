@@ -11,7 +11,7 @@ Multi-channel chatbot (web, Telegram, Discord, Slack) where each user owns their
 
 ### Highest rule
 
-When writing or changing code, [`CODE_RULES.md`](CODE_RULES.md) outranks this file, nearby code, and every other doc. Read it before editing. Follow it. If this file and `CODE_RULES.md` disagree about how to write code, `CODE_RULES.md` wins. The product constraints below still apply; they are not a license to skip `CODE_RULES.md`.
+When writing or changing code, [`CODE_RULES.md`](#hippo-code_rulesmd) outranks this file, nearby code, and every other doc. Read it before editing. Follow it. If this file and `CODE_RULES.md` disagree about how to write code, `CODE_RULES.md` wins. The product constraints below still apply; they are not a license to skip `CODE_RULES.md`.
 
 ### Read first
 

@@ -3,8 +3,12 @@
 **Owner:** Uy Le · **Branch:** `uy/U0-bootstrap` (local only, pushed straight to `main`) · **Worktree:** the main
 checkout. It's the first goal, so there's nothing to conflict with.
 
-**Do NOT start before Mon Oct 20, 07:00 Vietnam time** (Oct 20 00:00 UTC, when the build window opens).
-Every product commit must be dated inside the window.
+**Status: done on Oct 18, 2026** (commits `cd9acfd` … see `git log`). The time check below was
+superseded by [ADR-0018](../adr/0018-bootstrap-before-window.md): the owner chose to run the bootstrap
+before the window, with the timing disclosed in the root README.
+
+~~**Do NOT start before Mon Oct 20, 07:00 Vietnam time**~~ (Oct 20 00:00 UTC, when the build window
+opens).
 
 ## Read first (context, read-only)
 - `AGENTS.md`, `docs/README.md`

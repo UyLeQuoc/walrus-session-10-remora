@@ -3,7 +3,7 @@
 **Owner:** Uy Le · **Branch:** `uy/U1-spike` · **Worktree:** `../remora-U1` · **Depends on:** U0 (bootstrap)
 merged.
 
-**Goal:** prove, or disprove, the money rails before building on them. The outcome is **ADR-0018**:
+**Goal:** prove, or disprove, the money rails before building on them. The outcome is **ADR-0020**:
 either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR-0003).
 
 ## Read first
@@ -43,14 +43,14 @@ either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR
    - `docs/spikes/2026-10-21-allowance.md`: versions, digests, settlement delay, the address-balance
      read method, abort codes, gotchas;
    - corrections to `docs/tech-reference.md` §3 for anything verified differently;
-   - **ADR-0018** (go/no-go, which client calls to use, and any spec changes), plus updates to
+   - **ADR-0020** (go/no-go, which client calls to use, and any spec changes), plus updates to
      remora-spec §6 / §12.1 if the design changes.
 
 ## Done when
 - [ ] The positive flow passes on testnet (and on mainnet, with Uy's approval), with digests recorded
 - [ ] Every negative case aborts with a known code
 - [ ] The address-balance read method and the settlement delay are documented
-- [ ] ADR-0018 is written and indexed, and the docs are updated in the same commit
+- [ ] ADR-0020 is written and indexed, and the docs are updated in the same commit
 - [ ] Typecheck, lint, test and `sui move test` are green; pushed to `main`, with a PR for the Move
       stub (Move changes always get a PR)
 

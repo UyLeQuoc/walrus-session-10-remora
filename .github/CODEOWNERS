@@ -1,0 +1,17 @@
+# Generated from docs/team-split.md §2. The last matching line wins: keep the overrides block last.
+# default: Uy (infra + backend + everything not listed)
+*                                    @UyLeQuoc
+
+# ---- Huấn: frontend + UX + E2E ----
+/apps/web/                           @huanngdev
+/apps/server/src/copy/               @huanngdev
+/e2e/                                @huanngdev
+
+# ---- shared: contract PRs need BOTH approvals ----
+/packages/schema/                    @UyLeQuoc @huanngdev
+/apps/web/src/app/routes.tsx         @UyLeQuoc @huanngdev
+/apps/web/src/lib/api.ts             @UyLeQuoc @huanngdev
+/docs/team-split.md                  @UyLeQuoc @huanngdev
+
+# ---- overrides: MUST stay last ----
+/apps/web/src/features/lab/          @UyLeQuoc

@@ -9,9 +9,10 @@
 
 **Rules of the build:**
 
-1. **Write product code only from Oct 20.** Oct 18–19 is for accounts, keys and reading. On Oct 20 the
-   **first commit imports hippo's shared libraries** as clearly labeled prior work (see
-   [reuse-from-hippo.md §1](reuse-from-hippo.md#1-rules-for-reuse-hackathon-compliance)).
+1. **Write feature code only from Oct 20.** The bootstrap (the labeled hippo import, scaffold and
+   contracts) ran on Oct 18 by the owner's choice ([ADR-0018](adr/0018-bootstrap-before-window.md)),
+   and the root README discloses it. See
+   [reuse-from-hippo.md §1](reuse-from-hippo.md#1-rules-for-reuse-hackathon-compliance).
 2. **Each wave ends with the whole product working end to end on mainnet.** Never start a wave on top of
    a broken one.
 3. **The demo path is sacred.** It has to keep working at every merge:

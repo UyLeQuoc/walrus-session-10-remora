@@ -6,6 +6,7 @@ import { serverEnvSchema } from "./schema.ts";
 
 // What README step one asks a judge to fill in; everything else stays as shipped.
 const FILLED = {
+  MEMWAL_ACCOUNT_ID: `0x${"d".repeat(64)}`,
   MEMWAL_PRIVATE_KEY: "a".repeat(64),
   OPENROUTER_API_KEY: "sk-or-test",
   SESSION_SECRET: "b".repeat(64),
@@ -17,7 +18,7 @@ const example = parseEnvText(
 );
 
 describe("a freshly copied .env.example", () => {
-  it("starts the server once the four secrets are filled", () => {
+  it("starts the server once the operator values and secrets are filled", () => {
     // A fresh clone refused to start: `SURVEY_URL=` is "", not an optional URL.
     const parsed = serverEnvSchema.safeParse(withoutBlanks({ ...example, ...FILLED }));
     expect(parsed.error?.issues ?? []).toEqual([]);

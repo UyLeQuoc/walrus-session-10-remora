@@ -17,7 +17,7 @@ Hard rules:
 Done when:
 - docs/spikes/2026-10-21-allowance.md records versions, digests, settlement delay, the address-balance read method and abort codes;
 - tech-reference §3 is corrected;
-- ADR-0018 (go/no-go) is written and indexed;
+- ADR-0020 (go/no-go) is written and indexed;
 - checks plus sui move test are green, the work is pushed to main, and a PR is open for the Move stub.
 
 Finish with the go/no-go recommendation and its evidence.

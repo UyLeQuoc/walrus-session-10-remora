@@ -5,9 +5,8 @@ on:
     branches: [main]
   pull_request:
 
-# Nothing here touches the network or mainnet. The tests that read the real
-# Walrus Memory account skip themselves when credentials are absent, which is
-# deliberate: a fork should get a green run without secrets.
+# Nothing here touches the network beyond package installs, and nothing touches mainnet.
+# Tests that read a real Walrus Memory account skip themselves when credentials are absent.
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -16,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -30,6 +29,7 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Includes the packages/schema contract fixture test.
       - name: Test
         run: bun run test
 
@@ -39,17 +39,31 @@ jobs:
       - name: Audit dependencies
         run: bun pm scan
 
-      - name: Secrets must not be committed
+      - name: Secrets and reference clones must not be committed
         run: |
-          # Any .env file in any directory, except the example.
           if git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -vq '\.env\.example$'; then
             echo "::error::an .env file is tracked"; exit 1
           fi
-          if git ls-files | grep -q '^memwal/'; then
-            echo "::error::the memwal reference clone is tracked"; exit 1
+          if git ls-files | grep -Eq '^(reference|memwal)/'; then
+            echo "::error::a read-only reference clone is tracked"; exit 1
           fi
-          # In any package, not just the root: four slipped in at the scaffold.
           if git ls-files | grep -Eq '(^|/)\.turbo/'; then
             echo "::error::turbo cache is tracked"; exit 1
           fi
           echo "clean"
+
+  move:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: sui move test
+        run: |
+          if [ ! -f packages/move/remora/Move.toml ]; then
+            echo "packages/move/remora has no Move package yet; skipping."
+            exit 0
+          fi
+          if ! command -v sui >/dev/null 2>&1; then
+            echo "::error::Move package present but the Sui CLI install step is not wired yet (E1 adds a pinned install)."
+            exit 1
+          fi
+          cd packages/move/remora && sui move test
