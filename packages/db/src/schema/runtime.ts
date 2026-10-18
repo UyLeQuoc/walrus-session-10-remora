@@ -256,3 +256,15 @@ export const sentinelRules = pgTable(
   },
   (t) => [index("sentinel_rules_remora_idx").on(t.remoraId)],
 );
+
+/** D9: model usage per remora per UTC day, for the daily token cap. */
+export const remoraUsage = pgTable(
+  "remora_usage",
+  {
+    remoraId: text("remora_id").notNull(),
+    day: text("day").notNull(),
+    tokens: integer("tokens").notNull().default(0),
+    calls: integer("calls").notNull().default(0),
+  },
+  (t) => [uniqueIndex("remora_usage_day_idx").on(t.remoraId, t.day)],
+);

@@ -34,9 +34,30 @@ export interface PayRequest {
   /** Soft budget for this call (Sonar may lower it below the Disc's per-payment cap). */
   maxAmount: bigint;
   intent: IntentDraft;
+  /** The signing key (after a B9 rotation it isn't the remora id). Defaults to `remoraId`. */
+  keyId?: string;
+  /**
+   * I2: runs after the 402 and before anything is signed, with the merchant's exact requirements.
+   * Anything but "allow" stops the payment with `PaymentStopped`; the verdict goes into the Wake.
+   */
+  review?: (
+    req: PaymentRequirements,
+  ) => Promise<{ verdict: "allow" | "block" | "ask"; reasons: string[] }>;
 }
 
 export const WAKE_ANCHOR = "wake.anchor";
+
+/** A payment that Sonar (or shadow mode) stopped before signing; carries the would-be Wake intent. */
+export class PaymentStopped extends Error {
+  constructor(
+    readonly verdict: "block" | "ask",
+    readonly reasons: string[],
+    readonly intent: WakeIntent,
+    readonly requirements: PaymentRequirements,
+  ) {
+    super(`payment ${verdict === "ask" ? "needs approval" : "blocked"}: ${reasons.join("; ")}`);
+  }
+}
 
 export async function payWithDisc(deps: PayDeps, r: PayRequest) {
   const net = deps.networks.config(r.network);
@@ -48,7 +69,8 @@ export async function payWithDisc(deps: PayDeps, r: PayRequest) {
     registryId: net.discRegistryId,
     coinType: net.usdcCoinType,
   };
-  const agent = await deps.signer.address(r.remoraId);
+  const keyId = r.keyId ?? r.remoraId;
+  const agent = await deps.signer.address(keyId);
   const log = deps.log.child({ remora: r.remoraId, network: r.network });
 
   let intent: WakeIntent | null = null;
@@ -60,10 +82,12 @@ export async function payWithDisc(deps: PayDeps, r: PayRequest) {
       disc: r.disc,
       sender: agent,
       maxAmount: r.maxAmount,
-      sign: (bytes) => deps.signer.signTransaction(r.remoraId, bytes),
-      intentFor: (req: PaymentRequirements) => {
-        intent = WakeIntent.parse({
+      sign: (bytes) => deps.signer.signTransaction(keyId, bytes),
+      intentFor: async (req: PaymentRequirements) => {
+        const verdict = r.review ? await r.review(req) : null;
+        const built = WakeIntent.parse({
           ...r.intent,
+          ...(verdict ? { sonar: verdict } : {}),
           decision: {
             action: "pay",
             payee: r.intent.decision.payee,
@@ -73,6 +97,10 @@ export async function payWithDisc(deps: PayDeps, r: PayRequest) {
             reason: r.intent.decision.reason,
           },
         });
+        if (verdict && verdict.verdict !== "allow") {
+          throw new PaymentStopped(verdict.verdict, verdict.reasons, built, req);
+        }
+        intent = built;
         hash = intentHash(intent);
         return new Uint8Array(Buffer.from(hash, "hex"));
       },
