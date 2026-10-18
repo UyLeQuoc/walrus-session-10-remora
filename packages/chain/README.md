@@ -9,5 +9,6 @@ The typed Tatum client: **Sui gRPC only** (native transport; ADR-0021), includin
   - `tatumSuiOptionsFromEnv(network)`: reads `TATUM_API_KEY[_TESTNET]` / `TATUM_SUI_GRPC[_TESTNET]`;
   - `readFunds(client, owner, coinType)`: total, address balance and coin balance from one `GetBalance` call;
   - `withRetry(fn)`: retries transport errors only.
+  - `PacedTransport`: sits under the client, 3 unary calls/s by default, and retries Tatum's HTTP 429s (ADR-0020).
 
   The checkpoint stream and the Data API come later.

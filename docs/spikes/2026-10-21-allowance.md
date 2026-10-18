@@ -1,10 +1,9 @@
 # Spike U1: address balances + app-bound allowances via Tatum gRPC
 
-- **Goal:** [uy-01-spike-allowance.md](../goals/uy-01-spike-allowance.md) · **Decision:** ADR-0020 (written
-  when the on-chain runs are done)
-- **Status:** in progress. Steps 1–2, the Move stub and a full **localnet** dry run (§6) are done. The
-  testnet (Tatum) and mainnet runs wait for funding: the faucet API returns "CI compatibility is
-  disabled", so the owner key has to be funded by hand.
+- **Goal:** [uy-01-spike-allowance.md](../goals/uy-01-spike-allowance.md) · **Decision:** [ADR-0020](../adr/0020-allowance-spike-go.md)
+- **Status:** **GO** ([ADR-0020](../adr/0020-allowance-spike-go.md)). Versions, the read method, the
+  localnet dry run (§6) and the **testnet run via Tatum** (§7) are done. The mainnet check (§8) waits for
+  owner funding and Uy's OK per transaction.
 - **Code:** `packages/chain` (seed client), `packages/move/remora` (stub `disc`), `spikes/allowance`
   (`probe.ts`, `flow.ts`, which also takes `localnet`)
 
@@ -118,15 +117,44 @@ Findings:
   MoveAbort … 'EOverPaymentCap'") with a clever-error name and source line. That's good enough for the
   "Why?" drawer (N4).
 
-## 7. Testnet run via Tatum (pending funding)
+## 7. Testnet run via Tatum (Oct 18)
 
-`bun --env-file=.env spikes/allowance/flow.ts testnet <step>`: `deposit` (timing the settlement) →
-`publish` → `issue` → `pay` (spender signs, sponsor pays gas) → `negatives` / `windows` (simulate only)
-→ `revoke`. Digests, settlement delay and abort codes go here.
+Everything goes through `https://sui-testnet-grpc.gateway.tatum.io` (native gRPC, `PacedTransport` at
+3 req/s). The owner was funded with 2 testnet SUI from Uy's CLI wallet (`cmdocs`), with Uy's OK, because
+the faucet API is disabled. The owner key is also the gas sponsor. The spender holds 0 SUI.
 
-**Tatum rate limit:** a burst of `GetBalance` calls on testnet got **HTTP 429**, which grpc-js reports
-as `UNAVAILABLE`. `withRetry` now defaults to 4 attempts with a 500 ms base. The runtime needs a client
-side limiter.
+| Step | Digest (testnet) | Notes |
+|---|---|---|
+| deposit 0.05 SUI `Coin` → address balance (`coin::send_funds`) | `HdCnPPRyAEYew4NsDKEnDnE2MjKeSMs9oXhyZ9Hw8DKa` | execute 1.65 s. **The address balance was readable on the first `GetBalance` after `waitForTransaction`** (3.2 s after submit). There was no extra settlement wait beyond finality |
+| publish stub | `Fa7Frwzx9jQqj22CsGzMUMBKpYtZKXyipFYcJ2Ftwwzx` | package `0xa81fb7c0bd14ebacd232c6d175a6902186d1d9307ee4915077fbb688eb2fd73e`, registry `0xed500b60…57d3` |
+| owner `propose_for_app` → `disc::issue` (one PTB) | `9b27JP6X8mf3nzp6bgDMY2qAKNpzuJTeAvD2nYLAWsMF` | allowance `0xde05b193…fa23`, lifetime cap 0.003 SUI, per payment 0.001 SUI |
+| spender pays 0.001 SUI, sponsored gas | `71YKSzRn5vq1JMTeB8fhbzZwmvu9eoa41yiqgHDC1ixT` | simulate 1.0 s, execute 0.9 s. `balanceChanges`: payee **+1,000,000**, owner −2,000,391 (payment + gas, since owner = sponsor). Gas 0.001 SUI |
+| issue "starts in 1 h" | `ZT3ssCTVrdGDMjvbiyQx99uL3S2tun7KrLodzi95Xf7` | for the `ENotStarted` case |
+| issue "expires in 15 s" | `7kLks8PqS4z7B8tJ3iCjFgSJf53aN5ehoshNm6o8Enba` | for the `EExpired` case |
+| revoke | `6TERiroEwtuttnjuqbfzu1TpuYnSCFKmWuuasBE55DRH` | allowance and cap deleted, policy key freed |
+
+Negative cases on testnet were the same as on localnet (§6). **All seven fail before execution, with no
+gas charged:**
+
+| Case | Abort |
+|---|---|
+| Over the per-payment cap | `disc::EOverPaymentCap` (code 4), `disc::pay` line 82 |
+| Payee not on the allowlist | `disc::EPayeeNotAllowed` (code 3), `disc::pay` line 78 |
+| Over the lifetime cap | `0x2::allowance::EExceedsLifetimeCap`, `consume` line 415 |
+| Before start | `0x2::allowance::ENotStarted`, `consume` line 406 |
+| After expiry | `0x2::allowance::EExpired`, `consume` line 410 |
+| Sender isn't the spender | input check: "Invalid withdraw reservation: Transaction sender is not the spender of allowance …" |
+| After revoke | input resolution: "Object … not found" |
+
+**x402 check:** the pay transaction's `balanceChanges` show the payee's +amount even though the money
+moved with `balance::send_funds` into an address balance. So the `exact` scheme's verify step ("the
+`payTo` balance change equals `amount`") works for allowance-funded payments, and the tech-reference
+§3.2 caveat is resolved.
+
+**Tatum rate limit:** without pacing, `tx.build` + simulate + execute got **HTTP 429** on
+`ExecuteTransaction` (grpc-js reports it as `UNAVAILABLE`). The 429'd transaction never landed. The fix
+is `PacedTransport` in `@remora/chain`: it spaces unary calls (3/s by default) and retries 429s, which is
+safe even for execute because the gateway rejected the call.
 
 ## 8. Mainnet run (pending, needs Uy's OK per transaction)
 

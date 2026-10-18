@@ -227,7 +227,7 @@ public struct DISC has drop {}                  // app type A of every Disc-boun
 public struct Disc has key {                    // shared policy, 1:1 with an app-bound Allowance
     id: UID,
     owner: address,                             // the funder
-    allowance: ID,
+    name: String,                               // (owner, name) is the link: allowance::issue returns no ID (ADR-0020)
     payees: VecSet<address>,                    // allowed services (x402 payTo addresses)
     per_payment_cap: u64,
     paused: bool,
@@ -236,12 +236,15 @@ public struct Disc has key {                    // shared policy, 1:1 with an ap
 
 public struct Paid has copy, drop { disc: ID, payee: address, amount: u64, intent: vector<u8>, ts_ms: u64 }
 
+public struct Registry has key { id: UID, discs: Table<DiscKey, ID> }   // DiscKey { owner, name }: one Disc per allowance
+
 /// Owner PTB: allowance::propose_for_app<Balance<USDC>, DISC>(name, remora, cap, start, expiry, rate)
-///            → remora::disc::issue(proposal, payees, per_payment_cap)   (uses settings_permit)
-public fun issue<C>(p: AllowanceProposal<Balance<C>>, payees: vector<address>, per_payment_cap: u64, ctx: &mut TxContext);
+///            → remora::disc::issue(registry, proposal, payees, per_payment_cap)   (uses settings_permit;
+///              refuses a taken (owner, name), creates the Disc)
+public fun issue<C>(r: &mut Registry, p: AllowanceProposal<Balance<C>>, payees: vector<address>, per_payment_cap: u64, ctx: &mut TxContext);
 
 /// Remora PTB (spender signs, runtime sponsors gas): withdrawal input { from: allowance } → pay.
-/// Checks !paused and payee ∈ payees, spends via app_balance_spend(spend_permit), asserts value ≤ per_payment_cap
+/// Checks the allowance's (funder, name) == (disc.owner, disc.name), !paused and payee ∈ payees, spends via app_balance_spend(spend_permit), asserts value ≤ per_payment_cap
 /// (an abort reverts the whole PTB), balance::send_funds(payee), emits Paid { intent = sha256(Wake.intent) }.
 public fun pay<C>(disc: &Disc, a: &mut Allowance<Balance<C>>, w: AllowanceWithdrawal<Balance<C>>,
                   payee: address, intent: vector<u8>, c: &Clock, ctx: &TxContext);
@@ -263,8 +266,9 @@ public fun pause(disc: &mut Disc, paused: bool, ctx: &TxContext);
 **Guarding permits:** any holder of `SettingsPermit<DISC>` can rotate the spender of every Disc-bound
 allowance, so the functions that mint permits must check `ctx.sender() == disc.owner`.
 
-**Fallback** (if the day-2 spike fails): a plain `Coin` escrow with the same Disc policy, clearly labeled
-as a fallback.
+**Spike result (ADR-0020): GO.** The testnet run through Tatum passed, and every limit aborts before
+execution. The `Coin` escrow fallback is dropped. Evidence:
+[docs/spikes/2026-10-21-allowance.md](spikes/2026-10-21-allowance.md).
 
 ---
 
@@ -435,8 +439,13 @@ transfers.
   a `Coin`.
 - A low-balance warning appears when the address balance can't cover the remaining budget windows.
 
-**Spike (Oct 21):** find the Tatum call that exposes the address-balance component, and measure the
-settlement delay from deposit until an allowance can spend.
+**Spike result (ADR-0020):**
+
+- `StateService.GetBalance` returns `address_balance` and `coin_balance` separately, so one call gives
+  the split.
+- On testnet a `coin::send_funds` deposit was readable, and spendable, as soon as the transaction was
+  final (about 3 s from submit through Tatum).
+- The *settling* state stays as a fallback.
 
 ### 12.2 Accounts & Telegram linking (A1–A3, A5)
 
@@ -454,6 +463,8 @@ settlement delay from deposit until an allowance can spend.
   or sent to the LLM. A leaked key loses at most its Disc cap, and **rotate** (B9) fixes it.
 - **Gas sponsor:** one sponsor wallet, a per-remora daily gas budget, refusal past the budget, an admin
   alert at low balance, and per-user rate limits (I4).
+  - The sponsor is **never a funder** of any allowance. The SDK pays gas from the gas owner's address
+    balance, which would eat the funder's budget (ADR-0020).
 
 ### 12.4 Sonar: pre-action check (I1, I2)
 

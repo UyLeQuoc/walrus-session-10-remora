@@ -389,8 +389,9 @@ Docs: [overview](https://docs.sui.io/onchain-finance/allowances/allowances-overv
   gets a complete tx back, signs it, and the facilitator co-signs as sponsor at settlement.
 - **Caveats:**
   - the spec talks about `Coin<T>` transfers, and lists address balances as "in development";
-  - verification is based on balance changes, so confirm early that allowance-funded payments (which use
-    `send_funds` into address balances) pass. The fallback is `coin::from_balance` + transfer.
+  - verification is based on balance changes. **Verified in U1:** an allowance-funded `disc::pay`
+    (`send_funds` into an address balance) shows the payee's +amount in `balanceChanges`, so verify
+    passes without converting to a `Coin`.
 
 Spec: [scheme_exact_sui.md](https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/scheme_exact_sui.md).
 

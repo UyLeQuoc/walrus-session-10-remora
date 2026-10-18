@@ -1,6 +1,7 @@
 import { ChannelCredentials } from "@grpc/grpc-js";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
+import { PacedTransport } from "./paced.ts";
 
 export type SuiNetwork = "mainnet" | "testnet";
 
@@ -11,6 +12,8 @@ export interface TatumSuiOptions {
   url?: string;
   /** Per-call deadline. */
   timeoutMs?: number;
+  /** Unary calls per second. Tatum's gateway answers 429 above the plan's limit (3/s is safe on free). */
+  maxRps?: number;
 }
 
 export function tatumGrpcUrl(network: SuiNetwork): string {
@@ -32,7 +35,8 @@ export function createTatumTransport(opts: TatumSuiOptions): GrpcTransport {
 }
 
 export function createTatumSuiClient(opts: TatumSuiOptions): SuiGrpcClient {
-  return new SuiGrpcClient({ network: opts.network, transport: createTatumTransport(opts) });
+  const transport = new PacedTransport(createTatumTransport(opts), { maxRps: opts.maxRps ?? 3 });
+  return new SuiGrpcClient({ network: opts.network, transport });
 }
 
 /** Reads the `.env.example` keys: `TATUM_SUI_GRPC[_TESTNET]` and `TATUM_API_KEY[_TESTNET]`. */

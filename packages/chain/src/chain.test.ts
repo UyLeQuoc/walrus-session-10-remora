@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isRateLimited, PacedTransport } from "./paced.ts";
 import { withRetry } from "./retry.ts";
 import { tatumGrpcUrl, tatumSuiOptionsFromEnv } from "./tatum.ts";
 
@@ -47,5 +48,51 @@ describe("tatumSuiOptionsFromEnv", () => {
 
   it("builds the gateway URL per network", () => {
     expect(tatumGrpcUrl("mainnet")).toBe("https://sui-mainnet-grpc.gateway.tatum.io");
+  });
+});
+
+describe("PacedTransport", () => {
+  const method = { name: "GetBalance", service: { typeName: "sui.rpc.v2.StateService" } } as never;
+  const ok = (value: object) =>
+    ({
+      headers: Promise.resolve({}),
+      response: Promise.resolve(value),
+      status: Promise.resolve({ code: "OK", detail: "" }),
+      trailers: Promise.resolve({}),
+    }) as never;
+  const rejected = (err: Error) => {
+    const p = Promise.reject(err);
+    p.catch(() => {});
+    return { headers: p, response: p, status: p, trailers: p } as never;
+  };
+  const tooMany = () =>
+    Object.assign(new Error("Received HTTP status code 429"), { code: "UNAVAILABLE" });
+
+  it("retries a 429 and resolves with the next answer", async () => {
+    let calls = 0;
+    const inner = {
+      mergeOptions: (o: object) => o,
+      unary: () => (++calls < 3 ? rejected(tooMany()) : ok({ answer: 42 })),
+    } as never;
+    const paced = new PacedTransport(inner, { maxRps: 1000, sleep: async () => {} });
+    const call = paced.unary(method, {} as never, {} as never);
+    expect(await call.response).toEqual({ answer: 42 });
+    expect(calls).toBe(3);
+  });
+
+  it("passes other errors straight through", async () => {
+    const inner = {
+      mergeOptions: (o: object) => o,
+      unary: () => rejected(Object.assign(new Error("nope"), { code: "NOT_FOUND" })),
+    } as never;
+    const paced = new PacedTransport(inner, { maxRps: 1000, sleep: async () => {} });
+    await expect(paced.unary(method, {} as never, {} as never).response).rejects.toThrow("nope");
+  });
+
+  it("knows a 429 from other UNAVAILABLEs", () => {
+    expect(isRateLimited(tooMany())).toBe(true);
+    expect(
+      isRateLimited(Object.assign(new Error("connection reset"), { code: "UNAVAILABLE" })),
+    ).toBe(false);
   });
 });

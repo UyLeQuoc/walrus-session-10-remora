@@ -196,7 +196,7 @@ twice in a row on mainnet without intervention.
 | **132 features in 22 days** | About 40 get a head start from hippo; parallel workstreams; contracts frozen on day 1; wave exits enforced; anything unfinished ships as roadmap design |
 | Judges see reused hippo code as recycled | A labeled import commit, a README "Built on prior work" section, and the pitch led by what's new (money rails, autonomy, Wake, Tatum, Hatchery) |
 | Malicious shared templates | Payees only from Reef, consent screen, Sonar scan, shadow mode, Disc limits (M5, M7) |
-| Allowances and address balances are new (protocol v138) | Oct 21 spike; fallback to a `Coin` escrow with the same Disc policy |
+| Allowances and address balances are new (protocol v138) | **Retired:** the U1 spike passed on testnet through Tatum (ADR-0020). Mainnet is rechecked with ≤ 0.10 USDC before E1's publish |
 | Address-balance settlement delay | Measure it in the spike; the UI shows a *settling* state; don't spend right after a deposit in the demo |
 | Address-balance reads through Tatum unclear | Spike item. Fallback: compute the split from `ListOwnedObjects` (coins) + `GetBalance` (total) |
 | No per-memory delete in Walrus Memory | Settled: hide (local filter), correct (supersede) and forget all (namespace index). The UI states plainly that blobs persist until they expire |

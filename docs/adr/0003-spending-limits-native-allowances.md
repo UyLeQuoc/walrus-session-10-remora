@@ -1,6 +1,6 @@
 # ADR-0003: Spending limits on native app-bound Allowances (the Disc) + an x402 facilitator
 
-- **Status:** Accepted
+- **Status:** Accepted (spike passed; confirmed by [ADR-0020](0020-allowance-spike-go.md))
 - **Date:** 2026-10-18
 - **Deciders:** Uy Le
 
