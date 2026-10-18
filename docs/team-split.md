@@ -3,8 +3,8 @@
 > **Team:**
 > - **Uy Le:** **Sui + Walrus Memory + smart contracts (Move)**, plus the core backend. Repo owner and
 >   integrator, GitHub `@UyLeQuoc`.
-> - **Huấn** (written "Huanng" earlier): frontend + UX + **E2E quality**. GitHub `@<huanng-github>` (fill
->   in; branches and labels use the slug `huanng`).
+> - **Huấn** (written "Huanng" earlier): frontend + UX + **E2E quality**. GitHub `@huanngdev` (invited
+>   Oct 18; branches and labels use the slug `huanng`).
 > - **Ownership:** **Uy owns every deploy, the demo video and the submission.** Huấn owns the E2E suite
 >   and the "demo-ready" call.
 > - **Infra and UI are a flex pool:** both people can code them. Huấn is the UI specialist and does most
@@ -47,15 +47,15 @@ stays at the end.
 *                                    @UyLeQuoc
 
 # ---- Huấn: frontend + UX + E2E ----
-/apps/web/                           @<huanng-github>
-/apps/server/src/copy/               @<huanng-github>
-/e2e/                                @<huanng-github>
+/apps/web/                           @huanngdev
+/apps/server/src/copy/               @huanngdev
+/e2e/                                @huanngdev
 
 # ---- shared: contract PRs need BOTH approvals ----
-/packages/schema/                    @UyLeQuoc @<huanng-github>
-/apps/web/src/app/routes.tsx         @UyLeQuoc @<huanng-github>
-/apps/web/src/lib/api.ts             @UyLeQuoc @<huanng-github>
-/docs/team-split.md                  @UyLeQuoc @<huanng-github>
+/packages/schema/                    @UyLeQuoc @huanngdev
+/apps/web/src/app/routes.tsx         @UyLeQuoc @huanngdev
+/apps/web/src/lib/api.ts             @UyLeQuoc @huanngdev
+/docs/team-split.md                  @UyLeQuoc @huanngdev
 
 # ---- overrides: MUST stay last ----
 /apps/web/src/features/lab/          @UyLeQuoc
@@ -329,8 +329,8 @@ Huấn holds is the capped E2E burner.
 - [ ] GitHub Project board + issues for every feature, **split into `·be` / `·ui` issues** for shared
       features, generated from `remora-features.md` with `gh issue create`. Labels: `owner:uy` /
       `owner:huanng`, `wave:W1..W4`, `contract`.
-- [ ] Invite Huấn. Share secrets through the password manager; Huấn needs `VITE_*` values + the E2E
-      burner key.
+- [x] Invite Huấn: `@huanngdev` was invited with write access on Oct 18 (waiting for acceptance).
+- [ ] Share secrets through the password manager; Huấn needs `VITE_*` values + the E2E burner key.
 - [ ] Post-deploy E2E (Huấn's suite) wired into CI after each `main` deploy, posting results to the
       team chat.
 - [ ] The Walrus Sites mirror through `site-builder` (WAL, SuiNS), deployed by Uy.
