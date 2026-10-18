@@ -8,6 +8,7 @@ Remora is our entry to the Walrus x Tatum "Total Recall" hackathon (Track 2). Re
 - Shared interfaces live in `packages/schema`. Change them only through a contract PR approved by both people.
 - `reference/hippo` is a read-only reference clone of prior work. Port from it; never edit it.
 - MemWal behaves differently from its docs in places: read `docs/tech-reference.md` §1.11 before touching memory code.
+- Code conventions inherited from hippo: `docs/code-rules.md`.
 
 ## Decisions → ADRs (required)
 Any decision or change of direction gets an ADR in `docs/adr/`, in the **same commit** as the change. That covers architecture, scope, dependencies or vendors, deploy, workflow, naming and security.

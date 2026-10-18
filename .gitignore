@@ -7,3 +7,14 @@ reference/
 !.env.example
 node_modules/
 .DS_Store
+
+# Imported from hippo's .gitignore
+memwal/
+.memwal/
+.next/
+dist/
+.turbo/
+# React Bits Pro registry docs are proprietary (vendor skill), so keep them out of the repo.
+.claude/skills/react-bits-pro/
+# shadcn MCP config is personal tooling
+.mcp.json

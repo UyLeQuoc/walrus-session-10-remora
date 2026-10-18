@@ -1,0 +1,21 @@
+# hippo
+
+> A chatbot that remembers you across the web, Telegram, Discord and a CLI, where you own the memory. Facts are stored on Walrus in a Walrus Memory account your wallet owns on Sui, and hippo reaches them with a delegate key you can revoke on chain. Built for Walrus Session 8, "Chatbots That Remember".
+
+hippo starts in guest mode, so the first message needs no wallet. `/connect` moves the memory into an account your own wallet owns, with sponsored transactions; `/disconnect` removes hippo's key on chain. Memory is six kinds of fact (profile, decision, gotcha, commitment, correction, style), recalled before every reply as untrusted data. Memory text is never stored in hippo's database; it lives on Walrus.
+
+## App
+
+- [Chat](https://ask-hippo.vercel.app/): talk to hippo; open a new chat and ask what it knows to see recall from Walrus
+- [How it works](https://ask-hippo.vercel.app/guide): guest and owned mode, what is on chain, the commands, Claude Code
+- [Telegram](https://t.me/walrussession8_bot): the same memory on Telegram
+- [Discord](https://discord.com/oauth2/authorize?client_id=1556955188798169228&scope=bot&permissions=68608): add the bot to a server, then DM it or mention it
+
+## Source
+
+- [Repository](https://github.com/UyLeQuoc/walrus-session-8-chatbots): code, README quickstart and the memory eval (`bun run demo`)
+- [Architecture](https://github.com/UyLeQuoc/walrus-session-8-chatbots/blob/main/docs/ARCHITECTURE.md): identity, onboarding, revoke, memory layer and measured limits
+
+## Optional
+
+- [Walrus Memory](https://memory.walrus.xyz): the memory layer hippo is built on

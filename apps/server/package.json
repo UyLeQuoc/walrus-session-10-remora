@@ -1,0 +1,38 @@
+{
+  "name": "@remora/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "evidence": "tsx scripts/evidence.ts",
+    "restore": "tsx scripts/restore.ts",
+    "test": "vitest run",
+    "discord:commands": "tsx scripts/register-discord-commands.ts",
+    "probe:signin": "tsx scripts/archive/probe-signin.ts",
+    "prune:people": "tsx scripts/prune.ts",
+    "probe:header": "tsx scripts/archive/probe-header-identity.ts",
+    "capacity": "tsx scripts/capacity.ts",
+    "ops": "tsx scripts/ops.ts"
+  },
+  "dependencies": {
+    "@remora/core": "workspace:*",
+    "@remora/db": "workspace:*",
+    "@remora/memory": "workspace:*",
+    "@hono/node-server": "^1.19.0",
+    "@slack/bolt": "^4.6.0",
+    "ai": "^7.0.0",
+    "discord.js": "^14.27.0",
+    "grammy": "^1.46.0",
+    "hono": "^4.13.8",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  }
+}

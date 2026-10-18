@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /connect/
+Disallow: /disconnect/
+
+Sitemap: https://ask-hippo.vercel.app/sitemap.xml

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nothing here touches the network or mainnet. The tests that read the real
+# Walrus Memory account skip themselves when credentials are absent, which is
+# deliberate: a fork should get a green run without secrets.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - run: bun install --frozen-lockfile
+
+      - name: Lint and format
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+      - name: Build the web app
+        run: bun run build
+
+      - name: Audit dependencies
+        run: bun pm scan
+
+      - name: Secrets must not be committed
+        run: |
+          # Any .env file in any directory, except the example.
+          if git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -vq '\.env\.example$'; then
+            echo "::error::an .env file is tracked"; exit 1
+          fi
+          if git ls-files | grep -q '^memwal/'; then
+            echo "::error::the memwal reference clone is tracked"; exit 1
+          fi
+          # In any package, not just the root: four slipped in at the scaffold.
+          if git ls-files | grep -Eq '(^|/)\.turbo/'; then
+            echo "::error::turbo cache is tracked"; exit 1
+          fi
+          echo "clean"

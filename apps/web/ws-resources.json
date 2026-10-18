@@ -1,0 +1,19 @@
+{
+  "headers": {
+    "/index.html": {
+      "Cache-Control": "no-store"
+    }
+  },
+  "routes": {
+    "/*": "/index.html"
+  },
+  "metadata": {
+    "link": "https://github.com/UyLeQuoc/walrus-session-8-chatbots",
+    "image_url": null,
+    "description": "hippo — a chatbot that remembers you, and the memory is yours.",
+    "project_url": null,
+    "creator": null
+  },
+  "site_name": "My Walrus Site",
+  "object_id": "0x65eec4835f094c4c3d642f76f60ac983e0ddd08f715842e349daa11edb2a2078"
+}

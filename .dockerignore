@@ -1,0 +1,18 @@
+# Keep the build context small and keep secrets out of it. Without this the
+# daemon receives memwal/ (a reference clone), every node_modules, and .env.
+.git
+.github
+.turbo
+node_modules
+**/node_modules
+memwal
+docs
+scripts
+apps/web/*
+!apps/web/package.json
+.env
+.env.*
+!.env.example
+**/dist
+**/.next
+*.log
