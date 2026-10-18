@@ -1,0 +1,33 @@
+Goal U4: Take Huấn's open W1 items: web shell, funds UI, network switch, E2E (H0, A1·ui, A4·ui, A9·ui, error copy). TESTNET only. Run it after U3 is done.
+
+Source of truth: docs/goals/uy-04-w1-ui-takeover.md. Read it fully and do every step in order. Also read docs/adr/0026 and 0027, docs/goals/huan-00-web-shell-e2e.md (the detailed H0 spec), docs/handoffs/2026-10-19-uy-to-huan-*.md, and docs/remora-spec.md §12.1 and §12.12.
+
+Step 0 is required: git pull, then check Huấn's commits since Oct 19 in apps/web, e2e and apps/server/src/copy, and his handoffs. Skip anything he has started or claimed. Push a claim note to docs/handoffs/ BEFORE editing any web file (ADR-0027).
+
+Work in the main checkout on main. Allowed paths (claimed items only): apps/web/**, e2e/**, apps/server/src/copy/**, docs/ux/**, docs/e2e/**, docs/handoffs/**, docs/adr/**. packages/schema changes go through a contract PR.
+
+Needs in .env (never commit; ask me if one is missing): E2E_BURNER_KEY (testnet burner with SUI + USDC), TATUM_API_KEY_TESTNET, DATABASE_URL, and what U3 needs to run the server.
+
+Run order:
+1. H0 shell rebrand (keep the UI kit).
+2. H0 page skeletons from fixtures: /onboarding, /funds, /remoras, /remoras/:id, /memory, /approvals, the Why drawer, panic button placement; routes.tsx append-only.
+3. Copy v1 for every copy key, including the error.disc.* sentences.
+4. A1·ui wallet sign-in against the server session.
+5. A9·ui network switch: header switch + TESTNET badge, /api/networks disabled state, x-remora-network on every request, dapp-kit network sync + mismatch warning.
+6. A4·ui funds: the /api/funds split, settling state, "Move to address balance" (server-built tx, wallet signs), Withdraw under Advanced.
+7. Minimal Disc panel: the owner's Discs, and a panic button that pauses all of them in one PTB.
+8. E2E: Playwright + an injected test wallet (E2E_BURNER_KEY), smoke tests + a testnet flow (switch → detect → move → Discs → pause/unpause); bun run e2e; WEB_PORT=5183.
+9. docs/e2e README, docs/ux notes, ADRs, and a handoff to Huấn with what landed, what's left, and screenshots.
+
+Hard rules:
+- Never edit an item Huấn has started or claimed. Only burner or test keys, never real owner accounts.
+- No mainnet, no deploys, never commit keys or .env. Avoid ports 8787/5173.
+- Any decision gets an ADR in the same commit.
+
+Done when:
+- the claim handoff was pushed first;
+- the claimed pages render on desktop and mobile, and the network switch and funds work on testnet with the burner;
+- bun run e2e passes, typecheck, lint and test are green, and CI is green;
+- the handoff to Huấn is written and everything is pushed to main.
+
+Finish with a short summary and screenshots paths.

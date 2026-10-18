@@ -10,6 +10,7 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 2 | [H0: Web shell, page skeletons, E2E harness](huan-00-web-shell-e2e.md) ([prompt](huan-00-web-shell-e2e.prompt.txt)) | Huấn | From Mon Oct 20 (inside the window) | U0 ✅ |
 | 3 | [U2: Real Disc + disc-sdk, testnet](uy-02-disc-testnet.md) ([prompt](uy-02-disc-testnet.prompt.txt)) | Uy | ✅ **Done Oct 19** ([notes](../spikes/2026-10-19-disc-testnet.md), PR #2 Move, PR #3 contract) | U1 ✅ |
 | 4 | [U3: All W1 rails end to end, network-switchable](uy-03-w1-rails.md) ([prompt](uy-03-w1-rails.prompt.txt)) | Uy | Next | U2 ✅ |
+| 5 | [U4: Take Huấn's open W1 items (web, funds UI, network switch, E2E)](uy-04-w1-ui-takeover.md) ([prompt](uy-04-w1-ui-takeover.prompt.txt)) | Uy's agent ([ADR-0027](../adr/0027-flex-takeover.md)) | After U3 | U3 ✅, claim first |
 
 ## How to run one
 ```bash
