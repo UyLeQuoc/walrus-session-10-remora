@@ -8,6 +8,7 @@ import { telegramAdapter } from "./channels/telegram.ts";
 import type { ChannelAdapter } from "./channels/types.ts";
 import { env } from "./env/load.ts";
 import { checkAddress, clientAddress, isUnmetered, refusal } from "./iplimit.ts";
+import { startMoneyRuntime } from "./money/index.ts";
 import { registerRoutes } from "./routes/registry.ts";
 
 const app = new Hono();
@@ -74,12 +75,14 @@ if (!adapters.length)
       : "no channel tokens set; only the web API is running",
   );
 
+const stopMoney = startMoneyRuntime();
+
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) =>
   console.log(`remora server on http://localhost:${info.port}`),
 );
 
 const shutdown = async () => {
-  await Promise.allSettled(adapters.map((a) => a.stop()));
+  await Promise.allSettled([...adapters.map((a) => a.stop()), stopMoney()]);
   server.close();
   process.exit(0);
 };

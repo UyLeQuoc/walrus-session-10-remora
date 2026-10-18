@@ -62,3 +62,36 @@ export const AllowanceCapBcs = bcs.struct("AllowanceCap", {
   id: bcs.Address,
   allowance: bcs.Address,
 });
+
+export const DiscIssuedBcs = bcs.struct("DiscIssued", {
+  disc: bcs.Address,
+  owner: bcs.Address,
+  name: bcs.string(),
+  spender: bcs.Address,
+  payees: bcs.vector(bcs.Address),
+  per_payment_cap: bcs.u64(),
+});
+
+export const DiscUpdatedBcs = bcs.struct("DiscUpdated", {
+  disc: bcs.Address,
+  payees: bcs.vector(bcs.Address),
+  per_payment_cap: bcs.u64(),
+  paused: bcs.bool(),
+});
+
+export const SpenderRotatedBcs = bcs.struct("SpenderRotated", {
+  disc: bcs.Address,
+  new_spender: bcs.Address,
+});
+
+export const DiscRevokedBcs = bcs.struct("DiscRevoked", { disc: bcs.Address });
+
+/** Every `remora::disc` event the indexer stores, by struct name. */
+export const DISC_EVENT_BCS = {
+  Paid: PaidBcs,
+  DiscIssued: DiscIssuedBcs,
+  DiscUpdated: DiscUpdatedBcs,
+  SpenderRotated: SpenderRotatedBcs,
+  DiscRevoked: DiscRevokedBcs,
+} as const;
+export type DiscEventName = keyof typeof DISC_EVENT_BCS;

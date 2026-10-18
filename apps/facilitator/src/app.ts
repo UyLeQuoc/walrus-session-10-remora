@@ -5,6 +5,13 @@ import { type Facilitator, GasStationError } from "./facilitator.ts";
 
 export function createFacilitatorApp(f: Facilitator) {
   const app = new Hono();
+  // Clients parse JSON; never answer with a bare 500 page.
+  app.onError((err, c) =>
+    c.json(
+      { error: { code: "internal", message: err instanceof Error ? err.message : String(err) } },
+      500,
+    ),
+  );
 
   app.get("/health", (c) => c.json({ ok: true }));
   app.get("/supported", (c) => c.json(f.supported()));

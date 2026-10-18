@@ -11,7 +11,7 @@ import { discFetch, type PaymentRequirements, paidEvents } from "@remora/disc-sd
 import { intentHash, Wake, WakeIntent } from "@remora/schema";
 import type { RemoraSigner } from "@remora/signer";
 import { enqueue, type JobHandler } from "../runtime/jobs.ts";
-import type { Networks } from "./networks.ts";
+import { type Networks, NetworkUnavailableError } from "./networks.ts";
 
 export interface PayDeps {
   db: Db;
@@ -40,7 +40,9 @@ export const WAKE_ANCHOR = "wake.anchor";
 
 export async function payWithDisc(deps: PayDeps, r: PayRequest) {
   const net = deps.networks.config(r.network);
-  if (!net.packageId || !net.discRegistryId) throw new Error(`${r.network} has no Disc package`);
+  if (!net.available || !net.packageId || !net.discRegistryId) {
+    throw new NetworkUnavailableError(r.network, net.reason ?? "no Disc package");
+  }
   const cfg = {
     packageId: net.packageId,
     registryId: net.discRegistryId,

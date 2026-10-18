@@ -231,6 +231,13 @@ gRPC v2 services we use:
 **There's no gRPC equivalent** of "query events by type" or "transactions by address". History, such as
 `Paid` events or payments to a merchant, comes from our own indexer, fed by `SubscribeCheckpoints`.
 
+**Verified in U3 (Tatum testnet):** `SubscribeCheckpoints` streams through Tatum with a `TransactionFilter`
+of `emitModule: "<pkg>::disc"`.
+- Frames without a match only advance `cursor`, about every 25 checkpoints.
+- The stream starts at the tip; there's no start position. Backfill short gaps with
+  `LedgerService.GetCheckpoint`.
+- Streams can get HTTP 429 too, so reconnect with backoff (`apps/server/src/triggers/indexer.ts`).
+
 ### 2.3 Data API (`/v4/data/...`)
 
 | API | Paths |
@@ -403,6 +410,20 @@ Docs: [overview](https://docs.sui.io/onchain-finance/allowances/allowances-overv
 
 Spec: [scheme_exact_sui.md](https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/scheme_exact_sui.md).
 
+**Remora's implementation (U3, ADR-0028):**
+
+| Piece | Where |
+|---|---|
+| Client | `discFetch` in `@remora/disc-sdk` |
+| Merchant middleware (settles before the handler runs) | `@remora/merchant` |
+| Facilitator: `/verify`, `/settle`, `/supported`, plus the `/gas` gas station | `apps/facilitator` |
+
+- Headers carry base64(JSON): `x-payment` (PaymentPayload) and `x-payment-response` (SettleResponse).
+- Disc-aware requirements (`extra.disc`) also need a `<pkg>::disc::pay` call and a matching `Paid`
+  event in the simulation.
+- A doomed payment fails at `/gas`, since building simulates, with
+  `simulation_failed:<typed code>`.
+
 ### 3.3 Gas
 
 - **Sponsored transactions:** the sender and the sponsor both sign. Remora's runtime sponsors every
@@ -410,6 +431,9 @@ Spec: [scheme_exact_sui.md](https://github.com/x402-foundation/x402/blob/main/sp
 - **Gas from the address balance** (`enable_address_balance_gas_payments`, on both networks): the SDK
   pays gas from the gas owner's address balance when it has one (U1). **Keep the sponsor wallet
   separate from every funder**, or sponsoring eats the balance the allowances spend.
+- **Remora's sponsor is the facilitator's** (ADR-0028). Its policy is in `@remora/signer` `Sponsor`, and
+  a per-sender daily budget in `sponsor_ledger`. Verified in U3: a remora with 0 SUI paid with gas from
+  sponsor `0x4914…e122`.
 - **Gas coins can merge into the address balance:** when the SDK pays gas partly from the address
   balance and partly with a coin, the coin is deleted and its value lands in the address balance
   (U1).

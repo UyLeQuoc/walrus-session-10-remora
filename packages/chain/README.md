@@ -11,4 +11,6 @@ The typed Tatum client: **Sui gRPC only** (native transport; ADR-0021), includin
   - `withRetry(fn)`: retries transport errors only.
   - `PacedTransport`: sits under the client, 3 unary calls/s by default, and retries Tatum's HTTP 429s (ADR-0020).
 
-  The checkpoint stream and the Data API come later.
+  - `createLogger` / `redact`: the shared K1 JSON-lines logger with secret redaction (server, facilitator, merchants).
+
+  The Data API comes later. The checkpoint indexer lives in `apps/server/src/triggers/indexer.ts`.

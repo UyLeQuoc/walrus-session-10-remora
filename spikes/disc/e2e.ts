@@ -114,7 +114,9 @@ function created(
   suffix: string,
 ): string {
   const id = tx.effects?.changedObjects.find(
-    (o) => o.idOperation === "Created" && tx.objectTypes?.[o.objectId]?.includes(suffix),
+    (o) =>
+      o.idOperation === "Created" &&
+      tx.objectTypes?.[o.objectId]?.match(new RegExp(`${suffix.replace(/<$/, "")}(<|$)`)),
   )?.objectId;
   if (!id) throw new Error(`no created ${suffix}`);
   return id;

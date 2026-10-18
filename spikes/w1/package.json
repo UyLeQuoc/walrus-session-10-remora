@@ -1,0 +1,28 @@
+{
+  "name": "@remora/spike-w1",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "@mysten/sui": "^2.33.2",
+    "@remora/chain": "workspace:*",
+    "@remora/db": "workspace:*",
+    "@remora/disc-sdk": "workspace:*",
+    "@remora/facilitator": "workspace:*",
+    "@remora/memory": "workspace:*",
+    "@remora/merchant": "workspace:*",
+    "@remora/merchants": "workspace:*",
+    "@remora/schema": "workspace:*",
+    "@remora/server": "workspace:*",
+    "@remora/signer": "workspace:*",
+    "hono": "^4.13.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
+  }
+}

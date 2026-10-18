@@ -110,7 +110,16 @@ export function createFacilitator(deps: FacilitatorDeps) {
       const tx = Transaction.fromKind(fromBase64(input.transactionKind));
       tx.setSender(sender);
       tx.setGasOwner(n.sponsor.address);
-      const bytes = await tx.build({ client: n.client });
+      let bytes: Uint8Array;
+      try {
+        // Building simulates for the gas budget, so a doomed payment (over cap, bad payee…) fails here.
+        bytes = await tx.build({ client: n.client });
+      } catch (err) {
+        throw new GasStationError(
+          `simulation_failed:${toDiscError(err).code}`,
+          (err as Error).message,
+        );
+      }
       let inspected: { gasBudget: bigint | null };
       try {
         inspected = n.sponsor.inspectBytes(bytes);

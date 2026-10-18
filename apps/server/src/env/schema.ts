@@ -33,4 +33,7 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   /** The x402 facilitator + gas station per network (E3, D8). */
   FACILITATOR_URL: z.string().url().optional(),
   FACILITATOR_URL_TESTNET: z.string().url().optional(),
+  /** D2 worker and D1 checkpoint indexer; turn off for local runs that shouldn't spend Tatum calls. */
+  WORKER: z.enum(["on", "off"]).default("on"),
+  INDEXER: z.enum(["on", "off"]).default("on"),
 });
