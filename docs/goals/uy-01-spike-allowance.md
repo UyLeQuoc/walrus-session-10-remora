@@ -3,8 +3,8 @@
 **Owner:** Uy Le · **Runs in:** the main checkout, on `main` (no worktree, ADR-0022) · **Depends on:** U0
 (bootstrap) merged.
 
-**Status (Oct 18):** done on testnet: **GO**, see [ADR-0020](../adr/0020-allowance-spike-go.md). Step 4
-(mainnet) was **deferred by Uy** until before E1's publish.
+**Status: done (Oct 18–19). GO**, see [ADR-0020](../adr/0020-allowance-spike-go.md). Step 4 (mainnet)
+was moved out of this goal by Uy into the mainnet pass ([ADR-0024](../adr/0024-testnet-first.md)).
 
 **Goal:** prove, or disprove, the money rails before building on them. The outcome is **ADR-0020**:
 either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR-0003).
@@ -40,8 +40,10 @@ either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR
       key signs). Dry-run through Tatum, then execute through Tatum.
    4. Negative cases: over the cap, a payee not on the allowlist, before start / after expiry, and after
       `revoke`. Record the abort codes. Every one must fail.
-4. **Mainnet:** prepare a script with tiny amounts (≤ 0.10 USDC). **Ask Uy before every mainnet
-   transaction**, including publishing the stub package, then record the digests.
+4. ~~**Mainnet:** prepare a script with tiny amounts (≤ 0.10 USDC). Ask Uy before every mainnet
+   transaction, including publishing the stub package, then record the digests.~~ **Moved to the
+   mainnet pass (ADR-0024).** The script is ready (`flow.ts mainnet <step> --execute`). The testnet
+   USDC run already covers the regulated coin.
 5. **Write up:**
    - `docs/spikes/2026-10-21-allowance.md`: versions, digests, settlement delay, the address-balance
      read method, abort codes, gotchas;
@@ -50,12 +52,13 @@ either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR
      remora-spec §6 / §12.1 if the design changes.
 
 ## Done when
-- [ ] The positive flow passes on testnet (and on mainnet, with Uy's approval), with digests recorded
-- [ ] Every negative case aborts with a known code
-- [ ] The address-balance read method and the settlement delay are documented
-- [ ] ADR-0020 is written and indexed, and the docs are updated in the same commit
-- [ ] Typecheck, lint, test and `sui move test` are green; pushed to `main`, with a PR for the Move
-      stub (Move changes always get a PR)
+- [x] The positive flow passes on testnet, with digests recorded (SUI and USDC, spike §7–7.1). The
+      mainnet run moved to the mainnet pass ([ADR-0024](../adr/0024-testnet-first.md))
+- [x] Every negative case aborts with a known code (8 cases, rate limit included)
+- [x] The address-balance read method and the settlement delay are documented
+- [x] ADR-0020 is written and indexed, and the docs are updated in the same commit
+- [x] Typecheck, lint, test and `sui move test` are green; pushed to `main`, with a PR for the Move
+      stub (#1)
 
 ## Never
 - Spend more than 0.10 USDC per mainnet transaction.

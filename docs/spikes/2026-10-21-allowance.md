@@ -190,7 +190,7 @@ moved with `balance::send_funds` into an address balance. So the `exact` scheme'
 is `PacedTransport` in `@remora/chain`: it spaces unary calls (3/s by default) and retries 429s, which is
 safe even for execute because the gateway rejected the call.
 
-## 8. Mainnet run: deferred by Uy (Oct 18)
+## 8. Mainnet run: moved to the mainnet pass (Uy, Oct 18–19, [ADR-0024](../adr/0024-testnet-first.md))
 
 Uy decided to finish U1 on testnet ("làm hết trên testnet đi, mainnet để sau cũng được"). No mainnet
 transaction was made. The owner key holds 0 SUI and 0 USDC on mainnet.

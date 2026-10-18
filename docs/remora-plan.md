@@ -78,12 +78,13 @@
 | Mon 20 | **Labeled hippo import** (toolchain, `packages/memory`, `packages/db`, channels, web shell; `@hippo` → `@remora`), `packages/schema` frozen, `packages/chain` (Tatum) | Job queue skeleton (D2) on the ported server | `diagnose` green; MemWal smoke test: **≥10 mainnet memories**; namespace schema (F1) | Ported Vite shell + wallet sign-in (A1) | Logging, tracing, error tracking (K1) |
 | Tue 21 | **Spike (go/no-go):** address-balance deposit → app-bound allowance → stub `DISC` spend, sponsored, via Tatum. Measure settlement delay. Find the address-balance read | Durable retries, idempotency, dead-letter (D2) | Wake schema v1 (G1) | Funds view + **Detect funds** button (A4 UI) | CI, Move test runner |
 | Wed 22 | `remora::disc` + permit guards (E1, I6) | Signer + envelope-encrypted keys (B4) | `packages/memory` (namespaces, writes) | Detect / move / withdraw flows (A4) | — |
-| Thu 23 | Move tests green → **publish to mainnet** | Gas sponsor service (D8) | Intent hash → `Paid.intent` (G2) | — | — |
+| Thu 23 | Move tests green → **publish to testnet** (mainnet when Uy says, ADR-0024) | Gas sponsor service (D8) | Intent hash → `Paid.intent` (G2) | — | — |
 | Fri 24 | `disc-sdk` (E2): builders, revoke + reissue, `disc.fetch` | — | — | — | — |
 | Sat 25 | Facilitator (E3): verify via dry-run, settle via execute | Sentinel watcher on your real wallets (data starts accumulating) | — | — | `sui-risk` merchant (E9) |
 
-**Exit W1:** a real x402 call is paid on mainnet from a remora key through its Disc. It's sponsored, the
-funds come from the owner's address balance, and `Paid.intent` matches the stored Wake.
+**Exit W1:** a real x402 call is paid **on testnet** from a remora key through its Disc. It's sponsored,
+the funds come from the owner's address balance, and `Paid.intent` matches the stored Wake. The same run
+is repeated on mainnet when Uy calls the mainnet pass (ADR-0024).
 
 ## W2 — Core product (Sun Oct 26 – Sat Nov 1)
 

@@ -6,14 +6,15 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | Order | Goal | Owner | When | Depends on |
 |---|---|---|---|---|
 | 1 | [U0: Bootstrap the monorepo](uy-00-bootstrap.md) ([prompt](uy-00-bootstrap.prompt.txt)) | Uy | ✅ **Done Oct 18** ([ADR-0018](../adr/0018-bootstrap-before-window.md)) | — |
-| 2 | [U1: Allowance spike (go/no-go)](uy-01-spike-allowance.md) ([prompt](uy-01-spike-allowance.prompt.txt)) | Uy | From Mon Oct 20 (inside the window) | U0 ✅ |
+| 2 | [U1: Allowance spike (go/no-go)](uy-01-spike-allowance.md) ([prompt](uy-01-spike-allowance.prompt.txt)) | Uy | ✅ **Done Oct 19: GO** ([ADR-0020](../adr/0020-allowance-spike-go.md); mainnet moved to the mainnet pass, [ADR-0024](../adr/0024-testnet-first.md)) | U0 ✅ |
 | 2 | [H0: Web shell, page skeletons, E2E harness](huan-00-web-shell-e2e.md) ([prompt](huan-00-web-shell-e2e.prompt.txt)) | Huấn | From Mon Oct 20 (inside the window) | U0 ✅ |
+| 3 | [U2: Real Disc + disc-sdk, testnet](uy-02-disc-testnet.md) ([prompt](uy-02-disc-testnet.prompt.txt)) | Uy | Next | U1 ✅, PR #1 |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-01-spike-allowance.prompt.txt   # paste as the agent's goal (<4000 chars)
+pbcopy < docs/goals/uy-02-disc-testnet.prompt.txt   # paste as the agent's goal (<4000 chars)
 ```
 
 Each goal has two files:

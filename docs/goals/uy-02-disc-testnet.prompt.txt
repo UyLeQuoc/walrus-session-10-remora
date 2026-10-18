@@ -1,0 +1,28 @@
+Goal U2: The real Disc Move module + disc-sdk builders, on TESTNET only (E1, I6, G2, E2).
+
+Source of truth: docs/goals/uy-02-disc-testnet.md. Read it fully and follow its steps. Also read docs/remora-spec.md §6 and §12.3, docs/spikes/2026-10-21-allowance.md (all gotchas), docs/adr/0020, 0023, 0024, and the U1 stub in packages/move/remora (PR #1).
+
+Work in the main checkout on main (no worktree, ADR-0022). Move changes go through a PR; packages/schema changes only through a contract PR. Allowed paths: packages/move/remora/**, packages/disc-sdk/**, packages/chain/**, spikes/disc/**, docs/spikes/**, docs/tech-reference.md, docs/adr/**.
+
+Needs in .env (never commit; ask me if one is missing): TATUM_API_KEY_TESTNET, SPIKE_OWNER_KEY, SPIKE_SPENDER_KEY, SPIKE_SPONSOR_KEY (testnet-funded; the owner has testnet SUI + USDC). Read keys from env only.
+
+Run order:
+1. remora::disc per spec §6: Registry keyed by (owner, name); one shared Disc per allowance; issue, pay (with intent -> Paid event, 32-byte intent), owner-only rotate / set_payees / pause / revoke; permit guards and a version check.
+2. sui move tests: every path, every negative case, invariant tests, and revoke + reissue in one PTB.
+3. Publish to testnet (allowed by ADR-0024). Record the IDs; open a contract PR for DEPLOYMENTS.testnet.
+4. @remora/disc-sdk: typed PTB builders (issue, pay sponsor-ready, rotate, pause, setPayees, revokeAndReissue), readers (Disc, the owner's Discs, funds split), and clever-error -> typed error mapping, with vitest tests.
+5. Testnet e2e via Tatum with testnet USDC: issue -> pay with intent -> read Paid back; rotate; pause; revokeAndReissue; negatives simulate-only. Record the digests in a docs/spikes note.
+
+Hard rules:
+- No mainnet at all: no transactions, no publish. Mainnet is a separate pass that I call (ADR-0024).
+- Never commit keys. No facilitator or disc.fetch here (next goal).
+- Any decision gets an ADR in the same commit.
+
+Done when:
+- sui move test is green with invariant tests, and the Move PR is open with CI green;
+- the package is published on testnet and the IDs are in a contract PR;
+- disc-sdk has unit tests, and typecheck, lint and test are green;
+- the testnet e2e passes, with digests and Paid.intent recorded and negatives aborting with known codes;
+- the docs and ADRs are updated, and everything else is pushed to main.
+
+Finish with a short summary: package ID, digests, and anything E3 (facilitator) needs to know.

@@ -23,6 +23,6 @@ Any decision or change of direction gets an ADR in `docs/adr/`, in the **same co
 - Never:
   - commit secrets or `.env` values;
   - push the DB schema yourself;
-  - deploy, or publish the Move package;
+  - deploy, or publish the Move package to mainnet (testnet publishes are fine in Uy's goals, ADR-0024);
   - force-push;
   - use real owner accounts for testing (use test accounts or the E2E burner).
