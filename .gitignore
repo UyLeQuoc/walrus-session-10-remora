@@ -1,0 +1,9 @@
+# Read-only reference clones (not part of the submission)
+reference/
+
+# Secrets and local state
+.env
+.env.*
+!.env.example
+node_modules/
+.DS_Store
