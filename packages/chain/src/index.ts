@@ -1,2 +1,4 @@
-/** @remora/chain: The typed Tatum client: Sui gRPC only (ADR-0021) plus the Data API, with retries and rate limits. All chain I/O goes through it (ADR-0015). Scaffold only (see README.md). */
-export {};
+/** @remora/chain: the typed Tatum client. Sui is gRPC only (ADR-0021); all chain I/O goes through it (ADR-0015). */
+export * from "./funds.ts";
+export * from "./retry.ts";
+export * from "./tatum.ts";

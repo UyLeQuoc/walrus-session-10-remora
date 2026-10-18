@@ -38,3 +38,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0019](0019-bootstrap-structure-decisions.md) | Structure decisions made during the bootstrap | Accepted |
 | [0021](0021-sui-grpc-only.md) | Sui chain access is gRPC only | Accepted |
 | [0022](0022-no-worktrees.md) | No git worktrees: work in the main checkout on `main` | Accepted |
+| [0023](0023-sui-cli-pin-and-spikes-workspace.md) | Pin Sui CLI 1.82.1 for Move, and a `spikes/*` workspace | Accepted |

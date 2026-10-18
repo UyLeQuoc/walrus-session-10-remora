@@ -205,8 +205,10 @@ and as gRPC metadata. Remora uses the key only for gRPC and the Data API (no JSO
   ([Tatum migration guide](https://docs.tatum.io/docs/sui-migration-guide-from-json-rpc-to-grpc)).
 - **Tatum speaks native gRPC** (`application/grpc`). `@mysten/sui`'s `SuiGrpcClient` defaults to
   gRPC-web and fails with "unexpected response content type: application/grpc".
-  - **Server side:** plug a native transport (e.g. `@protobuf-ts/grpc-transport` + `@grpc/grpc-js`)
-    into `SuiGrpcClient`. U1 records the exact wiring.
+  - **Server side (verified in U1):** `new SuiGrpcClient({ network, transport })` with a
+    `GrpcTransport` from `@protobuf-ts/grpc-transport` + `@grpc/grpc-js`:
+    `host: "sui-<net>-grpc.gateway.tatum.io:443"`, `ChannelCredentials.createSsl()`,
+    `meta: { "x-api-key": key }`. It lives in `@remora/chain` (`createTatumSuiClient`).
   - **Browser:** gRPC-web against a public fullnode (`https://fullnode.<network>.sui.io:443`), or go
     through our API.
 - Build transactions client-side with the Sui SDK. Tatum doesn't support `unsafe_*` helpers.
@@ -220,7 +222,7 @@ gRPC v2 services we use:
 | Transaction + events by digest | `LedgerService.GetTransaction` / `BatchGetTransactions` |
 | Objects (allowance, Disc, UpgradeCap) | `LedgerService.GetObject` / `BatchGetObjects` |
 | Checkpoints, chain info | `LedgerService.GetCheckpoint` / `GetServiceInfo` |
-| Balances (coins + address balance) | `StateService.GetBalance` / `ListBalances` |
+| Balances (coins + address balance) | `StateService.GetBalance` / `ListBalances`: `Balance` has `balance`, `address_balance` and `coin_balance` separately (U1) |
 | Owned objects, coin info, dynamic fields | `StateService.ListOwnedObjects` / `GetCoinInfo` / `ListDynamicFields` |
 | Live chain events (triggers, indexer) | `SubscriptionService.SubscribeCheckpoints` |
 | Move introspection | `MovePackageService.GetPackage` / `GetFunction` / `GetDatatype` |
@@ -266,6 +268,16 @@ prize requires the product to be built *primarily* with it.
 ## 3. Sui primitives Remora relies on
 
 ### 3.1 Native Allowances (`sui::allowance`, mainnet since Oct 9, protocol v138)
+
+> **Verified in U1 (Oct 18)**, details in [docs/spikes/2026-10-18-allowance.md](spikes/2026-10-18-allowance.md):
+>
+> - It's enabled on both networks (`enable_allowances`, `enable_accumulators`; testnet is on protocol
+>   139).
+> - **Building needs Sui CLI ≥ 1.81.** 1.74's bundled framework has no `sui::allowance`. We pin
+>   1.82.1.
+> - `propose_for_app` is `entry`, so a PTB can call it but Move code can't. `issue` **returns no ID**, so
+>   app policy can't be keyed by allowance ID at issue time (the stub keys it by `(funder, name)`).
+> - Read the address-balance part with `StateService.GetBalance` (`address_balance` / `coin_balance`).
 
 A **funder** lets a **spender** pull from the funder's *address balance*, within limits. Nothing is locked
 or set aside: funds leave only when a spend succeeds.
@@ -321,7 +333,9 @@ public fun issue<T, A>(proposal: AllowanceProposal<T>, _: SettingsPermit<A>, ctx
 2. the allowance as a mutable shared input;
 3. `balance_spend` (direct) or `app_balance_spend` (app-bound), which returns `Balance<C>`.
 
-Failed pre-checks are rejected **before execution, with no gas charged**. The spender pays gas.
+Failed pre-checks are rejected **before execution, with no gas charged**. The spender is the sender.
+Gas can come from a separate sponsor (`AllowanceWithdrawal.is_sponsor` concerns where the *funds* come
+from and is always false today). U1 confirms sponsored gas on testnet.
 
 **TS SDK:**
 

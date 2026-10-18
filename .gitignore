@@ -21,3 +21,7 @@ dist/
 
 # Agent goal progress notes (team-split §7)
 NOTES.md
+
+# Move build output and U1 spike state
+packages/move/**/build/
+spikes/allowance/.state.*.json

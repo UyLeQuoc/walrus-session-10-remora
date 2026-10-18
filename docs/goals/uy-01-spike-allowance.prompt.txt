@@ -20,7 +20,7 @@ Hard rules:
 - Read keys from env only; never commit them. No product features: this is a throwaway spike.
 
 Done when:
-- docs/spikes/2026-10-21-allowance.md records versions, digests, settlement delay, the address-balance read method and abort codes;
+- docs/spikes/2026-10-18-allowance.md records versions, digests, settlement delay, the address-balance read method and abort codes;
 - tech-reference §3 is corrected;
 - ADR-0020 (go/no-go) is written and indexed;
 - checks plus sui move test are green, the work is pushed to main, and a PR is open for the Move stub.

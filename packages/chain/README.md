@@ -4,4 +4,10 @@ The typed Tatum client: **Sui gRPC only** (native transport; ADR-0021), includin
 
 - **Owner:** Uy Le (`@UyLeQuoc`) (see `docs/team-split.md` §2)
 - **Features:** Foundation for D1, E3, G3, Sentinel
-- **Status:** scaffold. Nothing is implemented yet.
+- **Status:** seed from the U1 spike:
+  - `createTatumSuiClient({ network, apiKey })`: a `SuiGrpcClient` on Tatum's native gRPC (`x-api-key` metadata);
+  - `tatumSuiOptionsFromEnv(network)`: reads `TATUM_API_KEY[_TESTNET]` / `TATUM_SUI_GRPC[_TESTNET]`;
+  - `readFunds(client, owner, coinType)`: total, address balance and coin balance from one `GetBalance` call;
+  - `withRetry(fn)`: retries transport errors only.
+
+  The checkpoint stream and the Data API come later.
