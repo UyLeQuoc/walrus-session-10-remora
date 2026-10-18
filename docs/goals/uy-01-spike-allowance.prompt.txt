@@ -4,6 +4,11 @@ Source of truth: docs/goals/uy-01-spike-allowance.md. Read it fully and follow i
 
 Prerequisite: U0 is on main. Work in worktree ../remora-U1 (branch uy/U1-spike). Allowed paths: spikes/allowance/**, packages/chain/**, packages/move/remora/** (stub only), docs/spikes/**, docs/tech-reference.md, docs/adr/**.
 
+Needs in .env (never commit; ask me if one is missing):
+- TATUM_API_KEY;
+- SPIKE_OWNER_KEY, SPIKE_SPENDER_KEY, SPIKE_SPONSOR_KEY (suiprivkey1… or hex), funded on testnet first.
+Read them from env only.
+
 Run order:
 1. record versions (@mysten/sui, Sui CLI);
 2. a seed Tatum client, plus finding which call returns the address-balance part;
