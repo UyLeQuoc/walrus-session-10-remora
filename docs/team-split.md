@@ -161,33 +161,38 @@ handoff note (§9).
 
 ---
 
-## 6. Git workflow
+## 6. Git workflow: one `main`, few PRs
 
-- **Trunk-based:**
-  - `main` is protected: a PR is required, CI must be green, and history stays linear (squash merge
-    only).
-  - A PR that only touches the author's own paths may be **self-merged after CI**.
-  - CODEOWNERS automatically asks the other person for review when another lane's paths or a contract
-    are touched.
-- **Branches:** `uy/<ID>-<slug>`, `huanng/<ID>-<slug>` (e.g. `uy/E1-disc-module`,
-  `huanng/F3-inspector-ui`).
-- **PRs:** one feature ID (or one half: `·be` / `·ui`), or a tight group, per PR. Aim for under ~500
-  changed lines. The title starts with the IDs (`[F3·ui] Memory inspector table`). The body lists the
-  paths touched and evidence (screenshots, tx digests, test output).
-- **CI gates:** `bun run typecheck`, `bun run lint`, `bun run test`, `sui move test`, and a contract
-  fixture check. Web PRs get a Vercel preview (it calls the `main` API), and E2E runs against it.
-- **Rebase on `main` at least twice a day.** Merge windows are **12:00 and 21:00 Vietnam time**.
-- **One environment, `main`.** There's no staging. After each window:
-  - Railway (backend, set to wait for CI) and Vercel (web) deploy `main` automatically;
-  - Huấn's **E2E suite runs against it**;
-  - **if E2E goes red, Uy reverts the offending PR or fixes forward within the same window.**
-- **Making up for the missing staging:**
-  - risky backend changes merge **behind a feature flag**;
-  - DB schema changes must be **additive only** (hippo's `additive` check in CI);
-  - backend PRs merge only inside the windows, never ad hoc.
-- **Demo freeze:** from Nov 6 at 21:00, only fixes merge.
-- **Feature flags** (`REMORA_FLAGS=hatchery,shadow,…`) let unfinished work merge dark, so `main` stays
-  demoable.
+See [ADR-0010](adr/0010-team-split-and-git-workflow.md).
+
+- **Work on `main` directly.** Commit small and often, inside your own paths (§2). Before every push:
+  ```bash
+  git pull --rebase origin main
+  bun run typecheck && bun run lint && bun run test     # + sui move test if packages/move changed
+  git push origin HEAD:main
+  ```
+  CI re-runs on `main`. Railway (backend, set to wait for CI) and Vercel (web) deploy automatically.
+- **PRs only when they add value:**
+  1. **contract changes** in `packages/schema` or the shared API client, which need both approvals (§4);
+  2. **edits in the other person's lane**;
+  3. **Move package changes** before Uy publishes to mainnet.
+
+  Everything else goes straight to `main`.
+- **Commit messages** start with the feature IDs: `[F3·ui] Memory inspector table`. Reference the board
+  issue (`closes #12`) so the board stays current.
+- **Agent goals** work in their own worktree and branch. At the end they rebase and push to `main` the
+  same way (§7). The branch is only local scaffolding.
+- **One environment, `main`,** with no staging. So:
+  - push backend changes at the merge windows (**12:00 and 21:00 Vietnam time**). Web-only changes can
+    go anytime;
+  - after each window, Huấn's **E2E suite runs against `main`**;
+  - **if E2E goes red, Uy reverts the offending commit (`git revert`) or fixes forward within the same
+    window**;
+  - risky backend changes go **behind a feature flag** (`REMORA_FLAGS=hatchery,shadow,…`);
+  - DB schema changes must be **additive only** (hippo's `additive` check in CI).
+- **Demo freeze:** from Nov 6 at 21:00, only fixes go to `main`.
+- **Every decision or change of direction gets an ADR** in `docs/adr/` (see
+  [docs/adr/README.md](adr/README.md)).
 
 ## 7. Running long agent goals ("treo goal") without conflicts
 
@@ -203,8 +208,10 @@ handoff note (§9).
    - touch secrets or `.env` values;
    - bump shared dependencies;
    - force-push.
-4. **Before finishing:** rebase on `main`, then run typecheck, lint, tests (+ `sui move test` for Move),
-   and open a PR (a draft is fine) with the IDs, paths touched and evidence.
+4. **Before finishing:** rebase on `main`, run typecheck, lint, tests (+ `sui move test` for Move), then
+   **push to `main`** (§6). Open a PR only for a contract, another lane, or a Move change. Post a
+   one-line summary with the IDs and evidence in the team chat. **If the goal made or changed a
+   decision, add an ADR** (`docs/adr/`).
 5. **Concurrency:**
    - at most **3 goals per person** at a time;
    - never two goals in the same package or web feature folder at once;
@@ -217,8 +224,8 @@ handoff note (§9).
      designated worktree, because two pollers on one Telegram token fail with `409 Conflict`.
    - Only one of Uy's worktrees runs chain-writing e2e tests at a time, since a shared sponsor gas coin
      can't be used by two concurrent transactions.
-7. **Check-ins:** a long goal updates its draft PR description about every 2 hours. The human reviews
-   at the merge windows.
+7. **Check-ins:** a long goal writes a short progress note in its worktree (`NOTES.md`, not committed)
+   about every 2 hours. The human reviews before pushing.
 
 **Starting a goal:**
 
@@ -239,8 +246,8 @@ Owner: Huấn · Branch: huanng/F3-inspector-ui · Worktree: ../remora-F3ui
 Allowed paths: apps/web/src/features/memory/**, apps/server/src/copy/** (strings only)
 Read-only context: docs/remora-spec.md §8 and §12.12, reference/hippo/apps/web/src/features/me/**
 Contracts (read-only): packages/schema/** — build against packages/schema/fixtures, then the main API (test accounts only)
-Done when: acceptance met, component tests added, typecheck/lint/test green, rebased on origin/main,
-  draft PR with IDs, paths touched, screenshots (desktop + mobile).
+Done when: acceptance met, component tests added, typecheck/lint/test green, rebased and pushed to main,
+  summary with IDs and screenshots (desktop + mobile) posted. New or changed decisions → add docs/adr/NNNN-*.md.
 Outside allowed paths? Write docs/handoffs/<YYYY-MM-DD>-huanng-to-uy-<topic>.md and stop that part.
 Never: edit backend code, deploy, edit secrets, bump shared deps, force-push.
 ```
@@ -251,7 +258,8 @@ Owner: Uy · Branch: uy/E1-disc-module · Worktree: ../remora-E1
 Allowed paths: packages/move/**, packages/disc-sdk/** (types only), packages/schema/fixtures/disc*.json (via contract PR)
 Read-only context: docs/tech-reference.md §3, docs/remora-spec.md §6 and §12.1
 Done when: sui move test green (limits, payees, pause, rotate, permit guards), typecheck/lint green,
-  draft PR with test output. Do NOT publish to mainnet (Uy publishes manually after review).
+  PR opened (Move changes always get a PR). Do NOT publish to mainnet (Uy publishes manually after review).
+  Record the module's design decisions in docs/adr/.
 ```
 
 ## 8. Environments
@@ -307,8 +315,8 @@ Huấn holds is the capped E2E burner.
       `apps/web/src/features/lab/` and `apps/server/src/copy/`.
 - [ ] `packages/schema` with the v1 contracts + fixtures (§4); the typed API client stub; append-only
       web routes.
-- [ ] `.github/CODEOWNERS` (§2), branch protection (PR + CI + code-owner review, squash only), CI (§6),
-      Vercel previews.
+- [ ] `.github/CODEOWNERS` (§2, an ownership map; reviews are only auto-requested on PRs). `main` needs
+      CI to pass but **allows direct pushes** from both people. CI (§6), Vercel previews.
 - [ ] **The `main` environment** (the only one):
   - Railway project with server, facilitator, Reef and merchants: one server replica, monorepo watch
     paths, wait for CI;
@@ -321,8 +329,8 @@ Huấn holds is the capped E2E burner.
       `owner:huanng`, `wave:W1..W4`, `contract`.
 - [ ] Invite Huấn. Share secrets through the password manager; Huấn needs `VITE_*` values + the E2E
       burner key.
-- [ ] Post-deploy E2E (Huấn's suite) wired into CI after each `main` deploy, posting results to the PR
-      or chat.
+- [ ] Post-deploy E2E (Huấn's suite) wired into CI after each `main` deploy, posting results to the
+      team chat.
 - [ ] The Walrus Sites mirror through `site-builder` (WAL, SuiNS), deployed by Uy.
 - [ ] **Team submission:** submit Remora **once as a team**. Ask the organizers on Discord how to list
       the second member (the form has per-person fields such as Tatum ID and SUI address).
@@ -331,7 +339,8 @@ Huấn holds is the capped E2E burner.
 
 - **Daily sync at 9:00 Vietnam time** (15 minutes, or async in chat): done, next, blocked, and any
   contract changes.
-- **Board:** move issues as you go. A PR closes its issue.
+- **Board:** move issues as you go. A commit with `closes #N` closes its issue.
+- **ADRs:** at the daily sync, skim the ADRs added since yesterday (`ls docs/adr`).
 - **Wave exits together:**
   - Oct 25 (W1), Nov 1 (W2), Nov 6 (W3): Huấn presents the **E2E report** (the demo path on the `main`
     deployment). Together, decide which lab pages stay in the video, and rebalance §3.

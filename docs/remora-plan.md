@@ -1,6 +1,7 @@
 # Remora — Build Plan (Track 2, full product)
 
-> **Scope:** [remora-features.md](remora-features.md) (132 features) · **Reuse:**
+> **Scope:** the [MVP ship set](remora-features.md#0-mvp-ship-set-68-features) (68 features) + backlog (132
+> total) · **Decisions:** [docs/adr](adr/README.md) · **Reuse:**
 > [reuse-from-hippo.md](reuse-from-hippo.md) · **Design:**
 > [remora-spec.md](remora-spec.md) · **Rules:** [event-rules.md](event-rules.md) · **APIs:**
 > [tech-reference.md](tech-reference.md)
@@ -19,8 +20,9 @@
    - rotate the key;
    - inspector + Proof of Learning;
    - recall from Claude Code.
-4. **Anything unfinished by Nov 6 ships as design** in the README roadmap, and the demo shows only what
-   works.
+4. **The ship set comes first in every wave.** Backlog items start only after the wave's ship-set items
+   pass E2E. Anything unfinished by Nov 6 ships as design in the README roadmap, and the demo shows
+   only what works.
 5. **Two people, five workstreams:** Uy Le (Sui, Walrus Memory, Move, backend, deploy, launch) and Huấn (UI/UX, E2E),
    with infra and UI as a flex pool;
    see [team-split.md](team-split.md) for

@@ -1,8 +1,39 @@
 # Remora — Full Product Scope & Feature Catalog
 
-> Scope decision (Oct 18): Remora ships as a **full product**, not an MVP. This file is the complete
-> feature list. [remora-spec.md](remora-spec.md) describes the design, and
-> [remora-plan.md](remora-plan.md) sequences these features into waves.
+> **Scope** ([ADR-0011](adr/0011-scope-mvp-ship-set.md)): an **MVP with enough features to feel complete.**
+>
+> - **The ship set (§0, 68 features) is what we commit to.**
+> - The other 64 features are the **backlog**: build them in wave order if time allows; otherwise they
+>   go into the README roadmap.
+>
+> [remora-spec.md](remora-spec.md) describes the design, and [remora-plan.md](remora-plan.md) sequences
+> the work into waves.
+
+---
+
+## 0. MVP ship set (68 features)
+
+The ship set covers the demo path, every hackathon requirement and the strongest judging angles.
+
+| Area | Features |
+|---|---|
+| Onboarding & accounts | A1 sign-in · A3 memory account · A4 address-balance funds + Detect funds · A5 Telegram linking · A6 wizard |
+| Remora lifecycle | B1 create from template · B3 creation flow · B4 key custody · B7 budget change · B8 pause/retire · B9 rotate key |
+| Templates | C1 Scout · C2 Sentinel |
+| Runtime | D1 triggers · D2 durable jobs · D3 turn engine · D4 tools · D5 handoffs · D8 gas sponsor · D9 model routing and caps |
+| Money | E1 Disc Move module · E2 disc-sdk · E3 x402 facilitator · E4 over-limit approval · E7 Reef (minimal) · E9 demo merchants |
+| Memory | F1 namespaces · F2 learning loops · F3 inspector · F4 hide/correct/forget · F5 expiry display · F8 export · F9 Claude Code portability |
+| Wake | G1 schema · G2 intent anchoring · G3 `remora verify` · G5 Proof of Learning |
+| Channels & UI | H1 Telegram · H4 dashboard · H5 notification policy · H6 Walrus Sites mirror · H7 playground |
+| Safety | I1 content isolation · I2 Sonar · I4 rate limits · I5 scrubber · I6 Move security · I7 threat model |
+| Ops & launch | K1 observability · K2 health + `diagnose` · K6 tests + E2E · L1 learning charts · L2 README · L3 launch |
+| Hatchery (core) | M1 share · M3 publish to Walrus · M4 gallery · M5 one-click hatch · M6 onchain provenance · M7 template safety |
+| UX | N1 activity feed · N2 approval inbox · N3 shadow mode · N4 "Why?" everywhere · N6 human errors and pending states · N10 panic button · N13 first-run win · N19 feedback everywhere |
+
+**The load:** about 65 parts for Uy and 36 for Huấn
+(see [team-split.md §3](team-split.md#3-feature-split-by-wave)).
+
+**Order:** ship set first, inside each wave; backlog only after the wave's ship-set items pass E2E.
 
 ---
 
