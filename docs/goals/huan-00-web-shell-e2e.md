@@ -1,6 +1,6 @@
 # Goal H0: Web shell rebrand, ship-set page skeletons, E2E harness (W1, Huấn)
 
-**Owner:** Huấn · **Branch:** `huanng/H0-web-shell` · **Worktree:** `../remora-H0` · **Depends on:** U0
+**Owner:** Huấn · **Runs in:** your main checkout, on `main` (no worktree, ADR-0022) · **Depends on:** U0
 (bootstrap) on `main`.
 
 ## Read first

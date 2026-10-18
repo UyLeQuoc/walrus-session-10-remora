@@ -11,9 +11,8 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 
 ## How to run one
 ```bash
-# U0 runs in the main checkout (first goal). Later goals each get their own worktree:
-git fetch origin && git worktree add ../remora-U1 -b uy/U1-spike origin/main
-cd ../remora-U1 && bun install
+# Every goal runs in your main checkout on main (no worktrees, ADR-0022):
+git pull --rebase origin main && bun install
 pbcopy < docs/goals/uy-01-spike-allowance.prompt.txt   # paste as the agent's goal (<4000 chars)
 ```
 

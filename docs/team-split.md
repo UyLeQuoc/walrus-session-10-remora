@@ -180,8 +180,8 @@ See [ADR-0010](adr/0010-team-split-and-git-workflow.md).
   Everything else goes straight to `main`.
 - **Commit messages** start with the feature IDs: `[F3·ui] Memory inspector table`. Reference the board
   issue (`closes #12`) so the board stays current.
-- **Agent goals** work in their own worktree and branch. At the end they rebase and push to `main` the
-  same way (§7). The branch is only local scaffolding.
+- **Agent goals** run in your one checkout on `main`, with no worktrees or branches
+  ([ADR-0022](adr/0022-no-worktrees.md)). At the end they rebase and push to `main` the same way (§7).
 - **One environment, `main`,** with no staging. So:
   - push backend changes at the merge windows (**12:00 and 21:00 Vietnam time**). Web-only changes can
     go anytime;
@@ -198,7 +198,8 @@ See [ADR-0010](adr/0010-team-split-and-git-workflow.md).
 
 **Rules for every goal:**
 
-1. **One goal = one feature ID (or one half) = one branch = one git worktree.**
+1. **One goal = one feature ID (or one half), run in your main checkout on `main`.** No worktrees and no
+   branches ([ADR-0022](adr/0022-no-worktrees.md)).
 2. **Allowed paths only** (§2). If a goal needs a change anywhere else, it writes a handoff note (§9)
    and stops that sub-task.
 3. **Never:**
@@ -213,36 +214,31 @@ See [ADR-0010](adr/0010-team-split-and-git-workflow.md).
    one-line summary with the IDs and evidence in the team chat. **If the goal made or changed a
    decision, add an ADR** (`docs/adr/`).
 5. **Concurrency:**
-   - at most **3 goals per person** at a time;
-   - never two goals in the same package or web feature folder at once;
+   - **one goal at a time per person**; parallelism comes from the two lanes;
    - goals that need a pending contract wait for it.
-6. **Runtime isolation per worktree** (see §8):
-   - **Huấn's web and E2E worktrees** point at the **`main` API** (`VITE_API_URL`), so they need no
-     backend secrets. They sign in **only with the E2E burner or test owner accounts**, never real
-     owner accounts.
-   - **Uy's backend worktrees** use their own ports (`PORT_OFFSET=n`), and `CHANNELS=off` except in one
-     designated worktree, because two pollers on one Telegram token fail with `409 Conflict`.
-   - Only one of Uy's worktrees runs chain-writing e2e tests at a time, since a shared sponsor gas coin
-     can't be used by two concurrent transactions.
-7. **Check-ins:** a long goal writes a short progress note in its worktree (`NOTES.md`, not committed)
-   about every 2 hours. The human reviews before pushing.
+6. **Runtime isolation per person** (see §8):
+   - **Huấn's web and E2E** point at the **`main` API** (`VITE_API_URL`), so they need no backend
+     secrets. They sign in **only with the E2E burner or test owner accounts**, never real owner
+     accounts.
+   - **Uy's local server** runs `CHANNELS=off` unless it's the one running channels (two pollers on
+     one Telegram token fail with `409 Conflict`). Chain-writing tests run one at a time, since a shared
+     sponsor gas coin can't be used by two concurrent transactions.
+7. **Check-ins:** a long goal writes a short progress note (`NOTES.md`, gitignored) about every
+   2 hours. The human reviews before pushing.
 
 **Starting a goal:**
 
 ```bash
-git fetch origin
-git worktree add ../remora-F3ui -b huanng/F3-inspector-ui origin/main
-cd ../remora-F3ui && bun install
+git pull --rebase origin main && bun install
 VITE_API_URL=https://<main-api> bun run dev:web        # Huấn: local web against the main API (test accounts only)
-# Uy: PORT_OFFSET=2 CHANNELS=off bun run dev:server
-# when merged:  git worktree remove ../remora-F3ui
+# Uy: CHANNELS=off bun run dev:server
 ```
 
 **Goal prompt templates** (paste into the agent session):
 
 ```text
 Goal: [F3·ui] Memory inspector UI — acceptance: docs/remora-features.md row F3, docs/remora-spec.md §8
-Owner: Huấn · Branch: huanng/F3-inspector-ui · Worktree: ../remora-F3ui
+Owner: Huấn · Runs in: the main checkout, on main (no worktree)
 Allowed paths: apps/web/src/features/memory/**, apps/server/src/copy/** (strings only)
 Read-only context: docs/remora-spec.md §8 and §12.12, reference/hippo/apps/web/src/features/me/**
 Contracts (read-only): packages/schema/** — build against packages/schema/fixtures, then the main API (test accounts only)
@@ -254,7 +250,7 @@ Never: edit backend code, deploy, edit secrets, bump shared deps, force-push.
 
 ```text
 Goal: [E1] Disc Move module — acceptance: docs/remora-features.md row E1, docs/remora-spec.md §6
-Owner: Uy · Branch: uy/E1-disc-module · Worktree: ../remora-E1
+Owner: Uy · Runs in: the main checkout, on main (Move changes get a PR branch)
 Allowed paths: packages/move/**, packages/disc-sdk/** (types only), packages/schema/fixtures/disc*.json (via contract PR)
 Read-only context: docs/tech-reference.md §3, docs/remora-spec.md §6 and §12.1
 Done when: sui move test green (limits, payees, pause, rotate, permit guards), typecheck/lint green,

@@ -1,7 +1,7 @@
 # Goal U1: Spike, address balances + app-bound Allowances via Tatum (go/no-go, Tue Oct 21)
 
-**Owner:** Uy Le · **Branch:** `uy/U1-spike` · **Worktree:** `../remora-U1` · **Depends on:** U0 (bootstrap)
-merged.
+**Owner:** Uy Le · **Runs in:** the main checkout, on `main` (no worktree, ADR-0022) · **Depends on:** U0
+(bootstrap) merged.
 
 **Goal:** prove, or disprove, the money rails before building on them. The outcome is **ADR-0020**:
 either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR-0003).

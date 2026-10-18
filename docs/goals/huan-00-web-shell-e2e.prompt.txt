@@ -2,7 +2,7 @@ Goal H0: Web shell rebrand, ship-set page skeletons, E2E harness.
 
 Source of truth: docs/goals/huan-00-web-shell-e2e.md. Read it fully and follow its steps. Also read AGENTS.md, docs/team-split.md (§2, §7, §8), docs/remora-features.md §0 and §2.1, and docs/remora-spec.md §12.1 and §12.12.
 
-Prerequisite: U0 is on main. Work in worktree ../remora-H0 (branch huanng/H0-web-shell).
+Prerequisite: U0 is on main. Work in your main checkout on main (no worktree, ADR-0022).
 
 Allowed paths: apps/web/** (except features/lab), apps/server/src/copy/** (strings only), e2e/**, docs/ux/**, docs/e2e/**. Treat packages/schema as read-only: build against its fixtures.
 

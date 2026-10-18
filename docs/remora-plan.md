@@ -28,8 +28,8 @@
    with infra and UI as a flex pool;
    see [team-split.md](team-split.md) for
    ownership, contracts and agent rules. The workstreams are WS1–WS5 (see
-   [remora-features.md §3](remora-features.md#3-workstreams-for-parallel-claude-code-sessions--git-worktrees)).
-   Run each as its own Claude Code session in its own git worktree, merging daily.
+   [remora-features.md §3](remora-features.md#3-workstreams-one-goal-at-a-time-per-person-in-their-own-checkout)).
+   Each person runs one goal at a time in their own checkout on `main` (no worktrees, ADR-0022).
 
 ---
 

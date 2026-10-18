@@ -334,7 +334,7 @@ limits always apply.
 
 ---
 
-## 3. Workstreams (for parallel Claude Code sessions / git worktrees)
+## 3. Workstreams (one goal at a time per person, in their own checkout)
 
 > **People:** **Uy Le** owns Sui, Walrus Memory, Move and the backend (WS1, WS2, WS3, WS5, and the
 > backend half of WS4), plus deploy, video and submission. **Huấn** owns UI/UX and E2E (every `·ui` part).
