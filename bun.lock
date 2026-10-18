@@ -217,6 +217,19 @@
         "vitest": "^4.0.0",
       },
     },
+    "packages/schema": {
+      "name": "@remora/schema",
+      "version": "0.0.1",
+      "dependencies": {
+        "@noble/hashes": "^2.0.0",
+        "zod": "^4.0.0",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.0",
+      },
+    },
     "packages/signer": {
       "name": "@remora/signer",
       "version": "0.0.1",
@@ -604,6 +617,8 @@
     "@remora/merchants": ["@remora/merchants@workspace:apps/merchants"],
 
     "@remora/reef": ["@remora/reef@workspace:apps/reef"],
+
+    "@remora/schema": ["@remora/schema@workspace:packages/schema"],
 
     "@remora/server": ["@remora/server@workspace:apps/server"],
 

@@ -1,0 +1,29 @@
+{
+  "movable": "5000000",
+  "splits": [
+    {
+      "address": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+      "role": "owner",
+      "coinType": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      "addressBalance": "18400000",
+      "coins": {
+        "total": "5000000",
+        "count": 2
+      },
+      "settling": "0",
+      "checkedAt": "2026-10-22T03:15:00Z"
+    },
+    {
+      "address": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+      "role": "merchant",
+      "coinType": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      "addressBalance": "350000",
+      "coins": {
+        "total": "0",
+        "count": 0
+      },
+      "settling": "50000",
+      "checkedAt": "2026-10-22T03:15:00Z"
+    }
+  ]
+}

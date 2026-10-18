@@ -1,0 +1,12 @@
+{
+  "id": "apr_7",
+  "remora": "scout",
+  "kind": "over_limit_payment",
+  "createdAt": "2026-11-03T02:22:00Z",
+  "summary": "Pay 2.00 USDC to reef:odds (cap is 0.50)",
+  "payload": {
+    "payee": "reef:odds",
+    "amount": "2000000"
+  },
+  "status": "pending"
+}

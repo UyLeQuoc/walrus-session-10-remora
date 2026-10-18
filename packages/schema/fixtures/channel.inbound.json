@@ -1,0 +1,11 @@
+{
+  "channel": "telegram",
+  "externalId": "123456789",
+  "displayName": "Uy",
+  "text": "",
+  "threadKey": "123456789",
+  "button": {
+    "kind": "noise",
+    "ref": "evt_91"
+  }
+}

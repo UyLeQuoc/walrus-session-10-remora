@@ -344,13 +344,18 @@ Every remora action writes a Wake to the `receipts` namespace.
   "intent": {
     "trigger": { "kind": "message", "ref": "tg:…" },
     "inputs": { "via": "tatum", "checkpoint": 0, "objects": [{ "id": "0x…", "version": "…" }], "sha256": "…" },
-    "memories": [{ "blob_id": "…", "namespace": "sources", "distance": 0.21 }],
-    "model": { "id": "anthropic/claude-sonnet-5-5", "prompt_sha256": "…" },
-    "decision": { "action": "pay", "payee": "0x…", "amount": "50000", "reason": "…" }
+    "memories": [{ "blobId": "…", "namespace": "sources", "distance": 0.21 }],
+    "model": { "id": "anthropic/claude-sonnet-5-5", "promptSha256": "…" },
+    "decision": { "action": "pay", "payee": "reef:sui-risk", "payTo": "0x…", "amount": "50000", "coinType": "…", "reason": "…" },
+    "sonar": { "verdict": "allow", "reasons": ["payee on Disc", "under per-payment cap"] }
   },
-  "result": { "tx": "…", "response_sha256": "…" }
+  "result": { "tx": "…", "responseSha256": "…" }
 }
 ```
+
+> **Source of truth:** the `Wake` schema in `packages/schema/src/wake.ts`, with its fixture in
+> `packages/schema/fixtures/wake.payment.json`. `intentHash()` there hashes the canonical (key-sorted)
+> JSON of `intent`.
 
 - **Anchoring:** `sha256(intent)` is computed **before** paying and passed to `disc::pay` as `intent`, so
   it lands in the `Paid` event. The full Wake, including the tx digest and response hash, is written
@@ -536,9 +541,9 @@ tools: [memory.recall, memory.remember, tatum.balances, web.fetch, pay]
 triggers:
   - { kind: message }
   - { kind: cron, human: "every Monday 9am", cron: "0 9 * * 1" }
-budget_suggestion: { monthly_usd: [10, 30], per_payment_usd: 0.5 }
+budgetSuggestion: { monthlyUsd: [10, 30], perPaymentUsd: 0.5 }
 payees: [reef:sui-risk, reef:odds, reef:brief]   # Reef references only, never raw addresses
-starter_memories: []                               # opt-in pack (M2), public plaintext
+starterMemories: []                                # opt-in pack (M2), public plaintext
 examples: ["Is 0xabc… a scam token?", "What changed in my wallet this week?"]
 ```
 

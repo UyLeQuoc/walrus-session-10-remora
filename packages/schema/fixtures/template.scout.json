@@ -1,0 +1,24 @@
+{
+  "schema": "remora.template/v1",
+  "name": "Scout",
+  "summary": "Answers questions by buying the best data, learns which sources are worth it",
+  "persona": "Answers questions by buying the best data, and learns which sources are worth it.",
+  "tools": ["memory.recall", "memory.remember", "web.fetch", "pay", "notify", "handoff"],
+  "triggers": [
+    {
+      "kind": "message"
+    },
+    {
+      "kind": "cron",
+      "cron": "0 9 * * 1",
+      "human": "every Monday 9am"
+    }
+  ],
+  "budgetSuggestion": {
+    "monthlyUsd": [10, 30],
+    "perPaymentUsd": 0.5
+  },
+  "payees": ["reef:sui-risk", "reef:odds", "reef:brief"],
+  "starterMemories": [],
+  "examples": ["Is 0xabc... a scam token?", "What changed in my wallet this week?"]
+}

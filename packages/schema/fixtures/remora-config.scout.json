@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "id": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+  "name": "Scout",
+  "template": "scout",
+  "persona": "Answers questions by buying the best data, and learns which sources are worth it.",
+  "tools": ["memory.recall", "memory.remember", "web.fetch", "pay", "notify", "handoff"],
+  "triggers": [
+    {
+      "kind": "message"
+    },
+    {
+      "kind": "cron",
+      "cron": "0 9 * * 1",
+      "human": "every Monday 9am"
+    }
+  ],
+  "budget": {
+    "coinType": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+    "windowLimit": "20000000",
+    "window": "month",
+    "perPaymentCap": "500000",
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "payees": ["reef:sui-risk", "reef:odds", "reef:brief"]
+  },
+  "status": "shadow",
+  "identity": {
+    "address": "0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+    "suinsName": "scout-uy.remora.sui"
+  },
+  "namespaces": ["me", "sources", "feedback", "budget", "handoffs", "receipts"]
+}

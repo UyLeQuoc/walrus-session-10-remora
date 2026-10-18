@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "3c1e7a92-5d44-4b8f-a0e6-7f2b9c1d3e55",
+  "name": "Sentinel",
+  "template": "sentinel",
+  "persona": "Watches my wallets and the protocols I use, and only wakes me for what matters.",
+  "tools": [
+    "memory.recall",
+    "memory.remember",
+    "tatum.balances",
+    "tatum.transactions",
+    "tatum.objects",
+    "tatum.events",
+    "notify",
+    "handoff"
+  ],
+  "triggers": [
+    {
+      "kind": "chain",
+      "addresses": ["0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"],
+      "objects": [],
+      "eventTypes": []
+    },
+    {
+      "kind": "price",
+      "symbol": "SUI",
+      "below": 2.5
+    }
+  ],
+  "budget": null,
+  "status": "active",
+  "identity": {
+    "address": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+  },
+  "namespaces": ["me", "remora:sentinel:rules", "remora:sentinel:episodes", "handoffs", "receipts"]
+}

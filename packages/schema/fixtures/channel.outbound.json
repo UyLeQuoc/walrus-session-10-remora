@@ -1,0 +1,24 @@
+{
+  "remora": "sentinel",
+  "copyKey": "ping.chain_event",
+  "params": {
+    "amount": "6200 USDC",
+    "from": "Treasury"
+  },
+  "priority": "ping",
+  "buttons": [
+    {
+      "kind": "why",
+      "ref": "wake:8PqTz4"
+    },
+    {
+      "kind": "useful",
+      "ref": "evt_91"
+    },
+    {
+      "kind": "noise",
+      "ref": "evt_91"
+    }
+  ],
+  "wakeId": "wake:8PqTz4"
+}

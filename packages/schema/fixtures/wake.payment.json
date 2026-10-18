@@ -1,0 +1,50 @@
+{
+  "v": 1,
+  "remora": "scout",
+  "agent": "0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+  "ts": "2026-11-03T02:13:00Z",
+  "intent": {
+    "trigger": {
+      "kind": "message",
+      "ref": "tg:1042"
+    },
+    "inputs": {
+      "via": "tatum",
+      "checkpoint": 331253888,
+      "objects": [
+        {
+          "id": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+          "version": "88231"
+        }
+      ],
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "memories": [
+      {
+        "blobId": "MKP2-KVpB_q1aZ0",
+        "namespace": "sources",
+        "distance": 0.21
+      }
+    ],
+    "model": {
+      "id": "anthropic/claude-sonnet-5-5",
+      "promptSha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "decision": {
+      "action": "pay",
+      "payee": "reef:sui-risk",
+      "payTo": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+      "amount": "50000",
+      "coinType": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+      "reason": "sui-risk answered 8 of 9 risk questions usefully"
+    },
+    "sonar": {
+      "verdict": "allow",
+      "reasons": ["payee on Disc", "under per-payment cap"]
+    }
+  },
+  "result": {
+    "tx": "8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ",
+    "responseSha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  }
+}
