@@ -893,7 +893,10 @@ describe("chat page", () => {
       }),
     );
     mountChat();
-    await user.type(screen.getByPlaceholderText("Message hippo…"), "Postgres runs on 5433{Enter}");
+    await user.type(
+      screen.getByPlaceholderText("Message your remora…"),
+      "Postgres runs on 5433{Enter}",
+    );
     expect(chatSend).toHaveBeenCalled();
     await waitFor(() => expect(memoryReads).toBe(1));
     await act(async () => {
@@ -955,7 +958,7 @@ describe("chat page", () => {
     });
     const suggestion = await screen.findByRole("button", { name: "What port?" });
     await user.click(suggestion);
-    const box = screen.getByPlaceholderText("Message hippo…");
+    const box = screen.getByPlaceholderText("Message your remora…");
     expect(box).toHaveProperty("value", "What port?");
     expect(chatSend).not.toHaveBeenCalled();
   });

@@ -43,7 +43,7 @@ export function ComposerShell({
         {command ? <CommandPaint text={text} /> : null}
         <textarea
           value={text}
-          placeholder="Message hippo…"
+          placeholder="Message your remora…"
           disabled={disabled}
           rows={1}
           onChange={(event) => onText(event.target.value)}

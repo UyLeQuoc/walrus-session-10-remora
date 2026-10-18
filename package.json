@@ -27,7 +27,9 @@
     "capacity": "bun run --filter @remora/server capacity",
     "ops": "bun run --filter @remora/server ops",
     "evidence:daily": "bash scripts/evidence-daily.sh",
-    "measure:corrections": "bun run --filter @remora/core measure:corrections"
+    "measure:corrections": "bun run --filter @remora/core measure:corrections",
+    "e2e": "bun run --filter @remora/e2e e2e",
+    "e2e:main": "bun run --filter @remora/e2e e2e:main"
   },
   "devDependencies": {
     "@bun-security-scanner/osv": "^1.0.0",
@@ -48,6 +50,7 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "spikes/*"
+    "spikes/*",
+    "e2e"
   ]
 }

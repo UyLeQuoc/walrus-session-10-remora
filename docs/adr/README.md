@@ -45,3 +45,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0026](0026-network-switch.md) | One deployment, both Sui networks, with a network switch in the UI | Accepted |
 | [0027](0027-flex-takeover.md) | Uy's agent may take Huấn's open W1 items after finishing its own | Accepted |
 | [0028](0028-w1-rails-design.md) | W1 rails design (facilitator as sponsor, queue, keys, indexer) | Accepted |
+| [0029](0029-u4-web-and-e2e.md) | W1 web (U4) and the E2E harness | Accepted |

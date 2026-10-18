@@ -1,0 +1,21 @@
+{
+  "name": "@remora/e2e",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:main": "E2E_BASE_URL=${E2E_BASE_URL:?set the main deployment URL} playwright test --project=smoke",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@mysten/sui": "^2.33.2",
+    "@playwright/test": "1.62.0",
+    "@remora/chain": "workspace:*",
+    "@remora/disc-sdk": "workspace:*",
+    "@remora/memory": "workspace:*",
+    "@remora/schema": "workspace:*",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3"
+  }
+}
