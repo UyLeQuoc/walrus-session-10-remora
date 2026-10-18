@@ -213,6 +213,8 @@ twice in a row on mainnet without intervention.
 - [ ] Walrus Memory writing on **mainnet**, ≥10 memories (show the count from `listMemories`)
 - [ ] Tatum Sui RPC in the core path (gRPC stream + dry-run/execute + facilitator), documented in the
       README
+- [ ] **Flip the repo to public** (`UyLeQuoc/walrus-session-10-remora`, [ADR-0017](adr/0017-github-repo-private-until-submission.md)) by Nov 9,
+      after a final review of the docs
 - [ ] Public repo, Apache-2.0/MIT, `.env.example`, one-command dev, Move tests, evals and CI
 - [ ] README section **"Built on prior work"** (hippo, commit `66fb33a`), listing what was reused and what's new
 - [ ] Working demo URL + playground + Walrus Sites URL + a 2–3 minute video

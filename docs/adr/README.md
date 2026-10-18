@@ -33,3 +33,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0014](0014-sonar-pre-action-check.md) | Sonar: defense in depth before any payment or send | Accepted |
 | [0015](0015-tatum-for-all-chain-io.md) | Route all chain I/O through Tatum | Accepted |
 | [0016](0016-record-decisions-as-adrs.md) | Record every decision as an ADR | Accepted |
+| [0017](0017-github-repo-private-until-submission.md) | GitHub repo stays private until submission | Accepted |

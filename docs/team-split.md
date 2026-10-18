@@ -306,6 +306,8 @@ Huấn holds is the capped E2E burner.
 ## 10. Uy's repo setup checklist (Mon Oct 20, morning)
 
 - [x] Docs + `.gitignore` committed (the planning written before the window).
+- [x] GitHub repo created, **private until submission**: `UyLeQuoc/walrus-session-10-remora`
+      ([ADR-0017](adr/0017-github-repo-private-until-submission.md)).
 - [ ] **Labeled import commit** from hippo (`66fb33a`):
   - the toolchain, `packages/memory`, `packages/db`, channels, identity/connect, and the web shell + UI
     kit;
