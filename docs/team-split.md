@@ -21,11 +21,11 @@
 
 | | **Uy Le: Sui + Walrus Memory + Move + backend (+ deploy, launch, flex infra/UI)** | **Huấn: UI/UX + E2E (+ flex infra/UI)** |
 |---|---|---|
-| Owns | Move, Disc SDK, Tatum client, signer, gas sponsor, facilitator, Reef API, merchants, `apps/server` (runtime, triggers, tools, templates, channels, identity, memory, Hatchery backend, ops), `packages/memory`, `packages/db`, MCP, evals, CI/CD, **all deploys** (staging + prod server, web on Walrus Sites/Vercel, Move publish), environments | Everything in `apps/web`: dashboard, onboarding, inspector, Mini App, playground, Hatchery gallery and hatch flow, guide, docs site, all UX features, design system, i18n, accessibility. Plus **bot UX copy** (`apps/server/src/copy/`: message text, button layouts, error sentences). Plus **E2E** (`e2e/`): the Playwright suite for the demo path, regression runs on staging after every merge window, wave-exit E2E reports, bug triage |
+| Owns | Move, Disc SDK, Tatum client, signer, gas sponsor, facilitator, Reef API, merchants, `apps/server` (runtime, triggers, tools, templates, channels, identity, memory, Hatchery backend, ops), `packages/memory`, `packages/db`, MCP, evals, CI/CD, **all deploys** (backend on **Railway**, frontend on **Vercel**, the Walrus Sites mirror, Move publish), environments | Everything in `apps/web`: dashboard, onboarding, inspector, Mini App, playground, Hatchery gallery and hatch flow, guide, docs site, all UX features, design system, i18n, accessibility. Plus **bot UX copy** (`apps/server/src/copy/`: message text, button layouts, error sentences). Plus **E2E** (`e2e/`): the Playwright suite for the demo path, regression runs on the `main` deployment after every merge window, wave-exit E2E reports, bug triage |
 | Light UI | `apps/web/src/features/lab/`: demo and ops consoles (Disc console, facilitator test, verify, health, cost, playground admin), built with Huấn's UI kit. The lab is a fallback for the video if a polished page isn't ready | — |
 | Work parts | 121 (65 backend-only + the backend half of 55 shared features + K6 CI/evals) | 67 (11 UI-only + the UI half of 55 shared features + K6 E2E) |
 | Ported from hippo | Toolchain, CI, Railway, `packages/memory`, `packages/db`, channels, identity/connect, key crypto, `diagnose` | Web shell, UI kit, wallet/zkLogin UI, connect pages, `/me` → inspector, guide diagrams, Claude Code panel |
-| Launch role | **Deploys, the demo video** (script, capture, edit, narration), **submission form**, blog post ("Rails Before Robots, Part 2"), X thread | Final E2E pass on production (the demo-ready call), landing page, learning charts, UX polish, screenshots on request |
+| Launch role | **Deploys, the demo video** (script, capture, edit, narration), **submission form**, blog post ("Rails Before Robots, Part 2"), X thread | Final E2E pass on `main` (the demo-ready call), landing page, learning charts, UX polish, screenshots on request |
 
 **On workload:**
 
@@ -35,7 +35,7 @@
 - If Huấn runs ahead, the next things to take over are bot UX (copy, keyboard layouts, Telegram
   message design), the docs site and the charts.
 - **E2E is a first-class job, not an afterthought.** Huấn writes the demo-path suite in W1–W2 against
-  fixtures and staging, and from then on it gates every wave exit.
+  fixtures and the `main` deployment, and from then on it gates every wave exit.
 
 ## 2. Directory ownership
 
@@ -88,13 +88,13 @@ Notation:
 
 | Wave | Uy Le: infra + backend + deploy | Huấn: frontend + UX + E2E |
 |---|---|---|
-| **W1** Oct 20–25 | A1·be, A4·be, B4, D2, D8, E1, E2, E3, F1, G1, G2, I6, K1 (+ repo setup, staging, spike) | A1·ui, A4·ui (+ port and verify the web shell, UI kit and design tokens; scaffold the copy keys; **set up Playwright + a burner test wallet + demo-path E2E skeleton on fixtures**) |
+| **W1** Oct 20–25 | A1·be, A4·be, B4, D2, D8, E1, E2, E3, F1, G1, G2, I6, K1 (+ repo setup, Railway + Vercel deploys of `main`, spike) | A1·ui, A4·ui (+ port and verify the web shell, UI kit and design tokens; scaffold the copy keys; **set up Playwright + a burner test wallet + demo-path E2E skeleton on fixtures**) |
 | **W2** Oct 26 – Nov 1 | A3·be, A5·be, A7·be, B1·be, B3, B6·be, B7·be, B8·be, B9·be, C1, C2, D3, D4, D9, E4·be, E9, F2, F3·be, F6, G3·be, H1, H5·be, I1, I2, I4, I5, N1·be, N2·be, N4·be, N5·be, N6·be, N10·be, N12·be, N13·be, N19·be | A2, A3·ui, A5·ui, A6, A7·ui, B1·ui, B6·ui, B7·ui, B8·ui, B9·ui, E4·ui, F3·ui, G3·ui, H4, H5·ui, N1·ui, N2·ui, N4·ui, N5·ui, N6·ui, N10·ui, N12·ui, N13·ui, N19·ui |
 | **W2/W3** | D1, F11 | — |
 | **W3** Nov 2–6 | A8·be, B2·be, B5·be, B10, C3, C4, C5, C6, D5, D6, D7, E5, E6·be, E7·be, E8, E13, F4·be, F5·be, F7·be, F8·be, F9·be, F10·be, G4, G5·be, G6·be, H2, H7·be, I3, I7, J1, K2, K3, K4, K5, L1·be, M1·be, M3, M4·be, M5·be, M6, M7, N3·be, N7·be, N8·be, N9, N11·be, N15·be, N20·be (ops dashboards render as **lab** pages) | A8·ui, B2·ui, B5·ui, E6·ui, E7·ui, F4·ui, F5·ui, F7·ui, F8·ui, F9·ui, F10·ui, G5·ui, G6·ui, H3, H6, H7·ui, H9, J4, L1·ui, M1·ui, M4·ui, M5·ui, M12, N3·ui, N7·ui, N8·ui, N11·ui, N14, N15·ui, N16, N18, N20·ui |
 | **W3/W4** | H8, L2 | — |
 | **W4** Nov 7–9 | C7, C8, C9, D10, E10, E11, E12, F12, F13·be, G7, J2, J3, L3·be, M2·be, M8·be, M9·be, M10·be, M11·be, N17·be | F13·ui, L3·ui, M2·ui, M8·ui, M9·ui, M10·ui, M11·ui, N17·ui |
-| Continuous / roadmap | K6·be (CI, LLM evals, backend unit and integration tests), E14 | K6·e2e (**E2E**: Playwright demo path on staging, regression after each merge window, wave-exit reports) |
+| Continuous / roadmap | K6·be (CI, LLM evals, backend unit and integration tests), E14 | K6·e2e (**E2E**: Playwright demo path against the `main` deployment and Vercel previews, a regression run after each merge window, wave-exit reports) |
 
 ### 3.1 Flex pool (infra + UI either person can take)
 
@@ -146,15 +146,15 @@ waits on the backend.
 | Mon Oct 20 | Uy → Huấn | Repo set up (§10), hippo import, contracts v1 + fixtures | All UI work, using fixtures |
 | Tue Oct 21 | Uy → both | **Spike go/no-go:** address balance + app-bound allowance via Tatum | A4, B3 |
 | Wed Oct 22 | Huấn → Uy | UI kit + app shell + lab route slot | Uy's lab pages |
-| Wed Oct 22 | Uy → Huấn | **Staging API live** (Railway, from `main`): sign-in, funds API, memory read endpoints | A1·ui, A4·ui, F3·ui against real data |
+| Wed Oct 22 | Uy → Huấn | **Main API live** (Railway, auto-deploys from `main`): sign-in, funds API, memory read endpoints | A1·ui, A4·ui, F3·ui against real data |
 | Fri Oct 24 | Uy → Huấn | Remora create/rotate/pause/reissue endpoints + tx builders, `pauseAll`, deployments | Create flow, B7–B9·ui, N10·ui |
 | Fri Oct 24 | Huấn → Uy | Bot copy v1 (Telegram messages, buttons, error sentences) | H1, N4·be, N6·be rendering |
 | Sat Oct 25 | Uy → Huấn | Facilitator + `sui-risk` live on mainnet | Scout flows in the UI |
 | Mon Oct 27 | Uy → Huấn | `RemoraEvent` SSE stream + approvals API + template schema | N1, N2, N4·ui, Hatchery UI prep |
-| Wed Oct 29 | Uy → Huấn | Scout + Sentinel live on staging | N13·ui, learning UI |
+| Wed Oct 29 | Uy → Huấn | Scout + Sentinel live on `main` | N13·ui, learning UI |
 | Mon Nov 3 | Uy → Huấn | Hatchery + Reef APIs, playground sandbox API | M4·ui, M5·ui, H7·ui, E7·ui |
-| Every merge window from Oct 26 | Huấn → Uy | E2E run on staging: pass/fail report + issues for regressions | Uy's prod deploy decision |
-| Thu Nov 6 | Huấn → Uy | **Demo-ready call:** the full E2E suite green on production | Uy records the video on Nov 7 |
+| Every merge window from Oct 26 | Huấn → Uy | E2E run on the `main` deployment: pass/fail + issues for regressions | Uy reverts or fixes forward |
+| Thu Nov 6 | Huấn → Uy | **Demo-ready call:** the full E2E suite green on `main`; merge freeze starts at 21:00 | Uy records the video on Nov 7 |
 
 **If a dependency slips,** the consumer keeps going on fixtures, and the producer posts a new date in a
 handoff note (§9).
@@ -175,10 +175,17 @@ handoff note (§9).
   changed lines. The title starts with the IDs (`[F3·ui] Memory inspector table`). The body lists the
   paths touched and evidence (screenshots, tx digests, test output).
 - **CI gates:** `bun run typecheck`, `bun run lint`, `bun run test`, `sui move test`, and a contract
-  fixture check. Web PRs also get a Vercel preview.
-- **Rebase on `main` at least twice a day.** Merge windows are **12:00 and 21:00 Vietnam time**. After
-  each window, staging redeploys (Uy's pipeline), Huấn's **E2E suite runs against staging**, and
-  production is promoted by Uy **only when E2E is green**.
+  fixture check. Web PRs get a Vercel preview (it calls the `main` API), and E2E runs against it.
+- **Rebase on `main` at least twice a day.** Merge windows are **12:00 and 21:00 Vietnam time**.
+- **One environment, `main`.** There's no staging. After each window:
+  - Railway (backend, set to wait for CI) and Vercel (web) deploy `main` automatically;
+  - Huấn's **E2E suite runs against it**;
+  - **if E2E goes red, Uy reverts the offending PR or fixes forward within the same window.**
+- **Making up for the missing staging:**
+  - risky backend changes merge **behind a feature flag**;
+  - DB schema changes must be **additive only** (hippo's `additive` check in CI);
+  - backend PRs merge only inside the windows, never ad hoc.
+- **Demo freeze:** from Nov 6 at 21:00, only fixes merge.
 - **Feature flags** (`REMORA_FLAGS=hatchery,shadow,…`) let unfinished work merge dark, so `main` stays
   demoable.
 
@@ -191,7 +198,7 @@ handoff note (§9).
    and stops that sub-task.
 3. **Never:**
    - edit `packages/schema` (unless the goal *is* a contract PR);
-   - push DB schema to staging or prod;
+   - push DB schema (only CI does that, on `main`);
    - deploy, or publish/upgrade the Move package;
    - touch secrets or `.env` values;
    - bump shared dependencies;
@@ -203,8 +210,9 @@ handoff note (§9).
    - never two goals in the same package or web feature folder at once;
    - goals that need a pending contract wait for it.
 6. **Runtime isolation per worktree** (see §8):
-   - **Huấn's web and E2E worktrees** point at **staging** (`VITE_API_URL`), so they need no chain or memory
-     secrets.
+   - **Huấn's web and E2E worktrees** point at the **`main` API** (`VITE_API_URL`), so they need no
+     backend secrets. They sign in **only with the E2E burner or test owner accounts**, never real
+     owner accounts.
    - **Uy's backend worktrees** use their own ports (`PORT_OFFSET=n`), and `CHANNELS=off` except in one
      designated worktree, because two pollers on one Telegram token fail with `409 Conflict`.
    - Only one of Uy's worktrees runs chain-writing e2e tests at a time, since a shared sponsor gas coin
@@ -218,7 +226,7 @@ handoff note (§9).
 git fetch origin
 git worktree add ../remora-F3ui -b huanng/F3-inspector-ui origin/main
 cd ../remora-F3ui && bun install
-VITE_API_URL=https://<staging-api> bun run dev:web     # Huấn: web against staging
+VITE_API_URL=https://<main-api> bun run dev:web        # Huấn: local web against the main API (test accounts only)
 # Uy: PORT_OFFSET=2 CHANNELS=off bun run dev:server
 # when merged:  git worktree remove ../remora-F3ui
 ```
@@ -230,7 +238,7 @@ Goal: [F3·ui] Memory inspector UI — acceptance: docs/remora-features.md row F
 Owner: Huấn · Branch: huanng/F3-inspector-ui · Worktree: ../remora-F3ui
 Allowed paths: apps/web/src/features/memory/**, apps/server/src/copy/** (strings only)
 Read-only context: docs/remora-spec.md §8 and §12.12, reference/hippo/apps/web/src/features/me/**
-Contracts (read-only): packages/schema/** — build against packages/schema/fixtures, then the staging API
+Contracts (read-only): packages/schema/** — build against packages/schema/fixtures, then the main API (test accounts only)
 Done when: acceptance met, component tests added, typecheck/lint/test green, rebased on origin/main,
   draft PR with IDs, paths touched, screenshots (desktop + mobile).
 Outside allowed paths? Write docs/handoffs/<YYYY-MM-DD>-huanng-to-uy-<topic>.md and stop that part.
@@ -248,19 +256,22 @@ Done when: sui move test green (limits, payees, pause, rotate, permit guards), t
 
 ## 8. Environments
 
-| Resource | Uy (local dev) | Huấn (local dev) | **Staging** (from `main`, Uy owns) | **Production** |
-|---|---|---|---|---|
-| API server | local, own ports | **uses staging** (optionally runs locally) | Railway `remora-staging` | Railway `remora` |
-| Web | lab pages locally | local Vite, `VITE_API_URL` = staging | Vercel preview + staging site (Uy deploys) | Walrus Sites (SuiNS) + Vercel (**Uy deploys**) |
-| E2E | — | Playwright locally + in CI against staging | runs after every merge window | final pass before the video |
-| E2E test wallet | — | **burner wallet** (≤ $2 USDC + a little SUI, its own capped Disc), signing via an injected test wallet (hippo's throwaway-wallet pattern) | same burner | separate prod burner, retired after launch |
-| Telegram bot | `@remora_uy_dev_bot` | optional `@remora_huanng_dev_bot` | `@remora_staging_bot` | official bot |
-| Postgres (Neon) | branch `dev-uy` | not needed | branch `staging` | branch `main` (CI pushes schema) |
-| Walrus Memory | own account + keys, prefix `dev-uy:` | not needed | staging accounts, prefix `stg:` | real owner accounts |
-| Tatum | own key | not needed | staging key | project key |
-| Gas sponsor | own wallet (small SUI) | not needed | staging sponsor wallet | prod sponsor wallet |
-| Move package | Uy publishes; IDs go in `packages/schema/src/deployments.ts` | read-only | same IDs | same IDs |
-| Secrets | password manager | `VITE_*` values + the E2E burner key | Railway/Vercel env | Railway/Vercel env |
+There is **one deployed environment: `main`.** Every merge to `main` deploys it. Everything else is a
+local machine.
+
+| Resource | Uy (local dev) | Huấn (local dev) | **`main`** (the only deployed environment, Uy owns) |
+|---|---|---|---|
+| Backend services (server, facilitator, Reef, merchants) | local, own ports | uses the `main` API | **Railway**, one environment, auto-deploys from `main` after CI. One server replica |
+| Web | lab pages locally | local Vite, `VITE_API_URL` = the `main` API | **Vercel** from `main`. PR previews also call the `main` API. Walrus Sites mirror (**Uy deploys**) |
+| E2E | — | Playwright locally + in CI | Runs on Vercel previews and after every merge window on `main`; final pass before the video |
+| E2E test wallet | — | **burner wallet** (≤ $2 USDC + a little SUI, its own capped Disc), signing through an injected test wallet (hippo's throwaway-wallet pattern) | The same burner + test owner accounts, retired after launch |
+| Telegram bot | `@remora_uy_dev_bot` | not needed | The official bot |
+| Postgres | local Docker Postgres (hippo's `docker-compose.yml`) | not needed | **Neon** `main`. CI pushes the schema, additive only |
+| Walrus Memory | own account + keys, prefix `dev-uy:` | not needed | Real owner accounts + test owner accounts (prefix `test:`) |
+| Tatum | own key | not needed | Project key |
+| Gas sponsor | own wallet (small SUI) | not needed | The `main` sponsor wallet |
+| Move package | Uy publishes; IDs go in `packages/schema/src/deployments.ts` | read-only | The same IDs |
+| Secrets | password manager | `VITE_*` values + the E2E burner key | Railway / Vercel env vars |
 
 **Why the resources are separate:**
 
@@ -268,7 +279,8 @@ Done when: sui move test green (limits, payees, pause, rotate, permit guards), t
 - Telegram allows **one poller per token**;
 - a Sui sponsor's gas coins **can't be shared** by concurrent transactions.
 
-**Staging means Huấn needs no production secrets.** The only key Huấn holds is the capped E2E burner.
+**Huấn needs no backend secrets.** Local web talks to the `main` API using test accounts. The only key
+Huấn holds is the capped E2E burner.
 
 ## 9. Hotspots & how to avoid them
 
@@ -277,7 +289,7 @@ Done when: sui move test green (limits, payees, pause, rotate, permit guards), t
 | Typed API client `apps/web/src/lib/api.ts` | Shared. It changes only when the server's `AppType` changes (contract PR) |
 | Web routes `apps/web/src/app/routes.tsx` | Append-only. Uy adds only `/lab/*` lines |
 | Bot copy | Keys in `packages/schema` (contract). The text in `apps/server/src/copy/` belongs to Huấn, and Uy never edits the strings |
-| DB schema | All Uy's, split per domain. Only CI pushes to staging and prod |
+| DB schema | All Uy's, split per domain. Only CI pushes, on `main`, additive changes only |
 | `bun.lock` | Add dependencies only inside your own app or package. On conflict, take `main`'s lockfile and run `bun install`. Root devDependencies change only through Uy |
 | UI kit `components/ui` | Huấn owns it. Uy's lab only imports it and requests new components through a handoff |
 | Docs | `remora-*.md` (scope, spec, plan): Uy. `team-split.md`: both. Huấn may add `docs/ux/*.md` and `docs/e2e/*.md` (test plans and reports) |
@@ -297,15 +309,21 @@ Done when: sui move test green (limits, payees, pause, rotate, permit guards), t
       web routes.
 - [ ] `.github/CODEOWNERS` (§2), branch protection (PR + CI + code-owner review, squash only), CI (§6),
       Vercel previews.
-- [ ] **Staging:** a Railway service, Neon branch, bot and sponsor wallet, deployed from `main`. Share
-      the staging URL with Huấn by **Oct 22**.
+- [ ] **The `main` environment** (the only one):
+  - Railway project with server, facilitator, Reef and merchants: one server replica, monorepo watch
+    paths, wait for CI;
+  - Vercel project for `apps/web`, with previews;
+  - Neon `main`, the official bot, the sponsor wallet.
+
+  Share the main API URL with Huấn by **Oct 22**.
 - [ ] GitHub Project board + issues for every feature, **split into `·be` / `·ui` issues** for shared
       features, generated from `remora-features.md` with `gh issue create`. Labels: `owner:uy` /
       `owner:huanng`, `wave:W1..W4`, `contract`.
 - [ ] Invite Huấn. Share secrets through the password manager; Huấn needs `VITE_*` values + the E2E
       burner key.
-- [ ] Production deploy pipeline (Uy): server to Railway, web to Walrus Sites (`site-builder`, WAL,
-      SuiNS) + Vercel, gated on Huấn's E2E status check.
+- [ ] Post-deploy E2E (Huấn's suite) wired into CI after each `main` deploy, posting results to the PR
+      or chat.
+- [ ] The Walrus Sites mirror through `site-builder` (WAL, SuiNS), deployed by Uy.
 - [ ] **Team submission:** submit Remora **once as a team**. Ask the organizers on Discord how to list
       the second member (the form has per-person fields such as Tatum ID and SUI address).
 
@@ -315,7 +333,7 @@ Done when: sui move test green (limits, payees, pause, rotate, permit guards), t
   contract changes.
 - **Board:** move issues as you go. A PR closes its issue.
 - **Wave exits together:**
-  - Oct 25 (W1), Nov 1 (W2), Nov 6 (W3): Huấn presents the **E2E report** (demo path on staging, then
-    production). Together, decide which lab pages stay in the video, and rebalance §3.
+  - Oct 25 (W1), Nov 1 (W2), Nov 6 (W3): Huấn presents the **E2E report** (the demo path on the `main`
+    deployment). Together, decide which lab pages stay in the video, and rebalance §3.
   - Nov 6: Huấn's demo-ready call. Nov 7: Uy records the video. Nov 8: Uy publishes the blog and posts.
     Nov 9: Uy submits.

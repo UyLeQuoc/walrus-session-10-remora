@@ -174,9 +174,9 @@ apps/facilitator        x402 facilitator for sui:mainnet (public, rate-limited)
 apps/reef               x402 service directory API (+ Walrus snapshots)
 apps/merchants          demo x402 APIs: sui-risk, odds, brief
 apps/web                Vite + React SPA: dashboard, Mini App, playground, Hatchery, verify pages, landing
-                        → Walrus Sites (SuiNS domain), Vercel as backup
+                        → Vercel (primary, a preview per PR) + Walrus Sites mirror (SuiNS domain)
 evals/                  prompt-injection red-team suite, triage/scoring evals
-e2e/                    Playwright demo-path suite (staging + production), burner test wallet
+e2e/                    Playwright demo-path suite (main deployment + Vercel previews), burner test wallet
 docs/                   these docs + architecture diagram + threat model
 ```
 
@@ -195,7 +195,22 @@ docs/                   these docs + architecture diagram + threat model
 - **Chain:** `@mysten/sui` (`Transaction`, `tx.withdrawal({ from: 'allowance' })`), with every network
   call routed through **Tatum**.
 - **Web:** Vite + React 19 + Tailwind v4 + shadcn/ui, dapp-kit (Slush), Enoki zkLogin and `@mysten/suins`,
-  all ported from hippo. Deployed to **Walrus Sites** with an SPA fallback, with Vercel as backup.
+  all ported from hippo. Hosted on **Vercel** (primary, with a preview per PR), plus a **Walrus Sites**
+  mirror (SPA fallback, SuiNS domain) for the landing, docs and verify pages (H6).
+
+### Deployment
+
+| What | Where | Notes |
+|---|---|---|
+| `apps/server` (API + channels + runtime) | **Railway** | **One environment, `main`**, auto-deployed after CI. **One replica**, because Telegram long-polling allows one poller per token |
+| `apps/facilitator`, `apps/reef`, `apps/merchants` | **Railway**, same project | One service each. Monorepo watch paths, so a change only redeploys the services it touches |
+| `apps/web` | **Vercel** | Root `apps/web`, SPA rewrites. Deploys from `main`; PR previews also call the `main` API |
+| Walrus Sites mirror | `site-builder` from CI | Needs WAL + a SuiNS domain. Served at `*.wal.app` |
+| Postgres | Neon `main` | Local dev uses Docker Postgres. Schema changes are additive only, pushed by CI |
+| Move packages | Sui mainnet | Published manually by Uy; IDs go in `packages/schema/src/deployments.ts` |
+
+If Railway PR environments are used for the backend, they must run with `CHANNELS=off` (or their own
+bot token) and their own sponsor wallet.
 
 ---
 

@@ -135,7 +135,8 @@ owner's own work, so reuse is allowed, but it has to be **disclosed and clearly 
   remoras (hippo's teams). The time saved moves
   **A2 zkLogin to W2** and **H8 Discord/Slack to W3**.
 - **The stack follows hippo:** Bun + Turbo, a **Hono** server on Railway (API + channels + runtime in one
-  always-on process), a **Vite + React** SPA on Walrus Sites (Vercel as backup), Drizzle + Neon. See
+  always-on process, plus the facilitator, Reef and merchant services), a **Vite + React** SPA on **Vercel**
+  (with a Walrus Sites mirror), Drizzle + Neon. See
   [remora-spec.md §5](remora-spec.md#5-architecture).
 - **Corrections hippo measured** (now applied to the spec and feature list):
   - no per-memory delete (F4 becomes hide + namespace forget);

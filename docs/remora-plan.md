@@ -40,7 +40,8 @@
 - [ ] **Enoki:** account for zkLogin, SuiNS subnames and the Seal mainnet key (for W4 private
       namespaces).
 - [ ] **Telegram:** bot token (BotFather), Mini App enabled, an admin chat for alerts.
-- [ ] **Infra:** AI Gateway key, Postgres (Neon), runtime host (Railway, Fly or a VPS), error tracking,
+- [ ] **Infra:** AI Gateway key, Postgres (Neon), a **Railway** project for the backend (one
+      environment, `main`), a **Vercel** project for `apps/web`, error tracking,
       KMS / secret store for the master key.
 - [ ] **SuiNS:** a parent domain for subnames and Walrus Sites (e.g. `remora.sui`, if available).
 
