@@ -54,16 +54,23 @@ jobs:
 
   move:
     runs-on: ubuntu-latest
+    env:
+      # Pinned: allowances need >= 1.81 (sui::allowance isn't in 1.74's framework). See docs/spikes.
+      SUI_VERSION: testnet-v1.82.1
     steps:
       - uses: actions/checkout@v4
+      - name: Install Sui CLI
+        if: hashFiles('packages/move/remora/Move.toml') != ''
+        run: |
+          mkdir -p /tmp/sui-cli "$HOME/.local/bin"
+          curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${SUI_VERSION}/sui-${SUI_VERSION}-ubuntu-x86_64.tgz" | tar -xz -C /tmp/sui-cli
+          install -m 0755 "$(find /tmp/sui-cli -type f -name sui | head -1)" "$HOME/.local/bin/sui"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: sui move test
         run: |
           if [ ! -f packages/move/remora/Move.toml ]; then
             echo "packages/move/remora has no Move package yet; skipping."
             exit 0
           fi
-          if ! command -v sui >/dev/null 2>&1; then
-            echo "::error::Move package present but the Sui CLI install step is not wired yet (E1 adds a pinned install)."
-            exit 1
-          fi
+          sui --version
           cd packages/move/remora && sui move test
