@@ -227,9 +227,13 @@ export const ownerSettings = pgTable("owner_settings", {
   /** "23:00"–"07:00": only urgent pings in between. */
   quietStart: text("quiet_start"),
   quietEnd: text("quiet_end"),
-  language: text("language", { enum: ["en", "vi"] }).notNull().default("en"),
+  language: text("language", { enum: ["en", "vi"] })
+    .notNull()
+    .default("en"),
   /** all = every ping; important = urgent only, the rest in the digest; digest = digest only. */
-  notify: text("notify", { enum: ["all", "important", "digest"] }).notNull().default("important"),
+  notify: text("notify", { enum: ["all", "important", "digest"] })
+    .notNull()
+    .default("important"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
