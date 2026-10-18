@@ -1,2 +1,5 @@
-/** apps/facilitator: x402 facilitator for `sui:mainnet`: verify through a Tatum dry-run, settle through Tatum execute, plus a gas station. Deployed on Railway. Scaffold only (see README.md). */
-export {};
+/** apps/facilitator: the x402 `exact` facilitator for Sui (E3) and the gas station + sponsor ledger (D8), per network (ADR-0026). */
+export * from "./app.ts";
+export * from "./config.ts";
+export * from "./facilitator.ts";
+export * from "./ledger.ts";
