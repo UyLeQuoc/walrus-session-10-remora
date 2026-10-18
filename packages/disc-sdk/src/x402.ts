@@ -65,10 +65,10 @@ export function fromX402Network(n: string): SuiNetworkName | null {
 }
 
 export function encodeHeader(value: unknown): string {
-  const json = JSON.stringify(value);
-  return typeof btoa === "function"
-    ? btoa(String.fromCharCode(...new TextEncoder().encode(json)))
-    : Buffer.from(json, "utf8").toString("base64");
+  // btoa exists in browsers and Node ≥ 16; encode UTF-8 first so non-ASCII survives.
+  let binary = "";
+  for (const b of new TextEncoder().encode(JSON.stringify(value))) binary += String.fromCharCode(b);
+  return btoa(binary);
 }
 
 export function decodeHeader<T>(header: string): T {

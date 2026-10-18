@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { clearActiveChat, writeActiveChat } from "@/features/chat/active-chat";
+import { PanicButton } from "@/features/funds/panic-button";
 import { NetworkSwitch, WalletNetworkWarning } from "@/features/network/network-switch";
 
 export function AppLayout() {
@@ -72,6 +73,7 @@ export function AppLayout() {
             <div className="flex w-full items-center gap-2 px-2">
               <SidebarTrigger />
               <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{title}</p>
+              <PanicButton />
               <NetworkSwitch />
               <ThemeToggle />
             </div>

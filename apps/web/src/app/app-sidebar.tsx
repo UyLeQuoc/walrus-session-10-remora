@@ -1,4 +1,17 @@
-import { BookOpen, Library, MessagesSquare, Search, Send, SquarePen, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  Brain,
+  Fish,
+  Inbox,
+  Library,
+  MessagesSquare,
+  Rocket,
+  Search,
+  Send,
+  SquarePen,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { WalletAccount } from "@/app/wallet-account";
@@ -66,6 +79,24 @@ export function AppSidebar({
                   <span>New chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {(
+                [
+                  ["/onboarding", "Get started", Rocket],
+                  ["/remoras", "Remoras", Fish],
+                  ["/funds", "Funds", Wallet],
+                  ["/memory", "Memory", Brain],
+                  ["/approvals", "Approvals", Inbox],
+                ] as const
+              ).map(([to, label, Icon]) => (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith(to)}>
+                    <Link to={to} onClick={closeOnPhone}>
+                      <Icon />
+                      <span>{label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/me"}>
                   <Link to="/me" onClick={closeOnPhone}>
