@@ -282,6 +282,10 @@ prize requires the product to be built *primarily* with it.
 >   and `periodic_rate_limit` aborting with `EExceedsRateLimit` past the window.
 > - A spend from a funder without enough address balance is rejected at input checks ("Insufficient
 >   address balance …"), with no gas charged.
+> - **Reading an allowance:** `getObject` content is BCS `Allowance { id, settings: Settings { funder,
+>   spender: Option<address>, app: Option<TypeName>, lifetime_cap: Option<u256>, start, expiration:
+>   Option<u64>, rate_limit: Option<RateLimit>, name: String }, current_spend: u256 }`. `TypeName.name`
+>   has no `0x`. Layout is in `@remora/disc-sdk` `bcs.ts` (U2).
 
 A **funder** lets a **spender** pull from the funder's *address balance*, within limits. Nothing is locked
 or set aside: funds leave only when a spend succeeds.

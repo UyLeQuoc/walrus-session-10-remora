@@ -180,6 +180,9 @@
     "packages/disc-sdk": {
       "name": "@remora/disc-sdk",
       "version": "0.0.1",
+      "dependencies": {
+        "@mysten/sui": "^2.33.2",
+      },
       "devDependencies": {
         "@types/node": "^24.0.0",
         "typescript": "^5.9.3",
@@ -262,6 +265,19 @@
         "@mysten/sui": "^2.33.2",
         "@protobuf-ts/grpc-transport": "^2.11.1",
         "@remora/chain": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^5.9.3",
+      },
+    },
+    "spikes/disc": {
+      "name": "@remora/spike-disc",
+      "version": "0.0.1",
+      "dependencies": {
+        "@mysten/sui": "^2.33.2",
+        "@remora/chain": "workspace:*",
+        "@remora/disc-sdk": "workspace:*",
       },
       "devDependencies": {
         "@types/node": "^24.0.0",
@@ -673,6 +689,8 @@
     "@remora/sonar": ["@remora/sonar@workspace:packages/sonar"],
 
     "@remora/spike-allowance": ["@remora/spike-allowance@workspace:spikes/allowance"],
+
+    "@remora/spike-disc": ["@remora/spike-disc@workspace:spikes/disc"],
 
     "@remora/web": ["@remora/web@workspace:apps/web"],
 

@@ -216,13 +216,15 @@ bot token) and their own sponsor wallet.
 
 ## 6. Disc: onchain spending limits
 
+As built in v1 (U2, [ADR-0025](adr/0025-disc-v1-design.md)). It's live on testnet and goes to mainnet
+in Uy's pass (ADR-0024). Source: `packages/move/remora/sources/disc.move`.
+
 ```move
 module remora::disc;
 
-use sui::allowance::{Self, Allowance, AllowanceProposal, AllowanceWithdrawal};
-use sui::balance::Balance;
+public struct DISC has drop {}                  // app type A of every Disc-bound allowance (also the OTW)
 
-public struct DISC has drop {}                  // app type A of every Disc-bound allowance
+public struct Registry has key { id: UID, discs: Table<DiscKey, ID>, version: u64 }   // DiscKey { owner, name }
 
 public struct Disc has key {                    // shared policy, 1:1 with an app-bound Allowance
     id: UID,
@@ -231,29 +233,38 @@ public struct Disc has key {                    // shared policy, 1:1 with an ap
     payees: VecSet<address>,                    // allowed services (x402 payTo addresses)
     per_payment_cap: u64,
     paused: bool,
-    version: u64,
+    version: u64,                               // checked on every entry point; migrate_disc moves it forward
 }
 
+// Events (the indexer reads them from checkpoints):
 public struct Paid has copy, drop { disc: ID, payee: address, amount: u64, intent: vector<u8>, ts_ms: u64 }
-
-public struct Registry has key { id: UID, discs: Table<DiscKey, ID> }   // DiscKey { owner, name }: one Disc per allowance
+// DiscIssued { disc, owner, name, spender, payees, per_payment_cap } · DiscUpdated { disc, payees, per_payment_cap, paused }
+// SpenderRotated { disc, new_spender } · DiscRevoked { disc }
 
 /// Owner PTB: allowance::propose_for_app<Balance<USDC>, DISC>(name, remora, cap, start, expiry, rate)
-///            → remora::disc::issue(registry, proposal, payees, per_payment_cap)   (uses settings_permit;
-///              refuses a taken (owner, name), creates the Disc)
-public fun issue<C>(r: &mut Registry, p: AllowanceProposal<Balance<C>>, payees: vector<address>, per_payment_cap: u64, ctx: &mut TxContext);
+///            → disc::issue(registry, proposal, payees, per_payment_cap)   (settings_permit;
+///              refuses a taken (owner, name); creates and shares the Disc; returns its ID)
+public fun issue<C>(r: &mut Registry, p: AllowanceProposal<Balance<C>>, payees: vector<address>, per_payment_cap: u64, ctx: &mut TxContext): ID;
 
 /// Remora PTB (spender signs, runtime sponsors gas): withdrawal input { from: allowance } → pay.
-/// Checks the allowance's (funder, name) == (disc.owner, disc.name), !paused and payee ∈ payees, spends via app_balance_spend(spend_permit), asserts value ≤ per_payment_cap
-/// (an abort reverts the whole PTB), balance::send_funds(payee), emits Paid { intent = sha256(Wake.intent) }.
+/// Checks version, !paused, the allowance's (funder, name) == (owner, name), payee ∈ payees and a 32-byte intent;
+/// spends via app_balance_spend(spend_permit), asserts value ≤ per_payment_cap (an abort reverts the whole PTB),
+/// balance::send_funds(payee), emits Paid { intent = sha256(Wake.intent) }.
 public fun pay<C>(disc: &Disc, a: &mut Allowance<Balance<C>>, w: AllowanceWithdrawal<Balance<C>>,
-                  payee: address, intent: vector<u8>, c: &Clock, ctx: &TxContext);
+                  payee: address, intent: vector<u8>, c: &Clock, ctx: &mut TxContext);
 
-/// Leaked remora key? The owner rotates the spender in place (settings_permit, guarded by an owner check).
-public fun rotate<C>(disc: &Disc, a: &mut Allowance<Balance<C>>, new_spender: address, ctx: &TxContext);
-public fun set_payees(disc: &mut Disc, payees: vector<address>, ctx: &TxContext);
-public fun pause(disc: &mut Disc, paused: bool, ctx: &TxContext);
+/// Owner only (ENotOwner otherwise):
+public fun rotate<C>(disc: &Disc, a: &mut Allowance<Balance<C>>, new_spender: address, ctx: &mut TxContext);  // B9, settings_permit
+public fun set_payees(disc: &mut Disc, payees: vector<address>, ctx: &mut TxContext);
+public fun set_per_payment_cap(disc: &mut Disc, per_payment_cap: u64, ctx: &mut TxContext);
+public fun pause(disc: &mut Disc, paused: bool, ctx: &mut TxContext);                                     // N10: all Discs in one PTB
+public fun revoke<C>(r: &mut Registry, disc: Disc, cap: AllowanceCap<Balance<C>>, a: Allowance<Balance<C>>, ctx: &mut TxContext);
+public fun migrate_registry(r: &mut Registry);  public fun migrate_disc(disc: &mut Disc);              // forward-only, anyone
 ```
+
+Abort codes: `EDiscExists` 1, `EWrongDisc` 2, `EPayeeNotAllowed` 3, `EOverPaymentCap` 4, `ENotOwner` 5,
+`EPaused` 6, `EBadIntent` 7, `EWrongVersion` 8, `EZeroCap` 9, `ENotUpgrade` 10. `@remora/disc-sdk`
+`toDiscError` maps them, and the native allowance errors, onto `ERROR_CODES`.
 
 **Who enforces what:**
 
@@ -261,7 +272,8 @@ public fun pause(disc: &mut Disc, paused: bool, ctx: &TxContext);
   the owner's non-transferable `AllowanceCap`.
 - **Disc:** the payee allowlist, per-payment cap, pause, rotation without reissuing, and `Paid` events.
 
-**Budget changes** need revoke + reissue in **one owner-signed PTB**, built by `disc-sdk`.
+**Budget changes** need revoke + reissue in **one owner-signed PTB**, built by `disc-sdk`
+(`buildRevokeAndReissue`; the name can stay the same).
 
 **Guarding permits:** any holder of `SettingsPermit<DISC>` can rotate the spender of every Disc-bound
 allowance, so the functions that mint permits must check `ctx.sender() == disc.owner`.

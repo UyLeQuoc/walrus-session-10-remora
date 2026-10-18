@@ -1,2 +1,10 @@
-/** @remora/disc-sdk: PTB builders for the Disc (issue, pay, rotate, pause, revoke and reissue), address-balance funds (detect, move, withdraw), and `disc.fetch` (the x402 client). Scaffold only (see README.md). */
-export {};
+/**
+ * @remora/disc-sdk: PTB builders and readers for the Disc (E2). Transport-agnostic, so it works with
+ * `@remora/chain` (Tatum, Node) and with gRPC-web in the browser. `disc.fetch` (x402) comes with E3.
+ */
+export * from "./bcs.ts";
+export * from "./builders.ts";
+export * from "./config.ts";
+export * from "./errors.ts";
+export * from "./funds.ts";
+export * from "./readers.ts";
