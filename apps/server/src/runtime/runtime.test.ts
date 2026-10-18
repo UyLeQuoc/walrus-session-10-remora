@@ -201,7 +201,12 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     reef: () => reef,
     memory,
     brain: obedient,
-    notifier: { send: async (_o, n) => (notices.push(n), "sent") },
+    notifier: {
+      send: async (_o, n) => {
+        notices.push(n);
+        return "sent";
+      },
+    },
     limiter: new SlidingLimiter(),
     dailyTokens: 100_000,
     webBase: "http://web.test",
