@@ -1,0 +1,36 @@
+Goal U3: The whole W1 rails end to end, network-switchable, exercised on TESTNET only (A9·be, K1, D2, B4, D8, A4·be, E3, E9, E2 disc.fetch, G1/G2, D1 indexer).
+
+Source of truth: docs/goals/uy-03-w1-rails.md. Read it fully and do every step in order. Also read docs/remora-spec.md §6, §7, §9 and §12.3, docs/spikes/2026-10-19-disc-testnet.md (the E3 notes), docs/adr/0020, 0024, 0025 and 0026, and the existing packages/chain, packages/disc-sdk and spikes/disc/e2e.ts.
+
+Work in the main checkout on main (ADR-0022). packages/schema changes go through ONE contract PR; apps/web is Huấn's, so send him a handoff. Allowed paths: apps/server/src/{money,runtime,ops,triggers,tools}/**, plus registry.ts and env/schema.ts (append-only) and one start line in apps/server/src/index.ts; apps/facilitator/**; apps/merchants/**; packages/{chain,disc-sdk,signer,merchant}/**; packages/db/src/schema/{money,runtime}.ts; spikes/**; .env.example (append); docs/spikes/**; docs/tech-reference.md; docs/adr/**; docs/handoffs/**.
+
+Needs in .env (never commit; ask me if one is missing): TATUM_API_KEY_TESTNET, SPIKE_OWNER_KEY, SPIKE_SPENDER_KEY, SPIKE_SPONSOR_KEY, KEY_ENCRYPTION_KEY, DATABASE_URL (local Docker), and SPONSOR_PRIVATE_KEY_TESTNET (already in .env: a separate sponsor 0x4914…e122 holding 0.5 testnet SUI; it is NOT a funder).
+
+Run order (tests for each):
+1. A9·be network layer: per-network config + chain clients, the x-remora-network middleware, GET /api/networks; contract PR for the network types.
+2. K1 structured logging (request ID, network, remora; never secrets).
+3. D2 Postgres job queue: idempotency, backoff, dead-letter.
+4. B4 signer: envelope-encrypted remora keys, decrypted only to sign.
+5. D8 gas sponsor per network: co-sign, per-remora daily budget, low-balance alert, refuse if the sponsor is a funder.
+6. A4·be funds API: /api/funds split, plus unsigned move-to-address-balance / withdraw builders.
+7. E3 facilitator: /verify (simulate via Tatum, payTo change == amount, Disc-aware), /settle, /supported, gas station.
+8. @remora/merchant x402 middleware + the sui-risk demo merchant.
+9. disc.fetch x402 client: intent = sha256(Wake intent), remora signs, sponsor co-signs; Wake stored; follow-ups on D2.
+10. Checkpoint indexer per network: remora::disc events into Postgres, with a cursor.
+11. W1 exit e2e on testnet (spikes/w1): a remora pays sui-risk via disc.fetch, sponsored, funded from the owner's address balance; Paid.intent == the stored Wake hash; the indexer has the row. Negatives: over cap, bad payee, sponsor budget out, and mainnet refused while unavailable. Record the digests in a docs/spikes note.
+12. Docs, ADRs and handoffs.
+
+Hard rules:
+- No mainnet at all (ADR-0024): no transactions, no publish. Mainnet paths exist but stay disabled until I call the pass.
+- The sponsor is never a funder. Never log or commit keys or .env.
+- No deploys. DB schema goes to local Docker only. Avoid ports 8787/5173 (another project uses them).
+- Any decision gets an ADR in the same commit.
+
+Done when:
+- the W1 exit e2e passes on testnet with digests recorded;
+- every step has tests, and typecheck, lint, test and sui move test are green with CI green;
+- /api/networks shows testnet available and mainnet unavailable, and mainnet requests are refused with a typed error;
+- the contract PR is open;
+- the docs, ADRs and handoffs are written, and everything else is pushed to main.
+
+Finish with a short summary: what's running, the digests, and what Huấn needs for the UI.

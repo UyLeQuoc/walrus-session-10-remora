@@ -42,3 +42,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0023](0023-sui-cli-pin-and-spikes-workspace.md) | Pin Sui CLI 1.82.1 for Move, and a `spikes/*` workspace | Accepted |
 | [0024](0024-testnet-first.md) | Testnet first; mainnet only when Uy says | Accepted |
 | [0025](0025-disc-v1-design.md) | Disc v1 design choices | Accepted |
+| [0026](0026-network-switch.md) | One deployment, both Sui networks, with a network switch in the UI | Accepted |

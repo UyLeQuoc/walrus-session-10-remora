@@ -2,7 +2,7 @@
 
 > **Scope** ([ADR-0011](adr/0011-scope-mvp-ship-set.md)): an **MVP with enough features to feel complete.**
 >
-> - **The ship set (§0, 68 features) is what we commit to.**
+> - **The ship set (§0, 69 features) is what we commit to.**
 > - The other 64 features are the **backlog**: build them in wave order if time allows; otherwise they
 >   go into the README roadmap.
 >
@@ -11,13 +11,13 @@
 
 ---
 
-## 0. MVP ship set (68 features)
+## 0. MVP ship set (69 features)
 
 The ship set covers the demo path, every hackathon requirement and the strongest judging angles.
 
 | Area | Features |
 |---|---|
-| Onboarding & accounts | A1 sign-in · A3 memory account · A4 address-balance funds + Detect funds · A5 Telegram linking · A6 wizard |
+| Onboarding & accounts | A1 sign-in · A3 memory account · A4 address-balance funds + Detect funds · A5 Telegram linking · A6 wizard · A9 network switch |
 | Remora lifecycle | B1 create from template · B3 creation flow · B4 key custody · B7 budget change · B8 pause/retire · B9 rotate key |
 | Templates | C1 Scout · C2 Sentinel |
 | Runtime | D1 triggers · D2 durable jobs · D3 turn engine · D4 tools · D5 handoffs · D8 gas sponsor · D9 model routing and caps |
@@ -116,6 +116,7 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | A6 | Onboarding wizard | Sign in → memory account → fund → link Telegram → first remora from a template | W2 |
 | A7 | Settings | Timezone, quiet hours, language (EN/VI), default channel, notification levels | W2 |
 | A8 | Account export & exit | Export all memories and Wakes; retire all remoras in one flow | W3 |
+| A9 | **Network switch** | One deployment serves testnet and mainnet. A header switch (with a TESTNET badge) picks the session's network, sent as `x-remora-network`. Mainnet is disabled until it's published. Remoras, Discs and funds are per network; memory stays on mainnet ([ADR-0026](adr/0026-network-switch.md)) | W1 |
 
 ### B. Remora lifecycle & identity
 | ID | Feature | Details | Wave |
@@ -309,7 +310,7 @@ limits always apply.
 | N19 | **Feedback everywhere** | "Was this purchase worth it?" and 👍/👎 on answers feed `sources` and rules: the learning loop's raw input | W2 |
 | N20 | Public status page | Runtime, facilitator, Reef, relayer and Tatum health | W3 |
 
-**Totals:** 132 active features (133 rows, minus B11, which M superseded).
+**Totals:** 133 active features (134 rows, minus B11, which M superseded).
 
 | Wave | Count |
 |---|---|
