@@ -1,9 +1,9 @@
 # Spike U1: address balances + app-bound allowances via Tatum gRPC
 
 - **Goal:** [uy-01-spike-allowance.md](../goals/uy-01-spike-allowance.md) · **Decision:** [ADR-0020](../adr/0020-allowance-spike-go.md)
-- **Status:** **GO** ([ADR-0020](../adr/0020-allowance-spike-go.md)). Versions, the read method, the
-  localnet dry run (§6) and the **testnet run via Tatum** (§7) are done. The mainnet check (§8) waits for
-  owner funding and Uy's OK per transaction.
+- **Status:** **GO** ([ADR-0020](../adr/0020-allowance-spike-go.md)). Done: versions, the read method,
+  the localnet dry run (§6), and the **testnet runs via Tatum with SUI (§7) and with USDC, rate limit
+  included (§7.1)**. The mainnet run was **deferred by Uy** to before E1's publish (§8).
 - **Code:** `packages/chain` (seed client), `packages/move/remora` (stub `disc`), `spikes/allowance`
   (`probe.ts`, `flow.ts`, which also takes `localnet`)
 
@@ -146,6 +146,40 @@ gas charged:**
 | Sender isn't the spender | input check: "Invalid withdraw reservation: Transaction sender is not the spender of allowance …" |
 | After revoke | input resolution: "Object … not found" |
 
+### 7.1 Testnet USDC run (Circle's regulated coin) and the rate limit
+
+`flow.ts testnet <step> --usdc` uses
+`0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC`, the same mainnet
+amounts (0.10 deposit, 0.05 lifetime cap, 0.02 per payment, 0.01 per pay) and the package published in
+§7. The owner got 20 testnet USDC as a `Coin`.
+
+| Step | Digest (testnet) | Notes |
+|---|---|---|
+| deposit 0.10 USDC `Coin` → address balance | `2LdMzhQQN1jW5yvBHcumxcEq88AaaaReQvaWzxRYLgJp` | **`coin::send_funds` works for a regulated coin.** Readable on the first poll after finality (3.9 s from submit) |
+| issue (USDC allowance) | `91KQTfo8GPGSsAfLHeEWQRqM5pCb7jECUjSaKC3LdP3F` | |
+| pay 0.01 USDC, sponsored | `GYFmjLVLXPsju2Z8jp72zK7YvEdfqZdB6ffbEoGtuzTa` | payee +10,000, owner's USDC −10,000 exactly. Gas is SUI, so it doesn't touch the USDC budget |
+| issue "starts in 1 h" / "expires in 15 s" | `7Mzh9VrRHRkFVGYfSC67aBvy4sp2aDUist2QWMJ55vC1` / `3gTWAYDKdxm2ifFRyES19cqD7Zn4DGrGj1ribsVHeqnT` | `ENotStarted` / `EExpired` as with SUI |
+| issue with `periodic_rate_limit(1 h, 0.02)` | `CMjbTNqeuvrK9F4BxQS5CWVipkkq3vaKPhSDNrwAgYyg` | |
+| pay 1/2, 2/2 in the window | `DwPY154poA5pCqaifTVyrGDUaudBKJhs8btbMpd58UBW`, `5v4yCFKffHc2Xsz3VdycKhUZwsqDUepjVvedkzFnmDPi` | |
+| pay 3 in the window | (simulate) | **`0x2::allowance::EExceedsRateLimit`**, `charge` line 442. The lifetime cap still had room |
+| revoke | `FmxAhdCfGKKGHhYs5dv1n68Pny6XRYQ8DNxhinDbEsNp` | then "Object … not found" |
+
+The other negative cases (per-payment cap, payee, lifetime cap, wrong spender) gave the same errors as
+with SUI. The SUI rate-limit run had the same result: issue `6odjtHTsNT6XdBg4CsjgbUrn18mB8mWiANKW3H1mDqwW`,
+pays `AzZbr1dHXCnqwR3hjYARRs21ozWwc9FnBYxksxyR7iQs` and `E1UnfUyrFaL3u2YEQzaJHwhB5qSZ25wyeDLwc8BgpUTj`,
+then `EExceedsRateLimit`.
+
+**One more negative case, found by accident: the funder is out of funds.** With owner = sponsor, gas
+drained the owner's SUI address balance. The next spend was rejected at input checks ("Invalid withdraw
+reservation: Insufficient address balance of coin type … requires 1000000 but only 188819 is
+available"), before execution and with no gas charged.
+
+**Gas-coin gotcha:** when the SDK pays gas partly from the address balance and partly with a coin (the
+`gasData.payment` list gets a version-0 address-balance entry plus the coin), **the whole gas coin is
+deleted and its value lands in the address balance** (deposit `9Eui99ehxpXRfPdbPhEfiac8gN3oieMuKfTQioK2Jdwe`
+moved the owner's ~1.94 SUI of coins into the address balance). No money is lost, but `Coin` objects
+disappear. Detect funds (A4) should show it as "moved to address balance", not as missing coins.
+
 **x402 check:** the pay transaction's `balanceChanges` show the payee's +amount even though the money
 moved with `balance::send_funds` into an address balance. So the `exact` scheme's verify step ("the
 `payTo` balance change equals `amount`") works for allowance-funded payments, and the tech-reference
@@ -156,7 +190,11 @@ moved with `balance::send_funds` into an address balance. So the `exact` scheme'
 is `PacedTransport` in `@remora/chain`: it spaces unary calls (3/s by default) and retries 429s, which is
 safe even for execute because the gateway rejected the call.
 
-## 8. Mainnet run (pending, needs Uy's OK per transaction)
+## 8. Mainnet run: deferred by Uy (Oct 18)
 
-`flow.ts mainnet <step>` only simulates unless `--execute` is passed. USDC amounts ≤ 0.10 per
-transaction.
+Uy decided to finish U1 on testnet ("làm hết trên testnet đi, mainnet để sau cũng được"). No mainnet
+transaction was made. The owner key holds 0 SUI and 0 USDC on mainnet.
+
+Before E1's mainnet publish, run `flow.ts mainnet <step> --execute` with ≤ 0.10 USDC per transaction,
+asking Uy before each one (deposit, publish, issue, pay), and record the digests here. The testnet USDC
+run (§7.1) already covers the regulated-coin path that mainnet uses.

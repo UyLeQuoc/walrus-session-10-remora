@@ -4,7 +4,8 @@ U1 spike scripts ([goal](../../docs/goals/uy-01-spike-allowance.md), [notes](../
 
 ```bash
 bun --env-file=.env spikes/allowance/probe.ts testnet           # read-only: chain info, feature flags, funds split
-bun --env-file=.env spikes/allowance/flow.ts testnet <step>     # status | deposit | publish | issue | pay | negatives | revoke
+bun --env-file=.env spikes/allowance/flow.ts testnet <step>     # status | deposit | publish | issue | pay | negatives | windows | ratelimit | revoke
+bun --env-file=.env spikes/allowance/flow.ts testnet <step> --usdc   # same steps with Circle's testnet USDC (regulated coin)
 bun --env-file=.env spikes/allowance/flow.ts mainnet <step>     # simulates only; --execute needs Uy's OK per transaction
 ```
 

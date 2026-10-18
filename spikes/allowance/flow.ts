@@ -1,6 +1,7 @@
 // U1 step 3/4: the allowance flow through Tatum gRPC, one step per run.
 //   bun --env-file=.env spikes/allowance/flow.ts <network> <step> [--execute]
-// Steps: status | deposit | publish | issue | pay | negatives | windows | revoke
+// Steps: status | deposit | publish | issue | pay | negatives | windows | ratelimit | revoke
+// --usdc (testnet): run the same steps with Circle's testnet USDC, a regulated coin, instead of SUI.
 // Testnet executes by default. Mainnet only simulates unless --execute is passed, and every
 // mainnet execution needs Uy's OK first (U1 goal). `localnet` (`sui start --with-faucet`) is a dry run
 // of the whole flow against a local node instead of Tatum; it adds a `faucet` step.
@@ -25,8 +26,11 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const [network, step] = process.argv.slice(2) as [SuiNetwork | "localnet", string];
 const execute = network !== "mainnet" || process.argv.includes("--execute");
+const usdc = process.argv.includes("--usdc");
+const TESTNET_USDC =
+  "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC";
 if (!["testnet", "mainnet", "localnet"].includes(network) || !step) {
-  console.error("usage: flow.ts <testnet|mainnet|localnet> <step> [--execute]");
+  console.error("usage: flow.ts <testnet|mainnet|localnet> <step> [--usdc] [--execute]");
   process.exit(1);
 }
 
@@ -38,17 +42,19 @@ const SUI_PLAN = {
   perPayment: 1_000_000n,
   pay: 1_000_000n,
 };
-const PLAN = {
-  localnet: SUI_PLAN,
-  testnet: SUI_PLAN,
-  mainnet: {
-    coinType: process.env.USDC_COIN_TYPE ?? "",
-    deposit: 100_000n,
-    lifetimeCap: 50_000n,
-    perPayment: 20_000n,
-    pay: 10_000n,
-  },
-}[network];
+const usdcPlan = (coinType: string) => ({
+  coinType,
+  deposit: 100_000n,
+  lifetimeCap: 50_000n,
+  perPayment: 20_000n,
+  pay: 10_000n,
+});
+const PLAN =
+  network === "mainnet"
+    ? usdcPlan(process.env.USDC_COIN_TYPE ?? "")
+    : usdc
+      ? usdcPlan(TESTNET_USDC)
+      : SUI_PLAN;
 
 function keypair(envKey: string): Ed25519Keypair {
   const raw = process.env[envKey];
@@ -73,8 +79,15 @@ type State = {
   name?: string;
   expiryMs?: number;
 };
-const statePath = join(here, `.state.${network}.json`);
+const statePath = join(here, `.state.${network}${usdc ? "-usdc" : ""}.json`);
+const basePath = join(here, `.state.${network}.json`);
 const state: State = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : {};
+if (usdc && !state.packageId && existsSync(basePath)) {
+  // The package and registry are coin-agnostic: reuse the ones published for the SUI run.
+  const base: State = JSON.parse(readFileSync(basePath, "utf8"));
+  state.packageId = base.packageId;
+  state.registryId = base.registryId;
+}
 function need(id: string | undefined): string {
   if (!id) throw new Error("missing spike state: run publish, then issue");
   return id;
@@ -203,12 +216,25 @@ async function expectFailure(label: string, tx: Transaction, signer: Ed25519Keyp
   }
 }
 
-function issueTx(name: string, startMs: number, expiryMs: number): Transaction {
+function issueTx(
+  name: string,
+  startMs: number,
+  expiryMs: number,
+  rate?: { periodMs: number; limit: bigint },
+): Transaction {
   const tx = new Transaction();
-  const rateLimitNone = tx.moveCall({
-    target: "0x1::option::none",
-    typeArguments: ["0x2::allowance::RateLimit"],
-  });
+  const rateLimit = rate
+    ? tx.moveCall({
+        target: "0x1::option::some",
+        typeArguments: ["0x2::allowance::RateLimit"],
+        arguments: [
+          tx.moveCall({
+            target: "0x2::allowance::periodic_rate_limit",
+            arguments: [tx.pure.u64(rate.periodMs), tx.pure.u256(rate.limit)],
+          }),
+        ],
+      })
+    : tx.moveCall({ target: "0x1::option::none", typeArguments: ["0x2::allowance::RateLimit"] });
   const proposal = tx.moveCall({
     target: "0x2::allowance::propose_for_app",
     typeArguments: [`0x2::balance::Balance<${PLAN.coinType}>`, `${state.packageId}::disc::DISC`],
@@ -218,7 +244,7 @@ function issueTx(name: string, startMs: number, expiryMs: number): Transaction {
       tx.pure(someU256(PLAN.lifetimeCap)),
       tx.pure(someU64(startMs)),
       tx.pure(someU64(expiryMs)),
-      rateLimitNone,
+      rateLimit,
     ],
   });
   tx.moveCall({
@@ -366,6 +392,22 @@ switch (step) {
     await expectFailure("before start", payTx(1n, PAYEE, future), spender);
     await new Promise((res) => setTimeout(res, 20_000));
     await expectFailure("after expiry", payTx(1n, PAYEE, short), spender);
+    break;
+  }
+  case "ratelimit": {
+    // A periodic window of two payments per hour under a larger lifetime cap: the third payment
+    // must hit the rate limit, not the cap.
+    const rate = { periodMs: 3600_000, limit: PLAN.pay * 2n };
+    const r = await run(
+      "issue rate-limited",
+      issueTx(`spike-rate-${Date.now()}`, 0, Date.now() + 24 * 3600_000, rate),
+      owner,
+    );
+    const id = r.tx && created(r.tx, "::allowance::Allowance<");
+    if (!id) throw new Error("issue rate-limited failed");
+    await run("pay 1/2 in window", payTx(PLAN.pay, PAYEE, id), spender, sponsor);
+    await run("pay 2/2 in window", payTx(PLAN.pay, PAYEE, id), spender, sponsor);
+    await expectFailure("pay 3 in window", payTx(PLAN.pay, PAYEE, id), spender);
     break;
   }
   case "revoke": {

@@ -20,8 +20,13 @@ The **testnet run went through Tatum gRPC** (protocol 139), digests recorded:
 All seven negative cases fail before execution, with no gas charged: over the per-payment cap, payee not
 allowed, over the lifetime cap, before start, after expiry, wrong spender, and after revoke.
 
-Mainnet (protocol 138) has the same feature flags, and the same flow is scripted. Its run waits for
-funding and Uy's OK per transaction.
+The **same flow ran with Circle's testnet USDC**, a regulated coin, at mainnet amounts:
+`coin::send_funds` deposit, issue, a 0.01 USDC sponsored pay with the payee +10,000 and the funder
+−10,000. All negative cases matched, and a periodic rate limit aborted the third pay in its window with
+`EExceedsRateLimit`.
+
+Mainnet (protocol 138) has the same feature flags, and the same flow is scripted. **Uy deferred the
+mainnet run on Oct 18** ("mainnet để sau"), so U1 closes on the testnet evidence.
 
 ## Decision
 **GO: keep native app-bound allowances. No `Coin` escrow fallback.** Specifics for E1 and the runtime:
@@ -52,8 +57,11 @@ funding and Uy's OK per transaction.
   as the transaction was final.
 - E1 builds the real Disc from the stub (PR #1): pause, `set_payees`, rotate, `Paid` events with the
   intent hash.
-- **Before E1's mainnet publish,** run `spikes/allowance/flow.ts mainnet` with ≤ 0.10 USDC per
-  transaction, after Uy's OK on each one. If it diverges from testnet, write a superseding ADR.
+- **Before E1's mainnet publish** (deferred from U1 by Uy), run `spikes/allowance/flow.ts mainnet
+  <step> --execute` with ≤ 0.10 USDC per transaction, after Uy's OK on each one. If it diverges from
+  testnet, write a superseding ADR.
+- **Detect funds** has to expect gas coins merging into the address balance when the SDK mixes the two
+  for gas (spike §7.1).
 
 ## Links
 - [ADR-0003](0003-spending-limits-native-allowances.md) · [ADR-0004](0004-address-balance-everywhere.md) · [ADR-0015](0015-tatum-for-all-chain-io.md) · [ADR-0021](0021-sui-grpc-only.md) · [ADR-0023](0023-sui-cli-pin-and-spikes-workspace.md)

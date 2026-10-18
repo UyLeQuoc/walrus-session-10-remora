@@ -278,6 +278,10 @@ prize requires the product to be built *primarily* with it.
 > - `propose_for_app` is `entry`, so a PTB can call it but Move code can't. `issue` **returns no ID**, so
 >   app policy can't be keyed by allowance ID at issue time (the stub keys it by `(funder, name)`).
 > - Read the address-balance part with `StateService.GetBalance` (`address_balance` / `coin_balance`).
+> - It works with **Circle's regulated USDC** (testnet): `coin::send_funds` deposit, app-bound spend,
+>   and `periodic_rate_limit` aborting with `EExceedsRateLimit` past the window.
+> - A spend from a funder without enough address balance is rejected at input checks ("Insufficient
+>   address balance …"), with no gas charged.
 
 A **funder** lets a **spender** pull from the funder's *address balance*, within limits. Nothing is locked
 or set aside: funds leave only when a spend succeeds.
@@ -402,6 +406,9 @@ Spec: [scheme_exact_sui.md](https://github.com/x402-foundation/x402/blob/main/sp
 - **Gas from the address balance** (`enable_address_balance_gas_payments`, on both networks): the SDK
   pays gas from the gas owner's address balance when it has one (U1). **Keep the sponsor wallet
   separate from every funder**, or sponsoring eats the balance the allowances spend.
+- **Gas coins can merge into the address balance:** when the SDK pays gas partly from the address
+  balance and partly with a coin, the coin is deleted and its value lands in the address balance
+  (U1).
 - **Gasless stablecoin lane** (since May 20, 2026): only simple transfers of 7 approved stablecoins
   through address balances, with gas price and budget set to 0. It's capped at **about 300 transfers per
   second network-wide** (`gasless_max_tps`). **Allowance spends and app calls don't qualify.**

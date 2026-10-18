@@ -3,6 +3,9 @@
 **Owner:** Uy Le · **Runs in:** the main checkout, on `main` (no worktree, ADR-0022) · **Depends on:** U0
 (bootstrap) merged.
 
+**Status (Oct 18):** done on testnet: **GO**, see [ADR-0020](../adr/0020-allowance-spike-go.md). Step 4
+(mainnet) was **deferred by Uy** until before E1's publish.
+
 **Goal:** prove, or disprove, the money rails before building on them. The outcome is **ADR-0020**:
 either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR-0003).
 
