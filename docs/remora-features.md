@@ -101,8 +101,8 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 
 **To verify in the Oct 21 spike:**
 
-- Which Tatum call returns the **address-balance component** separately from coin objects: gRPC balance
-  reads, or JSON-RPC `suix_getBalance` / `suix_getCoins`.
+- Which Tatum gRPC call returns the **address-balance component** separately from coin objects
+  (`StateService.GetBalance` fields vs `ListOwnedObjects` coins). gRPC only, per ADR-0021.
 - How long accumulator settlement takes after a deposit before an allowance can spend it.
 
 ### A. Onboarding & accounts

@@ -9,7 +9,6 @@ export const Deployment = z.object({
   hatcheryRegistryId: ObjectId.nullable(),
   usdcCoinType: z.string().min(1),
   memwalRelayer: z.url(),
-  tatumSuiRpc: z.url(),
   tatumSuiGrpc: z.url(),
 });
 
@@ -21,7 +20,6 @@ export const DEPLOYMENTS = {
     hatcheryRegistryId: null,
     usdcCoinType: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
     memwalRelayer: "https://relayer.memory.walrus.xyz",
-    tatumSuiRpc: "https://sui-mainnet.gateway.tatum.io",
     tatumSuiGrpc: "https://sui-mainnet-grpc.gateway.tatum.io",
   },
 } as const satisfies Record<string, z.input<typeof Deployment>>;

@@ -7,6 +7,7 @@ Remora is our entry to the Walrus x Tatum "Total Recall" hackathon (Track 2). Re
 - Ownership: `docs/team-split.md`. **Edit only the paths your goal owns.** Anything outside them goes in a note at `docs/handoffs/<YYYY-MM-DD>-<from>-to-<to>-<topic>.md`, and you stop that part.
 - Shared interfaces live in `packages/schema`. Change them only through a contract PR approved by both people.
 - `reference/hippo` is a read-only reference clone of prior work. Port from it; never edit it.
+- **Sui access is gRPC only** (ADR-0021): never add JSON-RPC calls. Server side uses Tatum gRPC with a native transport; the browser uses gRPC-web.
 - MemWal behaves differently from its docs in places: read `docs/tech-reference.md` §1.11 before touching memory code.
 - Code conventions inherited from hippo: `docs/code-rules.md`.
 

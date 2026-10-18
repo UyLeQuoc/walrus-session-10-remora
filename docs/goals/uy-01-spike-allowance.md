@@ -23,9 +23,9 @@ either go with native app-bound allowances, or fall back to a `Coin` escrow (ADR
      expose `tx.withdrawal` / `tx.balance` and the allowance helpers;
    - record the Sui CLI version and confirm the framework has `sui::allowance`, `propose_for_app`,
      `issue`, `app_balance_spend` and the permits.
-2. **Seed `packages/chain`:** a typed Tatum client (JSON-RPC + gRPC, `x-api-key`, retries).
+2. **Seed `packages/chain`:** a typed Tatum client, **gRPC only** (ADR-0021): native transport for Node, `x-api-key` metadata, retries.
    **Find which call exposes the address-balance component** separately from coin objects, comparing
-   `suix_getBalance`, the sum of `suix_getCoins`, and gRPC balance reads.
+   `StateService.GetBalance` / `ListBalances` fields against the coins from `ListOwnedObjects`.
 3. **Testnet first** (check that allowances are enabled there; if not, go to step 4 with extra care):
    1. Move test USDC (or SUI) from `Coin` → the address balance with `coin::send_funds`. **Measure the
       settlement delay** until it's spendable.

@@ -149,7 +149,7 @@ Both the memory and the budget make this visible.
  │ policy check (deterministic + memory rules) → act → Wake receipt (MemWal `receipts`, blob_id)    │
  └───────┬───────────────────────────┬──────────────────────────────┬───────────────────────────────┘
          │                           │                              │
-  Walrus Memory (mainnet)    Tatum Sui gRPC + JSON-RPC        apps/facilitator (x402, sui:mainnet)
+  Walrus Memory (mainnet)    Tatum Sui gRPC (only)            apps/facilitator (x402, sui:mainnet)
   relayer.memory.walrus.xyz  stream · dry-run · execute       verify (dry-run via Tatum) · settle
                              getObject · queryEvents                │
                                      │                              ▼
@@ -163,7 +163,7 @@ Both the memory and the budget make this visible.
 packages/move/remora    Move package: disc + hatchery modules (+ Anchored events) + tests → mainnet
 packages/disc-sdk       PTB builders (issue/pay/rotate/pause/reissue), funds (detect/move/withdraw), disc.fetch
 packages/merchant       @remora/merchant: x402 middleware + Reef auto-listing
-packages/chain          typed Tatum client (gRPC stream, JSON-RPC, Data API), retries, rate limits
+packages/chain          typed Tatum client: Sui gRPC only (native transport) + Data API, retries, rate limits
 packages/memory         MemWal wrapper: namespaces, scrubber, Wake, renewal, import/export, inspector helpers
 packages/sonar          trusted-intent builder, policy engine, check-model client
 packages/signer         envelope-encrypted remora keys, sponsor co-signing
@@ -271,10 +271,10 @@ as a fallback.
 ## 7. Payments: facilitator, SDK, merchants
 
 - **x402 facilitator** (`apps/facilitator`, network `sui:mainnet`):
-  - **verify:** check the network and signature, simulate with **Tatum `sui_dryRunTransactionBlock`**,
+  - **verify:** check the network and signature, simulate with **Tatum gRPC `SimulateTransaction`**,
     and assert that the balance change to `payTo` equals `amount` in the asset. Disc-aware mode also
     asserts that the PTB calls `remora::disc::pay`.
-  - **settle:** run **Tatum `sui_executeTransactionBlock`**, wait for finality, and return the digest.
+  - **settle:** run **Tatum gRPC `ExecuteTransaction`**, wait for finality, and return the digest.
   - **gas:** acts as the gas station (`extra.gasStation`).
 - **`disc.fetch(url)`:**
   1. gets a `402`;
@@ -399,14 +399,14 @@ Every remora action writes a Wake to the `receipts` namespace.
 
 | Tatum | Where | Why |
 |---|---|---|
-| Sui **gRPC** checkpoint stream | runtime (Sentinel), indexer | Chain-event triggers, `Paid` index |
-| `sui_dryRunTransactionBlock` | facilitator, `disc-sdk` | Verify x402 payments before settling |
-| `sui_executeTransactionBlock`, `sui_getTransactionBlock` | facilitator, runtime | Settle and confirm finality |
-| `sui_getObject` | dashboard, runtime | Allowance `current_spend` and settings, Disc state |
-| `suix_queryEvents` | dashboard, `remora verify` | `Paid` history, Wake anchoring |
-| `suix_queryTransactionBlocks`, `suix_getCoinMetadata`, `suix_resolveNameServiceNames` | Sentinel | Enrich alerts (amounts, symbols, SuiNS names) |
+| `SubscriptionService.SubscribeCheckpoints` | runtime (Sentinel), indexer | Chain-event triggers; the `Paid` and payment index (there's no gRPC event query) |
+| `TransactionExecutionService.SimulateTransaction` | facilitator, `disc-sdk` | Verify x402 payments before settling |
+| `TransactionExecutionService.ExecuteTransaction`, `LedgerService.GetTransaction` | facilitator, runtime | Settle and confirm finality |
+| `LedgerService.GetObject` / `BatchGetObjects` | dashboard, runtime | Allowance `current_spend` and settings, Disc state |
+| `LedgerService.GetTransaction` (by digest) + our indexer | dashboard, `remora verify` | `Paid` history, Wake anchoring |
+| `StateService.GetCoinInfo`, `NameService.ReverseLookupName` | Sentinel | Enrich alerts (amounts, symbols, SuiNS names) |
 | Data API `/v4/data/rate/symbol` | dashboard, Sentinel, `sui-risk` | USD values |
-| `suix_getCoins` / balance reads | **Detect funds** (§12.1) | Split USDC between `Coin` objects and the address balance |
+| `StateService.GetBalance` / `ListOwnedObjects` | **Detect funds** (§12.1) | Split USDC between `Coin` objects and the address balance |
 
 ---
 
@@ -481,7 +481,7 @@ Steps 1–3 are recorded in the Wake. The red-team suite (I3) measures the stack
 
 - **SuiNS subnames per remora** (e.g. `scout-uy.remora.sui`), via the Enoki subname API or our own parent
   name. Each remora has a human-readable onchain identity that can be resolved through Tatum
-  (`suix_resolveNameServiceNames`).
+  (gRPC `NameService.ReverseLookupName`).
 - **Landing, docs and the public verify page on Walrus Sites.** Deploy with `site-builder` (needs WAL),
   served through the public portal at `*.wal.app` under a SuiNS domain.
 

@@ -180,7 +180,7 @@ twice in a row on mainnet without intervention.
 
 | Criterion | Evidence |
 |---|---|
-| Integration (30%) | Walrus Memory drives every decision, with inspector, renewal, import/export, MCP and Wakes. Walrus Sites hosts the frontend. Tatum gRPC triggers, and Tatum JSON-RPC verifies and settles every payment. Tatum also powers the Data API values and the public facilitator |
+| Integration (30%) | Walrus Memory drives every decision, with inspector, renewal, import/export, MCP and Wakes. Walrus Sites hosts the frontend. Tatum gRPC triggers, verifies and settles every payment (gRPC only, ADR-0021). Tatum also powers the Data API values and the public facilitator |
 | Technical (30%) | Address balances + app-bound Allowances + the Disc Move module with tests, the x402 facilitator, sponsored gas, envelope-encrypted keys, Sonar, a red-team suite, `remora verify`, rebuild from truth |
 | Creativity (20%) | Always-on agents with **owned memory + contract-level budgets + verifiable receipts**, plus Reef, a service economy for agents |
 | Presentation (20%) | The playground judges can use, the abort moment, Proof of Learning, a blog that's a sequel to the published audit |
@@ -198,7 +198,7 @@ twice in a row on mainnet without intervention.
 | Malicious shared templates | Payees only from Reef, consent screen, Sonar scan, shadow mode, Disc limits (M5, M7) |
 | Allowances and address balances are new (protocol v138) | Oct 21 spike; fallback to a `Coin` escrow with the same Disc policy |
 | Address-balance settlement delay | Measure it in the spike; the UI shows a *settling* state; don't spend right after a deposit in the demo |
-| Address-balance reads through Tatum unclear | Spike item. Fallback: compute the split from `suix_getCoins` + the total balance |
+| Address-balance reads through Tatum unclear | Spike item. Fallback: compute the split from `ListOwnedObjects` (coins) + `GetBalance` (total) |
 | No per-memory delete in Walrus Memory | Settled: hide (local filter), correct (supersede) and forget all (namespace index). The UI states plainly that blobs persist until they expire |
 | Enoki access (zkLogin, subnames, Seal) delayed | Request it in week 0. Wallet sign-in and plain addresses cover W1–W2 |
 | Playground abuse | $1 Disc, rate limits, CAPTCHA-free throttling by session, 24-hour retirement, a capped pool |

@@ -36,3 +36,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0017](0017-github-repo-private-until-submission.md) | GitHub repo stays private until submission | Accepted |
 | [0018](0018-bootstrap-before-window.md) | Run the U0 bootstrap before the build window | Accepted |
 | [0019](0019-bootstrap-structure-decisions.md) | Structure decisions made during the bootstrap | Accepted |
+| [0021](0021-sui-grpc-only.md) | Sui chain access is gRPC only | Accepted |

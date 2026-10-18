@@ -191,41 +191,43 @@ These come from hippo's `docs/MEMWAL-NOTES.md` and `docs/SPIKES.md` (SDK 0.1.8, 
 ### 2.1 Auth
 
 Get an API key from https://dashboard.tatum.io/ and send it as the **`x-api-key`** header, both for HTTP
-and as gRPC metadata. One key works for JSON-RPC and gRPC.
+and as gRPC metadata. Remora uses the key only for gRPC and the Data API (no JSON-RPC, ADR-0021).
 
-### 2.2 Sui RPC gateway (scored under "Technical quality")
+### 2.2 Sui RPC gateway: **gRPC only** ([ADR-0021](adr/0021-sui-grpc-only.md))
 
-| Network | JSON-RPC | gRPC |
+| Network | gRPC (native, `x-api-key` metadata) | JSON-RPC |
 |---|---|---|
-| **Mainnet** | `https://sui-mainnet.gateway.tatum.io` | `https://sui-mainnet-grpc.gateway.tatum.io` |
-| Testnet | — | `https://sui-testnet-grpc.gateway.tatum.io` |
+| **Mainnet** | `https://sui-mainnet-grpc.gateway.tatum.io` | not used (deprecated) |
+| Testnet | `https://sui-testnet-grpc.gateway.tatum.io` | not offered by Tatum (404) |
 
-- **Sui has deprecated JSON-RPC in favor of gRPC**
+- **Sui deprecated JSON-RPC.** Public fullnodes reject it ("JSON-RPC on public fullnodes has been
+  deprecated"), so **Remora uses gRPC everywhere**
   ([Tatum migration guide](https://docs.tatum.io/docs/sui-migration-guide-from-json-rpc-to-grpc)).
-  Tatum's gRPC endpoint supports getting checkpoints and objects and **streaming live checkpoints**. Using
-  gRPC is a cheap technical-quality signal.
-- `unsafe_*` methods are not supported ([note](https://docs.tatum.io/docs/sui-unsafe-methods-not-supported.md)).
-  Build transactions client-side with the Sui SDK instead.
+- **Tatum speaks native gRPC** (`application/grpc`). `@mysten/sui`'s `SuiGrpcClient` defaults to
+  gRPC-web and fails with "unexpected response content type: application/grpc".
+  - **Server side:** plug a native transport (e.g. `@protobuf-ts/grpc-transport` + `@grpc/grpc-js`)
+    into `SuiGrpcClient`. U1 records the exact wiring.
+  - **Browser:** gRPC-web against a public fullnode (`https://fullnode.<network>.sui.io:443`), or go
+    through our API.
+- Build transactions client-side with the Sui SDK. Tatum doesn't support `unsafe_*` helpers.
 
-JSON-RPC methods Tatum documents for Sui (full list at https://docs.tatum.io/reference/rpc-sui):
+gRPC v2 services we use:
 
-| Need | Method |
+| Need | Service / method |
 |---|---|
-| Balances | `suix_getBalance`, `suix_getAllBalances`, `suix_getCoins`, `suix_getAllCoins` |
-| Coin info | `suix_getCoinMetadata`, `suix_getTotalSupply` |
-| Objects | `sui_getObject`, `sui_tryGetPastObject`, `suix_getOwnedObjects`, `suix_getDynamicFields`, `suix_getDynamicFieldObject` |
-| Transactions | `suix_queryTransactionBlocks` (filter by From/To address, etc.), `sui_getTransactionBlock` |
-| Events | `suix_queryEvents` (e.g. by Move event type), `sui_getEvents` |
-| Write | `sui_dryRunTransactionBlock`, `sui_executeTransactionBlock` |
-| Chain | `sui_getLatestCheckpointSequenceNumber`, `sui_getCheckpoint(s)`, `suix_getReferenceGasPrice` |
-| Move introspection | `sui_getNormalizedMoveModule(sByPackage)`, `sui_getNormalizedMoveFunction`, `sui_getNormalizedMoveStruct` |
-| SuiNS | `suix_resolveNameServiceAddress`, `suix_resolveNameServiceNames` |
+| Simulate (dry-run) | `TransactionExecutionService.SimulateTransaction` |
+| Execute / settle | `TransactionExecutionService.ExecuteTransaction` |
+| Transaction + events by digest | `LedgerService.GetTransaction` / `BatchGetTransactions` |
+| Objects (allowance, Disc, UpgradeCap) | `LedgerService.GetObject` / `BatchGetObjects` |
+| Checkpoints, chain info | `LedgerService.GetCheckpoint` / `GetServiceInfo` |
+| Balances (coins + address balance) | `StateService.GetBalance` / `ListBalances` |
+| Owned objects, coin info, dynamic fields | `StateService.ListOwnedObjects` / `GetCoinInfo` / `ListDynamicFields` |
+| Live chain events (triggers, indexer) | `SubscriptionService.SubscribeCheckpoints` |
+| Move introspection | `MovePackageService.GetPackage` / `GetFunction` / `GetDatatype` |
+| SuiNS | `NameService.LookupName` / `ReverseLookupName` |
 
-```bash
-curl -s https://sui-mainnet.gateway.tatum.io \
-  -H "x-api-key: $TATUM_API_KEY" -H "content-type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"suix_getBalance","params":["0x<address>"]}'
-```
+**There's no gRPC equivalent** of "query events by type" or "transactions by address". History, such as
+`Paid` events or payments to a merchant, comes from our own indexer, fed by `SubscribeCheckpoints`.
 
 ### 2.3 Data API (`/v4/data/...`)
 
@@ -242,8 +244,7 @@ endpoint.** Many Data API endpoints are EVM/UTXO-first, so for Sui-native data u
 ### 2.4 Notifications (webhooks)
 
 `/v4/subscription`, `/v4/subscription/webhook`, ... Call `GET /v4/subscription/chains` (free) to see whether
-Sui alerts are supported before designing around them. The fallback is a gRPC checkpoint stream or
-JSON-RPC polling with cursors.
+Sui alerts are supported before designing around them. The fallback is the gRPC checkpoint stream.
 
 ### 2.5 Tatum AI Builder
 
@@ -408,8 +409,9 @@ Docs: [using Seal](https://docs.sui.io/sui-stack/seal/using-seal) ·
 # .env.example
 # Tatum
 TATUM_API_KEY=
-TATUM_SUI_RPC=https://sui-mainnet.gateway.tatum.io
 TATUM_SUI_GRPC=https://sui-mainnet-grpc.gateway.tatum.io
+TATUM_SUI_GRPC_TESTNET=https://sui-testnet-grpc.gateway.tatum.io
+TATUM_API_KEY_TESTNET=
 # Walrus Memory
 MEMWAL_KEY=                 # delegate private key (never commit)
 MEMWAL_ACCOUNT_ID=          # MemWalAccount object ID
