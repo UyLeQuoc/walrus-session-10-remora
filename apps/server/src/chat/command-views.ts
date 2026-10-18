@@ -49,7 +49,6 @@ const HELP_COMMANDS = [
   "/proof",
   "/help",
   "/link",
-  "/team",
 ];
 
 function helpRows(): CommandTable["rows"] {
@@ -82,66 +81,6 @@ export function privacyView(): CommandView {
     .filter((line) => line.length > 0)
     .map((line) => ({ cells: [line.replace(/^•\s+/, "")] }));
   return { text: PRIVACY, table: { columns: ["Detail"], rows } };
-}
-
-export function teamNoneView(): CommandView {
-  const text =
-    "You are not in a team.\n\n/team new <name>  start one\n/team join <code>  join one somebody else started\n\nA team shares memory that anyone in it can recall. What you say normally stays yours; only /team remember puts something in the shared pile.";
-  return {
-    text,
-    table: {
-      lead: "You are not in a team.",
-      columns: ["Command", "What it does"],
-      rows: [
-        { cells: ["/team new <name>", "start one"] },
-        { cells: ["/team join <code>", "join one somebody else started"] },
-      ],
-      foot: "A team shares memory that anyone in it can recall. What you say normally stays yours; only /team remember puts something in the shared pile.",
-    },
-  };
-}
-
-export function teamStatusView(input: { name: string; memberCount: number }): CommandView {
-  const people = input.memberCount === 1 ? "member" : "members";
-  const text = `Team: ${input.name} (${input.memberCount} ${people}).\n\nEveryone in it recalls the shared memory. Your own memory is still yours and is not shared.\n\n/team remember <fact>  add to the shared memory\n/team invite           a code for somebody else\n/team leave            stop reading and writing it\n\nThe shared memory lives in my account, not yours, so nobody in the team owns it yet. /privacy has the detail.`;
-  return {
-    text,
-    table: {
-      lead: `Team: ${input.name} (${input.memberCount} ${people}).`,
-      columns: ["Field", "Value"],
-      rows: [{ cells: ["Name", input.name] }, { cells: ["Members", String(input.memberCount)] }],
-      foot: "Everyone in it recalls the shared memory. Your own memory is still yours and is not shared.\n\n/team remember <fact>  add to the shared memory\n/team invite           a code for somebody else\n/team leave            stop reading and writing it\n\nThe shared memory lives in my account, not yours, so nobody in the team owns it yet. /privacy has the detail.",
-    },
-  };
-}
-
-export function teamStartedView(input: {
-  name: string;
-  code: string;
-  expiresInMinutes: number;
-}): CommandView {
-  const text = `Started "${input.name}".\n\nShare this code, it works once and lasts ${input.expiresInMinutes} minutes:\n\n${input.code}\n\nThey run /team join ${input.code} on any channel. Add facts with /team remember <fact>; ordinary conversation stays private to you.`;
-  return {
-    text,
-    table: {
-      lead: `Started "${input.name}".`,
-      columns: ["Code"],
-      rows: [{ cells: [input.code], copy: input.code }],
-      foot: `Share this code, it works once and lasts ${input.expiresInMinutes} minutes. They run /team join ${input.code} on any channel. Add facts with /team remember <fact>; ordinary conversation stays private to you.`,
-    },
-  };
-}
-
-export function teamInviteView(input: { code: string; expiresInMinutes: number }): CommandView {
-  const text = `${input.code}\n\nWorks once, for ${input.expiresInMinutes} minutes. They run /team join ${input.code}.`;
-  return {
-    text,
-    table: {
-      columns: ["Code"],
-      rows: [{ cells: [input.code], copy: input.code }],
-      foot: `Works once, for ${input.expiresInMinutes} minutes. They run /team join ${input.code}.`,
-    },
-  };
 }
 
 export function whoamiView(input: {

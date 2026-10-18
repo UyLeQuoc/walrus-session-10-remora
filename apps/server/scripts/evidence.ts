@@ -4,7 +4,7 @@
  */
 import { IMPORT_CHANNEL } from "@remora/core/import-facts";
 import { desc, memoryIndex, people, sql, turnLog } from "@remora/db";
-import { createClient, explorer, guestScope, RelayerExtras, TEAM_PREFIX } from "@remora/memory";
+import { createClient, explorer, guestScope, RelayerExtras } from "@remora/memory";
 import { isConversationTurn } from "../src/chat/turn-modes.ts";
 import { db, operator } from "../src/context.ts";
 import { env } from "../src/env/load.ts";
@@ -13,17 +13,11 @@ import { countPeople, qualifyingPeople } from "../src/ops/people-count.ts";
 const rows = <T>(r: T[]): T[] => r;
 
 /**
- * A team fact is indexed under the person who added it, but it is shared
- * memory, not theirs. Counting it toward "3 people with 10 memories each" would
- * let one busy team inflate the requirement check, so every per-person number
- * below leaves team namespaces out and they are reported on their own line.
- * Facts pasted in from another assistant on /me are left out the same way:
- * one paste can hold twenty, and the requirement is memory built by using hippo.
+ * Facts pasted in from another assistant on /me are left out of the per-person
+ * numbers: one paste can hold twenty, and the requirement is memory built by use.
  */
-const notTeam = sql`${memoryIndex.namespace} not like ${`${TEAM_PREFIX}%`}`;
-const ownMemory = sql`${notTeam} and ${memoryIndex.channel} <> ${IMPORT_CHANNEL}`;
-const teamMemory = sql`${memoryIndex.namespace} like ${`${TEAM_PREFIX}%`}`;
-const importedMemory = sql`${notTeam} and ${memoryIndex.channel} = ${IMPORT_CHANNEL}`;
+const ownMemory = sql`${memoryIndex.channel} <> ${IMPORT_CHANNEL}`;
+const importedMemory = sql`${memoryIndex.channel} = ${IMPORT_CHANNEL}`;
 
 const byPerson = rows(
   await db
@@ -69,15 +63,6 @@ const byChannel = rows(
     .orderBy(desc(sql`count(*)`)),
 );
 
-const [team] = await db
-  .select({
-    stored: sql<number>`count(*) filter (where ${memoryIndex.status} = 'stored')::int`,
-    teams: sql<number>`count(distinct ${memoryIndex.namespace})::int`,
-    contributors: sql<number>`count(distinct ${memoryIndex.personId})::int`,
-  })
-  .from(memoryIndex)
-  .where(teamMemory);
-
 const [imported] = await db
   .select({
     stored: sql<number>`count(*) filter (where ${memoryIndex.status} = 'stored')::int`,
@@ -108,9 +93,6 @@ console.log(`  still writing:                 ${totalPending}`);
 console.log(`  failed to land:                ${totalFailed}`);
 console.log(
   `Distinct accounts written to:    ${new Set(counted.flatMap((p) => p.accountIds)).size}`,
-);
-console.log(
-  `Team memories, not counted above: ${team?.stored ?? 0} in ${team?.teams ?? 0} teams, from ${team?.contributors ?? 0} people`,
 );
 console.log(
   `Imported memories, not counted:  ${imported?.stored ?? 0} from ${imported?.people ?? 0} people`,

@@ -164,7 +164,6 @@ export const COMMAND_GROUPS: CommandGroup[] = [
     title: "Together",
     commands: [
       ["/link", "same memory, another channel"],
-      ["/team", "share with a few people"],
       ["/privacy", "what is stored, how long"],
     ],
   },

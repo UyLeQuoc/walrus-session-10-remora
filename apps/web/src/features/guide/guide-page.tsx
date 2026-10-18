@@ -1,4 +1,4 @@
-import { ArrowRight, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router";
 import { useShellTitle } from "@/app/shell";
 import { DiscordButton, TelegramButton } from "@/components/channel-links";
@@ -98,21 +98,6 @@ export function GuidePage() {
       >
         <ClaudeCodeSteps />
       </GuideSection>
-
-      <section className="flex flex-col items-start gap-4 rounded-xl border bg-card p-4 sm:flex-row sm:items-center">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand/15 text-brand [&_svg]:size-4">
-          <Users />
-        </span>
-        <div className="flex flex-1 flex-col gap-1">
-          <p className="text-sm font-medium">Share with a team</p>
-          <p className="text-sm text-muted-foreground">
-            Only what you add is shared. Your own memory stays yours.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/team">Open team</Link>
-        </Button>
-      </section>
 
       {me?.surveyUrl ? (
         <p className="text-sm text-muted-foreground">

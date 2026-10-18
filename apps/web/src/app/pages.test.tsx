@@ -18,7 +18,6 @@ import { greetingsFor, greetingText } from "../features/chat/greeting.ts";
 import { ConnectPage } from "../features/connect/connect-page.tsx";
 import { GuidePage } from "../features/guide/guide-page.tsx";
 import { MePage } from "../features/me/me-page.tsx";
-import { TeamPage } from "../features/team/team-page.tsx";
 import { AppLayout } from "./app-layout.tsx";
 import { NotFoundPage } from "./not-found.tsx";
 
@@ -229,8 +228,9 @@ describe("chat page", () => {
     expect(showsAGreeting(seen)).toBe(true);
     for (const phrase of HIDDEN_GUIDANCE) expect(seen).not.toMatch(phrase);
     expect(screen.getByRole("button", { name: /send/i })).toBeDefined();
+    // Private files were a hippo feature and are gone, so "Add" has nothing to open.
     const add = screen.getByRole("button", { name: "Add" });
-    expect((add as HTMLButtonElement).disabled).toBe(false);
+    expect((add as HTMLButtonElement).disabled).toBe(true);
     expect(container.querySelector("[data-slot='composer-shell']")?.textContent).toContain(
       "Gemini 2.5 Flash",
     );
@@ -1020,43 +1020,6 @@ describe("chat page", () => {
     expect(screen.getByText(/or your Google account/)).toBeDefined();
   });
 
-  it("asks a guest to own their memory before keeping a private file", async () => {
-    const user = userEvent.setup();
-    vi.stubEnv("VITE_SEAL_API_KEY", "test-key");
-    vi.stubGlobal("fetch", stubFetch({ "/api/me": { mode: "guest", memoryEnabled: true } }));
-    mountChat();
-    await user.click(screen.getByRole("button", { name: "Add" }));
-    expect(await screen.findByRole("dialog", { name: "Private files" })).toBeDefined();
-    expect(await screen.findByText(/Private files need a memory you own/)).toBeDefined();
-    expect(screen.queryByRole("button", { name: /Upload a \.txt/ })).toBeNull();
-  });
-
-  it("offers an upload to the owner once their own wallet is connected", async () => {
-    const user = userEvent.setup();
-    const owner = `0x${"ab".repeat(32)}`;
-    vi.stubEnv("VITE_SEAL_API_KEY", "test-key");
-    wallet = { address: owner };
-    vi.stubGlobal(
-      "fetch",
-      stubFetch({
-        "/api/me": {
-          mode: "owned",
-          memoryEnabled: true,
-          walletAddress: owner,
-          accountId: `0x${"cd".repeat(32)}`,
-        },
-        "/api/documents": { documents: [] },
-      }),
-    );
-    mountChat();
-    await waitFor(() => expect(screen.getByRole("switch", { name: "Memory on" })).toBeDefined());
-    await user.click(screen.getByRole("button", { name: "Add" }));
-    expect(
-      await screen.findByRole("button", { name: /Upload a \.txt or \.md file/ }),
-    ).toBeDefined();
-    expect(screen.queryByText(/Private files need a memory you own/)).toBeNull();
-  });
-
   it("closes the sidebar on a phone once the person starts a new chat", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("innerWidth", 500);
@@ -1602,75 +1565,6 @@ describe("me page", () => {
     expect(screen.queryByRole("button", { name: /full record/i })).toBeNull();
   });
 
-  it("shows the team in brief and sends the rest to the team page", async () => {
-    vi.stubGlobal(
-      "fetch",
-      stubFetch({
-        "/api/me": { mode: "guest", signedIn: false, memoryEnabled: true, surveyUrl: null },
-        "/api/me/memories": { memories: [] },
-        "/api/me/team": {
-          team: {
-            name: "Platform",
-            memberCount: 3,
-            memories: [
-              {
-                id: "t1",
-                type: "decision",
-                status: "stored",
-                createdAt: new Date().toISOString(),
-                blobId: "teamblob1",
-                explorerUrl: "https://walruscan.com/mainnet/blob/teamblob1",
-                mine: true,
-              },
-              {
-                id: "t2",
-                type: "gotcha",
-                status: "failed",
-                createdAt: new Date().toISOString(),
-                blobId: null,
-                explorerUrl: null,
-                mine: false,
-              },
-            ],
-          },
-        },
-      }),
-    );
-    render(
-      <MemoryRouter>
-        <MePage />
-      </MemoryRouter>,
-    );
-    await screen.findByText("Team: Platform");
-    const seen = document.body.textContent ?? "";
-    expect(seen).toMatch(/3 members · 2 shared/);
-    expect(seen).toMatch(/not part of yours: it lives in hippo's account/);
-    expect(screen.getByRole("link", { name: "Open team" }).getAttribute("href")).toBe("/team");
-    expect(seen).not.toMatch(/a teammate/);
-    expect(screen.queryByRole("button", { name: "Leave the team" })).toBeNull();
-  });
-
-  it("points to the team page when there is no team", async () => {
-    vi.stubGlobal(
-      "fetch",
-      stubFetch({
-        "/api/me": { mode: "guest", signedIn: false, memoryEnabled: true, surveyUrl: null },
-        "/api/me/memories": { memories: [] },
-        "/api/me/team": { team: null },
-      }),
-    );
-    render(
-      <MemoryRouter>
-        <MePage />
-      </MemoryRouter>,
-    );
-    await screen.findByText(/You are not in a team/);
-    expect(document.body.textContent).toMatch(/your own memory stays yours/);
-    expect(screen.getByRole("link", { name: "Start or join a team" }).getAttribute("href")).toBe(
-      "/team",
-    );
-  });
-
   it("hides one memory from its row, and shows a hidden one as hidden rather than gone", async () => {
     const row = (id: string, blobId: string, hidden: boolean) => ({
       id,
@@ -1780,310 +1674,6 @@ describe("me page", () => {
     await waitFor(() => expect(screen.getByText("guest")).toBeDefined());
     expect(screen.queryByRole("button", { name: /connect your sui wallet/i })).toBeNull();
     expect(screen.queryByText(/Already own your memory/i)).toBeNull();
-  });
-});
-
-describe("team page", () => {
-  type Reply = { status: number; body: unknown };
-  type Call = { path: string; method: string; body: unknown };
-
-  const teamRow = (id: string, status: string, mine: boolean, blobId: string | null) => ({
-    id,
-    type: "decision",
-    status,
-    createdAt: new Date().toISOString(),
-    blobId,
-    explorerUrl: blobId ? `https://walruscan.com/mainnet/blob/${blobId}` : null,
-    mine,
-    // The server never sends an author; if one ever slipped in, the page must not show it.
-    by: "@alice",
-  });
-
-  const platform = {
-    name: "Platform",
-    memberCount: 3,
-    memories: [teamRow("t1", "stored", true, "teamblob1"), teamRow("t2", "failed", false, null)],
-  };
-
-  function serveTeam(
-    state: { team: unknown },
-    handle: (path: string, method: string, body: unknown) => Reply | undefined = () => undefined,
-  ): Call[] {
-    const calls: Call[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        const path = url.split("?")[0] ?? "";
-        const method = init?.method ?? "GET";
-        const body: unknown = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
-        calls.push({ path: url, method, body });
-        const reply =
-          handle(path, method, body) ??
-          (path === "/api/me/team" && method === "GET"
-            ? { status: 200, body: { team: state.team } }
-            : { status: 404, body: {} });
-        return {
-          ok: reply.status < 400,
-          status: reply.status,
-          json: async () => reply.body,
-        } as Response;
-      }),
-    );
-    return calls;
-  }
-
-  function mountTeam() {
-    return render(
-      <MemoryRouter initialEntries={["/team"]}>
-        <TeamPage />
-      </MemoryRouter>,
-    );
-  }
-
-  const posts = (calls: Call[], path: string) =>
-    calls.filter((call) => call.method === "POST" && call.path === path);
-
-  it("offers to start or join when there is no team, and shows the code once one is started", async () => {
-    const state: { team: unknown } = { team: null };
-    const calls = serveTeam(state, (path, method) => {
-      if (path !== "/api/me/team" || method !== "POST") return undefined;
-      state.team = { name: "Platform", memberCount: 1, memories: [] };
-      return {
-        status: 200,
-        body: {
-          team: { name: "Platform", memberCount: 1 },
-          invite: { code: "K7QX2M", expiresInMinutes: 10 },
-        },
-      };
-    });
-    mountTeam();
-
-    const name = await screen.findByLabelText("Team name");
-    expect(screen.getByLabelText("Invite code")).toBeDefined();
-    const seen = document.body.textContent ?? "";
-    expect(seen).toMatch(/Your own memory stays yours/);
-    expect(seen).toMatch(/lives in hippo's account, not in yours/);
-    const start = screen.getByRole("button", { name: "Start the team" });
-    expect((start as HTMLButtonElement).disabled).toBe(true);
-
-    await userEvent.type(name, "Platform");
-    await userEvent.click(start);
-
-    await screen.findByText("K7QX2M");
-    expect(posts(calls, "/api/me/team").map((call) => call.body)).toEqual([{ name: "Platform" }]);
-    expect(document.body.textContent).toMatch(/works once, for 10 minutes, on any channel/);
-    expect(screen.getByRole("button", { name: "Copy join command" })).toBeDefined();
-    expect(screen.getByText("1 member", { exact: false })).toBeDefined();
-    expect(screen.queryByLabelText("Team name")).toBeNull();
-  });
-
-  it("joins with a cleaned-up code, and shows the server's sentence when the code is spent", async () => {
-    const calls = serveTeam({ team: null }, (path) =>
-      path === "/api/me/team/join"
-        ? { status: 404, body: { error: "That code is used or expired. Ask for a new one." } }
-        : undefined,
-    );
-    mountTeam();
-
-    const code = await screen.findByLabelText("Invite code");
-    const join = screen.getByRole("button", { name: "Join the team" });
-    await userEvent.type(code, "k7q-x2o");
-    expect((join as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.clear(code);
-    await userEvent.type(code, " k7q-x2m ");
-    expect((join as HTMLButtonElement).disabled).toBe(false);
-    await userEvent.click(join);
-
-    await screen.findByText("That code is used or expired. Ask for a new one.");
-    expect(posts(calls, "/api/me/team/join").map((call) => call.body)).toEqual([
-      { code: "K7QX2M" },
-    ]);
-    expect(screen.getByLabelText("Invite code")).toBeDefined();
-  });
-
-  it("shows the team and what it holds without naming anyone", async () => {
-    serveTeam({ team: platform }, (path) =>
-      path === "/api/me/team/invite"
-        ? { status: 200, body: { code: "K7QX2M", expiresInMinutes: 10 } }
-        : undefined,
-    );
-    mountTeam();
-
-    await screen.findByText("Platform");
-    const seen = document.body.textContent ?? "";
-    expect(seen).toMatch(/3 members/);
-    expect(seen).toMatch(/2 shared, 1 added by you/);
-    expect(seen).toMatch(/a teammate/);
-    expect(seen).toMatch(/just now · you/);
-    expect(seen).not.toMatch(/alice/);
-    // A failed team write is visible; it used to vanish after "Added".
-    expect(seen).toMatch(/never reached Walrus/);
-    expect(seen).toMatch(/no member owns it yet/);
-    expect(screen.getByRole("link", { name: /teamblob1/ }).getAttribute("href")).toContain(
-      "teamblob1",
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "Invite" }));
-    await screen.findByText("K7QX2M");
-  });
-
-  it("adds a fact to the team only after warning it cannot be taken back, and shows the reply", async () => {
-    const calls = serveTeam({ team: platform }, (path) =>
-      path === "/api/me/team/remember"
-        ? {
-            status: 200,
-            body: {
-              saved: true,
-              redacted: ["an API key"],
-              message:
-                'Added to "Platform". Everyone in the team can recall it from now on. I stripped an API key out of it first.',
-            },
-          }
-        : undefined,
-    );
-    mountTeam();
-
-    const box = await screen.findByLabelText("What the team should remember");
-    expect(document.body.textContent).toMatch(/Everyone in the team will recall this/);
-    expect(document.body.textContent).toMatch(/cannot be taken back/);
-    const add = screen.getByRole("button", { name: "Add to the team" });
-    await userEvent.type(box, "ab");
-    expect((add as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.type(box, "c is how we deploy.");
-    expect(document.body.textContent).toMatch(/21 \/ 1000/);
-    await userEvent.click(add);
-
-    await screen.findByText(/Added to "Platform"\. .* I stripped an API key out of it first\./);
-    expect(posts(calls, "/api/me/team/remember").map((call) => call.body)).toEqual([
-      { text: "abc is how we deploy." },
-    ]);
-    expect((box as HTMLTextAreaElement).value).toBe("");
-  });
-
-  it("keeps the draft and says why when the team could not take it", async () => {
-    serveTeam({ team: platform }, (path) =>
-      path === "/api/me/team/remember"
-        ? { status: 502, body: { error: "Could not add that to the team. Try again." } }
-        : undefined,
-    );
-    mountTeam();
-
-    const box = await screen.findByLabelText("What the team should remember");
-    await userEvent.type(box, "Staging freezes on Friday.");
-    await userEvent.click(screen.getByRole("button", { name: "Add to the team" }));
-
-    await screen.findByText("Could not add that to the team. Try again.");
-    expect((box as HTMLTextAreaElement).value).toBe("Staging freezes on Friday.");
-  });
-
-  it("searches the team's memory when asked, not as you type, and never says who added it", async () => {
-    const calls = serveTeam({ team: platform }, (path) =>
-      path === "/api/me/team/search"
-        ? {
-            status: 200,
-            body: {
-              results: [
-                {
-                  text: "Staging deploys freeze every Friday at 16:00.",
-                  type: "decision",
-                  relevance: 0.72,
-                  blobId: "teamblob1",
-                  explorerUrl: "https://walruscan.com/mainnet/blob/teamblob1",
-                  mine: true,
-                  by: "@alice",
-                },
-              ],
-            },
-          }
-        : undefined,
-    );
-    mountTeam();
-
-    const input = await screen.findByLabelText("Search the team's memory");
-    await userEvent.type(input, "deploys");
-    expect(calls.some((call) => call.path.startsWith("/api/me/team/search"))).toBe(false);
-    await userEvent.click(screen.getByRole("button", { name: "Search" }));
-
-    await screen.findByText("Staging deploys freeze every Friday at 16:00.");
-    expect(calls.map((call) => call.path)).toContain("/api/me/team/search?q=deploys");
-    const seen = document.body.textContent ?? "";
-    expect(seen).toMatch(/relevance 0\.72/);
-    expect(seen).toMatch(/added by you/);
-    expect(seen).not.toMatch(/alice/);
-  });
-
-  it("says so when a team search finds nothing, and passes on a failure sentence", async () => {
-    let fail = false;
-    serveTeam({ team: platform }, (path) => {
-      if (path !== "/api/me/team/search") return undefined;
-      return fail
-        ? { status: 502, body: { error: "Search failed: Walrus Memory is unreachable." } }
-        : { status: 200, body: { results: [] } };
-    });
-    mountTeam();
-
-    const input = await screen.findByLabelText("Search the team's memory");
-    await userEvent.type(input, "sailing");
-    await userEvent.click(screen.getByRole("button", { name: "Search" }));
-    await screen.findByText(/Nothing in the team's memory is close/);
-
-    fail = true;
-    await userEvent.click(screen.getByRole("button", { name: "Search" }));
-    await screen.findByText("Search failed: Walrus Memory is unreachable.");
-  });
-
-  it("leaves only after the dialog is confirmed, then offers to start or join again", async () => {
-    const state: { team: unknown } = { team: platform };
-    const calls = serveTeam(state, (path) => {
-      if (path !== "/api/me/team/leave") return undefined;
-      state.team = null;
-      return { status: 200, body: { left: "Platform" } };
-    });
-    mountTeam();
-
-    await userEvent.click(await screen.findByRole("button", { name: "Leave the team" }));
-    const dialog = await screen.findByRole("alertdialog");
-    expect(dialog.textContent).toMatch(/What you added stays with the team/);
-    expect(dialog.textContent).toMatch(/cannot be deleted/);
-    expect(posts(calls, "/api/me/team/leave")).toHaveLength(0);
-
-    await userEvent.click(within(dialog).getByRole("button", { name: "Stay" }));
-    expect(posts(calls, "/api/me/team/leave")).toHaveLength(0);
-
-    await userEvent.click(screen.getByRole("button", { name: "Leave the team" }));
-    await userEvent.click(
-      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Leave" }),
-    );
-    await screen.findByLabelText("Team name");
-    expect(posts(calls, "/api/me/team/leave")).toHaveLength(1);
-  });
-
-  it("sends a visitor hippo does not know yet to the chat instead of offering forms that would fail", async () => {
-    const calls = serveTeam({ team: null }, (path, method) =>
-      path === "/api/me/team" && method === "GET"
-        ? { status: 200, body: { known: false, team: null } }
-        : undefined,
-    );
-    mountTeam();
-
-    await screen.findByText("No team yet");
-    expect(screen.getByRole("link", { name: "Start chatting" }).getAttribute("href")).toBe("/");
-    expect(screen.queryByLabelText("Team name")).toBeNull();
-    expect(screen.queryByLabelText("Invite code")).toBeNull();
-    expect(calls.filter((call) => call.method === "POST")).toHaveLength(0);
-  });
-
-  it("shows a placeholder while loading and a sentence when the team cannot be read", async () => {
-    serveTeam({ team: null }, (path, method) =>
-      path === "/api/me/team" && method === "GET"
-        ? { status: 500, body: { error: "Could not read your team right now." } }
-        : undefined,
-    );
-    const { container } = mountTeam();
-    expect(container.querySelector('[data-slot="skeleton"]')).not.toBeNull();
-    await screen.findByText("Could not read your team right now.");
-    expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
   });
 });
 
@@ -2234,8 +1824,8 @@ describe("me page, finding a memory", () => {
               text: "Staging deploys freeze every Friday at 16:00.",
               type: "decision",
               relevance: 0.6,
-              blobId: "teamBlob",
-              explorerUrl: "https://walruscan.com/mainnet/blob/teamBlob",
+              blobId: "sharedBlob",
+              explorerUrl: "https://walruscan.com/mainnet/blob/sharedBlob",
             },
           ],
         },
@@ -2253,15 +1843,15 @@ describe("me page, finding a memory", () => {
     // The text is the whole point: it cannot come from Postgres, only Walrus.
     await waitFor(() => expect(container.textContent ?? "").toMatch(/Uy deploys with Railway\./));
     expect(container.textContent ?? "").toMatch(/relevance 0\.72/);
-    // A team memory comes back from recall too. It is marked, and only the
-    // person's own memory offers to be hidden: hiding a team fact 404'd.
+    // A memory that is not in this person's own index comes back from recall
+    // too. It is marked, and only the person's own memory offers to be hidden.
     const rows = [...container.querySelectorAll("li")].filter((li) =>
       li.textContent?.includes("relevance"),
     );
-    const teamRow = rows.find((li) => li.textContent?.includes("Staging deploys"));
+    const sharedRow = rows.find((li) => li.textContent?.includes("Staging deploys"));
     const ownRow = rows.find((li) => li.textContent?.includes("Railway"));
-    expect(teamRow?.textContent).toMatch(/team/);
-    expect(teamRow?.querySelector("button")).toBeNull();
+    expect(sharedRow?.textContent).toMatch(/shared/);
+    expect(sharedRow?.querySelector("button")).toBeNull();
     expect(ownRow?.querySelector("button")?.getAttribute("aria-label")).toBe("stop using this");
   });
 

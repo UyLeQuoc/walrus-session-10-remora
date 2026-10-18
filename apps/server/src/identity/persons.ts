@@ -18,8 +18,6 @@ import {
   guestScope,
   type MemoryPort,
   ownedScope,
-  TEAM_PREFIX,
-  teamScope,
   type WriteEvent,
 } from "@remora/memory";
 import { isConversationTurn } from "../chat/turn-modes.ts";
@@ -27,7 +25,6 @@ import { db, operator } from "../context.ts";
 import { env } from "../env/load.ts";
 import { isUniqueViolation } from "../unique-violation.ts";
 import { inheritedGuestIds } from "./predicates.ts";
-import { currentTeam } from "./teams.ts";
 
 export type Person = typeof people.$inferSelect;
 
@@ -60,23 +57,15 @@ export async function resolvePerson(
   }
 }
 
-/**
- * A person's own rows in `memory_index`: everything but what they added to a
- * team. Team writes are indexed under whoever made them, and a shared fact is
- * neither theirs to list as "what I remember about you" nor theirs to forget.
- */
+/** A person's own rows in `memory_index`. */
 export function ownMemoryOf(personId: string) {
-  return and(
-    eq(memoryIndex.personId, personId),
-    sql`${memoryIndex.namespace} not like ${`${TEAM_PREFIX}%`}`,
-  );
+  return eq(memoryIndex.personId, personId);
 }
 
 /**
  * Record every write in `memory_index` as it moves from accepted to stored or
- * failed. Shared by a person's own port and the team port, so a team write is
- * tracked like any other: it used to be written with no record at all, and one
- * that failed on Walrus went unnoticed after the person had been told "Added".
+ * failed, so a write that fails on Walrus is noticed after the person was told
+ * "Added".
  */
 function indexWrites(person: Person) {
   return async (e: WriteEvent) => {
@@ -112,14 +101,6 @@ function indexWrites(person: Person) {
 }
 
 /** Guest or owned MemoryPort for a person, recording every write in memory_index. */
-/**
- * Reads a person's own memory, plus their team's if they are in one.
- *
- * Team memory is a read-only companion here on purpose: being in a team must
- * never turn an ordinary sentence into something colleagues can read. Putting a
- * fact into the team is an explicit act, `/team remember`, and that path builds
- * its own port through `teamPortFor` below.
- */
 export async function portFor(
   person: Person,
   channel: string,
@@ -156,11 +137,7 @@ export async function portFor(
         by,
         channel,
         onWrite,
-        alsoRead: [
-          guestScope(operator, person.id),
-          ...(await inheritedGuestScopes(person)),
-          ...(await teamScopes(person)),
-        ],
+        alsoRead: [guestScope(operator, person.id), ...(await inheritedGuestScopes(person))],
         hidden,
       });
     }
@@ -170,7 +147,7 @@ export async function portFor(
     by,
     channel,
     onWrite,
-    alsoRead: [...(await inheritedGuestScopes(person)), ...(await teamScopes(person))],
+    alsoRead: await inheritedGuestScopes(person),
     hidden,
   });
 }
@@ -263,32 +240,6 @@ export async function inheritedGuestScopes(person: Person) {
     person.id,
     rows.map((r) => r.namespace),
   ).map((id) => guestScope(operator, id));
-}
-
-/** Empty unless the person is in a team, which keeps the common path unchanged. */
-async function teamScopes(person: Person) {
-  const team = await currentTeam(person.id);
-  return team ? [teamScope(operator, team.teamId)] : [];
-}
-
-/**
- * A port that writes into the team. Only `/team remember` builds one, and the
- * command says which team the fact is going to before it writes.
- */
-export async function teamPortFor(
-  person: Person,
-  channel: string,
-  teamId: string,
-): Promise<MemoryPort> {
-  const by = person.displayName ?? person.id.slice(0, 8);
-  return createMemoryPort({
-    scope: teamScope(operator, teamId),
-    by,
-    channel,
-    // Recorded under the person who added it, in the team's namespace. Anything
-    // counting a person's own memory must leave these out: see TEAM_PREFIX.
-    onWrite: indexWrites(person),
-  });
 }
 
 export async function logTurn(

@@ -6,7 +6,6 @@ import {
   type RecalledMemory,
 } from "@remora/memory";
 import { type ModelMessage, stepCountIs, streamText } from "ai";
-import { type AttachedDocument, formatUntrustedDocument } from "./document.ts";
 import type { HippoModel } from "./model.ts";
 import { buildSystemPrompt } from "./prompt.ts";
 import { createTools } from "./tools.ts";
@@ -28,8 +27,6 @@ export interface TurnInput {
   hasCorrections?: boolean;
   abortSignal?: AbortSignal;
   knownHashes?: ReadonlySet<string>;
-  /** A private file the person attached, already decrypted in their browser. */
-  document?: AttachedDocument;
   gettingToKnow?: boolean;
 }
 
@@ -155,7 +152,6 @@ export function runTurn(input: TurnInput, ctx: TurnContext, useFallback = false)
     userHandle: input.userHandle,
     today: isoDate(),
     styleHints: ctx.styleHints,
-    document: Boolean(input.document),
     sessionStart: input.sessionStart,
     gettingToKnow: input.gettingToKnow,
   });
@@ -164,13 +160,6 @@ export function runTurn(input: TurnInput, ctx: TurnContext, useFallback = false)
     const block = formatUntrustedMemories(ctx.injected);
     const idx = messages.map((m) => m.role).lastIndexOf("user");
     messages.splice(Math.max(idx, 0), 0, { role: "user", content: block });
-  }
-  if (input.document) {
-    const idx = messages.map((m) => m.role).lastIndexOf("user");
-    messages.splice(Math.max(idx, 0), 0, {
-      role: "user",
-      content: formatUntrustedDocument(input.document),
-    });
   }
   const model = useFallback ? input.model.fallback : input.model.primary;
   if (!model) throw new Error("No fallback model configured.");

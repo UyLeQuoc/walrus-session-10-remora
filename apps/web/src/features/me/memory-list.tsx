@@ -94,7 +94,7 @@ export function MemoryList({
                     <p>{hit.text}</p>
                     <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
                       {hit.type && <Badge>{hit.type}</Badge>}
-                      {hit.mine === false && <Badge variant="outline">team</Badge>}
+                      {hit.mine === false && <Badge variant="outline">shared</Badge>}
                       <span>relevance {hit.relevance.toFixed(2)}</span>
                       <a
                         className="block min-w-0 max-w-48 underline"

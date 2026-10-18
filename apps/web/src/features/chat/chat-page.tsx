@@ -1,17 +1,8 @@
 import type { UIMessage } from "ai";
-import { Brain, FileText, X } from "lucide-react";
+import { Brain } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNewChatTick, useOpenTick, useShellTitle } from "@/app/shell";
-import {
-  Attachment,
-  AttachmentAction,
-  AttachmentActions,
-  AttachmentContent,
-  AttachmentDescription,
-  AttachmentMedia,
-  AttachmentTitle,
-} from "@/components/ui/attachment";
 import { Button } from "@/components/ui/button";
 import {
   MessageScroller,
@@ -56,12 +47,8 @@ import { useRemembered } from "@/features/chat/use-remembered";
 import { useSelectionRemember } from "@/features/chat/use-selection-remember";
 import { useSlashMenu } from "@/features/chat/use-slash-menu";
 import { useTranscript } from "@/features/chat/use-transcript";
-import { DocumentPicker } from "@/features/documents/document-picker";
-import { useDocuments } from "@/features/documents/use-documents";
 import { useMe } from "@/features/me/use-me";
 import { usePageMeta } from "@/hooks/use-page-meta";
-
-type Files = ReturnType<typeof useDocuments>;
 
 const PAGE_META = {
   title: "hippo — the chatbot that remembers you, on memory you own",
@@ -85,12 +72,7 @@ export function ChatPage() {
     openConversation,
     replaceMessages,
     status,
-    setDocument,
   } = useChatThread();
-  const files = useDocuments();
-  useEffect(() => {
-    setDocument(files.attached ? { id: files.attached.id, text: files.attached.text } : null);
-  }, [files.attached, setDocument]);
   const citations = useChatCitations(conversationId, messages as UiMessage[], (next) => {
     replaceMessages(next as UIMessage[]);
   });
@@ -216,7 +198,6 @@ export function ChatPage() {
                 stop={() => void stop()}
                 busy={busy}
                 messages={messages}
-                files={files}
               />
               <div className="flex flex-col items-start gap-3">
                 <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
@@ -274,7 +255,6 @@ export function ChatPage() {
                 stop={stop}
                 busy={busy}
                 messages={messages}
-                files={files}
               />
             </div>
           </>
@@ -346,7 +326,6 @@ function ComposerDock({
   stop,
   busy,
   messages,
-  files,
 }: {
   text: string;
   setText: (value: string) => void;
@@ -354,7 +333,6 @@ function ComposerDock({
   stop: () => void;
   busy: boolean;
   messages: UIMessage[];
-  files: Files;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -365,7 +343,6 @@ function ComposerDock({
         stop={stop}
         busy={busy}
         messages={messages}
-        files={files}
       />
       <MemoryStrip />
     </div>
@@ -379,7 +356,6 @@ function Composer({
   stop,
   busy,
   messages,
-  files,
 }: {
   text: string;
   setText: (value: string) => void;
@@ -387,14 +363,8 @@ function Composer({
   stop: () => void;
   busy: boolean;
   messages: UIMessage[];
-  files: Files;
 }) {
   const [pinned, setPinned] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
-  const attachedId = files.attached?.id ?? null;
-  useEffect(() => {
-    if (attachedId) setPicking(false);
-  }, [attachedId]);
   const [guideOpen, setGuideOpen] = useState(false);
   const root = commandRoot(text);
   const guided = pinned !== null && root === pinned;
@@ -450,28 +420,6 @@ function Composer({
             busy={busy}
             meter={meter}
             command={guided}
-            onAdd={() => setPicking(true)}
-            attachment={
-              files.attached ? (
-                <Attachment>
-                  <AttachmentMedia variant="icon">
-                    <FileText />
-                  </AttachmentMedia>
-                  <AttachmentContent>
-                    <AttachmentTitle>{files.attached.name}</AttachmentTitle>
-                    <AttachmentDescription>Private, opened in this browser</AttachmentDescription>
-                  </AttachmentContent>
-                  <AttachmentActions>
-                    <AttachmentAction
-                      aria-label={`Remove ${files.attached.name}`}
-                      onClick={files.detach}
-                    >
-                      <X />
-                    </AttachmentAction>
-                  </AttachmentActions>
-                </Attachment>
-              ) : undefined
-            }
             memory={
               typeof me?.memoryEnabled === "boolean"
                 ? {
@@ -496,17 +444,6 @@ function Composer({
           />
         </form>
       </PopoverAnchor>
-      <DocumentPicker
-        open={picking}
-        onOpenChange={setPicking}
-        files={files.files}
-        refusal={files.refusal}
-        busy={files.busy}
-        status={files.status}
-        error={files.error}
-        onUpload={(file) => void files.upload(file)}
-        onOpen={(file) => void files.open(file)}
-      />
       {slash.open ? (
         <SlashMenu
           items={slash.items}

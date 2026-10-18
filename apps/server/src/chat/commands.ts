@@ -18,16 +18,7 @@ import {
   portFor,
   setHidden,
 } from "../identity/persons.ts";
-import {
-  createRefusalSentence,
-  joinedSentence,
-  joinRefusalSentence,
-  teamFactRefusalSentence,
-  teamFactSentence,
-} from "../identity/team-copy.ts";
-import { createTeam, currentTeam, inviteToTeam, joinTeam, leaveTeam } from "../identity/teams.ts";
 import { asDownload, type ExportDownload, exportFor } from "../memory/export-person.ts";
-import { rememberTeamFact } from "../memory/team-person.ts";
 import {
   compareView,
   connectLinkView,
@@ -45,10 +36,6 @@ import {
   proofView,
   searchView,
   sentence,
-  teamInviteView,
-  teamNoneView,
-  teamStartedView,
-  teamStatusView,
   welcomeView,
   whoamiView,
 } from "./command-views.ts";
@@ -98,72 +85,6 @@ async function exportMemories(ctx: CommandContext): Promise<CommandResult> {
   }
   if (ctx.channel === "web") return exportWebView(summary, page);
   return exportElsewhereView(summary, page);
-}
-
-/**
- * Shared memory for a few people, with the awkward parts said out loud.
- *
- * Two of these matter more than the feature: the team does not own its memory,
- * and leaving does not take back what you put in. Both are true of every other
- * shared-memory product too; the difference is whether they are in the help
- * text or discovered later.
- */
-async function team(ctx: CommandContext, arg: string): Promise<CommandResult> {
-  const [sub = "", ...rest] = arg.split(/\s+/);
-  const value = rest.join(" ");
-  const mine = await currentTeam(ctx.person.id);
-
-  switch (sub.toLowerCase()) {
-    case "": {
-      if (!mine) return teamNoneView();
-      return teamStatusView({ name: mine.name, memberCount: mine.memberCount });
-    }
-
-    case "new": {
-      const outcome = await createTeam(ctx.person, value);
-      if (!outcome.ok) return sentence(createRefusalSentence(outcome.reason));
-      return teamStartedView({
-        name: outcome.team.name,
-        code: outcome.code,
-        expiresInMinutes: outcome.expiresInMinutes,
-      });
-    }
-
-    case "invite": {
-      if (!mine) return sentence("You are not in a team. /team new <name> starts one.");
-      const invite = await inviteToTeam(ctx.person, mine.teamId);
-      return teamInviteView({ code: invite.code, expiresInMinutes: invite.expiresInMinutes });
-    }
-
-    case "join": {
-      const outcome = await joinTeam(ctx.person, value);
-      if (!outcome.ok) return sentence(joinRefusalSentence(outcome.reason));
-      return sentence(joinedSentence(outcome.team.name));
-    }
-
-    case "remember": {
-      const outcome = await rememberTeamFact({
-        person: ctx.person,
-        channel: ctx.channel,
-        text: value,
-      });
-      if (!outcome.ok) return sentence(teamFactRefusalSentence(outcome.reason));
-      return sentence(teamFactSentence(outcome));
-    }
-
-    case "leave": {
-      const left = await leaveTeam(ctx.person.id);
-      if (!left) return sentence("You are not in a team.");
-      return sentence(
-        `Left "${left.name}". I will not read or write its memory for you any more.\n\nWhat you already put in stays: a memory on Walrus cannot be deleted, so the team keeps it. Only add things to a team you are willing to leave behind.`,
-      );
-    }
-
-    default:
-      return sentence(
-        "Try /team, /team new <name>, /team join <code>, /team invite, /team remember <fact>, or /team leave.",
-      );
-  }
 }
 
 /**
@@ -281,7 +202,6 @@ async function forget(ctx: CommandContext): Promise<CommandResult> {
    * they said as a guest is still in hippo's account and still read alongside
    * (see `alsoRead` in persons.ts), so forgetting only the owned namespace left
    * it recallable — while /privacy and /disconnect both promised otherwise.
-   * Team memory is not theirs to forget and is left alone.
    */
   const scopes = [port.scope];
   if (ctx.person.mode === "owned") scopes.push(guestScope(operator, ctx.person.id));
@@ -395,8 +315,6 @@ export async function handleCommand(
       return helpView();
     case "privacy":
       return privacyView();
-    case "team":
-      return team(ctx, arg);
     case "whoami":
       return whoami(ctx);
     case "link":

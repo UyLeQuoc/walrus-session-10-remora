@@ -22,7 +22,6 @@ describe("memoryOffTurn", () => {
     });
     expect(turn.memoryEnabled).toBe(false);
     expect(turn.sessionStart).toBeUndefined();
-    expect(turn.document).toBeUndefined();
     expect(turn.messages).toBe(messages);
     expect(await gatherContext(turn)).toEqual({ injected: [], styleHints: [] });
     expect(recall).not.toHaveBeenCalled();

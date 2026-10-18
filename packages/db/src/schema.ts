@@ -152,46 +152,6 @@ export const memoryIndex = pgTable(
 );
 
 /**
- * Shared memory for a handful of people.
- *
- * A team's memory lives in hippo's own account under `hippo-team:<id>`, exactly
- * as a guest's does. The team does not own it, and that is said out loud in
- * `/team` and `/privacy` rather than implied otherwise: owning shared memory
- * needs an account somebody holds the keys to, and deciding who that is between
- * colleagues is a product question this does not answer yet.
- */
-export const teams = pgTable("teams", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  createdBy: uuid("created_by").references(() => people.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const teamMembers = pgTable(
-  "team_members",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    teamId: uuid("team_id")
-      .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id, { onDelete: "cascade" }),
-    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
-    /**
-     * Leaving stops reads and writes; it does not remove what the person
-     * contributed, because a memory on Walrus cannot be deleted (docs/issues/09).
-     * Kept as a row rather than a delete so `/team` can say that truthfully.
-     */
-    leftAt: timestamp("left_at", { withTimezone: true }),
-  },
-  (t) => [
-    index("team_members_person_idx").on(t.personId, t.leftAt),
-    uniqueIndex("team_members_unique").on(t.teamId, t.personId),
-  ],
-);
-
-/**
  * One thread of chat. Text is not stored here.
  *
  * A channel thread (Telegram, Discord, Slack, CLI) has one open row per
@@ -251,64 +211,4 @@ export const messages = pgTable(
       .where(sql`${t.clientId} is not null`),
     index("messages_conversation_seq_desc_idx").on(t.conversationId, t.seq),
   ],
-);
-
-/** Six characters, ten minutes, single use. Same shape as a channel link code. */
-export const teamInvites = pgTable("team_invites", {
-  code: text("code").primaryKey(),
-  teamId: uuid("team_id")
-    .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
-  createdBy: uuid("created_by").references(() => people.id, { onDelete: "set null" }),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  usedAt: timestamp("used_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-/**
- * A private file the person stored on Walrus from their own wallet. Only the
- * ciphertext is on Walrus; this row holds where it is and how to unseal it.
- * The file's text and its name are never columns: the name is AES-256-GCM
- * under `KEY_ENCRYPTION_KEY`, like a conversation title.
- */
-export const documents = pgTable(
-  "documents",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id, { onDelete: "cascade" }),
-    walletAddress: text("wallet_address").notNull(),
-    accountId: text("account_id").notNull(),
-    blobId: text("blob_id").notNull(),
-    blobObjectId: text("blob_object_id"),
-    sealId: text("seal_id").notNull(),
-    ciphertextSha256: text("ciphertext_sha256").notNull(),
-    nameEnc: text("name_enc").notNull(),
-    mediaType: text("media_type").notNull(),
-    byteSize: integer("byte_size").notNull(),
-    endEpoch: integer("end_epoch"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  },
-  (t) => [
-    index("documents_person_created_idx").on(t.personId, t.createdAt),
-    uniqueIndex("documents_person_blob_idx").on(t.personId, t.blobId),
-  ],
-);
-
-/** Which file a user message asked about. The excerpt itself is never stored. */
-export const messageAttachments = pgTable(
-  "message_attachments",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    messageId: uuid("message_id")
-      .notNull()
-      .references(() => messages.id, { onDelete: "cascade" }),
-    documentId: uuid("document_id")
-      .notNull()
-      .references(() => documents.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex("message_attachments_message_document_idx").on(t.messageId, t.documentId)],
 );

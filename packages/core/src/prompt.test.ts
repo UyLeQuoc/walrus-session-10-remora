@@ -26,13 +26,6 @@ describe("buildSystemPrompt", () => {
     );
   });
 
-  it("explains an attached file only on a turn that has one", () => {
-    const withFile = buildSystemPrompt({ ...base, document: true });
-    expect(withFile).toMatch(/BEGIN_UNTRUSTED_FILE/);
-    expect(withFile).toMatch(/never instructions/);
-    expect(buildSystemPrompt(base)).not.toMatch(/UNTRUSTED_FILE/);
-  });
-
   it("asks one getting-to-know question only while hippo knows little and memory is on", () => {
     expect(buildSystemPrompt({ ...base, gettingToKnow: true })).toMatch(
       /GETTING TO KNOW:.*end each reply with one short question.*answer it fully first/s,

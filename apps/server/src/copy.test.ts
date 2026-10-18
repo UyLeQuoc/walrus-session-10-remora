@@ -56,14 +56,6 @@ describe("/privacy", () => {
     expect(PRIVACY).toMatch(/\/memory off/);
   });
 
-  it("warns that a team sees what the team is told, and that leaving does not undo it", () => {
-    // Somebody joining a shared memory has to know both halves before they
-    // join, not after a colleague reads something back to them.
-    expect(PRIVACY).toMatch(/everyone in it can recall/i);
-    expect(PRIVACY).toMatch(/Your own memory is not shared/i);
-    expect(PRIVACY).toMatch(/leaving does not take it back out/i);
-  });
-
   it("says chat transcripts stay on the server, encrypted, and can be deleted", () => {
     expect(PRIVACY).toMatch(/not written to Walrus/i);
     expect(PRIVACY).toMatch(/other agents cannot recall it/i);

@@ -13,7 +13,6 @@ import {
   Lock,
   Unplug,
   User,
-  Users,
 } from "lucide-react";
 
 export interface SlashItem {
@@ -29,7 +28,6 @@ const ICONS: Record<(typeof CHANNEL_COMMANDS)[number]["name"], LucideIcon> = {
   compare: Columns2,
   export: Download,
   link: Link,
-  team: Users,
   connect: KeyRound,
   disconnect: Unplug,
   privacy: Lock,
@@ -66,21 +64,13 @@ const USAGE: Record<string, Array<{ command: string; description: string }>> = {
     { command: "/memory forget all", description: "make every memory unrecallable" },
     { command: "/memory unhide <blob>", description: "use one memory again" },
   ],
-  "/team": [
-    { command: "/team", description: "the team you are in" },
-    { command: "/team new <name>", description: "start one" },
-    { command: "/team join <code>", description: "join one somebody else started" },
-    { command: "/team invite", description: "a code for somebody else" },
-    { command: "/team remember <fact>", description: "add to the shared memory" },
-    { command: "/team leave", description: "stop reading and writing it" },
-  ],
   "/link": [
     { command: "/link", description: "a code for another channel" },
     { command: "/link <code>", description: "use a code from another channel" },
   ],
 };
 
-/** The root command in the box, such as `/team` inside `/team new <name>`. */
+/** The root command in the box, such as `/memory` inside `/memory search <question>`. */
 export function commandRoot(text: string): string | null {
   const trimmed = text.trim();
   if (!trimmed.startsWith("/")) return null;

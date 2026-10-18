@@ -22,7 +22,6 @@ import { ExportPanel } from "@/features/me/export-panel";
 import { ImportPanel } from "@/features/me/import-panel";
 import { MemoryList } from "@/features/me/memory-list";
 import { StatStrip } from "@/features/me/stat-strip";
-import { TeamCard } from "@/features/me/team-card";
 import { useMe } from "@/features/me/use-me";
 import { useUsage } from "@/features/me/use-usage";
 import { WalletReadPanel } from "@/features/me/wallet-read-panel";
@@ -119,7 +118,6 @@ export function MePage() {
         <ChainPanel owned={owned} onError={(message) => toast.error(message)} />
         <div className="flex flex-col gap-6">
           {stored > 0 ? <ExportPanel onError={(message) => toast.error(message)} /> : null}
-          <TeamCard />
         </div>
       </div>
 

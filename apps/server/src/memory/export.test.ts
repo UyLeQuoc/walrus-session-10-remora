@@ -87,7 +87,7 @@ describe("recoverText", () => {
 describe("assembleExport", () => {
   const rows = [
     row("a", LINE_A),
-    row("b", LINE_B, { namespace: "hippo-team:t1" }),
+    row("b", LINE_B),
     row("c", "[gotcha] [by:@mai] [2026-09-24] port 5433"),
     row(null, LINE_A, { status: "pending" }),
     row(null, LINE_A, { status: "failed" }),
@@ -101,7 +101,6 @@ describe("assembleExport", () => {
       ["b", { line: LINE_B, verified: true }],
     ]),
     expiry: new Map([["a", "2027-04-01T00:00:00Z"]]),
-    teamName: "Platform",
   });
 
   it("lists every stored memory and counts the rest", () => {
@@ -130,14 +129,8 @@ describe("assembleExport", () => {
     expect(c?.ciphertextUrl).toContain("c");
   });
 
-  it("labels what the person gave a team, and says what that does not cover", () => {
-    expect(file.memories.map((m) => m.scope)).toEqual(["own", "team", "own"]);
-    const said = file.limits.join(" ");
-    expect(said).toContain("hippo's own Walrus Memory account");
-    // Teammates' facts are not theirs, and untracked older writes cannot be
-    // listed; the file must not imply otherwise.
-    expect(said).toContain("What teammates added is theirs and is not in this file");
-    expect(said).toContain("nothing added before hippo began recording team writes");
+  it("says a guest's memories live in hippo's own account", () => {
+    expect(file.limits.join(" ")).toContain("hippo's own Walrus Memory account");
   });
 
   it("keeps a hidden memory in the file, marked, because it is still the person's", () => {

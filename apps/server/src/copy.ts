@@ -24,7 +24,6 @@ export const PRIVACY = `What happens to what you tell me:
 • Storage is paid per period. A memory written today lasts about seven months, then the bytes expire.
 • Your memory lives in a space named after a random id, not your name or your handle. That name is visible on Sui.
 • Until you run /connect, that space sits inside my own Walrus Memory account. After /connect new memories go into an account your wallet owns, and /disconnect takes my access to it away on chain.
-• If you join a team, everyone in it can recall what the team has been told. Your own memory is not shared: only /team remember puts something in the team, and leaving does not take it back out, because a memory on Walrus cannot be deleted.
 • What you told me before connecting stays in my account. It cannot be moved there and it cannot be deleted, so I keep reading it alongside yours, and I can still read it after you revoke me. /memory forget all makes it unrecallable.
 • The chat itself, the words back and forth, stays on my server so a reload can show it again. It is encrypted there, it is not written to Walrus, and other agents cannot recall it. On the web, delete a chat from the sidebar. That removes it from my server. It does not remove what I remembered to Walrus, and /memory off does not delete those chats.
 
@@ -70,7 +69,6 @@ export const HELP = `hippo remembers what you tell it, and the memory belongs to
 /memory forget <b> stop me using one memory (all: every one)
 /privacy           what is stored, where, and for how long
 /link              use the same memory on another channel
-/team              share a memory with a few people
 /whoami            your account and where the memory lives
 /proof             the memories behind my last answer
 /compare           my last answer again, without memory

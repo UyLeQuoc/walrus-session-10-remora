@@ -7,7 +7,6 @@ import { RelayerExtras } from "@remora/memory";
 import { db } from "../context.ts";
 import { env } from "../env/load.ts";
 import { type Person, portFor } from "../identity/persons.ts";
-import { currentTeam } from "../identity/teams.ts";
 import { assembleExport, type ExportFile, recoverText, renderMarkdown } from "./export.ts";
 
 export async function exportFor(person: Person, channel: string): Promise<ExportFile> {
@@ -41,7 +40,6 @@ export async function exportFor(person: Person, channel: string): Promise<Export
     rows,
     recovered,
     expiry,
-    teamName: (await currentTeam(person.id))?.name ?? null,
   });
 }
 

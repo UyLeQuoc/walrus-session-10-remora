@@ -40,14 +40,16 @@ describe("filterSlashCommands", () => {
 
 describe("commandRoot", () => {
   it("keeps the family when the box holds a form of the command", () => {
-    expect(commandRoot("/team")).toBe("/team");
-    expect(commandRoot("/team new <name>")).toBe("/team");
+    expect(commandRoot("/link")).toBe("/link");
+    expect(commandRoot("/memory search <question>")).toBe("/memory");
     expect(commandRoot("/memory on")).toBe("/memory");
     expect(commandRoot("hello")).toBeNull();
   });
 
   it("lists the forms under that command", () => {
-    expect(commandUsages("/team").map((line) => line.command)).toContain("/team new <name>");
+    expect(commandUsages("/memory").map((line) => line.command)).toContain(
+      "/memory search <question>",
+    );
     expect(commandUsages("/whoami")).toEqual([
       { command: "/whoami", description: "your account and where the memory lives" },
     ]);

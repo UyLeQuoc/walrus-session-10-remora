@@ -9,7 +9,6 @@ import { ChatPage } from "./features/chat/chat-page";
 import { ConnectPage } from "./features/connect/connect-page";
 import { GuidePage } from "./features/guide/guide-page";
 import { MePage } from "./features/me/me-page";
-import { TeamPage } from "./features/team/team-page";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("#root missing");
@@ -24,7 +23,6 @@ createRoot(root).render(
             <Route path="connect/:token" element={<ConnectPage kind="connect" />} />
             <Route path="disconnect/:token" element={<ConnectPage kind="disconnect" />} />
             <Route path="me" element={<MePage />} />
-            <Route path="team" element={<TeamPage />} />
             <Route path="guide" element={<GuidePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

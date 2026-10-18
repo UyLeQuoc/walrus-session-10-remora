@@ -4,8 +4,6 @@ export {
   type MemoryScope,
   NAMESPACE,
   ownedScope,
-  TEAM_PREFIX,
-  teamScope,
 } from "./client.ts";
 export { decryptSecret, encryptSecret } from "./crypto.ts";
 export { type GeneratedDelegate, generateDelegate } from "./delegate.ts";

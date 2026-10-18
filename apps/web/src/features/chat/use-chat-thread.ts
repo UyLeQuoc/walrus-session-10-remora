@@ -33,7 +33,6 @@ function lastUserText(messages: readonly UIMessage[]): string {
 
 export function useChatThread() {
   const idRef = useRef<string | null>(readActiveChat());
-  const documentRef = useRef<{ id: string; text: string } | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(() => readActiveChat());
   const adoptChat = useAdoptChat();
   const adoptRef = useRef(adoptChat);
@@ -59,7 +58,6 @@ export function useChatThread() {
               conversationId: idRef.current,
               clientMessageId: source?.id,
               regenerate: trigger === "regenerate-message",
-              ...(documentRef.current ? { document: documentRef.current } : {}),
             },
           };
         },
@@ -85,10 +83,6 @@ export function useChatThread() {
     },
     [setMessages],
   );
-
-  const setDocument = useCallback((document: { id: string; text: string } | null) => {
-    documentRef.current = document;
-  }, []);
 
   const replaceMessages = useCallback(
     (next: UIMessage[]) => {
@@ -131,6 +125,5 @@ export function useChatThread() {
     replaceMessages,
     resetConversation,
     openConversation,
-    setDocument,
   };
 }
