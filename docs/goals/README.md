@@ -11,12 +11,13 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 3 | [U2: Real Disc + disc-sdk, testnet](uy-02-disc-testnet.md) ([prompt](uy-02-disc-testnet.prompt.txt)) | Uy | ✅ **Done Oct 19** ([notes](../spikes/2026-10-19-disc-testnet.md), PR #2 Move, PR #3 contract) | U1 ✅ |
 | 4 | [U3: All W1 rails end to end, network-switchable](uy-03-w1-rails.md) ([prompt](uy-03-w1-rails.prompt.txt)) | Uy | ✅ **Done Oct 19: W1 exit on testnet** ([notes](../spikes/2026-10-19-w1-exit.md)) | U2 ✅ |
 | 5 | [U4: Take Huấn's open W1 items (web, funds UI, network switch, E2E)](uy-04-w1-ui-takeover.md) ([prompt](uy-04-w1-ui-takeover.prompt.txt)) | Uy's agent ([ADR-0027](../adr/0027-flex-takeover.md)) | ✅ **Done Oct 19** ([handoff](../handoffs/2026-10-19-uy-to-huan-u4-landed.md)) | U3 ✅ |
+| 6 | [U5: W2 core product end to end (both lanes)](uy-05-w2-core-product.md) ([prompt](uy-05-w2-core-product.prompt.txt)) | Uy's agent (+ Huấn's W2 UI, ADR-0027) | Next (needs `MEMWAL_ACCOUNT_ID`; `TELEGRAM_BOT_TOKEN` optional) | U3 ✅, U4 ✅ |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-03-w1-rails.prompt.txt   # paste as the agent's goal (<4000 chars)
+pbcopy < docs/goals/uy-05-w2-core-product.prompt.txt   # paste as the agent's goal (<4000 chars)
 ```
 
 Each goal has two files:

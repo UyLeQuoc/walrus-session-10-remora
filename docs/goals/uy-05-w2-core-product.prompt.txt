@@ -1,0 +1,33 @@
+Goal U5: W2 core product end to end on TESTNET, both lanes in one goal (Uy's backend plus Huấn's W2 UI, claimed first under ADR-0027).
+
+Source of truth: docs/goals/uy-05-w2-core-product.md. Read it fully and do Phase A, then B, then C, in order. Also read docs/remora-spec.md §3, §4, §8, §9, §10 and §12, docs/remora-features.md §0 (W2 rows), docs/team-split.md §3, docs/adr/0014, 0024 to 0029, and docs/tech-reference.md §1.11.
+
+Work in the main checkout on main. Before any web edit: pull, check Huấn's commits and handoffs, skip what he has started, and push a claim note. packages/schema changes go through ONE contract PR (Uy may merge it; Huấn reviews it after the fact).
+
+Needs in .env (never commit; ask me if one is missing): MEMWAL_ACCOUNT_ID + MEMWAL_PRIVATE_KEY (my Walrus Memory account; boots the full server), OPENROUTER_API_KEY, TATUM_API_KEY_TESTNET, KEY_ENCRYPTION_KEY, DATABASE_URL (local Docker), SPONSOR_PRIVATE_KEY_TESTNET, E2E_BURNER_KEY, the SPIKE_* keys. TELEGRAM_BOT_TOKEN (a test bot) is optional; without it, H1 stays unverified.
+
+Phase A (backend, tests for each):
+1. Remoras: a table, create from a template via a one-PTB owner tx (propose_for_app + disc::issue), shadow/active/pause/retire.
+2. Memory: remoras write into the operator's MemWal account under per-owner/remora namespaces (owned mode comes with the mainnet pass); write an ADR.
+3. Runtime: D3 turn engine (adapt hippo), D4 tools (memory, tatum, web.fetch, pay via payWithDisc, notify, handoff, schedule), D9 model routing + caps, D1 triggers (message, cron, chain via the indexer).
+4. Safety: I1 untrusted tagging, I2 Sonar (deterministic policy + check model, verdict in the Wake), I4 rate limits, I5/F11a scrubber.
+5. Templates: C1 Scout (buys from sui-risk, odds, brief; source scores) and C2 Sentinel (watches via the indexer, learns rules from free text).
+6. Money: B7 revoke+reissue, B9 rotate, E4 over-limit approval, E9 odds + brief merchants.
+7. Wake/memory: F3 inspector API, F6 index check, G3 remora verify (CLI + API), N19 feedback into F2.
+8. Channels: H1 Telegram bot + A5 linking, H5 notification policy, and APIs for N1/N2/N4/N5/N6/N10/N12/N13.
+
+Phase B (UI, claimed): A2 zkLogin, A3/A5 UI, the A6 wizard, A7 settings, B1/B6-B9 UI, E4 UI, live F3, the G3 verify page, the H4 dashboard, H5 UI, N1/N2/N4/N5/N6/N10/N12/N13/N19 UI; replace the U4 fixtures with live data.
+
+Phase C (the W2 exit e2e on testnet, Playwright + the burner): sign-in to the first remora in under 3 min (measured); Scout buys and answers with an anchored Wake; Sentinel learns a free-text rule and applies it; an injected payment is blocked by Sonar, and with Sonar forced off it's aborted by the Disc onchain; Telegram linking + a reply if the token is set. Record timings and digests in a docs/spikes note.
+
+Hard rules:
+- No mainnet money (no Disc/USDC transactions or publish on mainnet); memory goes through the relayer per ADR-0026.
+- Burner/test keys only, never real owner accounts. Never commit .env or keys. No deploys. Avoid ports 8787/5173.
+- Never edit an item Huấn has started or claimed. Any decision gets an ADR in the same commit.
+
+Done when:
+- Phase A + B are complete with tests; typecheck, lint, test, sui move test and bun run e2e are green, and CI is green;
+- the W2 exit e2e passes on testnet with timings and digests recorded;
+- the contract PR is merged, the ADRs, docs and handoffs to Huấn are written, and everything is pushed to main.
+
+Finish with a short summary: what users can do now, digests, timings, and what's left for W3.
