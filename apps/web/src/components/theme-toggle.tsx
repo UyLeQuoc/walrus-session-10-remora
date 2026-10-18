@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const KEY = "hippo.theme";
+const KEY = "remora.theme";
 type Choice = "light" | "dark" | null;
 
 function stored(): Choice {

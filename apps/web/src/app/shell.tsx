@@ -38,7 +38,7 @@ export function useAdoptChat(): (id: string) => void {
 }
 
 export function useShellState() {
-  const [title, setTitle] = useState("hippo");
+  const [title, setTitle] = useState("remora");
   const [newChatTick, setNewChatTick] = useState(0);
   const [activeChatId, setActiveChatId] = useState<string | null>(() => readActiveChat());
   const [openTick, setOpenTick] = useState(0);

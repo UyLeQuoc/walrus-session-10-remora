@@ -21,8 +21,8 @@ function ChannelRow({ href, icon, label }: { href: string; icon: ReactNode; labe
 export function ChannelsCard() {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-brand/30 bg-brand/10 p-2 group-data-[collapsible=icon]:hidden">
-      <ChannelRow href={TELEGRAM_BOT.url} icon={<Send />} label="hippo on Telegram" />
-      <ChannelRow href={DISCORD_BOT.url} icon={<MessagesSquare />} label="Add hippo to Discord" />
+      <ChannelRow href={TELEGRAM_BOT.url} icon={<Send />} label="Remora on Telegram" />
+      <ChannelRow href={DISCORD_BOT.url} icon={<MessagesSquare />} label="Add Remora to Discord" />
       <p className="px-1 pt-1 text-xs text-muted-foreground">
         One memory everywhere: type /link here, then send the code to the bot.
       </p>

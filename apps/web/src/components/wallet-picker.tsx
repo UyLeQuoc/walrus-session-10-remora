@@ -71,7 +71,7 @@ export function WalletPicker({
           )}
           {googleListed ? (
             <p className="text-sm text-muted-foreground">
-              Google gives you a Sui address that only hippo uses. To reach the same memory from
+              Google gives you a Sui address that only Remora uses. To reach the same memory from
               Claude Code or the Walrus dashboard, connect a wallet instead.
             </p>
           ) : null}

@@ -1003,7 +1003,7 @@ describe("chat page", () => {
     expect(document.querySelector("[data-slot='memory-panel']")).toBeNull();
   });
 
-  it("says a Google sign-in gets an address only hippo uses", async () => {
+  it("says a Google sign-in gets an address only Remora uses", async () => {
     const user = userEvent.setup();
     installedWallets = [
       { name: "Slush" },
@@ -1016,7 +1016,7 @@ describe("chat page", () => {
     mountChat();
     await user.click(await screen.findByRole("button", { name: "Connect wallet" }));
     expect(await screen.findByRole("button", { name: "Sign in with Google" })).toBeDefined();
-    expect(screen.getByText(/only hippo uses/)).toBeDefined();
+    expect(screen.getByText(/only Remora uses/)).toBeDefined();
     expect(screen.getByText(/or your Google account/)).toBeDefined();
   });
 
@@ -1136,13 +1136,12 @@ describe("chat page", () => {
 });
 
 describe("logo", () => {
-  it("pairs the public mark with the word in the lockup, and leaves the word off the mark", () => {
+  it("pairs the Remora mark with the word in the lockup, and leaves the word off the mark", () => {
     const lockup = render(<Logo variant="lockup" />);
-    const lockupImg = lockup.container.querySelector("img");
-    expect(lockupImg?.getAttribute("src") ?? "").toMatch(/\/logo-(black|white)\.svg$/);
-    expect(lockup.container.textContent ?? "").toContain("hippo");
-    const word = lockup.getByText("hippo");
-    const markHeight = Number.parseFloat(lockupImg?.style.height ?? "0");
+    const lockupSvg = lockup.container.querySelector("svg");
+    expect(lockup.container.textContent ?? "").toContain("remora");
+    const word = lockup.getByText("remora");
+    const markHeight = Number.parseFloat(lockupSvg?.getAttribute("height") ?? "0");
     const wordSize = Number.parseFloat((word as HTMLElement).style.fontSize);
     expect(markHeight).toBeGreaterThan(wordSize);
     expect(word.parentElement?.style.gap === "0px" || word.parentElement?.style.gap === "0").toBe(
@@ -1150,9 +1149,8 @@ describe("logo", () => {
     );
 
     const mark = render(<Logo variant="mark" />);
-    const markImg = mark.container.querySelector("img");
-    expect(markImg?.getAttribute("src") ?? "").toMatch(/\/logo-(black|white)\.svg$/);
-    expect(mark.container.textContent ?? "").not.toContain("hippo");
+    expect(mark.getByRole("img", { name: "remora" })).toBeDefined();
+    expect(mark.container.textContent ?? "").not.toContain("remora");
   });
 });
 
@@ -2004,11 +2002,11 @@ describe("theme", () => {
     expect(toggle.className).toContain("size-9");
     await userEvent.click(toggle);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(localStorage.getItem("hippo.theme")).toBe("dark");
+    expect(localStorage.getItem("remora.theme")).toBe("dark");
   });
 
   it("honours a stored choice over the system preference", () => {
-    localStorage.setItem("hippo.theme", "dark");
+    localStorage.setItem("remora.theme", "dark");
     mount();
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(screen.getByRole("button", { name: /switch to light/i })).toBeDefined();

@@ -14,6 +14,8 @@
  * for CSRF, unlike loosening the cookie to `SameSite=None`. The cost is that
  * the id sits in `localStorage` instead of an `HttpOnly` cookie.
  */
+import { currentNetwork, NETWORK_HEADER } from "@/lib/network";
+
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 
 export const isSameOrigin = API_URL === "" || API_URL.startsWith(window.location.origin);
@@ -72,10 +74,16 @@ export function apiFetch(path: string, init: RequestInit = {}): Promise<Response
   for (const [key, value] of Object.entries(identityHeaders())) {
     if (!headers.has(key)) headers.set(key, value);
   }
+  // A9: every call carries the session's network (ADR-0026).
+  if (!headers.has(NETWORK_HEADER)) headers.set(NETWORK_HEADER, currentNetwork());
   return fetch(`${API_URL}${path}`, { ...init, credentials: "include", headers });
 }
 
 export async function errorMessage(res: Response, fallback: string): Promise<string> {
-  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  const body = (await res.json().catch(() => null)) as {
+    error?: string | { code?: string; message?: string };
+  } | null;
+  // Money routes answer `{ error: { code, message } }`; older routes answer `{ error: "…" }`.
+  if (typeof body?.error === "object") return body.error.message ?? body.error.code ?? fallback;
   return body?.error ?? fallback;
 }

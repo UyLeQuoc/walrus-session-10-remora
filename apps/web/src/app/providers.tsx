@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps, ReactNode } from "react";
 import "@mysten/dapp-kit/dist/index.css";
 import { useEnokiWallets } from "@/app/use-enoki-wallets";
+import { NetworkSync } from "@/features/network/network-switch";
+import { currentNetwork } from "@/lib/network";
 
 const { networkConfig } = createNetworkConfig({
   mainnet: { url: "https://fullnode.mainnet.sui.io:443", network: "mainnet" },
@@ -32,11 +34,12 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider
         networks={networkConfig}
-        defaultNetwork="mainnet"
+        defaultNetwork={currentNetwork()}
         createClient={createClient}
       >
         {/* Reconnect-on-load opens Slush with no picker, and a rejected reconnect marks the wallet disconnected. */}
         <EnokiWallets />
+        <NetworkSync />
         <WalletProvider autoConnect={false}>{children}</WalletProvider>
       </SuiClientProvider>
     </QueryClientProvider>

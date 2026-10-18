@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 const PAGE_META = {
-  title: "Page not found · hippo",
-  description: "This address is not a page on hippo.",
+  title: "Page not found · Remora",
+  description: "This address is not a page on Remora.",
   path: "/404",
   index: false,
 };

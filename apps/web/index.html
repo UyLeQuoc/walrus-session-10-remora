@@ -3,78 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>hippo — the chatbot that remembers you, on memory you own</title>
+    <title>Remora — always-on agents with a leash on chain</title>
     <meta
       name="description"
-      content="Chat on the web, Telegram, Discord or a CLI and hippo remembers you between sessions. Your memory lives on Walrus, in a Sui account you own and can revoke."
+      content="Remoras are always-on agents with memory you own on Walrus, spending limits enforced on Sui (the Disc), and a receipt (Wake) for every action."
     />
-    <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://ask-hippo.vercel.app/" />
-    <meta name="application-name" content="hippo" />
-    <meta name="apple-mobile-web-app-title" content="hippo" />
+    <meta name="robots" content="noindex" />
+    <meta name="application-name" content="Remora" />
+    <meta name="apple-mobile-web-app-title" content="Remora" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap"
-      rel="stylesheet"
-    />
-    <!--
-      The submission is shared on X, cross-posted outside the ecosystem and
-      linked from an article. Link cards are read from this file, not from the
-      page after React runs, so every route shares these. The image is
-      docs/brand/banner.html; docs/brand/README.md regenerates it.
-    -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="hippo" />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:title" content="hippo — the chatbot that remembers you, on memory you own" />
+    <meta property="og:site_name" content="Remora" />
+    <meta property="og:title" content="Remora — always-on agents with a leash on chain" />
     <meta
       property="og:description"
-      content="Your memory lives on Walrus, in an account your wallet owns on Sui. hippo holds a key you can revoke on chain. Web, Telegram, Discord and a CLI share it."
+      content="Owned memory on Walrus, onchain spending limits on Sui, and a receipt for every action."
     />
-    <meta property="og:url" content="https://ask-hippo.vercel.app/" />
-    <meta property="og:image" content="https://ask-hippo.vercel.app/og.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta
-      property="og:image:alt"
-      content="hippo: a chatbot that remembers you, on memory you own. A memory goes from what you say, to a fact hippo keeps, to an encrypted blob on Walrus, and is recalled in the next chat."
-    />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="hippo — the chatbot that remembers you, on memory you own" />
-    <meta
-      name="twitter:description"
-      content="Tell it something, open a new chat, and ask again. What it still knows came back from Walrus, from an account you own."
-    />
-    <meta name="twitter:image" content="https://ask-hippo.vercel.app/og.png" />
-    <meta
-      name="twitter:image:alt"
-      content="hippo: a chatbot that remembers you, on memory you own. A memory goes from what you say, to a fact hippo keeps, to an encrypted blob on Walrus, and is recalled in the next chat."
-    />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "hippo",
-        "url": "https://ask-hippo.vercel.app/",
-        "description": "A chatbot that remembers you across the web, Telegram, Discord and a CLI. Memory is stored on Walrus in a Walrus Memory account your wallet owns on Sui, and hippo reaches it with a delegate key you can revoke on chain.",
-        "applicationCategory": "CommunicationApplication",
-        "operatingSystem": "Web",
-        "image": "https://ask-hippo.vercel.app/og.png",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "sameAs": [
-          "https://github.com/UyLeQuoc/walrus-session-8-chatbots",
-          "https://t.me/walrussession8_bot"
-        ]
-      }
-    </script>
     <!--
       Decide the theme before the first paint. React sets the same class, but it
       does so after mount, which is long enough for a dark-mode reader to get a
@@ -82,7 +30,7 @@
     -->
     <script>
       try {
-        const saved = localStorage.getItem("hippo.theme");
+        const saved = localStorage.getItem("remora.theme");
         const dark =
           saved === "dark" ||
           (saved === null && matchMedia("(prefers-color-scheme: dark)").matches);

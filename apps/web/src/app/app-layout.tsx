@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { clearActiveChat, writeActiveChat } from "@/features/chat/active-chat";
+import { NetworkSwitch, WalletNetworkWarning } from "@/features/network/network-switch";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -71,9 +72,11 @@ export function AppLayout() {
             <div className="flex w-full items-center gap-2 px-2">
               <SidebarTrigger />
               <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{title}</p>
+              <NetworkSwitch />
               <ThemeToggle />
             </div>
           </header>
+          <WalletNetworkWarning />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <Outlet />
           </div>

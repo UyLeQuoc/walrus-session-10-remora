@@ -1,14 +1,22 @@
 {
-  "name": "hippo",
-  "short_name": "hippo",
-  "description": "A chatbot that remembers you, on memory you own.",
+  "name": "Remora",
+  "short_name": "Remora",
+  "description": "Always-on agents with owned memory, onchain spending limits and receipts.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#0b3b45",
+  "theme_color": "#0b3b45",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
