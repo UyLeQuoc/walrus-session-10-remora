@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSignAndRun } from "@/features/funds/sign";
-import { formatUsdc, parseUsdc } from "@/lib/usdc";
+import { parseUsdc, usdc } from "@/lib/usdc";
 import { api } from "./api";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
@@ -196,8 +196,8 @@ function BudgetCard({ r, reload }: { r: RemoraView; reload: () => void }) {
   const meter = useLoad(() => api.budget(r.id), [r.id, r.discId], 30_000);
   const { run, busy, go } = useOwnerTx();
   const b = r.config.budget;
-  const [monthly, setMonthly] = useState(b ? formatUsdc(b.windowLimit) : "1");
-  const [cap, setCap] = useState(b ? formatUsdc(b.perPaymentCap) : "0.05");
+  const [monthly, setMonthly] = useState(b ? usdc(b.windowLimit) : "1");
+  const [cap, setCap] = useState(b ? usdc(b.perPaymentCap) : "0.05");
   const m = meter.data?.meter;
   if (!b) return null;
   const left = m?.window ? BigInt(m.window.limit) - BigInt(m.window.spent) : null;
@@ -210,8 +210,8 @@ function BudgetCard({ r, reload }: { r: RemoraView; reload: () => void }) {
       <CardContent className="flex flex-col gap-3 text-sm">
         {m ? (
           <p data-testid="budget-meter">
-            {left !== null ? `${formatUsdc(left)} USDC left this ${b.window}` : ""} · spent{" "}
-            {formatUsdc(m.spent)} in total{m.paused ? " · paused" : ""}
+            {left !== null ? `${usdc(left)} USDC left this ${b.window}` : ""} · spent{" "}
+            {usdc(m.spent)} in total{m.paused ? " · paused" : ""}
             {m.forecast?.runsOutOn ? ` · at this pace it runs out on ${m.forecast.runsOutOn}` : ""}
           </p>
         ) : (
@@ -437,8 +437,8 @@ function SourcesCard({ r }: { r: RemoraView }) {
         <ul className="flex flex-col gap-1 text-sm">
           {rows.map((x) => (
             <li key={x.payee}>
-              {x.payee}: {x.calls} calls, {x.useful} useful, {x.noise} noise, {formatUsdc(x.spent)}{" "}
-              USDC spent
+              {x.payee}: {x.calls} calls, {x.useful} useful, {x.noise} noise, {usdc(x.spent)} USDC
+              spent
             </li>
           ))}
         </ul>

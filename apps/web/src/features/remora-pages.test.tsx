@@ -8,7 +8,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "@/lib/api";
 import { currentNetwork, setNetwork } from "@/lib/network";
-import { formatUsdc, parseUsdc } from "@/lib/usdc";
+import { formatUsdc, parseUsdc, usdc } from "@/lib/usdc";
 import { ApprovalsPage } from "./approvals/approvals-page";
 import { FundsPage } from "./funds/funds-page";
 import { MemoryInspectorPage } from "./memory-inspector/memory-page";
@@ -80,6 +80,9 @@ describe("usdc helpers", () => {
     expect(parseUsdc("0")).toBeNull();
     expect(parseUsdc("1.1234567")).toBeNull();
     expect(parseUsdc("abc")).toBeNull();
+    expect(usdc("15000")).toBe("0.015");
+    expect(usdc("2000000")).toBe("2.00");
+    expect(usdc(10_000n)).toBe("0.01");
   });
 });
 

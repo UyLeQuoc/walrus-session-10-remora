@@ -8,7 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatUsdc } from "@/lib/usdc";
+import { usdc } from "@/lib/usdc";
 import { api } from "./api";
 import { WhyButton } from "./why-drawer";
 
@@ -30,9 +30,9 @@ const LABEL: Record<FeedItem["type"], string> = {
 export function describeItem(e: FeedItem): string {
   const p = e.payload as { amount?: string; payee?: string; answer?: string };
   if (e.type === "payment" && p.amount && p.payee)
-    return `Paid ${formatUsdc(p.amount)} USDC to ${p.payee}`;
+    return `Paid ${usdc(p.amount)} USDC to ${p.payee}`;
   if (e.type === "shadow" && p.amount && p.payee)
-    return `Would have paid ${formatUsdc(p.amount)} USDC to ${p.payee} (shadow mode)`;
+    return `Would have paid ${usdc(p.amount)} USDC to ${p.payee} (shadow mode)`;
   return e.summary;
 }
 

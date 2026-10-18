@@ -60,6 +60,19 @@ describe("the per-address ceiling", () => {
 describe("isUnmetered", () => {
   it("lets the page read who you are without spending the ceiling", () => {
     expect(isUnmetered("GET", "/api/me")).toBe(true);
+    // W2 reads that the pages poll; memory search, verify and writes still count.
+    const id = "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10";
+    for (const path of [
+      "/api/feed",
+      "/api/approvals",
+      `/api/remoras/${id}`,
+      `/api/remoras/${id}/budget`,
+      `/api/events/${id}/why`,
+    ])
+      expect(isUnmetered("GET", path), path).toBe(true);
+    expect(isUnmetered("GET", `/api/remoras/${id}/memory`)).toBe(false);
+    expect(isUnmetered("GET", "/api/verify/abc")).toBe(false);
+    expect(isUnmetered("POST", `/api/remoras/${id}/ask`)).toBe(false);
     expect(isUnmetered("GET", "/api/me/memories")).toBe(true);
     expect(isUnmetered("GET", "/api/me/memories/11111111-1111-4111-8111-111111111111/status")).toBe(
       true,

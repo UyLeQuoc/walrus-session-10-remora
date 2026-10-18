@@ -2,6 +2,8 @@
  * D1 chain trigger: one checkpoint stream per network, filtered to the addresses Sentinels watch
  * (`affectedAddress` terms, OR-ed). Balance changes of a watched address become `ChainEvent`s and go
  * to every Sentinel watching it. The watched set is re-read periodically; a change re-subscribes.
+ * The stream starts at the tip, so after a reconnect the checkpoints in between are fetched with
+ * `GetCheckpoint` (up to `maxBackfill`), as the indexer does: a ping is never lost to a reconnect.
  */
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
@@ -76,16 +78,57 @@ export function startWatcher(o: {
   log: Logger;
   onEvent: (remoraId: string, e: ChainEvent, checkpoint: number) => Promise<unknown>;
   refreshMs?: number;
+  maxBackfill?: number;
+  /** Who watches what; defaults to the Sentinels in the database. */
+  watched?: () => Promise<Watched[]>;
+  /** Wait before reconnecting (tests shorten it). */
+  reconnectMs?: number;
 }): () => void {
   let stopped = false;
+  /** The highest checkpoint this watcher has seen; frames carry it even without a match. */
+  let last: bigint | null = null;
+  const READ_MASK = {
+    paths: ["sequence_number", "transactions.digest", "transactions.balance_changes"],
+  };
   let abort: AbortController | null = null;
   let key = "";
   const log = o.log.child({ watcher: o.network });
+  const load = o.watched ?? (() => watchedOn(o.db, o.network));
+
+  const backfill = async (from: bigint, to: bigint, byAddress: Map<string, string[]>) => {
+    if (to - from >= BigInt(o.maxBackfill ?? 200)) {
+      log.warn("watcher.gap", { from, to, reason: "too large to backfill" });
+      return;
+    }
+    for (let s = from; s <= to && !stopped; s++) {
+      const { response } = await o.client.ledgerService.getCheckpoint({
+        checkpointId: { oneofKind: "sequenceNumber", sequenceNumber: s },
+        readMask: READ_MASK,
+      });
+      if (!response.checkpoint) continue;
+      await deliver(response.checkpoint as unknown as WatchCheckpoint, byAddress, Number(s));
+    }
+    log.info("watcher.backfilled", { from, to });
+  };
+
+  const deliver = async (
+    cp: WatchCheckpoint,
+    byAddress: Map<string, string[]>,
+    checkpoint: number,
+  ) => {
+    for (const e of eventsFrom(cp, new Set(byAddress.keys()))) {
+      for (const remoraId of byAddress.get(e.address) ?? []) {
+        await o
+          .onEvent(remoraId, e, checkpoint)
+          .catch((err) => log.warn("watcher.event_failed", { remoraId, error: err }));
+      }
+    }
+  };
 
   const loop = async () => {
-    let delay = 1_000;
+    let delay = o.reconnectMs ?? 1_000;
     while (!stopped) {
-      const watched = await watchedOn(o.db, o.network).catch(() => [] as Watched[]);
+      const watched = await load().catch(() => [] as Watched[]);
       const byAddress = new Map<string, string[]>();
       for (const w of watched)
         for (const a of w.addresses) byAddress.set(a, [...(byAddress.get(a) ?? []), w.remoraId]);
@@ -96,7 +139,7 @@ export function startWatcher(o: {
       }
       abort = new AbortController();
       const refresh = setInterval(async () => {
-        const next = await watchedOn(o.db, o.network).catch(() => null);
+        const next = await load().catch(() => null);
         const nextKey = next
           ? [...new Set(next.flatMap((w) => w.addresses))].sort().join(",")
           : key;
@@ -105,9 +148,7 @@ export function startWatcher(o: {
       try {
         const call = o.client.subscriptionService.subscribeCheckpoints(
           {
-            readMask: {
-              paths: ["sequence_number", "transactions.digest", "transactions.balance_changes"],
-            },
+            readMask: READ_MASK,
             filter: {
               terms: [...byAddress.keys()].map((address) => ({
                 literals: [
@@ -125,17 +166,22 @@ export function startWatcher(o: {
           { abort: abort.signal },
         );
         log.info("watcher.subscribed", { addresses: byAddress.size });
+        let first = true;
         for await (const frame of call.responses) {
-          if (stopped || !frame.checkpoint) continue;
-          const cp = frame.checkpoint as unknown as WatchCheckpoint;
-          for (const e of eventsFrom(cp, new Set(byAddress.keys()))) {
-            for (const remoraId of byAddress.get(e.address) ?? []) {
-              await o
-                .onEvent(remoraId, e, Number(frame.cursor ?? 0n))
-                .catch((err) => log.warn("watcher.event_failed", { remoraId, error: err }));
-            }
+          if (stopped) continue;
+          const cursor = frame.cursor ?? 0n;
+          if (first && last !== null && cursor > last + 1n)
+            await backfill(last + 1n, cursor - 1n, byAddress);
+          first = false;
+          if (frame.checkpoint) {
+            await deliver(
+              frame.checkpoint as unknown as WatchCheckpoint,
+              byAddress,
+              Number(cursor),
+            );
           }
-          delay = 1_000;
+          if (last === null || cursor > last) last = cursor;
+          delay = o.reconnectMs ?? 1_000;
         }
       } catch (err) {
         if (stopped) break;

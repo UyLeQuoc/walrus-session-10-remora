@@ -2,7 +2,13 @@
  * Testnet preconditions for the flow: the burner owns at least one Disc (so the Disc panel and the
  * panic button have something to act on) and holds some USDC in coins (so "Move" has work to do).
  */
-import { buildIssue, type DiscConfig, getFundsSplit, listOwnerDiscs } from "@remora/disc-sdk";
+import {
+  buildIssue,
+  buildRevoke,
+  type DiscConfig,
+  getFundsSplit,
+  listOwnerDiscs,
+} from "@remora/disc-sdk";
 import { DEPLOYMENTS } from "@remora/schema";
 import { burner, testnet } from "./support/env";
 
@@ -19,7 +25,24 @@ export default async function globalSetup() {
     coinType: d.usdcCoinType,
   };
 
-  const discs = await listOwnerDiscs(client.core, cfg, owner);
+  let discs = await listOwnerDiscs(client.core, cfg, owner);
+  // Remoras from earlier W2 runs leave their Discs behind when a run stops early; revoke them so the
+  // Disc panel (read over public gRPC-web) stays small.
+  for (const d of discs.filter((x) => x.disc.name.startsWith("remora-"))) {
+    const r = await client.signAndExecuteTransaction({
+      transaction: buildRevoke(cfg, {
+        discId: d.disc.id,
+        capId: d.capId,
+        allowanceId: d.allowance.id,
+      }),
+      signer: kp,
+      include: { effects: true },
+    });
+    const done = r.Transaction ?? r.FailedTransaction;
+    await client.core.waitForTransaction({ digest: done.digest });
+    console.log(`[e2e] revoked leftover Disc ${d.disc.name}: ${done.digest}`);
+  }
+  discs = await listOwnerDiscs(client.core, cfg, owner);
   if (!discs.length) {
     const tx = buildIssue(cfg, {
       name: "e2e-burner",

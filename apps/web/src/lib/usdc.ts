@@ -6,6 +6,11 @@ export function formatUsdc(amount: string | bigint, digits = 2): string {
   return digits > 0 ? `${whole}.${frac}` : `${whole}`;
 }
 
+/** At least two decimals and as many as the amount needs: 15000 → "0.015", 2000000 → "2.00". */
+export function usdc(amount: string | bigint): string {
+  return formatUsdc(amount, 6).replace(/(\.\d{2}\d*?)0+$/, "$1");
+}
+
 /** "1.5" → 1500000n; returns null for anything that isn't a positive amount with ≤ 6 decimals. */
 export function parseUsdc(input: string): bigint | null {
   const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec(input.trim());

@@ -89,6 +89,20 @@ describe("PacedTransport", () => {
     await expect(paced.unary(method, {} as never, {} as never).response).rejects.toThrow("nope");
   });
 
+  it("gives a server stream no deadline (it lives until aborted)", () => {
+    let seen: { timeout?: unknown } = {};
+    const inner = {
+      mergeOptions: (o: object) => o,
+      serverStreaming: (_m: unknown, _i: unknown, o: { timeout?: unknown }) => {
+        seen = o;
+        return {} as never;
+      },
+    } as never;
+    const paced = new PacedTransport(inner, { maxRps: 1000, sleep: async () => {} });
+    paced.serverStreaming(method, {} as never, { timeout: 30_000 } as never);
+    expect(seen.timeout).toBe(Number.POSITIVE_INFINITY);
+  });
+
   it("knows a 429 from other UNAVAILABLEs", () => {
     expect(isRateLimited(tooMany())).toBe(true);
     expect(

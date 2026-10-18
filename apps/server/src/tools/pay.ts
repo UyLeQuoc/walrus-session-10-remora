@@ -145,6 +145,16 @@ export async function requestPayment(
       },
     );
     const digest = receipt?.txDigest ?? null;
+    // The merchant answered without a settled payment (verify or settle refused): nothing was bought.
+    if (!response.ok || !digest) {
+      const body = (await response
+        .clone()
+        .json()
+        .catch(() => ({}))) as { error?: string };
+      const reason = body.error ?? `the service answered ${response.status}`;
+      log.warn("pay.unsettled", { url: p.url, status: response.status, reason });
+      return blocked("x402.unsettled", [reason]);
+    }
     const amount =
       (receipt?.wake as { intent?: { decision?: { amount?: string } } } | undefined)?.intent
         ?.decision?.amount ?? "0";

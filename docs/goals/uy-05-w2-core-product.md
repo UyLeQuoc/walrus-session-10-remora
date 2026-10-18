@@ -97,11 +97,16 @@ Playwright with the burner, plus a backend script, recording timings and digests
 5. Telegram (if the token is set): linking + one Scout reply with a Why button.
 
 ## Done when
-- [ ] Phase A + B are complete with tests; typecheck, lint, test, `sui move test` and `bun run e2e` are
+- [x] Phase A + B are complete with tests; typecheck, lint, test, `sui move test` and `bun run e2e` are
       green; CI is green
-- [ ] The W2 exit e2e passes on testnet, with timings and digests recorded
-- [ ] The contract PR is merged; the ADRs, docs and handoffs to Huấn (what landed, what's left) are
-      written; everything is pushed to `main`
+- [x] The W2 exit e2e passes on testnet, with timings and digests recorded
+      ([2026-10-19-w2-exit.md](../spikes/2026-10-19-w2-exit.md))
+- [x] The contract PR is merged (#5); the ADRs (0030–0035), docs and handoffs to Huấn
+      ([u5-landed](../handoffs/2026-10-19-uy-to-huan-u5-landed.md)) are written; everything is pushed to `main`
+
+**Open after U5:**
+- Telegram (H1) was not verified live: no test bot token.
+- Model-written answers are unverified: the `.env` OpenRouter key is a placeholder, so the runtime used its deterministic fallbacks.
 
 ## Never
 - Mainnet money: no Disc/USDC transactions or publish on mainnet (memory writes go through the relayer,

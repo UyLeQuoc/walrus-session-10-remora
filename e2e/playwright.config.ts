@@ -3,10 +3,15 @@
  * which another project uses — and runs:
  * - smoke (desktop + mobile): every W1 page paints;
  * - testnet: the burner wallet signs in, switches to testnet, detects and moves funds, and pauses
- *   and resumes its Discs.
+ *   and resumes its Discs;
+ * - w2: the W2 exit (U5 Phase C): first remora in under 3 minutes, Scout pays and answers with an
+ *   anchored Wake, Sentinel learns a rule and applies it, and an over-limit payment is approved.
+ * The facilitator + gas station (8798) and the demo merchants (8799) run locally as well.
  * `bun run e2e:main` runs smoke against a deployment (`E2E_BASE_URL`).
  */
 import { resolve } from "node:path";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { defineConfig, devices } from "@playwright/test";
 import { loadEnv } from "@remora/memory";
 
@@ -14,6 +19,17 @@ loadEnv();
 
 const root = resolve(import.meta.dirname, "..");
 const remote = process.env.E2E_BASE_URL;
+/** The demo merchants' testnet payTo: the W1 spike's spender (readable back), else a fixed address. */
+const payTo =
+  process.env.MERCHANT_PAYTO_TESTNET ||
+  (process.env.SPIKE_SPENDER_KEY
+    ? Ed25519Keypair.fromSecretKey(
+        decodeSuiPrivateKey(process.env.SPIKE_SPENDER_KEY).secretKey,
+      ).toSuiAddress()
+    : `0x${"3e".repeat(32)}`);
+/** W2 (U5 Phase C): the facilitator + gas station and the demo merchants run locally too. */
+const FAC = "http://localhost:8798";
+const MERCHANTS = "http://localhost:8799";
 
 export default defineConfig({
   testDir: "./tests",
@@ -32,6 +48,7 @@ export default defineConfig({
     { name: "smoke", testMatch: /smoke\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", testMatch: /smoke\.spec\.ts/, use: { ...devices["Pixel 7"] } },
     { name: "testnet", testMatch: /testnet\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "w2", testMatch: /w2\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: remote
     ? undefined
@@ -39,16 +56,45 @@ export default defineConfig({
         {
           command: "npx tsx src/index.ts",
           cwd: `${root}/apps/server`,
+          stdout: "pipe",
           port: 8797,
           timeout: 120_000,
           reuseExistingServer: false,
           env: {
             PORT: "8797",
             CHANNELS: "off",
-            WORKER: "off",
+            // The W2 flow needs the worker (first run, Wake anchors) and the chain watcher (Sentinel).
+            WORKER: "on",
+            WATCHER: "on",
             INDEXER: "off",
+            WEB_BASE_URL: "http://localhost:5183",
+            FACILITATOR_URL_TESTNET: FAC,
+            MERCHANTS_URL_TESTNET: MERCHANTS,
+            MERCHANT_PAYTO_TESTNET: payTo,
             // The server boots only with an operator MemWal account; memory isn't under test here.
             MEMWAL_ACCOUNT_ID: process.env.MEMWAL_ACCOUNT_ID || `0x${"0".repeat(63)}1`,
+          },
+        },
+        {
+          command: "npx tsx src/main.ts",
+          cwd: `${root}/apps/facilitator`,
+          url: `${FAC}/supported`,
+          stdout: "pipe",
+          timeout: 120_000,
+          reuseExistingServer: false,
+          env: { FACILITATOR_PORT: "8798" },
+        },
+        {
+          command: "npx tsx src/main.ts",
+          cwd: `${root}/apps/merchants`,
+          url: `${MERCHANTS}/health`,
+          stdout: "pipe",
+          timeout: 120_000,
+          reuseExistingServer: false,
+          env: {
+            MERCHANTS_PORT: "8799",
+            FACILITATOR_URL_TESTNET: FAC,
+            MERCHANT_PAYTO_TESTNET: payTo,
           },
         },
         {

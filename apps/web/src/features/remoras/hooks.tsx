@@ -1,4 +1,5 @@
 /** Shared pieces of the W2 pages: the signed-in owner, a loader with refresh, and the wallet gate. */
+import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WalletPicker } from "@/components/wallet-picker";
 import { useMe } from "@/features/me/use-me";
@@ -59,7 +60,26 @@ export function RequireOwner({
   what: string;
 }) {
   const { owner, loading, reload } = useOwner();
-  if (owner) return <>{children(owner)}</>;
+  const account = useCurrentAccount();
+  if (owner) {
+    // The session outlives the wallet connection (no auto-connect): signing needs it back.
+    const connected = account?.address.toLowerCase() === owner.toLowerCase();
+    return (
+      <>
+        {connected ? null : (
+          <div className="mx-auto w-full max-w-3xl px-4 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
+              <span className="text-muted-foreground">
+                Signed in as {owner.slice(0, 8)}…; connect that wallet here to sign.
+              </span>
+              <WalletPicker label="Connect wallet to sign" />
+            </div>
+          </div>
+        )}
+        {children(owner)}
+      </>
+    );
+  }
   if (loading) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-3 p-6">

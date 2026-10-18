@@ -101,7 +101,12 @@ export class PacedTransport implements RpcTransport {
     input: I,
     options: RpcOptions,
   ): ServerStreamingCall<I, O> {
-    return this.inner.serverStreaming(method, input, options);
+    // A stream (checkpoints) lives until its caller aborts it; the per-call deadline is for unary
+    // calls. With it, Tatum's stream was cut every 30 s and events between reconnects were lost.
+    return this.inner.serverStreaming(method, input, {
+      ...options,
+      timeout: Number.POSITIVE_INFINITY,
+    });
   }
 
   clientStreaming<I extends object, O extends object>(

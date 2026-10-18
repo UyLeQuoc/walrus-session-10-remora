@@ -9,7 +9,7 @@ import { useShellTitle } from "@/app/shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatUsdc } from "@/lib/usdc";
+import { usdc } from "@/lib/usdc";
 import { api } from "./api";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
@@ -25,7 +25,7 @@ const STATUS: Record<RemoraView["status"], "default" | "secondary" | "outline" |
 export function budgetLine(r: RemoraView): string {
   const b = r.config.budget;
   if (!b) return "Read-only: no budget";
-  return `Up to ${formatUsdc(b.windowLimit)} USDC a ${b.window}, at most ${formatUsdc(b.perPaymentCap)} a payment`;
+  return `Up to ${usdc(b.windowLimit)} USDC a ${b.window}, at most ${usdc(b.perPaymentCap)} a payment`;
 }
 
 function Dashboard() {

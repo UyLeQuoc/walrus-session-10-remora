@@ -579,10 +579,16 @@ export function createRemoraService(deps: RemoraDeps) {
       const r = await mine(id, owner);
       if (!r.allowanceId || !r.discId) return null;
       const core = deps.networks.client(r.network).core;
-      const [allowance, disc] = await Promise.all([
+      // Right after a retire or a budget change the old objects are gone before the row catches up.
+      const read = await Promise.all([
         getAllowance(core, r.allowanceId),
         getDisc(core, r.discId),
-      ]);
+      ]).catch((err) => {
+        if (/not found|deleted/i.test(String((err as Error).message))) return null;
+        throw err;
+      });
+      if (!read) return null;
+      const [allowance, disc] = read;
       return {
         spent: allowance.currentSpend.toString(),
         lifetimeCap: allowance.lifetimeCap?.toString() ?? null,

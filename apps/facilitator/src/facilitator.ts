@@ -21,6 +21,7 @@ import {
   type VerifyResponse,
 } from "@remora/disc-sdk";
 import { type Sponsor, SponsorRefusal } from "@remora/signer";
+import { GasCoinPool, GasPoolBusy } from "./gas-pool.ts";
 import { type SponsorLedger, utcDay } from "./ledger.ts";
 
 export interface NetworkDeps {
@@ -71,6 +72,26 @@ export function createFacilitator(deps: FacilitatorDeps) {
 
   const net = (n: SuiNetworkName | null) => (n ? deps.networks[n] : undefined);
 
+  /** One gas coin pool per sponsored network (D8). */
+  const pools = new Map<SuiNetworkName, GasCoinPool>();
+  const poolOf = (n: NetworkDeps & { sponsor: Sponsor }) => {
+    let p = pools.get(n.network);
+    if (!p) {
+      p = new GasCoinPool({
+        list: async () =>
+          (await n.client.core.listCoins({ owner: n.sponsor.address, coinType: "0x2::sui::SUI" }))
+            .objects,
+        // A real budget is a few MIST million; this floor keeps nearly-spent coins out of the pool.
+        minBalance:
+          n.sponsor.policy.maxGasBudget < 20_000_000n ? n.sponsor.policy.maxGasBudget : 20_000_000n,
+      });
+      pools.set(n.network, p);
+    }
+    return p;
+  };
+  const sponsorCoins = (bytes: Uint8Array) =>
+    (Transaction.from(bytes).getData().gasData.payment ?? []).map((c) => c.objectId);
+
   /** Reserves gas for a sponsored transaction against the sender's daily budget. */
   async function reserveGas(n: NetworkDeps, bytes: Uint8Array, sender: string, budget: bigint) {
     const day = utcDay(now());
@@ -111,11 +132,18 @@ export function createFacilitator(deps: FacilitatorDeps) {
       const tx = Transaction.fromKind(fromBase64(input.transactionKind));
       tx.setSender(sender);
       tx.setGasOwner(n.sponsor.address);
+      const pool = poolOf(n as NetworkDeps & { sponsor: Sponsor });
+      const coin = await pool.take().catch((err) => {
+        if (err instanceof GasPoolBusy) throw new GasStationError(err.code, err.message);
+        throw err;
+      });
+      tx.setGasPayment([coin]);
       let bytes: Uint8Array;
       try {
         // Building simulates for the gas budget, so a doomed payment (over cap, bad payee…) fails here.
         bytes = await tx.build({ client: n.client });
       } catch (err) {
+        pool.release([coin.objectId]);
         throw new GasStationError(
           `simulation_failed:${toDiscError(err).code}`,
           (err as Error).message,
@@ -210,69 +238,90 @@ export function createFacilitator(deps: FacilitatorDeps) {
     },
 
     async settle(payload: PaymentPayload, req: PaymentRequirements): Promise<SettleResponse> {
-      const network = payload.network;
-      const v = await this.verify(payload, req);
-      if (!v.isValid) {
-        return {
-          success: false,
-          network,
-          errorReason: v.invalidReason ?? "invalid",
-          ...(v.payer ? { payer: v.payer } : {}),
-        };
-      }
-      const n = net(fromX402Network(network)) as NetworkDeps;
-      const bytes = fromBase64(payload.payload.transaction);
-      const data = Transaction.from(bytes).getData();
-      const payer = v.payer as string;
-      const signatures = [payload.payload.signature];
-      const sponsored = normalizeSuiAddress(data.gasData.owner ?? payer) !== payer;
-      let digest = TransactionDataBuilder.getDigestFromBytes(bytes);
-      if (sponsored && n.sponsor) {
-        try {
-          const { signature, inspected } = await n.sponsor.cosign(bytes);
-          // Built without the gas station? Then the budget check happens here.
-          digest = await reserveGas(n, bytes, payer, inspected.gasBudget ?? 0n);
-          signatures.push(signature);
-        } catch (err) {
-          const code =
-            err instanceof GasStationError || err instanceof SponsorRefusal
-              ? err.code
-              : "sponsor_refused";
-          return { success: false, network, payer, errorReason: code };
+      try {
+        return await settleOnce(payload, req, this.verify.bind(this));
+      } finally {
+        // Executed or refused, the transaction no longer needs its sponsor gas coin held.
+        const n = net(fromX402Network(payload.network));
+        const pool = n && pools.get(n.network);
+        if (pool) {
+          try {
+            pool.release(sponsorCoins(fromBase64(payload.payload.transaction)));
+          } catch {
+            // Malformed bytes never took a coin.
+          }
         }
       }
-      const res = await n.client.core.executeTransaction({
-        transaction: bytes,
-        signatures,
-        include: { effects: true },
-      });
-      const done = res.Transaction ?? res.FailedTransaction;
-      const gas = done.effects?.gasUsed;
-      const gasUsed = gas
-        ? BigInt(gas.computationCost) + BigInt(gas.storageCost) - BigInt(gas.storageRebate)
-        : 0n;
-      if (sponsored) await deps.ledger.settle(n.network, digest, gasUsed > 0n ? gasUsed : 0n);
-      if (!done.effects?.status.success) {
-        deps.log.warn("settle.failed", { network: n.network, digest: done.digest, payer });
-        return {
-          success: false,
-          network,
-          payer,
-          transaction: done.digest,
-          errorReason: toDiscError(done.effects?.status.error).code,
-        };
-      }
-      await n.client.core.waitForTransaction({ digest: done.digest });
-      deps.log.info("settle.ok", {
-        network: n.network,
-        digest: done.digest,
-        payer,
-        gasUsed,
-        sponsored,
-      });
-      return { success: true, network, payer, transaction: done.digest };
     },
   };
+
+  async function settleOnce(
+    payload: PaymentPayload,
+    req: PaymentRequirements,
+    verify: (p: PaymentPayload, r: PaymentRequirements) => Promise<VerifyResponse>,
+  ): Promise<SettleResponse> {
+    const network = payload.network;
+    const v = await verify(payload, req);
+    if (!v.isValid) {
+      return {
+        success: false,
+        network,
+        errorReason: v.invalidReason ?? "invalid",
+        ...(v.payer ? { payer: v.payer } : {}),
+      };
+    }
+    const n = net(fromX402Network(network)) as NetworkDeps;
+    const bytes = fromBase64(payload.payload.transaction);
+    const data = Transaction.from(bytes).getData();
+    const payer = v.payer as string;
+    const signatures = [payload.payload.signature];
+    const sponsored = normalizeSuiAddress(data.gasData.owner ?? payer) !== payer;
+    let digest = TransactionDataBuilder.getDigestFromBytes(bytes);
+    if (sponsored && n.sponsor) {
+      try {
+        const { signature, inspected } = await n.sponsor.cosign(bytes);
+        // Built without the gas station? Then the budget check happens here.
+        digest = await reserveGas(n, bytes, payer, inspected.gasBudget ?? 0n);
+        signatures.push(signature);
+      } catch (err) {
+        const code =
+          err instanceof GasStationError || err instanceof SponsorRefusal
+            ? err.code
+            : "sponsor_refused";
+        return { success: false, network, payer, errorReason: code };
+      }
+    }
+    const res = await n.client.core.executeTransaction({
+      transaction: bytes,
+      signatures,
+      include: { effects: true },
+    });
+    const done = res.Transaction ?? res.FailedTransaction;
+    const gas = done.effects?.gasUsed;
+    const gasUsed = gas
+      ? BigInt(gas.computationCost) + BigInt(gas.storageCost) - BigInt(gas.storageRebate)
+      : 0n;
+    if (sponsored) await deps.ledger.settle(n.network, digest, gasUsed > 0n ? gasUsed : 0n);
+    if (!done.effects?.status.success) {
+      deps.log.warn("settle.failed", { network: n.network, digest: done.digest, payer });
+      return {
+        success: false,
+        network,
+        payer,
+        transaction: done.digest,
+        errorReason: toDiscError(done.effects?.status.error).code,
+      };
+    }
+    await n.client.core.waitForTransaction({ digest: done.digest });
+    deps.log.info("settle.ok", {
+      network: n.network,
+      digest: done.digest,
+      payer,
+      gasUsed,
+      sponsored,
+    });
+    return { success: true, network, payer, transaction: done.digest };
+  }
 }
 
 export type Facilitator = ReturnType<typeof createFacilitator>;

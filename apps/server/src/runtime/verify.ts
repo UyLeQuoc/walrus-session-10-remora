@@ -2,7 +2,8 @@
  * G3 `remora verify`: checks a Wake against the chain (spec §9).
  * 1. the recomputed intent hash equals the stored one (and, for payments, `Paid.intent` onchain);
  * 2. a payment's balance change to `payTo` matches the amount;
- * 3. the transaction succeeded and was signed by the remora's key.
+ * 3. the transaction succeeded and was signed by the remora's key;
+ * 4. the Wake's timestamp is before the transaction's (it was decided before paying).
  * Non-payment Wakes have no onchain anchor in the MVP; their hash check still runs.
  */
 import { normalizeSuiAddress } from "@mysten/sui/utils";
@@ -61,6 +62,14 @@ export async function verifyWake(deps: { db: Db; networks: Networks }, idOrDiges
       name: "payTo balance change",
       ok: credited === BigInt(d.amount),
       detail: `${credited} of ${d.amount}`,
+    });
+    // The Wake (intent) was written before the money moved, not reconstructed afterwards.
+    const paidAt = tx.timestampMs ? Number(tx.timestampMs) : null;
+    const decidedAt = Date.parse(wake.ts);
+    checks.push({
+      name: "decided before paying",
+      ok: paidAt === null ? null : decidedAt <= paidAt + 5_000,
+      detail: `Wake ${wake.ts}${paidAt ? `, tx ${new Date(paidAt).toISOString()}` : ""}, stored ${row.createdAt.toISOString()}`,
     });
     const sender = tx.transaction?.sender ? normalizeSuiAddress(tx.transaction.sender) : "";
     checks.push({

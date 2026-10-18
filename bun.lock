@@ -362,6 +362,29 @@
         "typescript": "^5.9.3",
       },
     },
+    "spikes/w2": {
+      "name": "@remora/spike-w2",
+      "version": "0.0.1",
+      "dependencies": {
+        "@hono/node-server": "^1.19.0",
+        "@mysten/sui": "^2.33.2",
+        "@remora/chain": "workspace:*",
+        "@remora/db": "workspace:*",
+        "@remora/disc-sdk": "workspace:*",
+        "@remora/facilitator": "workspace:*",
+        "@remora/memory": "workspace:*",
+        "@remora/merchant": "workspace:*",
+        "@remora/merchants": "workspace:*",
+        "@remora/schema": "workspace:*",
+        "@remora/server": "workspace:*",
+        "@remora/signer": "workspace:*",
+        "hono": "^4.13.8",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^5.9.3",
+      },
+    },
   },
   "trustedDependencies": [
     "@tailwindcss/oxide",
@@ -775,6 +798,8 @@
     "@remora/spike-disc": ["@remora/spike-disc@workspace:spikes/disc"],
 
     "@remora/spike-w1": ["@remora/spike-w1@workspace:spikes/w1"],
+
+    "@remora/spike-w2": ["@remora/spike-w2@workspace:spikes/w2"],
 
     "@remora/web": ["@remora/web@workspace:apps/web"],
 

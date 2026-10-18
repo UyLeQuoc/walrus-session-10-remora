@@ -464,6 +464,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
         },
       ],
       transaction: { sender },
+      timestampMs: String(Date.now() + 1_000),
     });
     txs.set(row.txDigest, onchain(row.intentHash));
     const ok = await verifyWake({ db, networks }, row.txDigest);
@@ -472,6 +473,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       ["transaction succeeded", true],
       ["Paid.intent matches", true],
       ["payTo balance change", true],
+      ["decided before paying", true],
       ["signed by the remora", true],
     ]);
     txs.set(row.txDigest, onchain("00".repeat(32), ATTACKER));

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useSignAndRun } from "@/features/funds/sign";
 import { useNetworks } from "@/features/network/use-networks";
-import { formatUsdc, parseUsdc } from "@/lib/usdc";
+import { parseUsdc, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 import { api } from "./api";
 import { RequireOwner, useLoad } from "./hooks";
@@ -147,8 +147,8 @@ function Wizard({ owner }: { owner: string }) {
           <p className="text-sm text-muted-foreground sm:col-span-2">
             Sui enforces this budget through a Disc, not us. It pays only{" "}
             {(chosen?.payees ?? []).join(", ")}; anything over{" "}
-            {parseUsdc(perPayment) ? formatUsdc(parseUsdc(perPayment) as bigint) : "the cap"} USDC
-            asks you first.
+            {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"} USDC asks
+            you first.
           </p>
         </div>
       ) : (

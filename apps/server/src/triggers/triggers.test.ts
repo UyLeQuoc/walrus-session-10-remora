@@ -1,8 +1,9 @@
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { describe, expect, it } from "vitest";
+import { createLogger } from "@remora/chain";
+import { describe, expect, it, vi } from "vitest";
 import { human, nextRun } from "./cron.ts";
 import { parseSchedule, previewSchedule } from "./schedule.ts";
-import { decimalsOf, eventsFrom } from "./watch.ts";
+import { decimalsOf, eventsFrom, startWatcher } from "./watch.ts";
 
 describe("cron (D1, N12)", () => {
   const from = new Date("2026-10-19T08:30:15Z"); // a Monday
@@ -95,5 +96,57 @@ describe("human schedules (N12)", () => {
     });
     expect(human("0 19 * * 1,3")).toBe("every Monday and Wednesday at 7pm UTC");
     expect(human("0 */2 * * *")).toBe("every 2 hours");
+  });
+});
+
+describe("chain watcher reconnects without losing events", () => {
+  it("backfills the checkpoints between the last frame and the new stream", async () => {
+    const watched = normalizeSuiAddress("0xa");
+    const change = (digest: string, amount: string) => ({
+      digest,
+      balanceChanges: [{ address: watched, coinType: "0x2::sui::SUI", amount }],
+    });
+    let subscriptions = 0;
+    const fetched: bigint[] = [];
+    const client = {
+      subscriptionService: {
+        subscribeCheckpoints: () => {
+          subscriptions += 1;
+          const first = subscriptions === 1;
+          return {
+            responses: (async function* () {
+              if (first) {
+                yield { cursor: 10n, checkpoint: { transactions: [change("Dg10", "5")] } };
+                throw new Error("stream reset");
+              }
+              yield { cursor: 14n, checkpoint: { transactions: [change("Dg14", "7")] } };
+              await new Promise(() => {}); // stays open
+            })(),
+          };
+        },
+      },
+      ledgerService: {
+        getCheckpoint: async ({ checkpointId }: { checkpointId: { sequenceNumber: bigint } }) => {
+          fetched.push(checkpointId.sequenceNumber);
+          const s = checkpointId.sequenceNumber;
+          return {
+            response: { checkpoint: { transactions: s === 12n ? [change("Dg12", "9")] : [] } },
+          };
+        },
+      },
+    };
+    const seen: string[] = [];
+    const stop = startWatcher({
+      network: "testnet",
+      client: client as never,
+      db: {} as never,
+      log: createLogger({}, () => {}),
+      watched: async () => [{ remoraId: "r1", addresses: [watched] }],
+      onEvent: async (_id, e) => void seen.push(e.digest),
+      reconnectMs: 1,
+    });
+    await vi.waitFor(() => expect(seen).toEqual(["Dg10", "Dg12", "Dg14"]));
+    expect(fetched).toEqual([11n, 12n, 13n]);
+    stop();
   });
 });

@@ -21,9 +21,24 @@ import {
 } from "@/components/ui/card";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
-import { formatUsdc } from "@/lib/usdc";
+import { usdc } from "@/lib/usdc";
 
-function ApprovalCard({ a, onDone }: { a: ApprovalRequest; onDone: () => void }) {
+interface Paid {
+  id: string;
+  remora: string;
+  answer: string;
+  digest: string | null;
+}
+
+function ApprovalCard({
+  a,
+  onDone,
+  onPaid,
+}: {
+  a: ApprovalRequest;
+  onDone: () => void;
+  onPaid: (p: Paid) => void;
+}) {
   const { mutateAsync: sign } = useSignTransaction();
   const [busy, setBusy] = useState("");
   const [answer, setAnswer] = useState("");
@@ -42,6 +57,8 @@ function ApprovalCard({ a, onDone }: { a: ApprovalRequest; onDone: () => void })
       });
       if (!out.ok) throw new Error(out.error);
       setAnswer(out.data.answer);
+      // Shown above the inbox, since this card leaves the pending list.
+      onPaid({ id: a.id, remora: a.remora, answer: out.data.answer, digest: out.data.digest });
       toast.success("Paid once, from your balance.");
       onDone();
     } catch (err) {
@@ -64,23 +81,21 @@ function ApprovalCard({ a, onDone }: { a: ApprovalRequest; onDone: () => void })
         </CardTitle>
         <CardDescription>
           {a.kind === "over_limit_payment" && p.amount && p.payee
-            ? `Pay ${formatUsdc(p.amount)} USDC to ${p.payee}, over its per-payment cap.`
+            ? `Pay ${usdc(p.amount)} USDC to ${p.payee}, over its per-payment cap.`
             : a.summary}
           {p.question ? ` For: “${p.question}”` : ""}
         </CardDescription>
       </CardHeader>
       {answer ? (
         <CardContent>
-          <p className="whitespace-pre-wrap text-sm" data-testid="approval-answer">
-            {answer}
-          </p>
+          <p className="whitespace-pre-wrap text-sm">{answer}</p>
         </CardContent>
       ) : null}
       {a.status === "pending" ? (
         <CardFooter className="flex-wrap gap-2">
           {a.kind === "over_limit_payment" ? (
             <Button type="button" disabled={!!busy} onClick={() => void pay()}>
-              Pay once{p.amount ? ` (${formatUsdc(p.amount)} USDC)` : ""}
+              Pay once{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
             </Button>
           ) : (
             <Button type="button" onClick={() => void decide(true)}>
@@ -104,6 +119,7 @@ function ApprovalCard({ a, onDone }: { a: ApprovalRequest; onDone: () => void })
 
 function Inbox() {
   const [all, setAll] = useState(false);
+  const [paid, setPaid] = useState<Paid[]>([]);
   const list = useLoad(() => api.approvals(all ? "all" : "pending"), [all], 20_000);
   const rows = list.data?.approvals ?? [];
   return (
@@ -121,8 +137,30 @@ function Inbox() {
         </Button>
       </div>
       {list.error ? <p className="text-sm text-destructive">{list.error}</p> : null}
+      {paid.map((p) => (
+        <Card key={p.id}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {p.remora} <Badge variant="secondary">paid once</Badge>
+            </CardTitle>
+            <CardDescription>
+              {p.digest ? `Settled in ${p.digest.slice(0, 10)}…` : "Settled."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm" data-testid="approval-answer">
+              {p.answer}
+            </p>
+          </CardContent>
+        </Card>
+      ))}
       {rows.map((a) => (
-        <ApprovalCard key={a.id} a={a} onDone={() => void list.refresh()} />
+        <ApprovalCard
+          key={a.id}
+          a={a}
+          onDone={() => void list.refresh()}
+          onPaid={(p) => setPaid((x) => [p, ...x])}
+        />
       ))}
     </div>
   );
