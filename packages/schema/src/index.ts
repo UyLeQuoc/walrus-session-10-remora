@@ -2,6 +2,7 @@
  * Shared contracts between the lanes (docs/team-split.md §4). Change them only
  * through a contract PR approved by both people, and update fixtures in the same PR.
  */
+export * from "./api.ts";
 export * from "./channel.ts";
 export * from "./common.ts";
 export * from "./copy-keys.ts";

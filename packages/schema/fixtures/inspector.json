@@ -1,0 +1,37 @@
+{
+  "namespaces": ["me", "sources", "feedback", "receipts"],
+  "rows": [
+    {
+      "namespace": "receipts",
+      "blobId": "MKP2-KVpB_q1aZ0",
+      "createdAt": "2026-11-03T02:13:10Z",
+      "expiresAt": "2027-06-01T00:00:00Z",
+      "status": "active",
+      "size": 1830
+    }
+  ],
+  "counts": {
+    "me": 0,
+    "sources": 1,
+    "feedback": 0,
+    "receipts": 3
+  },
+  "written": {
+    "receipts": 4
+  },
+  "mismatches": [
+    {
+      "namespace": "receipts",
+      "written": 4,
+      "relayer": 3
+    }
+  ],
+  "results": [
+    {
+      "blobId": "MKP2-KVpB_q1aZ0",
+      "namespace": "sources",
+      "text": "SOURCE reef:sui-risk \u00b7 9 calls \u00b7 8 useful \u00b7 1 noise \u00b7 $0.011 per useful answer \u00b7 as_of 2026-11-03",
+      "distance": 0.21
+    }
+  ]
+}

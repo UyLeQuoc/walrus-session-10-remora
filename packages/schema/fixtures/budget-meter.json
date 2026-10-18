@@ -1,0 +1,16 @@
+{
+  "spent": "30000",
+  "lifetimeCap": "12000000",
+  "window": {
+    "limit": "1000000",
+    "spent": "30000"
+  },
+  "perPaymentCap": "50000",
+  "paused": false,
+  "expiresAt": "2027-10-19T00:00:00.000Z",
+  "payees": ["0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d"],
+  "forecast": {
+    "perDay": "4286",
+    "runsOutOn": "2027-02-10"
+  }
+}

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   ApprovalRequest,
+  BudgetMeter,
   COPY_KEYS,
   DEPLOYMENTS,
   Deployment,
@@ -10,15 +11,21 @@ import {
   DetectFundsResult,
   ERROR_CODES,
   errorCopyKey,
+  FeedItem,
   FundsTxResponse,
   InboundMessage,
+  InspectorResponse,
   intentHash,
   MemoryRow,
   NetworksResponse,
   OutboundMessage,
+  OwnerSettings,
   RemoraConfig,
   RemoraEvent,
+  RemoraView,
+  SchedulePreview,
   Template,
+  VerifyResult,
   Wake,
   WakeView,
 } from "./index.ts";
@@ -29,6 +36,13 @@ const read = (name: string): unknown => JSON.parse(readFileSync(new URL(name, di
 /** Every fixture file must be listed here, so the consumer side can trust all of them. */
 const FIXTURES: Record<string, z.ZodType> = {
   "approval.over-limit.json": ApprovalRequest,
+  "budget-meter.json": BudgetMeter,
+  "feed.items.json": z.array(FeedItem),
+  "inspector.json": InspectorResponse,
+  "owner-settings.json": OwnerSettings,
+  "remora-view.scout.json": RemoraView,
+  "schedule-preview.json": SchedulePreview,
+  "verify-result.payment.json": VerifyResult,
   "channel.inbound.json": InboundMessage,
   "channel.outbound.json": OutboundMessage,
   "events.feed.json": z.array(RemoraEvent),
