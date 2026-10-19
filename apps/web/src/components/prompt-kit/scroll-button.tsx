@@ -11,7 +11,7 @@ export function ScrollButton({ className, ...props }: ButtonHTMLAttributes<HTMLB
     <Button
       type="button"
       variant="outline"
-      size="icon"
+      size="icon-sm"
       aria-label="Scroll to bottom"
       className={cn(
         "size-10 rounded-full shadow-sm transition-all duration-150",

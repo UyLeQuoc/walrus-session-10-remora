@@ -3,70 +3,87 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --font-greeting: "Instrument Serif", Georgia, "Times New Roman", serif;
-}
-
+/*
+ * Remora tokens (ADR-0036, ADR-0039). Warm neutrals (hue ~85-90, very low chroma), one electric
+ * indigo accent for both themes, and semantic success/warning. The indigo replaces the softened teal
+ * that ADR-0036 shipped.
+ */
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.42 0.08 205);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.62 0.09 205);
+  --background: oklch(0.985 0.004 90);
+  --foreground: oklch(0.26 0.008 85);
+  --card: oklch(0.995 0.002 90);
+  --card-foreground: oklch(0.26 0.008 85);
+  --popover: oklch(0.995 0.002 90);
+  --popover-foreground: oklch(0.26 0.008 85);
+  --primary: oklch(0.55 0.22 280);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0.006 90);
+  --secondary-foreground: oklch(0.26 0.008 85);
+  --muted: oklch(0.955 0.006 90);
+  --muted-foreground: oklch(0.5 0.01 85);
+  --accent: oklch(0.95 0.03 280);
+  --accent-foreground: oklch(0.26 0.008 85);
+  --destructive: oklch(0.56 0.17 28);
+  --success: oklch(0.55 0.11 155);
+  --success-foreground: oklch(0.31 0.06 155);
+  --warning: oklch(0.7 0.13 75);
+  --warning-foreground: oklch(0.36 0.07 60);
+  --border: oklch(0.9 0.006 90);
+  --input: oklch(0.9 0.006 90);
+  --ring: oklch(0.55 0.22 280);
   --spacing: 0.25rem;
-  --sidebar: oklch(0.975 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.42 0.08 205);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-  --brand: oklch(0.6 0.118 184.7);
+  --chart-1: var(--primary);
+  --chart-2: oklch(0.58 0.12 155);
+  --chart-3: oklch(0.68 0.13 75);
+  --chart-4: oklch(0.6 0.14 28);
+  --chart-5: oklch(0.55 0.1 320);
+  --sidebar: oklch(0.965 0.006 90);
+  --sidebar-foreground: oklch(0.26 0.008 85);
+  --sidebar-primary: oklch(0.55 0.22 280);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.955 0.006 90);
+  --sidebar-accent-foreground: oklch(0.26 0.008 85);
+  --sidebar-border: oklch(0.9 0.006 90);
+  --sidebar-ring: oklch(0.55 0.22 280);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.8 0.1 200);
-  --primary-foreground: oklch(0.2 0.03 215);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --background: oklch(0.27 0.004 85);
+  --foreground: oklch(0.93 0.006 90);
+  --card: oklch(0.31 0.004 85);
+  --card-foreground: oklch(0.93 0.006 90);
+  --popover: oklch(0.31 0.004 85);
+  --popover-foreground: oklch(0.93 0.006 90);
+  --primary: oklch(0.72 0.16 280);
+  --primary-foreground: oklch(0.18 0.04 280);
+  --secondary: oklch(0.33 0.004 85);
+  --secondary-foreground: oklch(0.93 0.006 90);
+  --muted: oklch(0.33 0.004 85);
+  --muted-foreground: oklch(0.72 0.01 85);
+  --accent: oklch(0.3 0.05 280);
+  --accent-foreground: oklch(0.93 0.006 90);
+  --destructive: oklch(0.66 0.15 28);
+  --success: oklch(0.72 0.11 155);
+  --success-foreground: oklch(0.9 0.06 155);
+  --warning: oklch(0.78 0.12 80);
+  --warning-foreground: oklch(0.92 0.06 90);
+  --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.65 0.1 200);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.8 0.1 200);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-  --brand: oklch(0.777 0.152 181.9);
+  --ring: oklch(0.72 0.16 280);
+  --chart-1: var(--primary);
+  --chart-2: oklch(0.72 0.11 155);
+  --chart-3: oklch(0.78 0.12 80);
+  --chart-4: oklch(0.68 0.13 28);
+  --chart-5: oklch(0.7 0.1 320);
+  --sidebar: oklch(0.235 0.004 85);
+  --sidebar-foreground: oklch(0.93 0.006 90);
+  --sidebar-primary: oklch(0.72 0.16 280);
+  --sidebar-primary-foreground: oklch(0.18 0.04 280);
+  --sidebar-accent: oklch(0.3 0.004 85);
+  --sidebar-accent-foreground: oklch(0.93 0.006 90);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.72 0.16 280);
 }
 
 @theme inline {
@@ -81,7 +98,6 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
-  --color-brand: var(--brand);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -90,9 +106,18 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -217,5 +242,35 @@
   @supports not (animation-timeline: scroll()) {
     --scroll-fade-t: var(--_scroll-fade-size-t);
     --scroll-fade-b: var(--_scroll-fade-size-b);
+  }
+}
+
+/* Trace (shadcn, Oct 2026): a running step's title shimmers; `shimmer-none` stops it. */
+@utility shimmer {
+  background: linear-gradient(
+      90deg,
+      var(--muted-foreground) 0%,
+      var(--muted-foreground) 40%,
+      var(--foreground) 50%,
+      var(--muted-foreground) 60%,
+      var(--muted-foreground) 100%
+    )
+    0 0 / 250% 100% text;
+  color: transparent;
+  animation: shimmer 2s linear infinite;
+}
+
+@utility shimmer-none {
+  background: none;
+  color: inherit;
+  animation: none;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
   }
 }

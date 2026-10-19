@@ -1,4 +1,4 @@
-export const SITE_URL = "https://ask-hippo.vercel.app";
+export const SITE_URL = "https://remora.vercel.app";
 
 export type PageMeta = {
   title: string;

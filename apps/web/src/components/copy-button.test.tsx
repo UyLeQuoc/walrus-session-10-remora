@@ -27,7 +27,7 @@ describe("CopyButton", () => {
 
     const copied = screen.getByRole("button", { name: "Copied" });
     expect(copied.hasAttribute("disabled")).toBe(true);
-    expect(copied.querySelector("svg")?.getAttribute("class")).toContain("text-green-600");
+    expect(copied.querySelector("svg")?.getAttribute("class")).toContain("text-success");
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText).toHaveBeenCalledWith("hippo");
 
