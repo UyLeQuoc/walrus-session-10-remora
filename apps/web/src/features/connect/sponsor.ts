@@ -19,6 +19,7 @@
 import type { Transaction } from "@mysten/sui/transactions";
 import { Transaction as Tx } from "@mysten/sui/transactions";
 import { createSponsorAuthorization } from "@mysten-incubation/memwal";
+import { type BalanceReader, balanceMist } from "@/lib/balance";
 
 const MAX_ATTEMPTS = 3;
 const BASE_DELAY_MS = 500;
@@ -37,14 +38,10 @@ function retryable(status: number): boolean {
 
 type TxClient = NonNullable<Parameters<Transaction["build"]>[0]>["client"];
 
-interface BalanceClient {
-  getBalance?(input: { owner: string }): Promise<unknown>;
-}
-
 export interface SponsorDeps {
   relayerUrl: string;
   sender: string;
-  suiClient: TxClient & BalanceClient;
+  suiClient: TxClient & BalanceReader;
   signTransaction: (input: { transaction: Tx }) => Promise<{ signature: string }>;
   signPersonalMessage: (input: { message: Uint8Array }) => Promise<{ signature: string }>;
   /**
@@ -68,28 +65,10 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 /** MIST held by an address, or null when the balance cannot be read. */
-function mistOf(value: unknown): string | null {
-  if (typeof value !== "object" || value === null) return null;
-  if ("totalBalance" in value && typeof value.totalBalance === "string") return value.totalBalance;
-  if (!("balance" in value)) return null;
-  const balance = value.balance;
-  if (typeof balance === "string") return balance;
-  if (
-    typeof balance === "object" &&
-    balance !== null &&
-    "balance" in balance &&
-    typeof balance.balance === "string"
-  ) {
-    return balance.balance;
-  }
-  return null;
-}
-
-async function suiBalance(client: BalanceClient, owner: string): Promise<bigint | null> {
+async function suiBalance(client: BalanceReader, owner: string): Promise<bigint | null> {
   if (typeof client.getBalance !== "function") return null;
   try {
-    const mist = mistOf(await client.getBalance({ owner }));
-    return mist === null ? null : BigInt(mist);
+    return balanceMist(await client.getBalance({ owner }));
   } catch {
     return null;
   }

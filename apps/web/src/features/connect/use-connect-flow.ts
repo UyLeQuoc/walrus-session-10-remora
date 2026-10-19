@@ -109,7 +109,7 @@ export function useConnectFlow(kind: "connect" | "disconnect", token: string | u
             );
           }
         }
-        setStatus("Granting hippo access to your account…");
+        setStatus("Granting Remora access to your account…");
         const id = accountId;
         const { digest } = await sponsorAndExecute(
           () => addDelegateKeyTx(chain, id, info.publicKey, info.label),
@@ -119,7 +119,7 @@ export function useConnectFlow(kind: "connect" | "disconnect", token: string | u
         await finish(accountId, digest);
       } else {
         if (!accountId) throw new Error("This wallet does not own a Walrus Memory account.");
-        setStatus("Revoking hippo's access…");
+        setStatus("Revoking Remora's access…");
         const id = accountId;
         const { digest } = await sponsorAndExecute(
           () => removeDelegateKeyTx(chain, id, info.publicKey),
