@@ -1,42 +1,31 @@
 /**
- * Anything that is not a route.
- *
- * Without this, react-router matched nothing and rendered nothing, so a typo or
- * an expired link left the header sitting above an empty page. A judge following
- * a stale URL would have seen a site that looks broken rather than one telling
- * them where to go.
+ * Anything that is not a route. A stale link should tell the reader where to go rather than leave the
+ * header above an empty page.
  */
+import { Compass } from "lucide-react";
 import { Link } from "react-router";
-import { useShellTitle } from "@/app/shell";
+import { EmptyState } from "@/components/app/empty-state";
+import { Page } from "@/components/app/page";
 import { Button } from "@/components/ui/button";
-import { usePageMeta } from "@/hooks/use-page-meta";
-
-const PAGE_META = {
-  title: "Page not found · Remora",
-  description: "This address is not a page on Remora.",
-  path: "/404",
-  index: false,
-};
 
 export function NotFoundPage() {
-  useShellTitle("Not found");
-  usePageMeta(PAGE_META);
   return (
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6">
-      <h1 className="text-xl font-semibold tracking-tight">Nothing here</h1>
-      <p className="text-sm text-muted-foreground">
-        That address is not a page. If you followed a <code>/connect</code> or{" "}
-        <code>/disconnect</code> link, those expire after ten minutes and are single use: run the
-        command again in the chat for a fresh one.
-      </p>
-      <div className="flex gap-2">
-        <Button asChild>
-          <Link to="/">Go to the chat</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/me">My memory</Link>
-        </Button>
-      </div>
-    </div>
+    <Page title="Page not found" description="This address is not a page on Remora.">
+      <EmptyState
+        icon={<Compass />}
+        title="Nothing here"
+        description="That address is not a page. If you followed a /connect or /disconnect link, those expire after ten minutes and are single use: run the command again in the chat for a fresh one."
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button asChild>
+              <Link to="/">Go home</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/chat">Open chat</Link>
+            </Button>
+          </div>
+        }
+      />
+    </Page>
   );
 }
