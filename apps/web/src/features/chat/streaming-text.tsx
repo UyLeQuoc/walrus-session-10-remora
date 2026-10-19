@@ -18,6 +18,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
+import { TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 
 /** How fast the buffer closes a gap, and the floor so it never stalls. */
 const CATCH_UP_MS = 180;
@@ -108,13 +109,15 @@ export function Thinking({ label = "Thinking" }: { label?: string }) {
   return (
     // role="status" so the label is announced and is valid on the element; a
     // bare span supports no aria-label at all.
-    <span
+    <TraceLine
       role="status"
-      aria-label={label === "Thinking" ? "hippo is thinking" : label}
-      className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+      status="running"
+      aria-label={label === "Thinking" ? "Remora is thinking" : label}
     >
-      <Spinner aria-hidden className="size-4" />
-      {label}
-    </span>
+      <TraceIcon>
+        <Spinner className="size-4" />
+      </TraceIcon>
+      <TraceTitle>{label}</TraceTitle>
+    </TraceLine>
   );
 }
