@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useTheme } from "../components/app/theme-choice.tsx";
 import { Logo } from "../components/logo.tsx";
 import { writeActiveChat } from "../features/chat/active-chat.ts";
 import { ChatPage } from "../features/chat/chat-page.tsx";
@@ -228,15 +229,12 @@ describe("chat page", () => {
     expect(showsAGreeting(seen)).toBe(true);
     for (const phrase of HIDDEN_GUIDANCE) expect(seen).not.toMatch(phrase);
     expect(screen.getByRole("button", { name: /send/i })).toBeDefined();
-    // Private files were a hippo feature and are gone, so "Add" has nothing to open.
-    const add = screen.getByRole("button", { name: "Add" });
-    expect((add as HTMLButtonElement).disabled).toBe(true);
-    expect(container.querySelector("[data-slot='composer-shell']")?.textContent).toContain(
-      "Gemini 2.5 Flash",
-    );
+    // The dead "+" is gone; the meter moved into one ⓘ instead of a grey line.
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Model and memory details" })).toBeDefined();
     expect(screen.queryByText(/Try one/)).toBeNull();
-    expect(screen.getByRole("link", { name: /Open in Telegram/ }).getAttribute("href")).toBe(
-      "https://t.me/walrussession8_bot",
+    expect(container.querySelector("[data-slot='composer-shell']")?.textContent).not.toContain(
+      "Gemini 2.5 Flash",
     );
   });
 
@@ -246,15 +244,15 @@ describe("chat page", () => {
         <ChatPage />
       </MemoryRouter>,
     );
-    // One message proves nothing here, so the first set is things to teach it.
-    const chip = screen.getByRole("button", { name: /only use pnpm/i });
+    // One message proves nothing here, so the first set is things to teach a remora.
+    const chip = screen.getByRole("button", { name: /Teach Sentinel/i });
     expect(screen.queryByRole("button", { name: /Reload, then ask/i })).toBeNull();
 
     await userEvent.click(chip);
     expect(chatSend).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveProperty(
       "value",
-      "I only use pnpm, and I want short answers in Vietnamese.",
+      "Teach Sentinel: ignore incoming SUI under 0.01",
     );
   });
 
@@ -403,6 +401,8 @@ describe("chat page", () => {
         <Routes>
           <Route element={<AppLayout />}>
             <Route index element={<ChatPage />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="memory" element={<p>memory</p>} />
           </Route>
         </Routes>
       </MemoryRouter>,
@@ -417,16 +417,16 @@ describe("chat page", () => {
     expect(shell.getAttribute("data-variant")).toBe("inset");
     const railText = rail.textContent ?? "";
     expect(railText.indexOf("New chat")).toBeGreaterThanOrEqual(0);
-    expect(railText.indexOf("New chat")).toBeLessThan(railText.indexOf("My memory"));
+    expect(railText.indexOf("New chat")).toBeLessThan(railText.indexOf("Memory"));
     const group = rail.querySelector("[data-sidebar='group']");
     expect(group?.className).toContain("p-2");
     expect(group?.textContent).toContain("New chat");
-    expect(group?.textContent).toContain("My memory");
+    expect(group?.textContent).toContain("Memory");
     expect(
       within(rail)
-        .getByRole("link", { name: /my memory/i })
+        .getByRole("link", { name: /^memory$/i })
         .getAttribute("href"),
-    ).toBe("/me");
+    ).toBe("/memory");
     const sidebarToggle = container.querySelector(
       "header [data-sidebar='trigger']",
     ) as HTMLButtonElement;
@@ -442,24 +442,22 @@ describe("chat page", () => {
     if (!greeting) throw new Error("greeting missing");
     const box = within(cluster as HTMLElement).getByRole("textbox");
     const suggestion = within(cluster as HTMLElement).getByRole("button", {
-      name: /only use pnpm/i,
+      name: /Teach Sentinel/i,
     });
     expect(showsAGreeting(greeting.textContent ?? "")).toBe(true);
-    expect(greeting.querySelector(".font-greeting")).toBeTruthy();
+    expect(greeting.querySelector("[data-slot='hello']")).toBeTruthy();
     expect(greeting.textContent ?? "").not.toContain("hippo");
     expect(greeting.querySelector("img")).toBeNull();
     expect(greeting.className).toContain("text-center");
     expect(greeting.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(box.compareDocumentPosition(suggestion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(suggestion.getAttribute("data-slot")).not.toBe("button");
+    expect(suggestion.getAttribute("data-slot")).toBe("button");
     expect(suggestion.className).toContain("text-sm");
-    expect(suggestion.className).toContain("hover:text-primary");
     expect(screen.getByRole("button", { name: /send/i })).toBeDefined();
     expect(screen.queryByText(/^Try one$/)).toBeNull();
     const seen = container.textContent ?? "";
     for (const phrase of HIDDEN_GUIDANCE) expect(seen).not.toMatch(phrase);
-    const theme = screen.getByRole("button", { name: /switch to (dark|light)/i });
-    expect(theme.className).toContain("size-9");
+    expect(screen.queryByRole("button", { name: /switch to (dark|light)/i })).toBeNull();
   });
 
   it("sends from the button and from Enter, and Shift+Enter does not", async () => {
@@ -500,13 +498,13 @@ describe("chat page", () => {
     const shell = filled.closest("[data-slot='composer-shell']");
     const token = shell?.querySelector("[data-command-token]");
     expect(token?.textContent).toBe("/memory");
-    expect(token?.className).toContain("text-[#156BC1]");
+    expect(token?.className).toContain("text-primary");
     expect(screen.getByRole("option", { name: /\/memory search/i })).toBeDefined();
     expect(screen.getByRole("option", { name: /\/memory forget <blob>/i })).toBeDefined();
     await user.type(filled, " search");
     const rest = shell?.querySelector("[data-command-rest]");
     expect(rest?.textContent).toBe(" search");
-    expect(rest?.className).not.toContain("text-[#156BC1]");
+    expect(rest?.className).not.toContain("text-primary");
   });
 
   it("retries the last answer and edits the last user line through one resend", async () => {
@@ -639,7 +637,11 @@ describe("chat page", () => {
     expect(
       screen.getByRole("button", { name: "Postgres on 5433" }).closest("[data-slot='sidebar-menu']")
         ?.className,
-    ).toContain("pe-3");
+    ).toContain("pb-2");
+    // The chat row fills the same inset as the nav items and the search input (§3).
+    const chatRow = screen.getByRole("button", { name: "Postgres on 5433" });
+    expect(chatRow.className).toContain("w-full");
+    expect(chatRow.querySelector("span")?.className).toContain("truncate");
     await user.type(search, "postgres");
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Vietnamese answers" })).toBeNull();
@@ -856,6 +858,7 @@ describe("chat page", () => {
       }),
     );
     mountChat();
+    await user.click(await screen.findByRole("button", { name: "Open memory" }));
     expect(await screen.findByRole("button", { name: "Correct" })).toBeDefined();
     expect(screen.getAllByRole("button", { name: "Correct" })).toHaveLength(1);
     await user.click(screen.getAllByRole("button", { name: "Hide" })[0]);
@@ -920,7 +923,8 @@ describe("chat page", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     mountChat();
-    const toggle = await screen.findByRole("switch", { name: "Memory on" });
+    const toggle = await screen.findByRole("switch", { name: "Memory" });
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
     await user.click(toggle);
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
@@ -972,15 +976,16 @@ describe("chat page", () => {
       removeItem: (key: string) => void stored.delete(key),
     });
     const view = mountChat();
+    // Default closed: the panel is off the chat until the person asks for it.
+    await user.click(await screen.findByRole("button", { name: "Open memory" }));
+    expect(
+      view.container.querySelector("[data-slot='memory-panel']")?.getAttribute("aria-hidden"),
+    ).toBeNull();
     expect(screen.getByText("Nothing remembered in this chat yet.")).toBeDefined();
-    expect(screen.queryByRole("tab", { name: "Memory" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Close memory" }));
     expect(screen.queryByRole("button", { name: "Close memory" })).toBeNull();
     expect(screen.getByRole("button", { name: "Open memory" })).toBeDefined();
-    expect(
-      view.container.querySelector("[data-slot='memory-panel']")?.getAttribute("aria-hidden"),
-    ).toBe("true");
-    expect(stored.get("hippo.memory-panel")).toBe("closed");
+    expect(stored.get("remora.memory-panel")).toBe("closed");
     view.unmount();
     mountChat();
     expect(screen.queryByRole("button", { name: "Close memory" })).toBeNull();
@@ -1017,7 +1022,7 @@ describe("chat page", () => {
     ];
     vi.stubGlobal("fetch", stubFetch({ "/api/me": { mode: "guest", memoryEnabled: true } }));
     mountChat();
-    await user.click(await screen.findByRole("button", { name: "Connect wallet" }));
+    await user.click(await screen.findByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("button", { name: "Sign in with Google" })).toBeDefined();
     expect(screen.getByText(/only Remora uses/)).toBeDefined();
     expect(screen.getByText(/or your Google account/)).toBeDefined();
@@ -1139,21 +1144,33 @@ describe("chat page", () => {
 });
 
 describe("logo", () => {
-  it("pairs the Remora mark with the word in the lockup, and leaves the word off the mark", () => {
-    const lockup = render(<Logo variant="lockup" />);
-    const lockupSvg = lockup.container.querySelector("svg");
-    expect(lockup.container.textContent ?? "").toContain("remora");
-    const word = lockup.getByText("remora");
-    const markHeight = Number.parseFloat(lockupSvg?.getAttribute("height") ?? "0");
-    const wordSize = Number.parseFloat((word as HTMLElement).style.fontSize);
-    expect(markHeight).toBeGreaterThan(wordSize);
-    expect(word.parentElement?.style.gap === "0px" || word.parentElement?.style.gap === "0").toBe(
-      true,
-    );
-
-    const mark = render(<Logo variant="mark" />);
-    expect(mark.getByRole("img", { name: "remora" })).toBeDefined();
+  it("names itself once, with or without the word", () => {
+    const mark = render(<Logo />);
+    expect(mark.getByRole("img", { name: "Remora" })).toBeDefined();
     expect(mark.container.textContent ?? "").not.toContain("remora");
+
+    const lockup = render(<Logo withText size="lg" />);
+    const img = lockup.getAllByRole("img", { name: "Remora" }).at(-1) as HTMLElement;
+    expect(img.textContent).toContain("remora");
+    const svg = img.querySelector("svg");
+    const word = Number.parseFloat((img.lastElementChild as HTMLElement).style.fontSize);
+    expect(Number(svg?.getAttribute("height"))).toBe(32);
+    expect(word).toBeLessThan(32);
+  });
+
+  it("draws the tile in the tone and the glyph in its contrast colour", () => {
+    const { container } = render(<Logo background tone="primary" size={40} />);
+    const tile = container.querySelector('[data-slot="logo-tile"]') as HTMLElement;
+    expect(tile.className).toContain("bg-primary");
+    expect(tile.style.width).toBe("40px");
+    expect(tile.querySelector("svg")?.getAttribute("class")).toContain("text-primary-foreground");
+    expect(Number(tile.querySelector("svg")?.getAttribute("height"))).toBeLessThan(40);
+  });
+
+  it("can hide from assistive tech next to a visible name", () => {
+    const { container } = render(<Logo decorative withText />);
+    expect(container.querySelector('[role="img"]')).toBeNull();
+    expect(container.firstElementChild?.getAttribute("aria-hidden")).toBe("true");
   });
 });
 
@@ -1175,14 +1192,10 @@ describe("how it works", () => {
     expect(container.textContent ?? "").toMatch(/seven months/);
     expect(container.textContent ?? "").toMatch(/\/connect/);
     expect(container.textContent ?? "").toMatch(/\/compare/);
-    expect(screen.getByRole("link", { name: /Start chatting/ }).getAttribute("href")).toBe("/");
-    expect(screen.getByRole("link", { name: /Open in Telegram/ }).getAttribute("href")).toBe(
-      "https://t.me/walrussession8_bot",
-    );
-    expect(screen.getByText("One memory, on the web, Telegram and Discord")).toBeDefined();
-    expect(screen.getByRole("link", { name: /Add to Discord/ }).getAttribute("href")).toContain(
-      "client_id=1556955188798169228",
-    );
+    expect(screen.getByRole("link", { name: /Open chat/ }).getAttribute("href")).toBe("/chat");
+    expect(container.textContent ?? "").toMatch(/A receipt for every action/);
+    expect(container.textContent ?? "").toMatch(/A budget Sui enforces/);
+    expect(container.textContent ?? "").not.toMatch(/hippo/i);
     expect(screen.queryByRole("button", { name: /own this memory/i })).toBeNull();
   });
 });
@@ -1314,7 +1327,7 @@ describe("me page, Claude Code", () => {
     mount("owned");
     expect(await screen.findByText("Use the same memory in Claude Code")).toBeDefined();
     expect(screen.getByText("/plugin install memwal@memwal-plugins")).toBeDefined();
-    expect(screen.getByText(/namespace "hippo"/)).toBeDefined();
+    expect(screen.getByText(/namespace "remora"/)).toBeDefined();
     expect(screen.queryByText(/Own your memory first/)).toBeNull();
   });
 
@@ -1438,7 +1451,7 @@ describe("me page", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText("Nothing remembered yet")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Start chatting" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Start chatting" }).getAttribute("href")).toBe("/chat");
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -1541,7 +1554,7 @@ describe("me page", () => {
     );
     const full = await screen.findByRole("button", { name: /full record/i });
     // What the file holds is on the page before anyone downloads, not only inside it.
-    expect(document.body.textContent).toMatch(/checked against the hash hippo recorded/i);
+    expect(document.body.textContent).toMatch(/checked against the hash Remora recorded/i);
     full.click();
     await screen.findByText(/verified for/i);
     expect(exportFetch).toHaveBeenCalledTimes(1);
@@ -1562,7 +1575,7 @@ describe("me page", () => {
         <MePage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(container.textContent ?? "").toMatch(/Right now hippo keeps/));
+    await waitFor(() => expect(container.textContent ?? "").toMatch(/Right now Remora keeps/));
     expect(screen.queryByRole("button", { name: /full record/i })).toBeNull();
   });
 
@@ -1672,7 +1685,7 @@ describe("me page", () => {
         <MePage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText("guest")).toBeDefined());
+    await waitFor(() => expect(screen.getByText("Not owned yet")).toBeDefined());
     expect(screen.queryByRole("button", { name: /connect your sui wallet/i })).toBeNull();
     expect(screen.queryByText(/Already own your memory/i)).toBeNull();
   });
@@ -1739,7 +1752,7 @@ describe("me page, on chain", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /own this memory/i })).toBeDefined(),
     );
-    expect(container.textContent ?? "").toMatch(/hippo's own account/i);
+    expect(container.textContent ?? "").toMatch(/Remora's own account/i);
   });
 
   it("keeps the explorer link when the object cannot be read", async () => {
@@ -1914,13 +1927,13 @@ describe("search engines", () => {
       }),
     );
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/guide"]}>
         <GuidePage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(document.title).toMatch(/^How hippo works/));
+    await waitFor(() => expect(document.title).toMatch(/^How Remora works/));
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
-      "https://ask-hippo.vercel.app/guide",
+      "https://remora.vercel.app/guide",
     );
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe(
       "index, follow",
@@ -1952,15 +1965,30 @@ describe("an address that is not a page", () => {
     expect(container.textContent ?? "").toMatch(/Nothing here/i);
     // Expired connect links are the likeliest way somebody lands here.
     expect(container.textContent ?? "").toMatch(/expire after ten minutes/i);
-    expect(screen.getByRole("link", { name: /go to the chat/i })).toBeDefined();
+    expect(screen.getByRole("link", { name: /go home/i })).toBeDefined();
   });
 });
+
+function ThemeProbe() {
+  const [theme, choose] = useTheme();
+  return (
+    <div>
+      <span>{theme}</span>
+      <button type="button" onClick={() => choose("dark")}>
+        pick dark
+      </button>
+      <button type="button" onClick={() => choose("system")}>
+        pick system
+      </button>
+    </div>
+  );
+}
 
 describe("theme", () => {
   /**
    * This jsdom has no localStorage, which is also why `lib/api.ts` guards every
-   * access. The toggle must work with it and without it, so the tests supply a
-   * minimal one rather than pretending the guard is unnecessary.
+   * access. The preference must work with it and without it, so the tests supply
+   * a minimal one rather than pretending the guard is unnecessary.
    */
   function fakeStorage() {
     const map = new Map<string, string>();
@@ -1975,7 +2003,6 @@ describe("theme", () => {
   beforeEach(() => {
     document.documentElement.classList.remove("dark");
     vi.stubGlobal("localStorage", fakeStorage());
-    // jsdom has no matchMedia; without it the toggle cannot read the system.
     vi.stubGlobal(
       "matchMedia",
       vi.fn(() => ({
@@ -1986,33 +2013,20 @@ describe("theme", () => {
     );
   });
 
-  const mount = () =>
-    render(
-      <MemoryRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<p>hello</p>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
-
-  it("applies the dark class and remembers the choice", async () => {
-    mount();
-    // The palette existed in index.css and nothing ever switched it on.
+  it("follows the system until a choice is made, then remembers it", async () => {
+    render(<ThemeProbe />);
     expect(document.documentElement.classList.contains("dark")).toBe(false);
-    const toggle = screen.getByRole("button", { name: /switch to dark/i });
-    expect(toggle.className).toContain("size-9");
-    await userEvent.click(toggle);
+    expect(screen.getByText("system")).toBeDefined();
+    await userEvent.click(screen.getByRole("button", { name: "pick dark" }));
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(localStorage.getItem("remora.theme")).toBe("dark");
   });
 
   it("honours a stored choice over the system preference", () => {
     localStorage.setItem("remora.theme", "dark");
-    mount();
+    render(<ThemeProbe />);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(screen.getByRole("button", { name: /switch to light/i })).toBeDefined();
+    expect(screen.getByText("dark")).toBeDefined();
   });
 
   it("follows the system when nothing is stored", () => {
@@ -2024,7 +2038,7 @@ describe("theme", () => {
         removeEventListener: vi.fn(),
       })),
     );
-    mount();
+    render(<ThemeProbe />);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 });
