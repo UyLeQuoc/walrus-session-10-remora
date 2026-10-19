@@ -23,7 +23,7 @@ test("burner: sign in, detect, withdraw, move, pause all, resume", async ({ page
   // A1: connect the injected wallet and sign in through the app's own picker.
   await connectAndSignIn(page);
   expect((await fundsCall).headers()["x-remora-network"]).toBe("testnet");
-  await expect(page.getByText("Your USDC on testnet")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Funds" })).toBeVisible();
   await expect(page.getByTestId("ready")).toContainText("$");
   await expect.poll(() => money(page, "ready")).not.toBeNaN();
 
@@ -50,7 +50,10 @@ test("burner: sign in, detect, withdraw, move, pause all, resume", async ({ page
     await expect(page.getByRole("button", { name: "Resume" })).toHaveCount(0, { timeout: 90_000 });
   }
   await page.getByRole("button", { name: "Pause all spending" }).click();
-  await expect(page.getByText(/Paused \d+ Disc/)).toBeVisible({ timeout: 90_000 });
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: /^Pause/ }).click();
+  await expect(page.getByText(/Paused .*Disc/)).toBeVisible({ timeout: 90_000 });
   await expect(rows.filter({ hasText: "paused" })).toHaveCount(await rows.count(), {
     timeout: 60_000,
   });
