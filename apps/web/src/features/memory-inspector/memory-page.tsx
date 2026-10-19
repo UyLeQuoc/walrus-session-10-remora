@@ -1,34 +1,43 @@
 /**
- * `/memory` (F3·ui + F6): a remora's namespaces as the relayer holds them. Each row is a Walrus blob
- * with its expiry; search runs a real recall; and if we wrote more than the relayer reports, it says
- * so (an index-check warning, never a `restore()`).
+ * `/memory` (F3·ui + F6): one place with two tabs. Remoras lists each remora's namespaces as the
+ * relayer holds them (a Walrus blob per row, real recall search, an index-check warning); Chat is
+ * the memory Remora keeps from conversations (the old `/me`).
  */
+import { Brain, Fish } from "lucide-react";
 import { useState } from "react";
-import { useSearchParams } from "react-router";
-import { useShellTitle } from "@/app/shell";
+import { Link, useSearchParams } from "react-router";
+import { EmptyState } from "@/components/app/empty-state";
+import { Page, PageHeader } from "@/components/app/page";
+import { StatusBadge } from "@/components/app/status-badge";
+import { Time } from "@/components/app/time";
+import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Toggle } from "@/components/ui/toggle";
+import { ChatMemory } from "@/features/me/me-page";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—");
+const size = (bytes: number) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);
 
-function Inspector() {
+function RemorasTab() {
   const [params, setParams] = useSearchParams();
   const remoras = useLoad(() => api.remoras(), []);
   const list = (remoras.data?.remoras ?? []).filter((r) => r.status !== "creating");
   const id = params.get("remora") ?? list[0]?.id ?? "";
   const [q, setQ] = useState("");
+  const [namespace, setNamespace] = useState<string | null>(null);
   const query = useDebouncedValue(q, 400);
   const mem = useLoad(
     () =>
@@ -36,39 +45,83 @@ function Inspector() {
     [id, query],
   );
   const m = mem.data;
-  if (remoras.data && !list.length)
+  const active = namespace && m?.namespaces.includes(namespace) ? namespace : null;
+  const rows = (m?.rows ?? []).filter((row) => !active || row.namespace === active);
+  const results = (m?.results ?? []).filter((x) => !active || x.namespace === active);
+
+  if (remoras.loading && !remoras.data) {
     return (
-      <p className="p-6 text-sm text-muted-foreground">No remoras yet, so no memory to show.</p>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-40 w-full" />
+      </div>
     );
+  }
+  if (remoras.data && !list.length) {
+    return (
+      <EmptyState
+        icon={<Fish />}
+        title="No remoras yet"
+        description="A remora writes what it learns to Walrus Memory. Create one to start."
+        action={
+          <Link className="link text-sm" to="/remoras/new">
+            Create a remora
+          </Link>
+        }
+      />
+    );
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 overflow-auto p-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <NativeSelect
-          aria-label="Remora"
+        <Select
           value={id}
-          onChange={(e) => setParams({ remora: e.target.value })}
+          onValueChange={(value) => {
+            const next = new URLSearchParams(params);
+            next.set("remora", value);
+            setParams(next);
+          }}
         >
-          {list.map((r) => (
-            <NativeSelectOption key={r.id} value={r.id}>
-              {r.name}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          <SelectTrigger aria-label="Remora" className="w-48">
+            <SelectValue placeholder="Remora" />
+          </SelectTrigger>
+          <SelectContent>
+            {list.map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                {r.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input
           className="max-w-xs"
           aria-label="Search memory"
-          placeholder="Search (recall)…"
+          placeholder="Search what it remembers"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
       </div>
-      <p className="text-sm text-muted-foreground">
-        Each memory is a Walrus blob in Walrus Memory, under this remora's namespaces:{" "}
-        {m ? m.namespaces.map((ns) => `${ns} (${m.counts[ns] ?? 0})`).join(", ") : "…"}
-      </p>
+
+      <div className="flex flex-wrap gap-2">
+        {(m?.namespaces ?? []).map((ns) => (
+          <Toggle
+            key={ns}
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            pressed={active === ns}
+            aria-label={`Filter by ${ns}`}
+            onPressedChange={(on) => setNamespace(on ? ns : null)}
+          >
+            {ns} · {m?.counts[ns] ?? 0}
+          </Toggle>
+        ))}
+      </div>
+
       {m?.mismatches.length ? (
         <p
-          className="rounded-md border border-amber-500/50 p-2 text-sm"
+          className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm text-warning-foreground"
           data-testid="index-warning"
         >
           Index check:{" "}
@@ -79,55 +132,129 @@ function Inspector() {
         </p>
       ) : null}
       {mem.error ? <p className="text-sm text-destructive">{mem.error}</p> : null}
-      {m?.results.length ? (
-        <ul className="flex flex-col gap-1 text-sm" aria-label="Search results">
-          {m.results.map((x) => (
-            <li key={x.blobId} className="rounded-md border p-2">
-              <Badge variant="outline">{x.namespace}</Badge> {x.text}
+
+      {results.length ? (
+        <ul className="flex flex-col gap-2 text-sm" aria-label="Search results">
+          {results.map((x) => (
+            <li key={x.blobId} className="rounded-lg border p-3">
+              <Badge variant="outline">{x.namespace}</Badge>{" "}
+              <span className="whitespace-pre-wrap">{x.text}</span>
             </li>
           ))}
         </ul>
       ) : null}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Blob</TableHead>
-            <TableHead>Namespace</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Stored</TableHead>
-            <TableHead>Expires</TableHead>
-            <TableHead className="text-right">Size</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(m?.rows ?? []).map((row) => (
-            <TableRow key={row.blobId}>
-              <TableCell className="font-mono text-xs">{row.blobId.slice(0, 16)}…</TableCell>
-              <TableCell>{row.namespace}</TableCell>
-              <TableCell>
-                <Badge variant={row.status === "active" ? "secondary" : "outline"}>
-                  {row.status}
-                </Badge>
-              </TableCell>
-              <TableCell>{day(row.createdAt)}</TableCell>
-              <TableCell>{day(row.expiresAt)}</TableCell>
-              <TableCell className="text-right">{row.size} B</TableCell>
-            </TableRow>
-          ))}
-          {m && !m.rows.length ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-muted-foreground">
-                Nothing stored yet.
-              </TableCell>
-            </TableRow>
-          ) : null}
-        </TableBody>
-      </Table>
+
+      {/* Desktop table. */}
+      <div className="hidden overflow-x-auto rounded-xl border md:block">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase">
+            <tr>
+              <th className="px-3 py-2 font-medium">Blob</th>
+              <th className="px-3 py-2 font-medium">Namespace</th>
+              <th className="px-3 py-2 font-medium">Status</th>
+              <th className="px-3 py-2 font-medium">Stored</th>
+              <th className="px-3 py-2 font-medium">Expires</th>
+              <th className="px-3 py-2 text-right font-medium">Size</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.blobId} className="border-t">
+                <td className="w-64 max-w-64 px-3 py-2">
+                  <Hash value={row.blobId} label="blob" />
+                </td>
+                <td className="max-w-52 truncate px-3 py-2" title={row.namespace}>
+                  {row.namespace}
+                </td>
+                <td className="px-3 py-2">
+                  {row.status === "active" ? (
+                    <StatusBadge status="active" />
+                  ) : (
+                    <Badge variant="outline">expired</Badge>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  <Time value={row.createdAt} />
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">{day(row.expiresAt)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{size(row.size)}</td>
+              </tr>
+            ))}
+            {m && !rows.length ? (
+              <tr>
+                <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                  {active ? `Nothing in ${active} yet.` : "Nothing stored yet."}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Phone: one card per blob. */}
+      <ul className="flex flex-col gap-2 md:hidden">
+        {rows.map((row) => (
+          <li key={row.blobId} className="flex flex-col gap-1 rounded-lg border p-3 text-sm">
+            <Hash value={row.blobId} label="blob" />
+            <span className="truncate text-muted-foreground" title={row.namespace}>
+              {row.namespace}
+            </span>
+            <span className="flex items-center justify-between gap-2 text-muted-foreground">
+              {row.status === "active" ? (
+                <StatusBadge status="active" />
+              ) : (
+                <Badge variant="outline">expired</Badge>
+              )}
+              <span>
+                {row.expiresAt ? `expires ${day(row.expiresAt)}` : "no expiry"} · {size(row.size)}
+              </span>
+            </span>
+          </li>
+        ))}
+        {m && !rows.length ? (
+          <li className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+            {active ? `Nothing in ${active} yet.` : "Nothing stored yet."}
+          </li>
+        ) : null}
+      </ul>
     </div>
   );
 }
 
+function Memory() {
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "chat" ? "chat" : "remoras";
+  return (
+    <Page title="Memory" description="What your remoras remember, and what the chat does.">
+      <PageHeader
+        title="Memory"
+        description="Two kinds of memory, side by side: each remora's Walrus blobs and the chat's own facts."
+      />
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          const next = new URLSearchParams(params);
+          next.set("tab", value);
+          setParams(next);
+        }}
+      >
+        <TabsList>
+          <TabsTrigger value="remoras">
+            <Brain /> Remoras
+          </TabsTrigger>
+          <TabsTrigger value="chat">Chat</TabsTrigger>
+        </TabsList>
+        <TabsContent value="remoras" className="pt-4">
+          <RemorasTab />
+        </TabsContent>
+        <TabsContent value="chat" className="pt-4">
+          <ChatMemory />
+        </TabsContent>
+      </Tabs>
+    </Page>
+  );
+}
+
 export function MemoryInspectorPage() {
-  useShellTitle("Memory");
-  return <RequireOwner what="your remoras' memory">{() => <Inspector />}</RequireOwner>;
+  return <RequireOwner what="your remoras' memory">{() => <Memory />}</RequireOwner>;
 }

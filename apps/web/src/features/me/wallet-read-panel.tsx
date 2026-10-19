@@ -9,7 +9,7 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
   return (
     <Section
       title="Read it yourself"
-      description="Decrypt your memory in this browser with your wallet. No hippo server, no relayer."
+      description="Decrypt your memory in this browser with your wallet. No Remora server, no relayer."
       action={
         read.refusal ? null : (
           <Button
@@ -26,8 +26,8 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
         <p className="text-sm text-muted-foreground">{read.refusal}</p>
       ) : read.readable === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing in your own account yet. What you told hippo as a guest stays in hippo's account,
-          which your wallet cannot open.
+          Nothing in your own account yet. What you told Remora as a guest stays in Remora's
+          account, which your wallet cannot open.
         </p>
       ) : null}
       {read.results.length > 0 ? (
@@ -38,7 +38,7 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
                 <>
                   <span className="min-w-0 flex-1 break-words">{result.text}</span>
                   <Badge variant={result.verified ? "outline" : "destructive"}>
-                    {result.verified ? "matches what hippo wrote" : "does not match"}
+                    {result.verified ? "matches what Remora wrote" : "does not match"}
                   </Badge>
                 </>
               ) : (

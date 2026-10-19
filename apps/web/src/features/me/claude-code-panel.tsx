@@ -6,7 +6,7 @@ const SKILL_URL =
 
 const INSTALL = "/plugin marketplace add MystenLabs/MemWal";
 const PLUGIN = "/plugin install memwal@memwal-plugins";
-const ASK = 'What does hippo know about me? Use memwal_recall with namespace "hippo".';
+const ASK = 'What does Remora know about me? Use memwal_recall with namespace "remora".';
 
 function Command({ value, label }: { value: string; label: string }) {
   return (
@@ -34,19 +34,19 @@ export function ClaudeCodePanel({ owned }: { owned: boolean }) {
         </li>
         <li>Ask Claude Code to log in to Walrus Memory, and sign with the same wallet.</li>
         <li className="flex flex-col gap-2">
-          <span>Ask what hippo knows.</span>
+          <span>Ask what Remora knows.</span>
           <Command value={ASK} label="the question" />
         </li>
         <li>
-          To have Claude Code read and write in hippo's format, add the{" "}
+          To have Claude Code read and write in Remora's format, add the{" "}
           <a className="underline" href={SKILL_URL} target="_blank" rel="noreferrer">
-            hippo-memory skill
+            Remora memory skill
           </a>
           .
         </li>
       </ol>
       <p className="text-sm text-muted-foreground">
-        A Google sign-in here gives an address only hippo uses, so this needs a wallet.
+        A Google sign-in here gives an address only Remora uses, so this needs a wallet.
       </p>
     </Section>
   );

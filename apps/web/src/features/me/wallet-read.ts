@@ -43,7 +43,7 @@ export async function sha256Text(text: string): Promise<string> {
 
 export function readMarkdown(results: ReadResult[], account: string, readAt: string): string {
   const lines = [
-    "# My hippo memory, read with my own wallet",
+    "# My Remora memory, read with my own wallet",
     "",
     `Account: ${account}`,
     `Read: ${readAt}, from Walrus, decrypted in the browser with Seal. The relayer took no part.`,
@@ -52,7 +52,7 @@ export function readMarkdown(results: ReadResult[], account: string, readAt: str
   for (const r of results) {
     if ("text" in r) {
       lines.push(
-        `- ${r.text}${r.verified ? "" : " (does not match the hash hippo recorded when it wrote this)"}`,
+        `- ${r.text}${r.verified ? "" : " (does not match the hash Remora recorded when it wrote this)"}`,
       );
       lines.push(`  - blob ${r.blobId}`);
     } else {

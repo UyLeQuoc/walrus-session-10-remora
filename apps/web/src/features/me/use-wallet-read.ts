@@ -55,7 +55,7 @@ export function useWalletRead(memories: Memory[]) {
       const res = await apiFetch("/api/config");
       const cfg = (await res.json()) as { packageId?: unknown; registryId?: unknown };
       if (typeof cfg.packageId !== "string" || typeof cfg.registryId !== "string") {
-        throw new Error("hippo's settings are missing the Walrus Memory package.");
+        throw new Error("Remora's settings are missing the Walrus Memory package.");
       }
       const approval = {
         packageId: cfg.packageId,
@@ -101,7 +101,7 @@ export function useWalletRead(memories: Memory[]) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "hippo-memory-read-with-my-wallet.md";
+    link.download = "remora-memory-read-with-my-wallet.md";
     link.click();
     URL.revokeObjectURL(url);
   }, [me?.accountId, results]);
