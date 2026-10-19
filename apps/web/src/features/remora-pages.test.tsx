@@ -2,6 +2,8 @@
  * The W2 pages on a fake API that answers from the contract fixtures, the network store driving the
  * API header, and the funds split. Wallets and the chain are stubbed; the e2e suite covers the real ones.
  */
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -45,12 +47,15 @@ vi.mock("@mysten/dapp-kit", () => ({
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 
 function at(path: string, routePath: string, element: React.ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path={routePath} element={element} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path={routePath} element={element} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -68,6 +73,15 @@ function fakeStorage() {
 beforeEach(() => {
   account = null;
   vi.stubGlobal("localStorage", fakeStorage());
+  // Hash measures its container; jsdom has no ResizeObserver.
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -172,10 +186,13 @@ describe("W2 pages on the live API (contract fixtures)", () => {
   it("dashboard: remoras, what's waiting, and the feed across all (H4, N1, N2)", async () => {
     fakeApi(OWNER);
     at("/remoras", "/remoras", <RemorasPage />);
-    expect(await screen.findByText("1 waiting for you")).toBeDefined();
-    expect(screen.getByTestId("remora-card").textContent).toMatch(
-      /Up to 20.00 USDC a month, at most 0.50 a payment/,
-    );
+    expect(await screen.findByText("1 approval waiting")).toBeDefined();
+    const card = screen.getByTestId("remora-card");
+    // The template shows once, capitalised ("Scout"), not again as a budget sentence.
+    expect(card.textContent).toMatch(/Scout/);
+    expect(card.textContent).not.toMatch(/Read-only: no budget/);
+    const meter = await screen.findByTestId("budget-meter");
+    expect(meter.textContent).toMatch(/0.97.*of.*1.00 USDC left this month/);
     expect(await screen.findByText(/Paid 0.01 USDC to reef:sui-risk/)).toBeDefined();
     expect(screen.getByText(/0x2 is the Sui framework/)).toBeDefined();
   });
@@ -184,15 +201,17 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     const calls = fakeApi(OWNER);
     at(`/remoras/${FIXTURE_SCOUT.id}`, "/remoras/:id", <RemoraPage />);
     expect((await screen.findByTestId("budget-meter")).textContent).toMatch(
-      /0.97 USDC left this month.*runs out on 2027-02-10/,
-    );
-    expect((await screen.findByTestId("schedule-preview")).textContent).toMatch(
-      /weekdays at 8am UTC/,
+      /0.97 of 1.00 USDC left this month.*runs out around 2027-02-10/,
     );
     await userEvent.type(screen.getByLabelText("Question"), "Is 0x2 safe?");
     await userEvent.click(screen.getByRole("button", { name: "Ask" }));
     expect((await screen.findByTestId("answer")).textContent).toBe("0x2 is the Sui framework.");
     expect(calls.find((c) => c.url.endsWith("/ask"))?.body).toEqual({ question: "Is 0x2 safe?" });
+    await userEvent.click(await screen.findByRole("tab", { name: "Settings" }));
+    expect((await screen.findByTestId("schedule-preview")).textContent).toMatch(
+      /weekdays at 8am UTC/,
+    );
+    await userEvent.click(await screen.findByRole("tab", { name: "Overview" }));
     await userEvent.click(
       (await screen.findAllByRole("button", { name: "Why?" }))[0] as HTMLElement,
     );
@@ -204,9 +223,9 @@ describe("W2 pages on the live API (contract fixtures)", () => {
   it("approvals: an over-limit payment offers to pay once (N2, E4)", async () => {
     fakeApi(OWNER);
     at("/approvals", "/approvals", <ApprovalsPage />);
-    expect(
-      await screen.findByText(/Pay 2.00 USDC to reef:odds, over its per-payment cap/),
-    ).toBeDefined();
+    const card = await screen.findByTestId("approval");
+    expect(card.textContent).toMatch(/2\.00 USDC/);
+    expect(card.textContent).toMatch(/reef:odds/);
     expect(screen.getByRole("button", { name: /Pay once \(2.00 USDC\)/ })).toBeDefined();
   });
 
@@ -222,9 +241,7 @@ describe("W2 pages on the live API (contract fixtures)", () => {
   it("verify page checks a digest without signing in (G3)", async () => {
     fakeApi(null);
     at("/verify/8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ", "/verify/:ref", <VerifyPage />);
-    expect((await screen.findByTestId("verify-verdict")).textContent).toMatch(
-      /verified.*anchored onchain/,
-    );
+    expect((await screen.findByTestId("verify-verdict")).textContent).toMatch(/Verified/);
     expect(screen.getByText("Paid.intent matches")).toBeDefined();
   });
 
@@ -235,14 +252,30 @@ describe("W2 pages on the live API (contract fixtures)", () => {
       "Asia/Ho_Chi_Minh",
     );
     await userEvent.click(screen.getByRole("button", { name: "Link Telegram" }));
-    expect((await screen.findByTestId("telegram-code")).textContent).toMatch(/\/link ABC234/);
+    expect((await screen.findByTestId("telegram-code")).textContent).toMatch(/10 minutes/);
   });
 
-  it("onboarding ticks sign-in and the first remora from live state (A6)", async () => {
-    fakeApi(OWNER);
+  it("onboarding ticks the wallet, funds and first remora from live state (A6)", async () => {
+    fakeApi(OWNER, {
+      "GET /api/funds": {
+        network: "testnet",
+        splits: [
+          {
+            address: OWNER,
+            role: "owner",
+            coinType: "0xa1ec::usdc::USDC",
+            addressBalance: "1000000",
+            coins: { total: "0", count: 0 },
+            settling: "0",
+            checkedAt: "2026-10-19T00:00:00Z",
+          },
+        ],
+        movable: "0",
+      },
+    });
     account = { address: OWNER, chains: ["sui:testnet"] };
     at("/onboarding", "/onboarding", <OnboardingPage />);
-    await waitFor(() => expect(screen.getAllByText("done").length).toBe(3));
+    await waitFor(() => expect(screen.getByText("3 of 3 done")).toBeDefined());
   });
 });
 
@@ -254,7 +287,7 @@ describe("funds page (A4·ui)", () => {
     );
     at("/funds", "/funds", <FundsPage />);
     // `/api/me` is one shared snapshot; an earlier test's wallet clears once this one's guest loads.
-    expect(await screen.findByText(/Connect your wallet to see your funds/)).toBeDefined();
+    expect(await screen.findByText(/Sign in with your wallet to see your funds/)).toBeDefined();
   });
 
   it("shows the address-balance / coins split from /api/funds", async () => {
@@ -263,6 +296,10 @@ describe("funds page (A4·ui)", () => {
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const url = String(input);
+        if (url === "/api/me") {
+          return Response.json({ mode: "owned", signedIn: true, walletAddress: OWNER });
+        }
+        if (url === "/api/me/memories") return Response.json({ memories: [] });
         if (url.startsWith("/api/funds")) {
           return Response.json({
             network: "testnet",

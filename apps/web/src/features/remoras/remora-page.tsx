@@ -1,24 +1,45 @@
 /**
  * `/remoras/:id` (H4): one remora. Its status and controls (N3 shadow → live, B8 pause/retire, B9
- * rotate, B6 edit), its budget with a forecast (N5, B7), Ask (Scout, C1) or Teach (Sentinel, C2),
- * schedules (N12), sources (F2), and its activity (N1) with Why? (N4) and 👍/👎 (N19).
+ * rotate, B6 edit), its budget (N5, B7), Ask (Scout, C1) or Teach (Sentinel, C2), schedules (N12),
+ * sources (F2), and its activity (N1) with Why? (N4) and 👍/👎 (N19). Three tabs keep Overview to
+ * about one screen; destructive actions live in Settings → Danger zone behind ConfirmAction.
  */
 import type { RemoraView } from "@remora/schema";
+import { AlertTriangle, Ellipsis, KeyRound, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { useShellTitle } from "@/app/shell";
-import { Badge } from "@/components/ui/badge";
+import { BudgetMeter } from "@/components/app/budget-meter";
+import { ConfirmAction } from "@/components/app/confirm-action";
+import { Page, PageHeader, Section } from "@/components/app/page";
+import { StatusBadge } from "@/components/app/status-badge";
+import { Hash } from "@/components/hash";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useSignAndRun } from "@/features/funds/sign";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { api } from "./api";
+import { budgetLine } from "./budget";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
-import { budgetLine } from "./remoras-page";
+import { useBudget } from "./use-budget";
+
+const must = <T,>(r: { ok: true; data: T } | { ok: false; error: string }): T => {
+  if (!r.ok) throw new Error(r.error);
+  return r.data;
+};
 
 /** Runs an owner transaction from the server, then its confirm; toasts the human error (N6). */
 function useOwnerTx() {
@@ -38,231 +59,84 @@ function useOwnerTx() {
   return { run, busy, go };
 }
 
-const must = <T,>(r: { ok: true; data: T } | { ok: false; error: string }): T => {
-  if (!r.ok) throw new Error(r.error);
-  return r.data;
-};
+type Tab = "overview" | "activity" | "settings";
 
-function Controls({ r, reload }: { r: RemoraView; reload: () => void }) {
+/** Pause/resume needs the shared signer; kept separate from the menu so the JSX stays flat. */
+function PauseButton({ r, reload }: { r: RemoraView; reload: () => void }) {
   const { run, busy, go } = useOwnerTx();
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(r.name);
-  const [persona, setPersona] = useState(r.config.persona);
   const live = r.status === "active" || r.status === "shadow";
+  if (!live && r.status !== "paused") return null;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          {r.name}{" "}
-          <Badge variant={r.status === "paused" ? "destructive" : "secondary"}>{r.status}</Badge>
-          <span className="text-xs font-normal text-muted-foreground">
-            {r.template} · {r.network}
-          </span>
-        </CardTitle>
-        <CardDescription>
-          {r.status === "shadow"
-            ? `Shadow mode: it says what it would pay but pays nothing${r.shadowUntil ? ` until ${new Date(r.shadowUntil).toLocaleString()}` : ""}.`
-            : r.status === "creating"
-              ? "Waiting for its budget transaction."
-              : r.config.persona}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
-        <p className="text-muted-foreground">
-          Key {r.address ? `${r.address.slice(0, 10)}…` : "—"}
-          {r.discId ? ` · Disc ${r.discId.slice(0, 10)}…` : ""}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {r.status === "shadow" ? (
-            <Button
-              type="button"
-              size="sm"
-              disabled={!!busy}
-              onClick={() =>
-                void go("activate", async () => {
-                  must(await api.activate(r.id));
-                  reload();
-                  return `${r.name} is live.`;
-                })
-              }
-            >
-              Go live
-            </Button>
-          ) : null}
-          {live || r.status === "paused" ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!!busy}
-              onClick={() =>
-                void go("pause", async () => {
-                  const paused = r.status !== "paused";
-                  const out = must(await api.pause(r.id, paused));
-                  if (out.transaction) {
-                    await run(out.transaction);
-                    must(await api.pauseConfirm(r.id));
-                  }
-                  reload();
-                  return paused ? `${r.name} is paused.` : `${r.name} is back on.`;
-                })
-              }
-            >
-              {r.status === "paused" ? "Resume" : "Pause"}
-            </Button>
-          ) : null}
-          {r.discId ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!!busy}
-              onClick={() =>
-                void go("rotate", async () => {
-                  const out = must(await api.rotate(r.id));
-                  const digest = await run(out.transaction);
-                  must(await api.rotateConfirm(r.id, digest, out.keyId));
-                  reload();
-                  return "New key in place. The old one can't spend anymore.";
-                })
-              }
-            >
-              Rotate key
-            </Button>
-          ) : null}
-          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing((e) => !e)}>
-            Edit
-          </Button>
-          {r.status !== "retired" ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={!!busy}
-              onClick={() =>
-                void go("retire", async () => {
-                  const out = must(await api.retire(r.id));
-                  const digest = out.transaction ? await run(out.transaction) : undefined;
-                  must(await api.retireConfirm(r.id, digest));
-                  reload();
-                  return `${r.name} is retired. Its memory stays yours.`;
-                })
-              }
-            >
-              Retire
-            </Button>
-          ) : null}
-          {busy ? (
-            <span className="self-center text-muted-foreground">Working… check your wallet.</span>
-          ) : null}
-        </div>
-        {editing ? (
-          <div className="flex flex-col gap-2">
-            <Input
-              aria-label="Name"
-              value={name}
-              maxLength={40}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Textarea
-              aria-label="Persona"
-              rows={3}
-              value={persona}
-              onChange={(e) => setPersona(e.target.value)}
-            />
-            <Button
-              type="button"
-              size="sm"
-              className="self-start"
-              onClick={() =>
-                void go("edit", async () => {
-                  must(await api.edit(r.id, { name, persona }));
-                  setEditing(false);
-                  reload();
-                  return "Saved. The previous version is in the feed.";
-                })
-              }
-            >
-              Save
-            </Button>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+    <Button
+      type="button"
+      variant={r.status === "paused" ? "default" : "outline"}
+      disabled={!!busy}
+      onClick={() =>
+        void go("pause", async () => {
+          const paused = r.status !== "paused";
+          const out = must(await api.pause(r.id, paused));
+          if (out.transaction) {
+            await run(out.transaction);
+            must(await api.pauseConfirm(r.id));
+          }
+          reload();
+          return paused ? `${r.name} is paused.` : `${r.name} is back on.`;
+        })
+      }
+    >
+      {busy === "pause" ? <Spinner /> : null}
+      {r.status === "paused" ? "Resume" : "Pause"}
+    </Button>
   );
 }
 
-function BudgetCard({ r, reload }: { r: RemoraView; reload: () => void }) {
-  const meter = useLoad(() => api.budget(r.id), [r.id, r.discId], 30_000);
-  const { run, busy, go } = useOwnerTx();
-  const b = r.config.budget;
-  const [monthly, setMonthly] = useState(b ? usdc(b.windowLimit) : "1");
-  const [cap, setCap] = useState(b ? usdc(b.perPaymentCap) : "0.05");
-  const m = meter.data?.meter;
-  if (!b) return null;
-  const left = m?.window ? BigInt(m.window.limit) - BigInt(m.window.spent) : null;
+function headerActions(r: RemoraView, reload: () => void, setTab: (t: Tab) => void) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Budget</CardTitle>
-        <CardDescription>{budgetLine(r)}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
-        {m ? (
-          <p data-testid="budget-meter">
-            {left !== null ? `${usdc(left)} USDC left this ${b.window}` : ""} · spent{" "}
-            {usdc(m.spent)} in total{m.paused ? " · paused" : ""}
-            {m.forecast?.runsOutOn ? ` · at this pace it runs out on ${m.forecast.runsOutOn}` : ""}
-          </p>
-        ) : (
-          <p className="text-muted-foreground">{meter.error || "Reading the Disc…"}</p>
-        )}
-        {r.discId ? (
-          <div className="flex flex-wrap items-end gap-2">
-            <Input
-              className="w-28"
-              aria-label="Monthly limit"
-              value={monthly}
-              onChange={(e) => setMonthly(e.target.value)}
-            />
-            <Input
-              className="w-28"
-              aria-label="Per payment"
-              value={cap}
-              onChange={(e) => setCap(e.target.value)}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!!busy}
-              onClick={() =>
-                void go("budget", async () => {
-                  const limit = parseUsdc(monthly);
-                  const per = parseUsdc(cap);
-                  if (!limit || !per || per > limit)
-                    throw new Error("Set a monthly limit and a smaller per-payment cap.");
-                  const budget = {
-                    ...b,
-                    windowLimit: limit.toString(),
-                    perPaymentCap: per.toString(),
-                  };
-                  const out = must(await api.budgetTx(r.id, budget));
-                  if (!out.transaction) throw new Error("This remora has no Disc.");
-                  const digest = await run(out.transaction);
-                  must(await api.budgetConfirm(r.id, digest, budget));
-                  reload();
-                  void meter.refresh();
-                  return "Budget changed: the old Disc is revoked and the new one is live.";
-                })
-              }
-            >
-              Change budget
-            </Button>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+    <>
+      {r.status === "shadow" ? (
+        <GoLive r={r} reload={reload} />
+      ) : (
+        <PauseButton r={r} reload={reload} />
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="More actions">
+            <Ellipsis />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setTab("settings")}>Edit</DropdownMenuItem>
+          {r.discId ? (
+            <DropdownMenuItem onSelect={() => setTab("settings")}>Rotate key</DropdownMenuItem>
+          ) : null}
+          {r.status !== "retired" ? (
+            <DropdownMenuItem variant="destructive" onSelect={() => setTab("settings")}>
+              Retire
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+}
+
+function GoLive({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const { busy, go } = useOwnerTx();
+  return (
+    <Button
+      type="button"
+      disabled={!!busy}
+      onClick={() =>
+        void go("activate", async () => {
+          must(await api.activate(r.id));
+          reload();
+          return `${r.name} is live.`;
+        })
+      }
+    >
+      {busy === "activate" ? <Spinner /> : null}
+      Go live
+    </Button>
   );
 }
 
@@ -279,14 +153,11 @@ function AskCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
     onDone();
   };
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Ask {r.name}</CardTitle>
-        <CardDescription>
-          It buys data when that helps, and tells you what each answer cost.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+    <Section
+      title={`Ask ${r.name}`}
+      description="It buys data when that helps, and tells you what each answer cost."
+    >
+      <div className="flex flex-col gap-2">
         <Textarea
           aria-label="Question"
           rows={2}
@@ -294,22 +165,19 @@ function AskCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <Button
-          type="button"
-          size="sm"
-          className="self-start"
-          disabled={busy || !q.trim()}
-          onClick={() => void ask()}
-        >
-          {busy ? "Thinking (and maybe paying)…" : "Ask"}
-        </Button>
+        <div className="flex justify-end">
+          <Button type="button" disabled={busy || !q.trim()} onClick={() => void ask()}>
+            {busy ? <Spinner /> : null}
+            {busy ? "Thinking…" : "Ask"}
+          </Button>
+        </div>
         {answer ? (
           <p className="whitespace-pre-wrap text-sm" data-testid="answer">
             {answer}
           </p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </Section>
   );
 }
 
@@ -325,41 +193,159 @@ function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
     onDone();
   };
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Teach {r.name}</CardTitle>
-        <CardDescription>
-          Plain words: “ignore incoming SUI under 0.01”, “always ping me for anything over 1 SUI”.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-sm">
-        <div className="flex gap-2">
-          <Input aria-label="Rule" value={text} onChange={(e) => setText(e.target.value)} />
-          <Button type="button" size="sm" disabled={!text.trim()} onClick={() => void teach()}>
-            Teach
-          </Button>
-        </div>
-        <ul className="flex flex-col gap-1" aria-label="Rules">
-          {(rules.data?.rules ?? []).map((x) => (
-            <li key={x.id} className="flex items-center justify-between gap-2">
-              <span>{x.text}</span>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void api.deleteRule(r.id, x.id).then(() => rules.refresh())}
-              >
-                Forget
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <Section
+      title={`Teach ${r.name}`}
+      description="Plain words: “ignore incoming SUI under 0.01”, “always ping me for anything over 1 SUI”."
+    >
+      <div className="flex gap-2">
+        <Input aria-label="Rule" value={text} onChange={(e) => setText(e.target.value)} />
+        <Button type="button" disabled={!text.trim()} onClick={() => void teach()}>
+          Teach
+        </Button>
+      </div>
+      <ul className="flex flex-col gap-1" aria-label="Rules">
+        {(rules.data?.rules ?? []).map((x) => (
+          <li key={x.id} className="flex items-center justify-between gap-2 text-sm">
+            <span>{x.text}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => void api.deleteRule(r.id, x.id).then(() => rules.refresh())}
+            >
+              Forget
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }
 
-function SchedulesCard({ r }: { r: RemoraView }) {
+function BudgetSection({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const meter = useBudget(r.id, Boolean(r.config.budget));
+  const { run } = useOwnerTx();
+  const b = r.config.budget;
+  const [monthly, setMonthly] = useState(b ? usdc(b.windowLimit) : "1");
+  const [cap, setCap] = useState(b ? usdc(b.perPaymentCap) : "0.05");
+  if (!b)
+    return (
+      <Section title="Budget" description="Read-only: this remora has no Disc and never pays.">
+        <p className="text-sm text-muted-foreground">No budget to change.</p>
+      </Section>
+    );
+
+  const change = async () => {
+    const limit = parseUsdc(monthly);
+    const per = parseUsdc(cap);
+    if (!limit || !per || per > limit)
+      throw new Error("Set a monthly limit and a smaller per-payment cap.");
+    const budget = { ...b, windowLimit: limit.toString(), perPaymentCap: per.toString() };
+    const out = must(await api.budgetTx(r.id, budget));
+    if (!out.transaction) throw new Error("This remora has no Disc.");
+    const digest = await run(out.transaction);
+    must(await api.budgetConfirm(r.id, digest, budget));
+    reload();
+    void meter.refresh();
+    toast.success("Budget changed: the old Disc is revoked and the new one is live.");
+  };
+
+  return (
+    <Section title="Budget" description={budgetLine(r)}>
+      <BudgetMeter meter={meter.meter} window={b.window} />
+      {meter.error ? <p className="text-sm text-destructive">{meter.error}</p> : null}
+      {r.discId ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="budget-monthly">Monthly limit</Label>
+            <Input
+              id="budget-monthly"
+              className="w-28"
+              aria-label="Monthly limit"
+              value={monthly}
+              onChange={(e) => setMonthly(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="budget-cap">Per payment</Label>
+            <Input
+              id="budget-cap"
+              className="w-28"
+              aria-label="Per payment"
+              value={cap}
+              onChange={(e) => setCap(e.target.value)}
+            />
+          </div>
+          <ConfirmAction
+            trigger={
+              <Button type="button" variant="outline">
+                Change budget
+              </Button>
+            }
+            title={`Change ${r.name}'s budget?`}
+            description="This revokes the old Disc and issues a new one. You'll sign one transaction."
+            confirmLabel="Change budget"
+            tone="default"
+            onConfirm={change}
+          />
+        </div>
+      ) : null}
+    </Section>
+  );
+}
+
+function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const [name, setName] = useState(r.name);
+  const [persona, setPersona] = useState(r.config.persona);
+  const [busy, setBusy] = useState(false);
+  const changed = name !== r.name || persona !== r.config.persona;
+  const save = async () => {
+    setBusy(true);
+    try {
+      must(await api.edit(r.id, { name, persona }));
+      reload();
+      toast.success("Saved. The previous version is in the feed.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Section title="Identity" description="The name and the one-sentence persona it answers as.">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="remora-name">Name</Label>
+          <Input
+            id="remora-name"
+            aria-label="Name"
+            value={name}
+            maxLength={40}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="remora-persona">Persona</Label>
+          <Textarea
+            id="remora-persona"
+            aria-label="Persona"
+            rows={3}
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button type="button" disabled={busy || !changed} onClick={() => void save()}>
+            {busy ? <Spinner /> : null}
+            Save
+          </Button>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function SchedulesSection({ r }: { r: RemoraView }) {
   const [when, setWhen] = useState("weekdays at 8am");
   const [question, setQuestion] = useState("");
   const preview = useLoad(() => api.schedulePreview(when), [when]);
@@ -373,115 +359,276 @@ function SchedulesCard({ r }: { r: RemoraView }) {
     void list.refresh();
   };
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Schedules</CardTitle>
-        <CardDescription>A question it asks on its own, and tells you the answer.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-sm">
-        <div className="grid gap-2 sm:grid-cols-[12rem_1fr_auto]">
-          <Input aria-label="When" value={when} onChange={(e) => setWhen(e.target.value)} />
-          <Input
-            aria-label="Scheduled question"
-            placeholder="What are the odds for this weekend?"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-          />
-          <Button
-            type="button"
-            size="sm"
-            disabled={!preview.data || !question.trim()}
-            onClick={() => void add()}
-          >
-            Add
-          </Button>
-        </div>
-        <p className="text-muted-foreground" data-testid="schedule-preview">
-          {preview.data
-            ? `${preview.data.human}: next ${preview.data.next.map((t) => new Date(t).toLocaleString()).join(", ")}`
-            : preview.error || "…"}
-        </p>
-        <ul className="flex flex-col gap-1">
-          {schedules.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-2">
-              <span>
-                {s.human}: {s.question}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void api.removeSchedule(r.id, s.id).then(() => list.refresh())}
-              >
-                Remove
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <Section
+      title="Schedules"
+      description="A question it asks on its own, and tells you the answer."
+    >
+      <div className="grid gap-2 sm:grid-cols-[12rem_1fr_auto]">
+        <Input aria-label="When" value={when} onChange={(e) => setWhen(e.target.value)} />
+        <Input
+          aria-label="Scheduled question"
+          placeholder="What are the odds for this weekend?"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+        />
+        <Button
+          type="button"
+          disabled={!preview.data || !question.trim()}
+          onClick={() => void add()}
+        >
+          Add
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground" data-testid="schedule-preview">
+        {preview.data
+          ? `${preview.data.human}: next ${preview.data.next.map((t) => new Date(t).toLocaleString()).join(", ")}`
+          : preview.error || "…"}
+      </p>
+      <ul className="flex flex-col gap-1">
+        {schedules.map((s) => (
+          <li key={s.id} className="flex items-center justify-between gap-2 text-sm">
+            <span>
+              {s.human}: {s.question}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => void api.removeSchedule(r.id, s.id).then(() => list.refresh())}
+            >
+              Remove
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }
 
-function SourcesCard({ r }: { r: RemoraView }) {
+function SourcesSection({ r }: { r: RemoraView }) {
   const s = useLoad(() => api.sources(r.id), [r.id], 30_000);
   const rows = s.data?.sources ?? [];
   if (!rows.length) return null;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">What its sources are worth</CardTitle>
-        <CardDescription>From your 👍/👎; written to its memory as it learns.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ul className="flex flex-col gap-1 text-sm">
-          {rows.map((x) => (
-            <li key={x.payee}>
-              {x.payee}: {x.calls} calls, {x.useful} useful, {x.noise} noise, {usdc(x.spent)} USDC
-              spent
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <Section title="Sources" description="From your 👍/👎; written to its memory as it learns.">
+      <ul className="flex flex-col gap-2 text-sm">
+        {rows.map((x) => (
+          <li key={x.payee} className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="font-medium">{x.payee}</span>
+            <span className="text-muted-foreground">
+              {x.calls} calls · {x.useful} useful · {x.noise} noise · {usdc(x.spent)} USDC spent
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function KeysSection({ r }: { r: RemoraView }) {
+  return (
+    <Section title="Keys" description="The key that acts, and the Disc that caps it.">
+      <dl className="flex flex-col gap-2 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <dt className="text-muted-foreground">Spending key</dt>
+          <dd className="min-w-0 max-w-full">{r.address ? <Hash value={r.address} /> : "—"}</dd>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <dt className="text-muted-foreground">Disc</dt>
+          <dd className="min-w-0 max-w-full">{r.discId ? <Hash value={r.discId} /> : "—"}</dd>
+        </div>
+      </dl>
+    </Section>
+  );
+}
+
+function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const { run } = useOwnerTx();
+  return (
+    <Section
+      title="Danger zone"
+      tone="danger"
+      description="Both actions need a signature and take effect immediately."
+    >
+      <div className="flex flex-wrap gap-2">
+        {r.discId ? (
+          <ConfirmAction
+            trigger={
+              <Button type="button" variant="outline" className="text-destructive">
+                <KeyRound /> Rotate key
+              </Button>
+            }
+            title={`Rotate ${r.name}'s key?`}
+            description="The old key cannot spend after this. The new key is written to its memory."
+            confirmLabel="Rotate key"
+            onConfirm={async () => {
+              const out = must(await api.rotate(r.id));
+              const digest = await run(out.transaction);
+              must(await api.rotateConfirm(r.id, digest, out.keyId));
+              reload();
+              toast.success("New key in place. The old one can't spend anymore.");
+            }}
+          />
+        ) : null}
+        {r.status !== "retired" ? (
+          <ConfirmAction
+            trigger={
+              <Button type="button" variant="outline" className="text-destructive">
+                <Trash2 /> Retire
+              </Button>
+            }
+            title={`Retire ${r.name}?`}
+            description="Its Disc is revoked and it stops for good. Its memory stays yours."
+            confirmLabel="Retire"
+            onConfirm={async () => {
+              const out = must(await api.retire(r.id));
+              const digest = out.transaction ? await run(out.transaction) : undefined;
+              must(await api.retireConfirm(r.id, digest));
+              reload();
+              toast.success(`${r.name} is retired. Its memory stays yours.`);
+            }}
+          />
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
+function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
+  return (
+    <div className="flex flex-col gap-8">
+      <IdentitySection r={r} reload={reload} />
+      <BudgetSection r={r} reload={reload} />
+      {r.template === "scout" ? <SchedulesSection r={r} /> : null}
+      {r.template === "scout" ? <SourcesSection r={r} /> : null}
+      <KeysSection r={r} />
+      <DangerSection r={r} reload={reload} />
+    </div>
   );
 }
 
 function Remora({ id }: { id: string }) {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const remora = useLoad(() => api.remora(id), [id]);
+  const tab = (params.get("tab") as Tab | null) ?? "overview";
   // N13: the first run lands within a minute; poll faster right after creation.
   const feed = useLoad(() => api.feed({ remora: id }), [id], params.get("new") ? 5_000 : 20_000);
   const r = remora.data?.remora;
-  useShellTitle(r?.name ?? "Remora");
-  if (remora.error) return <p className="p-6 text-sm text-destructive">{remora.error}</p>;
-  if (!r) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
+
+  if (remora.error) {
+    return (
+      <Page title="Remora">
+        <Alert variant="destructive">
+          <AlertTriangle />
+          <AlertTitle>Couldn't read this remora</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-2">
+            {remora.error}
+            <Button variant="outline" size="sm" onClick={() => void remora.refresh()}>
+              Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </Page>
+    );
+  }
+  if (!r) {
+    return (
+      <Page title="Remora">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-40 w-full" />
+      </Page>
+    );
+  }
+
   const reload = () => void remora.refresh();
   const refreshFeed = () => void feed.refresh();
+  const setTab = (next: Tab) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", next);
+    setParams(params);
+  };
+  const events = feed.data?.events ?? [];
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 overflow-y-auto p-4">
-      <Controls r={r} reload={reload} />
-      {params.get("new") &&
-      !feed.data?.events.some((e) => e.type === "answer" || e.type === "action") ? (
-        <p className="text-sm text-muted-foreground">Getting its first run ready…</p>
+    <Page title={r.name} description={r.config.persona}>
+      <PageHeader
+        title={r.name}
+        badge={<StatusBadge status={r.status} />}
+        description={r.config.persona}
+        actions={headerActions(r, reload, setTab)}
+      />
+
+      {r.status === "shadow" ? (
+        <Alert variant="warning">
+          <AlertTitle>Shadow mode</AlertTitle>
+          <AlertDescription>
+            It shows what it would pay, but pays nothing
+            {r.shadowUntil ? ` until ${new Date(r.shadowUntil).toLocaleDateString()}` : ""}.
+          </AlertDescription>
+        </Alert>
       ) : null}
-      {r.template === "scout" ? <AskCard r={r} onDone={refreshFeed} /> : null}
-      {r.template === "sentinel" ? <TeachCard r={r} onDone={refreshFeed} /> : null}
-      <BudgetCard r={r} reload={reload} />
-      {r.template === "scout" ? <SchedulesCard r={r} /> : null}
-      <SourcesCard r={r} />
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">Activity</h2>
-        <Link className="text-sm underline" to={`/memory?remora=${r.id}`}>
-          Its memory
-        </Link>
-      </div>
-      <FeedList items={feed.data?.events ?? []} />
-    </div>
+      {r.status === "creating" ? (
+        <Alert>
+          <AlertTitle>Waiting for its budget transaction</AlertTitle>
+          <AlertDescription>This page updates itself when the Disc lands.</AlertDescription>
+        </Alert>
+      ) : null}
+      {params.get("new") && !events.some((e) => e.type === "answer" || e.type === "action") ? (
+        <Alert>
+          <AlertTitle>Getting its first run ready…</AlertTitle>
+          <AlertDescription>Nothing else to do; it will show up here.</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
+        <TabsList variant="line" className="max-w-full overflow-x-auto">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="flex flex-col gap-8 pt-4">
+          {r.template === "scout" ? (
+            <AskCard r={r} onDone={refreshFeed} />
+          ) : (
+            <TeachCard r={r} onDone={refreshFeed} />
+          )}
+          <BudgetSection r={r} reload={reload} />
+          <Section
+            title="Recent activity"
+            actions={
+              <Button asChild variant="ghost" size="sm" className="-mr-3">
+                <Link to={`?tab=activity`}>See all</Link>
+              </Button>
+            }
+          >
+            <FeedList items={events.slice(0, 5)} />
+          </Section>
+        </TabsContent>
+
+        <TabsContent value="activity" className="flex flex-col gap-4 pt-4">
+          <div className="flex justify-end">
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/memory?remora=${r.id}`}>Its memory</Link>
+            </Button>
+          </div>
+          <FeedList items={events} />
+        </TabsContent>
+
+        <TabsContent value="settings" className="pt-4">
+          <SettingsTab r={r} reload={reload} />
+        </TabsContent>
+      </Tabs>
+    </Page>
   );
 }
 
 export function RemoraPage() {
   const { id = "" } = useParams();
-  return <RequireOwner what="this remora">{() => <Remora id={id} />}</RequireOwner>;
+  return (
+    <RequireOwner what="this remora" needsWallet>
+      {() => <Remora id={id} />}
+    </RequireOwner>
+  );
 }

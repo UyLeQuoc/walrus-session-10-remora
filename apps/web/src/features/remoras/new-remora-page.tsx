@@ -1,16 +1,20 @@
 /**
- * `/remoras/new` (A6 + B1·ui): pick a template, name it, set its budget or what it watches, sign one
- * transaction for the Disc (Scout) or none (Sentinel), and land on its page while its first run (N13)
- * comes in. Each wait says what it's waiting for (N6).
+ * `/remoras/new` (A6 + B1·ui): pick a template as a card, name it, set its budget or what it
+ * watches, sign one transaction for the Disc (Scout) or none (Sentinel), and land on its page while
+ * its first run (N13) comes in. Each wait says what it is waiting for (N6).
  */
 import type { Template } from "@remora/schema";
+import { Package, Shield } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { useShellTitle } from "@/app/shell";
+import { useNavigate, useSearchParams } from "react-router";
+import { Page, PageHeader } from "@/components/app/page";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useSignAndRun } from "@/features/funds/sign";
 import { useNetworks } from "@/features/network/use-networks";
@@ -23,16 +27,23 @@ type Step = "idle" | "creating" | "signing" | "confirming";
 const STEP_TEXT: Record<Step, string> = {
   idle: "",
   creating: "Creating its key…",
-  signing: "Sign the budget (one transaction) in your wallet…",
+  signing: "Sign the budget in your wallet…",
   confirming: "Confirming onchain…",
+};
+
+const PAYEE_NAME: Record<string, string> = {
+  "reef:sui-risk": "Sui risk check",
+  "reef:odds": "Odds",
+  "reef:brief": "Brief",
 };
 
 function Wizard({ owner }: { owner: string }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const run = useSignAndRun();
   const { network, networks } = useNetworks();
   const templates = useLoad(() => api.templates(), []);
-  const [slug, setSlug] = useState<string>("scout");
+  const [slug, setSlug] = useState(() => params.get("template") ?? "scout");
   const [name, setName] = useState("");
   const [monthly, setMonthly] = useState("1");
   const [perPayment, setPerPayment] = useState("0.05");
@@ -42,6 +53,7 @@ function Wizard({ owner }: { owner: string }) {
   const list = Object.entries(templates.data?.templates ?? {}) as [string, Template][];
   const chosen = templates.data?.templates[slug];
   const coinType = networks.find((n) => n.network === network)?.usdcCoinType;
+  const busy = step !== "idle";
 
   const create = async () => {
     setError("");
@@ -94,96 +106,191 @@ function Wizard({ owner }: { owner: string }) {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 overflow-y-auto p-4">
-      <fieldset className="grid gap-3 sm:grid-cols-2">
-        <legend className="sr-only">Template</legend>
-        {list.map(([s, t]) => (
-          <button
-            key={s}
-            type="button"
-            aria-pressed={slug === s}
-            onClick={() => setSlug(s)}
-            className={cn("rounded-xl text-left", slug === s && "ring-2 ring-primary")}
+    <Page title="New remora" description="Start from a template and set its leash.">
+      <PageHeader
+        title="New remora"
+        description="Pick what it does. You can change the details later."
+      />
+
+      <div className="flex w-full flex-col gap-6">
+        <RadioGroup
+          aria-label="Template"
+          value={slug}
+          onValueChange={setSlug}
+          className="grid gap-3 sm:grid-cols-2"
+        >
+          {list.map(([s, t]) => {
+            const spends = Boolean(t.budgetSuggestion.perPaymentUsd);
+            return (
+              <FieldLabel
+                key={s}
+                htmlFor={`template-${s}`}
+                className={cn(
+                  "cursor-pointer items-stretch gap-3 rounded-xl border p-5",
+                  slug === s && "border-primary bg-primary/5",
+                )}
+              >
+                <RadioGroupItem id={`template-${s}`} value={s} className="mt-1" />
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {spends ? (
+                      <Package className="size-4 text-primary" />
+                    ) : (
+                      <Shield className="size-4 text-primary" />
+                    )}
+                    <span className="font-semibold">{t.name}</span>
+                    <Badge variant={spends ? "accent" : "outline"}>
+                      {spends ? "Spends USDC" : "Read-only"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t.summary}</p>
+                </div>
+              </FieldLabel>
+            );
+          })}
+        </RadioGroup>
+
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <Field>
+              <FieldLabel htmlFor="remora-name">Name</FieldLabel>
+              <Input
+                id="remora-name"
+                placeholder={chosen?.name ?? "Name"}
+                value={name}
+                maxLength={40}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <FieldDescription>What you will call it in the feed.</FieldDescription>
+            </Field>
+
+            {slug === "scout" ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="monthly">Monthly limit (USDC)</FieldLabel>
+                    <Input
+                      id="monthly"
+                      inputMode="decimal"
+                      value={monthly}
+                      onChange={(e) => setMonthly(e.target.value)}
+                    />
+                    <FieldDescription>
+                      Its Disc cannot spend more than this a month.
+                    </FieldDescription>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="per-payment">Most it pays at once (USDC)</FieldLabel>
+                    <Input
+                      id="per-payment"
+                      inputMode="decimal"
+                      value={perPayment}
+                      onChange={(e) => setPerPayment(e.target.value)}
+                    />
+                    <FieldDescription>Anything above this asks you first.</FieldDescription>
+                  </Field>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">It can pay</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(chosen?.payees ?? []).map((payee) => (
+                      <Badge key={payee} variant="outline" title={payee}>
+                        {PAYEE_NAME[payee] ?? payee}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Sui enforces the budget through a Disc, not us. It pays only these sources;
+                    anything over{" "}
+                    {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"} USDC
+                    asks you first.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <Field>
+                <FieldLabel htmlFor="watch">Addresses to watch</FieldLabel>
+                <Textarea
+                  id="watch"
+                  rows={3}
+                  value={watch}
+                  onChange={(e) => setWatch(e.target.value)}
+                />
+                <FieldDescription>
+                  One per line. Read-only: Sentinel has no budget.
+                </FieldDescription>
+              </Field>
+            )}
+          </div>
+
+          <aside
+            aria-label="Summary"
+            className="flex flex-col gap-4 rounded-xl border bg-card p-5 lg:sticky lg:top-6"
           >
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>{t.name}</CardTitle>
-                <CardDescription>{t.summary}</CardDescription>
-              </CardHeader>
-            </Card>
-          </button>
-        ))}
-      </fieldset>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="remora-name">Name</Label>
-        <Input
-          id="remora-name"
-          placeholder={chosen?.name ?? "Name"}
-          value={name}
-          maxLength={40}
-          onChange={(e) => setName(e.target.value)}
-        />
-      </div>
-      {slug === "scout" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="monthly">Monthly limit (USDC)</Label>
-            <Input
-              id="monthly"
-              inputMode="decimal"
-              value={monthly}
-              onChange={(e) => setMonthly(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="per-payment">Most it pays at once (USDC)</Label>
-            <Input
-              id="per-payment"
-              inputMode="decimal"
-              value={perPayment}
-              onChange={(e) => setPerPayment(e.target.value)}
-            />
-          </div>
-          <p className="text-sm text-muted-foreground sm:col-span-2">
-            Sui enforces this budget through a Disc, not us. It pays only{" "}
-            {(chosen?.payees ?? []).join(", ")}; anything over{" "}
-            {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"} USDC asks
-            you first.
-          </p>
+            <h2 className="text-base font-semibold">Summary</h2>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Template</dt>
+              <dd className="truncate text-right font-medium">{chosen?.name ?? "—"}</dd>
+              <dt className="text-muted-foreground">Name</dt>
+              <dd className="truncate text-right font-medium">
+                {name.trim() || chosen?.name || "—"}
+              </dd>
+              {slug === "scout" ? (
+                <>
+                  <dt className="text-muted-foreground">Monthly limit</dt>
+                  <dd className="text-right font-medium tabular-nums">{monthly || "—"} USDC</dd>
+                  <dt className="text-muted-foreground">Most at once</dt>
+                  <dd className="text-right font-medium tabular-nums">{perPayment || "—"} USDC</dd>
+                  <dt className="text-muted-foreground">Can pay</dt>
+                  <dd className="text-right font-medium">
+                    {(chosen?.payees ?? []).length} sources
+                  </dd>
+                </>
+              ) : (
+                <>
+                  <dt className="text-muted-foreground">Budget</dt>
+                  <dd className="text-right font-medium">None, read-only</dd>
+                </>
+              )}
+            </dl>
+            <p className="rounded-lg bg-muted/60 p-3 text-sm">
+              {slug === "scout" ? (
+                <>
+                  You'll sign <strong>1 transaction</strong> to create its Disc.
+                </>
+              ) : (
+                <>No signature needed. Sentinel only reads.</>
+              )}
+            </p>
+
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>Couldn't create it</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <Button
+              type="button"
+              className="w-full"
+              disabled={busy || !list.length}
+              onClick={() => void create()}
+              data-testid="create-step"
+            >
+              {busy ? <Spinner /> : null}
+              {busy ? STEP_TEXT[step] : `Create ${chosen?.name ?? "remora"}`}
+            </Button>
+          </aside>
         </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="watch">Addresses to watch</Label>
-          <Textarea id="watch" rows={3} value={watch} onChange={(e) => setWatch(e.target.value)} />
-          <p className="text-sm text-muted-foreground">
-            Read-only: Sentinel has no budget and never pays.
-          </p>
-        </div>
-      )}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          disabled={step !== "idle" || !list.length}
-          onClick={() => void create()}
-        >
-          Create {chosen?.name ?? "remora"}
-        </Button>
-        <span
-          className="text-sm text-muted-foreground"
-          aria-live="polite"
-          data-testid="create-step"
-        >
-          {STEP_TEXT[step]}
-        </span>
       </div>
-    </div>
+    </Page>
   );
 }
 
 export function NewRemoraPage() {
-  useShellTitle("New remora");
   return (
-    <RequireOwner what="the create wizard">{(owner) => <Wizard owner={owner} />}</RequireOwner>
+    <RequireOwner what="the create wizard" needsWallet>
+      {(owner) => <Wizard owner={owner} />}
+    </RequireOwner>
   );
 }
