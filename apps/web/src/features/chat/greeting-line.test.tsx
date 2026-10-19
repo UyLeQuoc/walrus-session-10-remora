@@ -18,7 +18,7 @@ describe("greeting line", () => {
     const quiet = container.querySelector(".sr-only");
     expect(quiet?.textContent).toBe(spoken);
     expect(quiet?.closest("[aria-hidden='true']")).toBeNull();
-    const hello = container.querySelector(".font-greeting");
+    const hello = container.querySelector("[data-slot='hello']");
     expect(hello?.textContent).toContain("Oh, hello");
     expect(hello?.textContent).toContain("✦");
     expect(container.textContent).toContain("What are we figuring out today?");

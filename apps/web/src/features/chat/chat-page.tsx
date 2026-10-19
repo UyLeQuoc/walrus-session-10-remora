@@ -1,9 +1,7 @@
 import type { UIMessage } from "ai";
-import { Brain } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNewChatTick, useOpenTick, useShellTitle } from "@/app/shell";
-import { Button } from "@/components/ui/button";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -23,9 +21,7 @@ import { ComposerShell } from "@/features/chat/composer-shell";
 import { Examples, rememberPendingAsk, takePendingAsk } from "@/features/chat/examples";
 import { FollowUpRow } from "@/features/chat/follow-up-row";
 import { GreetingLine } from "@/features/chat/greeting-line";
-import { HowStrip } from "@/features/chat/how-strip";
 import { MemoryPanel } from "@/features/chat/memory-panel";
-import { MemoryStrip } from "@/features/chat/memory-strip";
 import { RememberDialog } from "@/features/chat/remember-dialog";
 import { mergeCards } from "@/features/chat/remembered";
 import { RememberedList } from "@/features/chat/remembered-list";
@@ -35,6 +31,7 @@ import { Thinking } from "@/features/chat/streaming-text";
 import type { UiMessage } from "@/features/chat/transcript";
 import { useChatCitations } from "@/features/chat/use-chat-citations";
 import { useChatMemories } from "@/features/chat/use-chat-memories";
+import { useChatModel } from "@/features/chat/use-chat-model";
 import { useChatThread } from "@/features/chat/use-chat-thread";
 import { questionBefore, useCompare } from "@/features/chat/use-compare";
 import { useComposerMeter } from "@/features/chat/use-composer-meter";
@@ -50,15 +47,8 @@ import { useTranscript } from "@/features/chat/use-transcript";
 import { useMe } from "@/features/me/use-me";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
-const PAGE_META = {
-  title: "hippo — the chatbot that remembers you, on memory you own",
-  description:
-    "Chat on the web, Telegram, Discord or a CLI and hippo remembers you between sessions. Your memory lives on Walrus, in a Sui account you own and can revoke.",
-  path: "/",
-  index: true,
-};
-
 export function ChatPage() {
+  const chatModel = useChatModel();
   const {
     messages,
     busy,
@@ -72,7 +62,7 @@ export function ChatPage() {
     openConversation,
     replaceMessages,
     status,
-  } = useChatThread();
+  } = useChatThread({ model: chatModel.id });
   const citations = useChatCitations(conversationId, messages as UiMessage[], (next) => {
     replaceMessages(next as UIMessage[]);
   });
@@ -87,7 +77,7 @@ export function ChatPage() {
   const transcript = useTranscript(loadId);
   const newChatTick = useNewChatTick();
   const openTick = useOpenTick();
-  const seenTick = useRef(newChatTick);
+  const seenTick = useRef(0);
   const seenOpen = useRef(openTick);
   const applied = useRef(0);
   const wasBusy = useRef(false);
@@ -155,7 +145,13 @@ export function ChatPage() {
 
   const title = useMemo(() => threadTitle(messages), [messages]);
   useShellTitle(title);
-  usePageMeta(PAGE_META);
+  usePageMeta({
+    title: title === "New chat" ? "Chat · Remora" : `${title} · Remora`,
+    description:
+      "Talk to your remoras on the web, Telegram or Discord. Their memory lives on Walrus, in a Sui account you own and can revoke.",
+    path: "/chat",
+    index: false,
+  });
   const greeting = useGreeting(newChatTick, messages.length === 0);
 
   const reloadAndAsk = (value: string) => {
@@ -167,14 +163,6 @@ export function ChatPage() {
   return (
     <div className="relative flex min-h-0 flex-1 overflow-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {panel.open ? null : (
-          <div className="flex justify-end px-4 pt-2">
-            <Button type="button" variant="ghost" onClick={panel.show}>
-              <Brain />
-              Open memory
-            </Button>
-          </div>
-        )}
         {transcript.loading && messages.length === 0 ? (
           <div
             className="flex flex-1 flex-col gap-3 px-4 py-6"
@@ -189,7 +177,6 @@ export function ChatPage() {
             <div data-slot="empty-cluster" className="flex w-full max-w-xl flex-col gap-10">
               <div data-slot="greeting" className="flex flex-col gap-6 text-center">
                 <GreetingLine greeting={greeting} />
-                <HowStrip />
               </div>
               <ComposerDock
                 text={text}
@@ -198,6 +185,9 @@ export function ChatPage() {
                 stop={() => void stop()}
                 busy={busy}
                 messages={messages}
+                model={chatModel}
+                panelOpen={panel.open}
+                onTogglePanel={panel.open ? panel.close : panel.show}
               />
               <div className="flex flex-col items-start gap-3">
                 <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
@@ -255,6 +245,9 @@ export function ChatPage() {
                 stop={stop}
                 busy={busy}
                 messages={messages}
+                model={chatModel}
+                panelOpen={panel.open}
+                onTogglePanel={panel.open ? panel.close : panel.show}
               />
             </div>
           </>
@@ -326,6 +319,9 @@ function ComposerDock({
   stop,
   busy,
   messages,
+  model,
+  panelOpen,
+  onTogglePanel,
 }: {
   text: string;
   setText: (value: string) => void;
@@ -333,19 +329,22 @@ function ComposerDock({
   stop: () => void;
   busy: boolean;
   messages: UIMessage[];
+  model: ReturnType<typeof useChatModel>;
+  panelOpen: boolean;
+  onTogglePanel: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Composer
-        text={text}
-        setText={setText}
-        send={send}
-        stop={stop}
-        busy={busy}
-        messages={messages}
-      />
-      <MemoryStrip />
-    </div>
+    <Composer
+      text={text}
+      setText={setText}
+      send={send}
+      stop={stop}
+      busy={busy}
+      messages={messages}
+      model={model}
+      panelOpen={panelOpen}
+      onTogglePanel={onTogglePanel}
+    />
   );
 }
 
@@ -356,6 +355,9 @@ function Composer({
   stop,
   busy,
   messages,
+  model,
+  panelOpen,
+  onTogglePanel,
 }: {
   text: string;
   setText: (value: string) => void;
@@ -363,6 +365,9 @@ function Composer({
   stop: () => void;
   busy: boolean;
   messages: UIMessage[];
+  model: ReturnType<typeof useChatModel>;
+  panelOpen: boolean;
+  onTogglePanel: () => void;
 }) {
   const [pinned, setPinned] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -380,7 +385,7 @@ function Composer({
     pinned: guided,
     apply: applyCommand,
   });
-  const { me } = useMe();
+  const { me, memories } = useMe();
   const memory = useMemoryToggle(me?.memoryEnabled);
   const meter = useComposerMeter(messages, text);
   useEffect(() => {
@@ -431,6 +436,15 @@ function Composer({
                   }
                 : undefined
             }
+            memoryStatus={{
+              stored: memories.filter((m) => m.status === "stored").length,
+              total: memories.length,
+              mode: me?.mode ?? null,
+              enabled: me?.memoryEnabled !== false,
+            }}
+            model={{ value: model.id, onChange: model.select }}
+            panelOpen={panelOpen}
+            onTogglePanel={onTogglePanel}
             onKeyDown={(e) => {
               if (slash.onKeyDown(e.key) === "handled") {
                 e.preventDefault();

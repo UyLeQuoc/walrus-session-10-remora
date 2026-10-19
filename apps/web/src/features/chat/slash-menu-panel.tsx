@@ -31,9 +31,7 @@ export function CommandGuide({
               }}
             >
               <span className="shrink-0 font-medium">
-                <span className="text-[#156BC1] dark:text-[#8EBEF5]">
-                  {line.command.split(" ")[0]}
-                </span>
+                <span className="text-primary">{line.command.split(" ")[0]}</span>
                 {line.command.includes(" ")
                   ? ` ${line.command.slice(line.command.indexOf(" ") + 1)}`
                   : ""}
