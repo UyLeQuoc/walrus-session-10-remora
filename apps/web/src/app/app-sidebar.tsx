@@ -1,23 +1,13 @@
-import {
-  BookOpen,
-  Brain,
-  Fish,
-  Inbox,
-  Library,
-  MessagesSquare,
-  Rocket,
-  Search,
-  Send,
-  Settings,
-  ShieldCheck,
-  SquarePen,
-  Trash2,
-  Wallet,
-} from "lucide-react";
+/**
+ * B4: five navigation items, Recents, a compact setup card while setup is unfinished, and the
+ * account menu. Get started, Verify, Settings, the guide and the channel card moved into the menu.
+ */
+import { Brain, Fish, Inbox, Search, SquarePen, Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
-import { WalletAccount } from "@/app/wallet-account";
-import { ChannelsCard } from "@/components/channel-links";
+import { navActive } from "@/app/nav-active";
+import { AccountMenu } from "@/components/app/account-menu";
+import { SetupChecklist } from "@/components/app/setup-checklist";
 import { Logo } from "@/components/logo";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,14 +21,23 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { filterConversations } from "@/features/chat/conversations-filter";
 import { useConversations } from "@/features/chat/use-conversations";
+import { api } from "@/features/remoras/api";
+import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { DISCORD_BOT, TELEGRAM_BOT } from "@/lib/channels";
+
+const NAV = [
+  { to: "/", label: "Home", icon: Fish },
+  { to: "/approvals", label: "Approvals", icon: Inbox },
+  { to: "/funds", label: "Funds", icon: Wallet },
+  { to: "/memory", label: "Memory", icon: Brain },
+] as const;
 
 export function AppSidebar({
   onNewChat,
@@ -57,12 +56,22 @@ export function AppSidebar({
   const [text, setText] = useState("");
   const query = useDebouncedValue(text);
   const shown = filterConversations(items, query);
+  const { owner } = useOwner();
+  const inbox = useLoad(
+    () =>
+      owner
+        ? api.approvals()
+        : Promise.resolve({ ok: true as const, data: { approvals: [] as never[] } }),
+    [owner],
+    30_000,
+  );
+  const pending = inbox.data?.approvals.length ?? 0;
 
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <Link to="/" className="flex items-center rounded-md px-2 py-1.5" onClick={closeOnPhone}>
-          <Logo variant={collapsed ? "mark" : "lockup"} wordSize={18} />
+          <Logo size={collapsed ? 24 : 28} tone="primary" background withText={!collapsed} />
         </Link>
       </SidebarHeader>
       <SidebarContent className="overflow-hidden">
@@ -81,50 +90,27 @@ export function AppSidebar({
                   <span>New chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {(
-                [
-                  ["/onboarding", "Get started", Rocket],
-                  ["/remoras", "Remoras", Fish],
-                  ["/funds", "Funds", Wallet],
-                  ["/memory", "Memory", Brain],
-                  ["/approvals", "Approvals", Inbox],
-                  ["/verify", "Verify", ShieldCheck],
-                  ["/settings", "Settings", Settings],
-                ] as const
-              ).map(([to, label, Icon]) => (
+              {NAV.map(({ to, label, icon: Icon }) => (
                 <SidebarMenuItem key={to}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(to)}>
+                  <SidebarMenuButton asChild isActive={navActive(to, pathname)} tooltip={label}>
                     <Link to={to} onClick={closeOnPhone}>
                       <Icon />
                       <span>{label}</span>
                     </Link>
                   </SidebarMenuButton>
+                  {to === "/approvals" && pending > 0 ? (
+                    <SidebarMenuBadge>{pending}</SidebarMenuBadge>
+                  ) : null}
                 </SidebarMenuItem>
               ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/me"}>
-                  <Link to="/me" onClick={closeOnPhone}>
-                    <Library />
-                    <span>My memory</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/guide"}>
-                  <Link to="/guide" onClick={closeOnPhone}>
-                    <BookOpen />
-                    <span>How it works</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
         {!collapsed && items.length > 0 && (
           <SidebarGroup className="min-h-0 flex-1">
-            <SidebarGroupLabel>Chats</SidebarGroupLabel>
+            <SidebarGroupLabel>Recents</SidebarGroupLabel>
             <SidebarGroupContent className="flex min-h-0 flex-1 flex-col">
-              <div className="shrink-0 px-2 pb-2">
+              <div className="shrink-0 pb-2">
                 <InputGroup>
                   <InputGroupAddon>
                     <Search />
@@ -144,7 +130,7 @@ export function AppSidebar({
                 {shown.length === 0 ? (
                   <p className="px-2 py-6 text-center text-sm text-muted-foreground">No chats</p>
                 ) : (
-                  <SidebarMenu className="pe-3 pb-2">
+                  <SidebarMenu className="pb-2">
                     {shown.map((item) => (
                       <SidebarMenuItem key={item.id}>
                         <SidebarMenuButton
@@ -155,7 +141,7 @@ export function AppSidebar({
                             onOpenChat(item.id);
                           }}
                         >
-                          <span>{item.title}</span>
+                          <span className="min-w-0 flex-1 truncate">{item.title}</span>
                         </SidebarMenuButton>
                         <SidebarMenuAction
                           aria-label={`Delete ${item.title}`}
@@ -177,27 +163,9 @@ export function AppSidebar({
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter>
-        <ChannelsCard />
-        <SidebarMenu className="hidden group-data-[collapsible=icon]:flex">
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Open in Telegram">
-              <a href={TELEGRAM_BOT.url} target="_blank" rel="noreferrer">
-                <Send />
-                <span>Open in Telegram</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Add to Discord">
-              <a href={DISCORD_BOT.url} target="_blank" rel="noreferrer">
-                <MessagesSquare />
-                <span>Add to Discord</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <WalletAccount />
+      <SidebarFooter className="gap-2">
+        <SetupChecklist variant="compact" />
+        <AccountMenu />
       </SidebarFooter>
     </Sidebar>
   );

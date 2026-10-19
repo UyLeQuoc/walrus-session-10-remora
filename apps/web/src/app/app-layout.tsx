@@ -2,12 +2,12 @@ import type { CSSProperties } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { AppSidebar } from "@/app/app-sidebar";
 import { ShellContext, useShellState } from "@/app/shell";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { NetworkSelect } from "@/components/app/network-select";
+import { ThemeSync } from "@/components/app/theme-choice";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { clearActiveChat, writeActiveChat } from "@/features/chat/active-chat";
 import { PanicButton } from "@/features/funds/panic-button";
-import { NetworkSwitch, WalletNetworkWarning } from "@/features/network/network-switch";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -26,14 +26,14 @@ export function AppLayout() {
     clearActiveChat();
     setActiveChatId(null);
     setNewChatTick((n) => n + 1);
-    navigate("/");
+    navigate("/chat");
   };
 
   const requestOpenChat = (id: string) => {
     writeActiveChat(id);
     setActiveChatId(id);
     setOpenTick((n) => n + 1);
-    navigate("/");
+    navigate("/chat");
   };
 
   const adoptChat = (id: string) => {
@@ -70,21 +70,23 @@ export function AppLayout() {
         />
         <SidebarInset className="min-h-0 overflow-hidden">
           <header className="flex h-(--header-height) shrink-0 items-center border-b">
-            <div className="flex w-full items-center gap-2 px-2">
-              <SidebarTrigger />
-              <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{title}</p>
+            <div className="flex w-full items-center gap-1 px-2">
+              <SidebarTrigger className="size-8" />
+              <p className="min-w-0 flex-1 truncate pl-1 text-sm text-muted-foreground md:hidden">
+                {title}
+              </p>
+              <div className="hidden flex-1 md:block" />
+              <NetworkSelect />
               <PanicButton />
-              <NetworkSwitch />
-              <ThemeToggle />
             </div>
           </header>
-          <WalletNetworkWarning />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <Outlet />
           </div>
         </SidebarInset>
       </SidebarProvider>
       <Toaster />
+      <ThemeSync />
     </ShellContext.Provider>
   );
 }
