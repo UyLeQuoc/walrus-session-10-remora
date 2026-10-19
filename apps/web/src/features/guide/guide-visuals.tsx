@@ -57,7 +57,7 @@ function Connector({ label }: { label?: string }) {
 
 function IconTile({ children }: { children: ReactNode }) {
   return (
-    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand/15 text-brand [&_svg]:size-4">
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary [&_svg]:size-4">
       {children}
     </span>
   );
@@ -87,7 +87,7 @@ export function MemoryFlow() {
           </li>
         ))}
       </ol>
-      <div className="flex flex-col gap-1 rounded-xl border border-dashed border-brand/40 p-3">
+      <div className="flex flex-col gap-1 rounded-xl border border-dashed border-primary/40 p-3">
         <span className="text-xs text-muted-foreground">
           What lands on Walrus, before encryption
         </span>
@@ -113,7 +113,7 @@ export function ChatVsMemory() {
                 )}
               >
                 {line.yes ? (
-                  <Check aria-label="yes" className="size-4 shrink-0 text-brand" />
+                  <Check aria-label="yes" className="size-4 shrink-0 text-primary" />
                 ) : (
                   <X aria-label="no" className="size-4 shrink-0" />
                 )}
@@ -208,7 +208,7 @@ export function ClaudeCodeSteps() {
 }
 
 const CHANNELS = [
-  { icon: Globe, name: "Web", detail: "ask-hippo.vercel.app", href: null },
+  { icon: Globe, name: "Web", detail: "remora.vercel.app", href: null },
   { icon: Send, name: "Telegram", detail: TELEGRAM_BOT.handle, href: TELEGRAM_BOT.url },
   {
     icon: MessagesSquare,
