@@ -1,8 +1,14 @@
 /** Shared pieces of the W2 pages: the signed-in owner, a loader with refresh, and the wallet gate. */
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PageColumn } from "@/components/app/page";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WalletPicker } from "@/components/wallet-picker";
+import { useWalletResume } from "@/features/connect/wallet-resume";
 import { useMe } from "@/features/me/use-me";
+import { WalletNetworkWarning } from "@/features/network/network-switch";
 import { useNetwork } from "@/lib/network";
 import type { Result } from "./api";
 
@@ -51,40 +57,60 @@ export function useLoad<T>(fn: () => Promise<Result<T>>, key: unknown[], pollMs?
   return { ...state, refresh };
 }
 
-/** Shows a sign-in card until the session has a wallet; then renders the page for that owner. */
+/**
+ * Shows a sign-in card until the session has a wallet; then renders the page for that owner.
+ * `needsWallet` turns on the quiet reconnect banner, and only pages that sign should set it (B6).
+ * The banners sit in the same full-width `PageColumn` as the page body, so their left edge matches;
+ * the silent resume hides them while it is in flight, so a refresh never flashes a warning (§5).
+ */
 export function RequireOwner({
   children,
   what,
+  needsWallet = false,
 }: {
   children: (owner: string) => React.ReactNode;
   what: string;
+  needsWallet?: boolean;
 }) {
   const { owner, loading, reload } = useOwner();
   const account = useCurrentAccount();
+  const resume = useWalletResume();
   if (owner) {
-    // The session outlives the wallet connection (no auto-connect): signing needs it back.
     const connected = account?.address.toLowerCase() === owner.toLowerCase();
     return (
       <>
-        {connected ? null : (
-          <div className="mx-auto w-full max-w-3xl px-4 pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
-              <span className="text-muted-foreground">
-                Signed in as {owner.slice(0, 8)}…; connect that wallet here to sign.
-              </span>
-              <WalletPicker label="Connect wallet to sign" />
-            </div>
-          </div>
-        )}
+        <PageColumn className="gap-3 pt-4 [&:has(>div:empty)]:hidden">
+          <WalletNetworkWarning />
+          {connected || !needsWallet || resume.pending ? null : (
+            <Alert variant="warning">
+              <AlertTriangle />
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  Reconnect your wallet to sign. Signed in as {owner.slice(0, 6)}…{owner.slice(-4)}.
+                </span>
+                <WalletPicker label="Reconnect" variant="outline" size="sm" onSignedIn={reload} />
+              </AlertDescription>
+            </Alert>
+          )}
+        </PageColumn>
         {children(owner)}
       </>
     );
   }
-  if (loading) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
+  if (loading) {
+    return (
+      <PageColumn className="gap-3 py-6">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-24 w-full" />
+      </PageColumn>
+    );
+  }
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-3 p-6">
+    <PageColumn className="items-start gap-3 py-6">
+      <h1 className="text-xl font-semibold tracking-tight md:text-2xl">Sign in</h1>
       <p className="text-sm text-muted-foreground">Sign in with your wallet to see {what}.</p>
       <WalletPicker label="Sign in with your wallet" signIn onSignedIn={reload} />
-    </div>
+    </PageColumn>
   );
 }

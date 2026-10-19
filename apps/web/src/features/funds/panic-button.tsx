@@ -1,60 +1,98 @@
-/** N10: one tap pauses every Disc you own on this network, in one transaction. */
+/**
+ * N10 / E1: the header's emergency stop. A soft destructive pill (icon + "Pause all", icon only on a
+ * phone) so it is easy to find, still quiet next to the network menu. It opens a confirm; nothing
+ * signs on one tap.
+ */
 import { useCurrentAccount } from "@mysten/dapp-kit";
-import { buildPause, toDiscError } from "@remora/disc-sdk";
-import { OctagonX } from "lucide-react";
+import { OctagonPause } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ConfirmAction } from "@/components/app/confirm-action";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useNetwork } from "@/lib/network";
-import { DISCS_CHANGED, useOwnerDiscs } from "./discs";
-import { useSignAndRun } from "./sign";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { WalletPicker } from "@/components/wallet-picker";
+import { useMe } from "@/features/me/use-me";
+import { usePanic } from "./use-panic";
 
 export function PanicButton() {
-  const network = useNetwork();
+  const { me, load } = useMe();
   const account = useCurrentAccount();
-  const { discs, cfg } = useOwnerDiscs(account?.address ?? null, network);
-  const run = useSignAndRun();
-  const [busy, setBusy] = useState(false);
-  const live = (discs ?? []).filter((d) => !d.disc.paused);
-  if (!account || !cfg) return null;
+  const { busy, remoraCount, discCount, panic } = usePanic();
+  const [connectOpen, setConnectOpen] = useState(false);
 
-  const panic = async () => {
-    if (!live.length) {
-      toast("Nothing to pause: every Disc is already paused.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const digest = await run(
-        buildPause(
-          cfg,
-          live.map((d) => d.disc.id),
-          true,
-        ),
-      );
-      toast.success(`Paused ${live.length} Disc${live.length > 1 ? "s" : ""}.`, {
-        description: digest,
-      });
-      window.dispatchEvent(new Event(DISCS_CHANGED));
-    } catch (err) {
-      toast.error(toDiscError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  if (!me?.signedIn) return null;
 
-  return (
+  const trigger = (
     <Button
       type="button"
+      variant="outline"
       size="sm"
-      variant="destructive"
-      onClick={() => void panic()}
-      disabled={busy}
       aria-label="Pause all spending"
-      title="Pause every Disc on this network"
+      disabled={busy}
+      className="h-8 gap-1.5 rounded-full border-destructive/30 bg-destructive/5 px-2.5 text-destructive shadow-none hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/30 sm:px-3 dark:border-destructive/40 dark:bg-destructive/10 dark:hover:bg-destructive/20"
     >
-      <OctagonX />
+      <OctagonPause />
       <span className="hidden sm:inline">Pause all</span>
     </Button>
+  );
+
+  if (!account) {
+    return (
+      <AlertDialog open={connectOpen} onOpenChange={setConnectOpen}>
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Connect a wallet to pause everything</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pausing signs one transaction, so the wallet behind your session has to be connected
+              again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <WalletPicker label="Connect wallet" signIn onSignedIn={load} />
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  const what =
+    remoraCount || discCount
+      ? `${remoraCount} remora${remoraCount === 1 ? "" : "s"} and ${discCount} Disc${
+          discCount === 1 ? "" : "s"
+        } stop paying until you resume each one.`
+      : "Every remora and every Disc on this network stops paying until you resume them one by one.";
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <ConfirmAction
+              trigger={trigger}
+              title="Pause all spending on testnet?"
+              description={what}
+              confirmLabel={remoraCount || discCount ? "Pause everything" : "Pause all"}
+              onConfirm={async () => {
+                const message = await panic();
+                toast.success(message);
+              }}
+            />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Pause all spending</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -1,10 +1,14 @@
 /** The owner's Discs (budgets) on this network: limits, spend, pause and resume, one per row. */
 import { buildPause, type OwnedDisc, toDiscError } from "@remora/disc-sdk";
+import { Wallet } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/app/empty-state";
+import { Section } from "@/components/app/page";
+import { StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { Network } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
 import { DISCS_CHANGED, useOwnerDiscs } from "./discs";
@@ -31,72 +35,78 @@ function DiscRow({
     }
   };
   const cap = d.allowance.lifetimeCap;
+  const used =
+    cap && BigInt(cap) > 0n
+      ? Number((BigInt(d.allowance.currentSpend) * 100n) / BigInt(cap))
+      : null;
   return (
-    <li
-      className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"
-      data-testid="disc-row"
-    >
-      <div className="min-w-0">
-        <p className="font-medium">
-          {d.disc.name}{" "}
-          {d.disc.paused ? (
-            <Badge variant="destructive">paused</Badge>
-          ) : (
-            <Badge variant="secondary">live</Badge>
-          )}
+    <li className="flex flex-col gap-3 rounded-xl border p-4 text-sm" data-testid="disc-row">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex flex-wrap items-center gap-2 font-medium">
+          {d.disc.name} <StatusBadge status={d.disc.paused ? "paused" : "live"} />
         </p>
-        <p className="text-muted-foreground">
-          {formatUsdc(d.allowance.currentSpend)}
-          {cap !== null ? ` of ${formatUsdc(cap)}` : ""} USDC spent · up to{" "}
-          {formatUsdc(d.disc.perPaymentCap)} a payment · {d.disc.payees.length} payee
-          {d.disc.payees.length === 1 ? "" : "s"}
-          {d.allowance.expiryMs
-            ? ` · until ${new Date(d.allowance.expiryMs).toLocaleDateString()}`
-            : ""}
-        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void toggle()}
+        >
+          {d.disc.paused ? "Resume" : "Pause"}
+        </Button>
       </div>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={busy}
-        onClick={() => void toggle()}
-      >
-        {d.disc.paused ? "Resume" : "Pause"}
-      </Button>
+      {used === null ? null : (
+        <Progress value={Math.min(100, used)} aria-label={`${used}% of this Disc spent`} />
+      )}
+      <p className="text-muted-foreground">
+        {formatUsdc(d.allowance.currentSpend)}
+        {cap !== null ? ` of ${formatUsdc(cap)}` : ""} USDC spent · up to{" "}
+        {formatUsdc(d.disc.perPaymentCap)} a payment · {d.disc.payees.length} payee
+        {d.disc.payees.length === 1 ? "" : "s"}
+        {d.allowance.expiryMs
+          ? ` · until ${new Date(d.allowance.expiryMs).toLocaleDateString()}`
+          : ""}
+      </p>
     </li>
   );
 }
 
 export function DiscPanel({ owner, network }: { owner: string; network: Network }) {
-  const { discs, error, cfg } = useOwnerDiscs(owner, network);
+  const { discs, error, cfg, reload } = useOwnerDiscs(owner, network);
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Budgets (Discs)</CardTitle>
-        <CardDescription>
-          Each remora spends only through its Disc: a spending limit Sui enforces, not us.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {!cfg ? (
-          <p className="text-sm text-muted-foreground">Remora isn't published on {network} yet.</p>
-        ) : discs === null ? (
-          <p className="text-sm text-muted-foreground">Reading your Discs…</p>
-        ) : error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : discs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No Discs yet. Creating a remora issues one (W2).
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2" aria-label="Discs">
-            {discs.map((d) => (
-              <DiscRow key={d.disc.id} d={d} cfg={cfg} />
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <Section
+      title="Budgets"
+      description="Each remora spends only through its Disc: a spending limit Sui enforces, not us."
+    >
+      {!cfg ? (
+        <p className="text-sm text-muted-foreground">Remora isn't published on {network} yet.</p>
+      ) : discs === null ? (
+        <p className="text-sm text-muted-foreground">Reading your Discs…</p>
+      ) : error ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="text-destructive">{error}</span>
+          <Button variant="outline" size="sm" onClick={() => void reload()}>
+            Try again
+          </Button>
+        </div>
+      ) : discs.length === 0 ? (
+        <EmptyState
+          icon={<Wallet />}
+          title="No budgets yet"
+          description="Creating a remora issues a Disc with a budget Sui enforces."
+          action={
+            <Button asChild>
+              <Link to="/remoras/new">Create a remora</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <ul className="flex flex-col gap-2" aria-label="Discs">
+          {discs.map((d) => (
+            <DiscRow key={d.disc.id} d={d} cfg={cfg} />
+          ))}
+        </ul>
+      )}
+    </Section>
   );
 }

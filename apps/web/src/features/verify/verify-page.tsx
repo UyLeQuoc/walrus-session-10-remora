@@ -4,18 +4,28 @@
  * No sign-in needed: it only reads public chain data and the stored Wake.
  */
 import type { VerifyResult } from "@remora/schema";
-import { CheckCircle2, CircleMinus, XCircle } from "lucide-react";
+import { CheckCircle2, CircleMinus, ShieldCheck, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useShellTitle } from "@/app/shell";
+import { Page, PageHeader, Section } from "@/components/app/page";
+import { StatusBadge } from "@/components/app/status-badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/features/remoras/api";
 import { WakeDetails } from "@/features/remoras/why-drawer";
+import { cn } from "@/lib/utils";
+
+const CHECKS = [
+  "The intent hash matches what the remora says it did.",
+  "The Paid anchor is on chain, in the transaction you pasted.",
+  "The payee's balance moved by the amount in the receipt.",
+  "The signer is the remora's key, not a stranger.",
+];
 
 export function VerifyPage() {
-  useShellTitle("Verify");
   const { ref = "" } = useParams();
   const navigate = useNavigate();
   const [input, setInput] = useState(ref);
@@ -43,10 +53,15 @@ export function VerifyPage() {
   }, [ref]);
   const r = state.result;
   const allOk = r ? r.checks.every((c) => c.ok !== false) : false;
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 overflow-y-auto p-4">
+    <Page title="Verify a receipt" description="Check a remora receipt against Sui.">
+      <PageHeader
+        title="Verify a receipt"
+        description="Paste a transaction digest or a Wake id. We check it against Sui through Tatum; no sign-in needed."
+      />
       <form
-        className="flex gap-2"
+        className="flex flex-col gap-2 sm:flex-row"
         onSubmit={(e) => {
           e.preventDefault();
           if (input.trim()) navigate(`/verify/${input.trim()}`);
@@ -54,57 +69,108 @@ export function VerifyPage() {
       >
         <Input
           aria-label="Digest or Wake id"
+          className="h-10"
           placeholder="Transaction digest or Wake id"
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        <Button type="submit">Verify</Button>
+        <Button type="submit" size="lg">
+          Verify
+        </Button>
       </form>
+
       {state.loading ? (
-        <p className="text-sm text-muted-foreground">Reading the chain through Tatum…</p>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       ) : null}
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      {state.error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Couldn't check that receipt</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-2">
+            {state.error}
+            <Button variant="outline" size="sm" onClick={() => navigate(`/verify/${ref}`)}>
+              Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {r ? (
         <>
-          <p className="flex items-center gap-2 text-sm" data-testid="verify-verdict">
-            {allOk ? (
-              <Badge>verified</Badge>
-            ) : (
-              <Badge variant="destructive">does not check out</Badge>
+          <div
+            className={cn(
+              "flex flex-col gap-2 rounded-xl border p-5",
+              allOk ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5",
             )}
-            {r.anchored ? (
-              <Badge variant="secondary">anchored onchain</Badge>
-            ) : (
-              <Badge variant="outline">not anchored</Badge>
-            )}
-          </p>
-          <ul className="flex flex-col gap-2 text-sm" aria-label="Checks">
-            {r.checks.map((c) => (
-              <li key={c.name} className="flex items-start gap-2">
-                {c.ok === null ? (
-                  <CircleMinus className="size-4 text-muted-foreground" />
-                ) : c.ok ? (
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                ) : (
-                  <XCircle className="size-4 text-destructive" />
-                )}
-                <span>
-                  <span className="font-medium">{c.name}</span>{" "}
-                  <span className="break-all text-muted-foreground">{c.detail}</span>
-                </span>
+            data-testid="verify-verdict"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {allOk ? (
+                <CheckCircle2 className="size-6 text-success" />
+              ) : (
+                <XCircle className="size-6 text-destructive" />
+              )}
+              <p className="text-lg font-semibold">{allOk ? "Verified" : "Doesn't check out"}</p>
+              {r.anchored ? (
+                <StatusBadge status="verified" />
+              ) : (
+                <Badge variant="outline">not anchored</Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {allOk
+                ? "The receipt matches the chain."
+                : "At least one check did not match. Treat the claim as unproven."}
+            </p>
+          </div>
+
+          <Section title="What we checked">
+            <ul className="flex flex-col gap-2 text-sm" aria-label="Checks">
+              {r.checks.map((c) => (
+                <li key={c.name} className="flex items-start gap-2">
+                  {c.ok === null ? (
+                    <CircleMinus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  ) : c.ok ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                  ) : (
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  )}
+                  <span>
+                    <span className="font-medium">{c.name}</span>{" "}
+                    <span className="break-all text-muted-foreground">{c.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+
+          <Section title="Receipt">
+            <WakeDetails
+              view={{
+                wakeBlobId: null,
+                intentHash: r.checks[0]?.detail ?? "",
+                anchored: r.anchored,
+                wake: r.wake,
+              }}
+            />
+          </Section>
+        </>
+      ) : null}
+
+      {!r && !state.loading && !state.error ? (
+        <Section title="What we check" description="Nothing here asks you to take Remora's word.">
+          <ul className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+            {CHECKS.map((line) => (
+              <li key={line} className="flex items-start gap-3 rounded-xl border bg-card p-4">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+                {line}
               </li>
             ))}
           </ul>
-          <WakeDetails
-            view={{
-              wakeBlobId: null,
-              intentHash: r.checks[0]?.detail ?? "",
-              anchored: r.anchored,
-              wake: r.wake,
-            }}
-          />
-        </>
+        </Section>
       ) : null}
-    </div>
+    </Page>
   );
 }

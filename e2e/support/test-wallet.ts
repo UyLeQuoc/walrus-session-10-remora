@@ -94,9 +94,17 @@ export async function installTestWallet(
   return { signed };
 }
 
-/** Connects the test wallet and signs in through the app's own wallet picker (A1·ui). */
+/**
+ * Connects the test wallet and signs in through the app's own wallet picker (A1·ui).
+ *
+ * Signed out, the page offers "Sign in with your wallet" and the sidebar/account menu offers
+ * "Sign in"; the mobile layout hides the sidebar, so either label is accepted.
+ */
 export async function connectAndSignIn(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Connect wallet" }).first().click();
+  await page
+    .getByRole("button", { name: /^(Sign in|Connect wallet)/ })
+    .first()
+    .click();
   await page.getByRole("button", { name: WALLET_NAME }).click();
   await page.getByRole("dialog").waitFor({ state: "detached", timeout: 30_000 });
 }

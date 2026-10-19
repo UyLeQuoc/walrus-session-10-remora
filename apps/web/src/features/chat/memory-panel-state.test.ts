@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { panelOpen, panelShown, parsePanelChoice } from "./memory-panel-state.ts";
 
 describe("memory panel choice", () => {
-  it("opens on the first visit and stays closed after the person closes it", () => {
+  it("is closed on the first visit and only opens when the person asks", () => {
     expect(parsePanelChoice(null)).toBeNull();
-    expect(panelOpen(null)).toBe(true);
+    expect(panelOpen(null)).toBe(false);
     expect(panelOpen("closed")).toBe(false);
     expect(panelOpen("open")).toBe(true);
     expect(parsePanelChoice("nope")).toBeNull();

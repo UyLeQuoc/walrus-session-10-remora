@@ -44,11 +44,11 @@ export function Hash({
               <span className="block min-w-0 flex-1">{text}</span>
             )}
           </TooltipTrigger>
-          <TooltipContent className="max-w-[min(90vw,28rem)] break-all font-mono text-[11px]">
+          <TooltipContent className="max-w-[min(90vw,28rem)] break-all font-mono text-xs">
             {value}
           </TooltipContent>
         </Tooltip>
-        <CopyButton value={value} label={label ?? "value"} />
+        <CopyButton value={value} label={label ?? "value"} variant="ghost" size="icon-sm" />
       </span>
     </TooltipProvider>
   );

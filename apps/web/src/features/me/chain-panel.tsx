@@ -1,7 +1,7 @@
 /**
  * The account on Sui, read from the chain, with the keys that can reach it.
  *
- * Everything else on /me is hippo's account of itself. This is the part a user
+ * Everything else on Memory is Remora's account of itself. This is the part a user
  * does not have to believe: the object id resolves on an explorer, the delegate
  * list is what the contract enforces, and the revoke button removes an entry
  * from that exact list. Showing our own `delegate_keys` table here would have
@@ -38,7 +38,7 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
     <Card>
       <CardHeader>
         <CardTitle>Account</CardTitle>
-        {owned ? null : <CardDescription>Still hippo's own account.</CardDescription>}
+        {owned ? null : <CardDescription>Still Remora's own account.</CardDescription>}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {owned ? null : (
@@ -80,7 +80,7 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
                 >
                   <span className="flex items-center gap-2">
                     <span>{d.label || "unlabelled"}</span>
-                    {d.isHippo && <Badge variant="accent">hippo</Badge>}
+                    {d.isHippo && <Badge variant="accent">Remora</Badge>}
                   </span>
                   <Hash value={d.publicKeyHex} label="public key" />
                 </li>
@@ -96,7 +96,7 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
 
         {owned ? (
           <Button variant="destructive" disabled={busy} onClick={() => void start("disconnect")}>
-            {busy ? "Opening…" : "Revoke hippo's access"}
+            {busy ? "Opening…" : "Revoke Remora's access"}
           </Button>
         ) : null}
       </CardContent>

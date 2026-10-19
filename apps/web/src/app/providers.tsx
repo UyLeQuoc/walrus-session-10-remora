@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps, ReactNode } from "react";
 import "@mysten/dapp-kit/dist/index.css";
 import { useEnokiWallets } from "@/app/use-enoki-wallets";
+import { WalletResumeProvider } from "@/features/connect/wallet-resume";
 import { NetworkSync } from "@/features/network/network-switch";
 import { currentNetwork } from "@/lib/network";
 
@@ -40,7 +41,9 @@ export function Providers({ children }: { children: ReactNode }) {
         {/* Reconnect-on-load opens Slush with no picker, and a rejected reconnect marks the wallet disconnected. */}
         <EnokiWallets />
         <NetworkSync />
-        <WalletProvider autoConnect={false}>{children}</WalletProvider>
+        <WalletProvider autoConnect={false}>
+          <WalletResumeProvider>{children}</WalletResumeProvider>
+        </WalletProvider>
       </SuiClientProvider>
     </QueryClientProvider>
   );

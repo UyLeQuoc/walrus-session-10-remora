@@ -5,7 +5,7 @@ import { GREETING_ACCENT, greetingText } from "./greeting";
 const EASE = [0.23, 1, 0.32, 1] as const;
 const WORD_STAGGER = 0.04;
 
-const helloClass = "font-greeting text-4xl font-normal leading-tight text-balance sm:text-5xl";
+const helloClass = "text-3xl font-semibold tracking-tight leading-tight text-balance sm:text-4xl";
 const inviteClass =
   "mx-auto max-w-md text-base leading-snug text-balance text-muted-foreground sm:text-lg";
 
@@ -78,7 +78,7 @@ function AccentMark({
 function HelloLine({ greeting, reduced }: { greeting: Greeting; reduced: boolean }) {
   const words = wordsOf(greeting.hello);
   return (
-    <p className={helloClass}>
+    <p className={helloClass} data-slot="hello">
       {words.map((word, index) => (
         <span key={`${greeting.id}-${index}`}>
           {index > 0 ? " " : null}

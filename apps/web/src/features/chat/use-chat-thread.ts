@@ -31,12 +31,14 @@ function lastUserText(messages: readonly UIMessage[]): string {
   return textOfMessage(last);
 }
 
-export function useChatThread() {
+export function useChatThread(options?: { model?: string }) {
   const idRef = useRef<string | null>(readActiveChat());
   const [conversationId, setConversationId] = useState<string | null>(() => readActiveChat());
   const adoptChat = useAdoptChat();
   const adoptRef = useRef(adoptChat);
   adoptRef.current = adoptChat;
+  const modelRef = useRef(options?.model ?? "");
+  modelRef.current = options?.model ?? "";
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -58,6 +60,8 @@ export function useChatThread() {
               conversationId: idRef.current,
               clientMessageId: source?.id,
               regenerate: trigger === "regenerate-message",
+              // An empty selection means the server's default, so the field is omitted (§4).
+              ...(modelRef.current ? { model: modelRef.current } : {}),
             },
           };
         },

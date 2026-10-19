@@ -163,7 +163,7 @@ export function MemoriesTable({
         <EmptyHeader>
           <EmptyTitle>Nothing yet</EmptyTitle>
           <EmptyDescription>
-            Say something in the <Link to="/">chat</Link> and hippo will start remembering you.
+            Say something in the <Link to="/chat">chat</Link> and Remora will start remembering you.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -254,7 +254,7 @@ function Status({ memory }: { memory: Memory }) {
     return <span className="text-muted-foreground">write failed</span>;
   }
   return (
-    <Badge variant="outline" className="border-brand/40 text-brand">
+    <Badge variant="outline" className="border-primary/40 text-primary">
       stored
     </Badge>
   );
@@ -274,7 +274,7 @@ function RowActions({
   return (
     <div className="flex items-center justify-end gap-1">
       {memory.ciphertextUrl ? (
-        <Button size="icon" variant="ghost" asChild>
+        <Button size="icon-sm" variant="ghost" asChild>
           <a
             href={memory.ciphertextUrl}
             target="_blank"
@@ -287,7 +287,7 @@ function RowActions({
       ) : null}
       <Button
         type="button"
-        size="icon"
+        size="icon-sm"
         variant="ghost"
         disabled={toggling === blobId}
         aria-label={memory.hidden ? "Use again" : "Hide"}

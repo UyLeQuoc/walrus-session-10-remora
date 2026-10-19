@@ -33,11 +33,11 @@ export function RememberedList({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
         {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
-        <span className="mb-1 flex size-10 items-center justify-center rounded-lg bg-brand/15 text-brand [&_svg]:size-5">
+        <span className="mb-1 flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary [&_svg]:size-5">
           <NotebookPen aria-hidden />
         </span>
         <p className="text-sm text-muted-foreground">Nothing remembered in this chat yet.</p>
-        <p className="text-sm text-muted-foreground">Facts hippo keeps land here.</p>
+        <p className="text-sm text-muted-foreground">Facts Remora keeps land here.</p>
       </div>
     );
   }
@@ -82,7 +82,7 @@ function RememberedCardView({
           <Badge variant="outline">{card.type}</Badge>
           <Badge
             variant="secondary"
-            className={card.status === "stored" ? "bg-brand/15 text-brand" : undefined}
+            className={card.status === "stored" ? "bg-primary/15 text-primary" : undefined}
           >
             {label}
           </Badge>

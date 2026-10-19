@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import { Navigate } from "react-router";
 import { ApprovalsPage } from "../features/approvals/approvals-page";
 import { ChatPage } from "../features/chat/chat-page";
 import { ConnectPage } from "../features/connect/connect-page";
 import { FundsPage } from "../features/funds/funds-page";
 import { GuidePage } from "../features/guide/guide-page";
+import { HomePage } from "../features/home/home-page";
 import { LabPage } from "../features/lab/lab-page";
-import { MePage } from "../features/me/me-page";
 import { MemoryInspectorPage } from "../features/memory-inspector/memory-page";
 import { OnboardingPage } from "../features/onboarding/onboarding-page";
 import { NewRemoraPage } from "../features/remoras/new-remora-page";
@@ -26,10 +27,11 @@ export interface AppRoute {
  * not-found route is added by `main.tsx` after these.
  */
 export const APP_ROUTES: AppRoute[] = [
-  { element: <ChatPage /> },
+  { element: <HomePage /> },
+  { path: "chat", element: <ChatPage /> },
   { path: "connect/:token", element: <ConnectPage kind="connect" /> },
   { path: "disconnect/:token", element: <ConnectPage kind="disconnect" /> },
-  { path: "me", element: <MePage /> },
+  { path: "me", element: <Navigate to="/memory?tab=chat" replace /> },
   { path: "guide", element: <GuidePage /> },
   { path: "lab/*", element: <LabPage /> },
   { path: "onboarding", element: <OnboardingPage /> },

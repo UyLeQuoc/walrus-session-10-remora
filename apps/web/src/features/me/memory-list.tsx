@@ -107,7 +107,7 @@ export function MemoryList({
                       {hit.mine !== false && (
                         <Button
                           type="button"
-                          size="icon"
+                          size="icon-sm"
                           variant="ghost"
                           disabled={toggling === hit.blobId}
                           aria-label="stop using this"

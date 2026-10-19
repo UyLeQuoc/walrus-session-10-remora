@@ -45,8 +45,8 @@ export function MemoryPanel({
           <Button
             type="button"
             variant="ghost"
-            size="icon"
-            aria-label="Close memory"
+            size="icon-sm"
+            aria-label="Close memory panel"
             onClick={onClose}
           >
             <X />

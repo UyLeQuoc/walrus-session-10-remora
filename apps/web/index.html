@@ -11,8 +11,8 @@
     <meta name="robots" content="noindex" />
     <meta name="application-name" content="Remora" />
     <meta name="apple-mobile-web-app-title" content="Remora" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAF9F6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#262624" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
@@ -33,7 +33,8 @@
         const saved = localStorage.getItem("remora.theme");
         const dark =
           saved === "dark" ||
-          (saved === null && matchMedia("(prefers-color-scheme: dark)").matches);
+          ((saved === null || saved === "system") &&
+            matchMedia("(prefers-color-scheme: dark)").matches);
         if (dark) document.documentElement.classList.add("dark");
       } catch {}
     </script>

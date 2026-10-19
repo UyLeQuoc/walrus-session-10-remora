@@ -6,19 +6,18 @@
 import { useSignTransaction } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import type { ApprovalRequest } from "@remora/schema";
+import { Inbox } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useShellTitle } from "@/app/shell";
+import { EmptyState } from "@/components/app/empty-state";
+import { Page, PageHeader } from "@/components/app/page";
+import { StatusBadge } from "@/components/app/status-badge";
+import { Time } from "@/components/app/time";
+import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { usdc } from "@/lib/usdc";
@@ -76,21 +75,37 @@ function ApprovalCard({
   return (
     <Card data-testid="approval">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {a.remora} <Badge variant="outline">{a.status}</Badge>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          {a.remora}
+          {a.status === "pending" ? (
+            <StatusBadge status="pending" />
+          ) : (
+            <Badge variant="outline">{a.status}</Badge>
+          )}
+          <Time value={a.createdAt} className="ml-auto" />
         </CardTitle>
-        <CardDescription>
-          {a.kind === "over_limit_payment" && p.amount && p.payee
-            ? `Pay ${usdc(p.amount)} USDC to ${p.payee}, over its per-payment cap.`
-            : a.summary}
-          {p.question ? ` For: “${p.question}”` : ""}
-        </CardDescription>
       </CardHeader>
-      {answer ? (
-        <CardContent>
-          <p className="whitespace-pre-wrap text-sm">{answer}</p>
-        </CardContent>
-      ) : null}
+      <CardContent className="flex flex-col gap-2">
+        {a.kind === "over_limit_payment" && p.amount && p.payee ? (
+          <>
+            <p className="text-2xl font-semibold tabular-nums">
+              {usdc(p.amount)} USDC{" "}
+              <span className="text-base font-normal text-muted-foreground">to {p.payee}</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Over its per-payment cap. You pay this once from your own balance.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm">{a.summary}</p>
+        )}
+        {p.question ? <p className="text-sm text-muted-foreground">For: “{p.question}”</p> : null}
+        {answer ? (
+          <p className="whitespace-pre-wrap text-sm" data-testid="approval-answer">
+            {answer}
+          </p>
+        ) : null}
+      </CardContent>
       {a.status === "pending" ? (
         <CardFooter className="flex-wrap gap-2">
           {a.kind === "over_limit_payment" ? (
@@ -98,7 +113,7 @@ function ApprovalCard({
               Pay once{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
             </Button>
           ) : (
-            <Button type="button" onClick={() => void decide(true)}>
+            <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
               Approve
             </Button>
           )}
@@ -117,56 +132,121 @@ function ApprovalCard({
   );
 }
 
-function Inbox() {
-  const [all, setAll] = useState(false);
-  const [paid, setPaid] = useState<Paid[]>([]);
-  const list = useLoad(() => api.approvals(all ? "all" : "pending"), [all], 20_000);
-  const rows = list.data?.approvals ?? [];
+function PaidCard({ p }: { p: Paid }) {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 overflow-y-auto p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {list.loading && !list.data
-            ? "Loading…"
-            : rows.length
-              ? `${rows.length} ${all ? "in total" : "waiting for you"}.`
-              : "Nothing is waiting for you."}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          {p.remora} <StatusBadge status="paid" />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2 text-sm">
+        {p.digest ? (
+          <p className="flex items-center gap-2 text-muted-foreground">
+            Settled <Hash value={p.digest} label="transaction" />
+          </p>
+        ) : (
+          <p className="text-muted-foreground">Settled.</p>
+        )}
+        <p className="whitespace-pre-wrap" data-testid="approval-answer">
+          {p.answer}
         </p>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setAll((x) => !x)}>
-          {all ? "Only pending" : "Show decided"}
-        </Button>
-      </div>
-      {list.error ? <p className="text-sm text-destructive">{list.error}</p> : null}
-      {paid.map((p) => (
-        <Card key={p.id}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {p.remora} <Badge variant="secondary">paid once</Badge>
-            </CardTitle>
-            <CardDescription>
-              {p.digest ? `Settled in ${p.digest.slice(0, 10)}…` : "Settled."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm" data-testid="approval-answer">
-              {p.answer}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
-      {rows.map((a) => (
-        <ApprovalCard
-          key={a.id}
-          a={a}
-          onDone={() => void list.refresh()}
-          onPaid={(p) => setPaid((x) => [p, ...x])}
-        />
-      ))}
-    </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InboxPage() {
+  const [tab, setTab] = useState<"waiting" | "decided">("waiting");
+  const [paid, setPaid] = useState<Paid[]>([]);
+  const waiting = useLoad(() => api.approvals("pending"), [], 20_000);
+  const decided = useLoad(
+    () =>
+      tab === "decided"
+        ? api.approvals("all")
+        : Promise.resolve({ ok: true as const, data: { approvals: [] as never[] } }),
+    [tab],
+  );
+  const rows =
+    tab === "waiting" ? (waiting.data?.approvals ?? []) : (decided.data?.approvals ?? []);
+  const pending = waiting.data?.approvals.length ?? 0;
+  const loading = tab === "waiting" ? waiting.loading : decided.loading;
+  const error = tab === "waiting" ? waiting.error : decided.error;
+  const refresh = () => {
+    void waiting.refresh();
+    if (tab === "decided") void decided.refresh();
+  };
+
+  return (
+    <Page title="Approvals" description="Payments and changes that need your yes.">
+      <PageHeader
+        title="Approvals"
+        description="A remora asks when a payment goes over its cap. Nothing is paid without you."
+      />
+
+      <Tabs value={tab} onValueChange={(value) => setTab(value as "waiting" | "decided")}>
+        <TabsList>
+          <TabsTrigger value="waiting">Waiting{pending ? ` (${pending})` : ""}</TabsTrigger>
+          <TabsTrigger value="decided">Decided</TabsTrigger>
+        </TabsList>
+        <TabsContent value="waiting" className="flex flex-col gap-3 pt-4">
+          {paid.map((p) => (
+            <PaidCard key={p.id} p={p} />
+          ))}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {!loading && !rows.length ? (
+            <EmptyState
+              icon={<Inbox />}
+              title="You're all caught up"
+              description="When a remora needs a payment over its cap, it lands here first."
+            />
+          ) : (
+            rows.map((a) => (
+              <ApprovalCard
+                key={a.id}
+                a={a}
+                onDone={refresh}
+                onPaid={(p) => setPaid((x) => [p, ...x])}
+              />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="decided" className="flex flex-col gap-3 pt-4">
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {!loading && !rows.length ? (
+            <EmptyState
+              icon={<Inbox />}
+              title="Nothing decided yet"
+              description="Approved, declined and expired requests show up here."
+            />
+          ) : (
+            rows.map((a) => (
+              <Card key={a.id} data-testid="approval">
+                <CardHeader>
+                  <CardTitle className="flex flex-wrap items-center gap-2">
+                    {a.remora}
+                    <Badge variant={a.status === "approved" ? "success" : "outline"}>
+                      {a.status}
+                    </Badge>
+                    <Time value={a.createdAt} className="ml-auto" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{a.summary}</p>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
+    </Page>
   );
 }
 
 export function ApprovalsPage() {
-  useShellTitle("Approvals");
-  return <RequireOwner what="your approvals">{() => <Inbox />}</RequireOwner>;
+  return (
+    <RequireOwner what="your approvals" needsWallet>
+      {() => <InboxPage />}
+    </RequireOwner>
+  );
 }

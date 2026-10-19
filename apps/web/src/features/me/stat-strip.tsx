@@ -27,7 +27,7 @@ function Tile({
     <div
       className={cn("flex flex-col gap-2 rounded-xl border bg-card p-3 sm:gap-3 sm:p-4", className)}
     >
-      <div className="flex items-center gap-2 text-sm text-muted-foreground [&_svg]:size-4 [&_svg]:text-brand">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground [&_svg]:size-4 [&_svg]:text-primary">
         {icon}
         {label}
       </div>
@@ -39,7 +39,7 @@ function Tile({
         <Progress
           value={progress}
           aria-label={label}
-          className="bg-brand/20 [&>[data-slot=progress-indicator]]:bg-brand"
+          className="bg-primary/20 [&>[data-slot=progress-indicator]]:bg-primary"
         />
       )}
     </div>
@@ -59,7 +59,7 @@ export function StatStrip({
 }) {
   const answered = usage && usage.answers > 0 ? usage : null;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className={cn("grid grid-cols-2 gap-3", answered && "sm:grid-cols-3")}>
       <Tile
         icon={<Database />}
         label="On Walrus"
@@ -78,7 +78,7 @@ export function StatStrip({
       <Tile
         icon={owned ? <Wallet /> : <UserRound />}
         label="Owned by"
-        value={owned ? "You" : "hippo, for now"}
+        value={owned ? "You" : "Remora, for now"}
         className={answered ? "col-span-2 sm:col-span-1" : undefined}
       />
     </div>

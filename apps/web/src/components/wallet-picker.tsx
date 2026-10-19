@@ -15,13 +15,26 @@ export function WalletPicker({
   className,
   signIn = false,
   onSignedIn,
+  variant,
+  size,
+  open,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   label: string;
   className?: string;
   signIn?: boolean;
   onSignedIn?: () => void;
+  variant?: React.ComponentProps<typeof Button>["variant"];
+  size?: React.ComponentProps<typeof Button>["size"];
+  /** Controlled dialog (the account menu opens it from a menu item). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const shown = open ?? internalOpen;
+  const setShown = onOpenChange ?? setInternalOpen;
   const { wallets, googleListed, pick, busy, error, status } = useWalletPicker({
     signIn,
     onSignedIn,
@@ -29,15 +42,23 @@ export function WalletPicker({
 
   const choose = async (wallet: (typeof wallets)[number]) => {
     const ok = await pick(wallet);
-    if (ok) setOpen(false);
+    if (ok) setShown(false);
   };
 
   return (
     <>
-      <Button type="button" className={cn(className)} onClick={() => setOpen(true)}>
-        {label}
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      {hideTrigger ? null : (
+        <Button
+          type="button"
+          variant={variant}
+          size={size}
+          className={cn(className)}
+          onClick={() => setShown(true)}
+        >
+          {label}
+        </Button>
+      )}
+      <Dialog open={shown} onOpenChange={setShown}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Choose a wallet</DialogTitle>

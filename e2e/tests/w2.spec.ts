@@ -63,13 +63,15 @@ async function sendSui(to: string, mist: bigint): Promise<string> {
   return done.digest;
 }
 
-/** The app doesn't auto-connect, so after a navigation the session stays but the wallet must reconnect. */
+/** The app resumes the last approved wallet silently; this is the fallback if that fails. */
 async function goto(page: Page, path: string) {
   await page.goto(path);
-  // A reload always drops the wallet (no auto-connect), so the reconnect bar always appears.
-  const reconnect = page.getByRole("button", { name: "Connect wallet to sign" });
-  await reconnect.click({ timeout: 30_000 });
-  await page.getByRole("button", { name: WALLET_NAME }).click();
+  const reconnect = page.getByRole("button", { name: "Reconnect" });
+  await reconnect.waitFor({ state: "visible", timeout: 8_000 }).catch(() => {});
+  if (await reconnect.isVisible().catch(() => false)) {
+    await reconnect.click({ timeout: 30_000 });
+    await page.getByRole("button", { name: WALLET_NAME }).click();
+  }
   await expect(reconnect).toBeHidden({ timeout: 30_000 });
 }
 
@@ -79,7 +81,7 @@ async function createRemora(
   fill: (p: Page) => Promise<void>,
 ) {
   await goto(page, "/remoras/new");
-  await page.getByRole("button", { name: new RegExp(`^${template}`) }).click();
+  await page.getByRole("radio", { name: new RegExp(`^${template}`) }).click();
   await fill(page);
   await page.getByRole("button", { name: `Create ${template}` }).click();
   await page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
@@ -98,7 +100,7 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
   const t0 = Date.now();
   await page.goto("/remoras/new");
   await connectAndSignIn(page);
-  await expect(page.getByRole("button", { name: /^Scout/ })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("radio", { name: /^Scout/ })).toBeVisible({ timeout: 60_000 });
   const stamp = Date.now().toString(36);
   const scoutId = await createRemora(page, "Scout", async (p) => {
     await p.getByLabel("Name").fill(`Scout ${stamp}`);
@@ -106,7 +108,7 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
     // 0.015 a payment: sui-risk (0.01) passes, odds (0.02) has to ask the owner (E4).
     await p.getByLabel("Most it pays at once (USDC)").fill("0.015");
   });
-  await expect(page.getByText(`Scout ${stamp}`).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Scout ${stamp}`, exact: true })).toBeVisible();
   results.firstRemoraMs = ms(t0);
   expect(results.firstRemoraMs as number, "sign-in to first remora under 3 minutes").toBeLessThan(
     180_000,
@@ -216,7 +218,9 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
 
   // B8: retire the Scout (the owner signs the revoke), so runs don't pile up Discs on the burner.
   await goto(page, `/remoras/${scoutId}`);
+  await page.getByRole("tab", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Retire" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Retire" }).click();
   await expect(page.getByText("retired").first()).toBeVisible({ timeout: 90_000 });
   const retired = (await feedOf(page, scoutId)).find((e) => /retired/.test(e.summary));
   results.retire = retired?.payload.digest ?? null;

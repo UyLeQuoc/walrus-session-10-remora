@@ -1,37 +1,91 @@
 /**
  * `/settings` (A7 + H5 + A5 + N10): your timezone, quiet hours, language and how loud remoras may be;
- * linking Telegram so they can reach you; and the panic button that pauses every remora and Disc on
- * this network with one signature.
+ * linking Telegram so they can reach you; and one panic action (the same hook as the header).
  */
 import type { OwnerSettings } from "@remora/schema";
-import { OctagonX } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { OctagonPause } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useShellTitle } from "@/app/shell";
+import { ConfirmAction } from "@/components/app/confirm-action";
+import { Page, PageHeader, Section } from "@/components/app/page";
+import { Hash } from "@/components/hash";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { useSignAndRun } from "@/features/funds/sign";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { usePanic } from "@/features/funds/use-panic";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { cn } from "@/lib/utils";
 
-const NOTIFY: Record<OwnerSettings["notify"], string> = {
-  all: "Every ping",
-  important: "Only urgent ones live; the rest in the feed",
-  digest: "Nothing live; read the feed",
-};
+const NOTIFY: Array<{
+  value: OwnerSettings["notify"];
+  title: string;
+  body: string;
+}> = [
+  { value: "all", title: "All pings", body: "Every ping, as it happens." },
+  {
+    value: "important",
+    title: "Urgent only",
+    body: "Live for big outflows and payments; the rest in the feed.",
+  },
+  { value: "digest", title: "Digest only", body: "Nothing live; read the feed when you want." },
+];
+
+function timezones(): string[] {
+  try {
+    return Intl.supportedValuesOf("timeZone");
+  } catch {
+    return ["UTC"];
+  }
+}
 
 function Policy() {
   const loaded = useLoad(() => api.settings(), []);
   const [s, setS] = useState<OwnerSettings | null>(null);
+  const [saved, setSaved] = useState<OwnerSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+  const zones = useMemo(timezones, []);
+
   useEffect(() => {
-    if (loaded.data) setS(loaded.data.settings);
+    if (loaded.data) {
+      setS(loaded.data.settings);
+      setSaved(loaded.data.settings);
+    }
   }, [loaded.data]);
-  if (!s) return <p className="text-sm text-muted-foreground">{loaded.error || "Loading…"}</p>;
+
+  if (!s || !saved) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  const changed = JSON.stringify(s) !== JSON.stringify(saved);
+  const quiet = Boolean(s.quietStart || s.quietEnd);
   const save = async () => {
+    setBusy(true);
     const out = await api.saveSettings({
       timezone: s.timezone,
       quietStart: s.quietStart || null,
@@ -39,68 +93,144 @@ function Policy() {
       language: s.language,
       notify: s.notify,
     });
-    if (out.ok) toast.success("Saved.");
-    else toast.error(out.error);
+    setBusy(false);
+    if (out.ok) {
+      setS(out.data.settings);
+      setSaved(out.data.settings);
+      toast.success("Saved.");
+    } else {
+      toast.error(out.error);
+    }
   };
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="tz">Timezone</Label>
-        <Input
-          id="tz"
-          value={s.timezone}
-          onChange={(e) => setS({ ...s, timezone: e.target.value })}
-        />
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <Label htmlFor="timezone">Timezone</Label>
+          <Combobox
+            items={zones}
+            value={s.timezone}
+            onValueChange={(value) => value && setS({ ...s, timezone: value })}
+          >
+            <ComboboxInput
+              id="timezone"
+              aria-label="Timezone"
+              placeholder="Search timezones"
+              showTrigger
+            />
+            <ComboboxContent>
+              <ComboboxEmpty>No timezone found.</ComboboxEmpty>
+              <ComboboxList>
+                {zones.map((zone) => (
+                  <ComboboxItem key={zone} value={zone}>
+                    {zone}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="quiet-hours">Quiet hours</Label>
+            <Switch
+              id="quiet-hours"
+              aria-label="Quiet hours"
+              checked={quiet}
+              onCheckedChange={(on) =>
+                setS({
+                  ...s,
+                  quietStart: on ? (s.quietStart ?? "22:00") : null,
+                  quietEnd: on ? (s.quietEnd ?? "07:00") : null,
+                })
+              }
+            />
+          </div>
+          {quiet ? (
+            <div className="flex items-center gap-2">
+              <Input
+                aria-label="Quiet from"
+                type="time"
+                value={s.quietStart ?? "22:00"}
+                onChange={(e) => setS({ ...s, quietStart: e.target.value || null })}
+              />
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input
+                aria-label="Quiet until"
+                type="time"
+                value={s.quietEnd ?? "07:00"}
+                onChange={(e) => setS({ ...s, quietEnd: e.target.value || null })}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Off: remoras can reach you at any hour.</p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Urgent pings (a big outflow, a payment waiting for you) still come during quiet hours.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="language">Language</Label>
+          <Select
+            value={s.language}
+            onValueChange={(value) => setS({ ...s, language: value as "en" | "vi" })}
+          >
+            <SelectTrigger id="language" aria-label="Language" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="vi">Tiếng Việt</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
       <div className="flex flex-col gap-2">
-        <Label htmlFor="lang">Language</Label>
-        <NativeSelect
-          id="lang"
-          value={s.language}
-          onChange={(e) => setS({ ...s, language: e.target.value as "en" | "vi" })}
-        >
-          <NativeSelectOption value="en">English</NativeSelectOption>
-          <NativeSelectOption value="vi">Tiếng Việt</NativeSelectOption>
-        </NativeSelect>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="quiet-start">Quiet from</Label>
-        <Input
-          id="quiet-start"
-          type="time"
-          value={s.quietStart ?? ""}
-          onChange={(e) => setS({ ...s, quietStart: e.target.value || null })}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="quiet-end">Quiet until</Label>
-        <Input
-          id="quiet-end"
-          type="time"
-          value={s.quietEnd ?? ""}
-          onChange={(e) => setS({ ...s, quietEnd: e.target.value || null })}
-        />
-      </div>
-      <div className="flex flex-col gap-2 sm:col-span-2">
-        <Label htmlFor="notify">Notifications</Label>
-        <NativeSelect
-          id="notify"
+        <Label>How loud</Label>
+        <RadioGroup
           value={s.notify}
-          onChange={(e) => setS({ ...s, notify: e.target.value as OwnerSettings["notify"] })}
+          onValueChange={(value) => setS({ ...s, notify: value as OwnerSettings["notify"] })}
+          className="grid gap-2 sm:grid-cols-3"
         >
-          {Object.entries(NOTIFY).map(([k, v]) => (
-            <NativeSelectOption key={k} value={k}>
-              {v}
-            </NativeSelectOption>
+          {NOTIFY.map((option) => (
+            <Label
+              key={option.value}
+              htmlFor={`notify-${option.value}`}
+              className={cn(
+                "flex cursor-pointer items-start gap-2 rounded-lg border p-3",
+                s.notify === option.value && "border-primary bg-primary/5",
+              )}
+            >
+              <RadioGroupItem
+                id={`notify-${option.value}`}
+                value={option.value}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block font-medium">{option.title}</span>
+                <span className="block text-sm text-muted-foreground">{option.body}</span>
+              </span>
+            </Label>
           ))}
-        </NativeSelect>
-        <p className="text-sm text-muted-foreground">
-          Urgent pings (a big outflow, a payment waiting for you) still come during quiet hours.
-        </p>
+        </RadioGroup>
       </div>
-      <Button type="button" className="self-start" onClick={() => void save()}>
-        Save
-      </Button>
+
+      <div className="flex items-center justify-end gap-3">
+        {changed ? null : <span className="text-sm text-muted-foreground">All changes saved</span>}
+        <Button
+          type="button"
+          variant={changed ? "default" : "outline"}
+          disabled={!changed || busy}
+          onClick={() => void save()}
+        >
+          {busy ? <Spinner /> : null}
+          Save
+        </Button>
+      </div>
     </div>
   );
 }
@@ -117,102 +247,97 @@ function TelegramLink() {
     else toast.error(out.error);
   };
   return (
-    <div className="flex flex-col gap-2 text-sm">
-      <Button type="button" variant="outline" className="self-start" onClick={() => void make()}>
-        Link Telegram
-      </Button>
-      {link ? (
-        <p data-testid="telegram-code">
-          {link.url ? (
-            <a className="underline" href={link.url} target="_blank" rel="noreferrer">
-              Open the bot
-            </a>
-          ) : (
-            "Send the bot"
-          )}{" "}
-          {link.url ? "or send it" : ""} <code>/link {link.code}</code> within{" "}
-          {link.expiresInMinutes} minutes.
-        </p>
-      ) : null}
+    <div className="flex flex-col gap-3 text-sm">
+      <p className="flex items-center gap-2">
+        <span className={link ? "text-warning" : "text-muted-foreground"}>
+          {link ? "Code ready" : "Not linked"}
+        </span>
+        <span className="text-muted-foreground">
+          {link
+            ? "Send the code to the bot to finish."
+            : "Link it to talk to remoras where you are."}
+        </span>
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" variant="outline" onClick={() => void make()}>
+          Link Telegram
+        </Button>
+        {link ? (
+          <span data-testid="telegram-code" className="flex flex-wrap items-center gap-2">
+            {link.url ? (
+              <a className="link" href={link.url} target="_blank" rel="noreferrer">
+                Open the bot
+              </a>
+            ) : (
+              "Send the bot"
+            )}{" "}
+            <Hash value={link.code} label="link code" /> within {link.expiresInMinutes} minutes.
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 function Panic() {
-  const run = useSignAndRun();
-  const [busy, setBusy] = useState(false);
-  const panic = async () => {
-    setBusy(true);
-    try {
-      const out = await api.panic();
-      if (!out.ok) throw new Error(out.error);
-      const digest = out.data.transaction ? await run(out.data.transaction) : undefined;
-      const done = await api.panicConfirm(digest);
-      if (!done.ok) throw new Error(done.error);
-      toast.success(
-        `Paused ${done.data.paused.length} remora${done.data.paused.length === 1 ? "" : "s"}.`,
-      );
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const { panic, remoraCount, discCount } = usePanic();
   return (
-    <Button
-      type="button"
-      variant="destructive"
-      className="self-start"
-      disabled={busy}
-      onClick={() => void panic()}
+    <Section
+      title="Danger zone"
+      tone="danger"
+      layout="split"
+      description="Pauses every remora and every Disc on this network with one signature. Resume each one from its page."
     >
-      <OctagonX /> {busy ? "Pausing… check your wallet" : "Pause everything"}
-    </Button>
+      <ConfirmAction
+        trigger={
+          <Button type="button" variant="outline" className="self-start text-destructive">
+            <OctagonPause /> Pause everything
+          </Button>
+        }
+        title="Pause all spending on testnet?"
+        description={`${remoraCount} remora${remoraCount === 1 ? "" : "s"} and ${discCount} Disc${
+          discCount === 1 ? "" : "s"
+        } stop paying until you resume each one.`}
+        confirmLabel="Pause everything"
+        onConfirm={async () => {
+          const message = await panic();
+          toast.success(message);
+        }}
+      />
+    </Section>
   );
 }
 
 function Settings() {
-  const [params] = useSearchParams();
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 overflow-y-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Notifications</CardTitle>
-          <CardDescription>When remoras may reach you, and how often.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Policy />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Telegram</CardTitle>
-          <CardDescription>
-            Talk to your remoras where you already are: /scout, /teach, /budget, and buttons on
-            every message.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TelegramLink />
-        </CardContent>
-      </Card>
-      <Card className={params.get("panic") ? "ring-2 ring-destructive" : ""}>
-        <CardHeader>
-          <CardTitle className="text-base">Panic button</CardTitle>
-          <CardDescription>
-            Pauses every remora and every Disc on this network with one signature. Resume each one
-            from its page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Panic />
-        </CardContent>
-      </Card>
-    </div>
+    <Page title="Settings" description="Notifications, Telegram and the panic switch.">
+      <PageHeader
+        title="Settings"
+        description="When remoras may reach you, where, and how to stop them all."
+      />
+      <Section
+        title="Notifications"
+        description="When remoras may reach you, and how often."
+        layout="split"
+      >
+        <Policy />
+      </Section>
+      <Section
+        layout="split"
+        title="Telegram"
+        description="Talk to your remoras where you already are: /scout, /teach, /budget, and buttons on every message."
+      >
+        <TelegramLink />
+      </Section>
+      <Panic />
+    </Page>
   );
 }
 
 export function SettingsPage() {
-  useShellTitle("Settings");
-  return <RequireOwner what="your settings">{() => <Settings />}</RequireOwner>;
+  return (
+    <RequireOwner what="your settings" needsWallet>
+      {() => <Settings />}
+    </RequireOwner>
+  );
 }

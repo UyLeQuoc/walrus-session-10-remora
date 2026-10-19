@@ -25,7 +25,7 @@ export function useExport(onError: (message: string) => void) {
       }
       const name =
         /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ??
-        `hippo-memory.${format}`;
+        `remora-memory.${format}`;
       const url = URL.createObjectURL(
         new Blob([content], { type: res.headers.get("content-type") ?? "" }),
       );

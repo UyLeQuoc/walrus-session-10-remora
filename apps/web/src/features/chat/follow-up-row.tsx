@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export function FollowUpRow({
   suggestions,
   onPick,
@@ -7,16 +9,18 @@ export function FollowUpRow({
 }) {
   if (suggestions.length === 0) return null;
   return (
-    <div className="flex flex-col items-start gap-3 px-2 pb-2">
+    <div className="flex flex-col items-start gap-1 px-2 pb-2">
       {suggestions.map((text) => (
-        <button
+        <Button
           key={text}
           type="button"
+          variant="ghost"
+          size="sm"
+          className="h-auto justify-start px-1 py-1 text-left font-normal text-muted-foreground hover:text-foreground"
           onClick={() => onPick(text)}
-          className="text-left text-sm text-muted-foreground hover:text-primary"
         >
           {text}
-        </button>
+        </Button>
       ))}
     </div>
   );

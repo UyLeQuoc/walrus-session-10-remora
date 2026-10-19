@@ -1,6 +1,10 @@
 import { useConnectWallet, useCurrentAccount, useWallets } from "@mysten/dapp-kit";
 import { useEffect, useState } from "react";
-import { lastWalletConnection, WALLET_CONNECTION_KEY } from "@/features/connect/last-wallet";
+import {
+  type LastWallet,
+  lastWalletConnection,
+  WALLET_CONNECTION_KEY,
+} from "@/features/connect/last-wallet";
 
 /**
  * One silent reconnect shared across Strict Mode's extra mount.
@@ -23,7 +27,7 @@ function startResume(key: string, run: () => Promise<unknown>): Promise<boolean>
 }
 
 /** Reconnect the wallet this browser already approved, instead of opening the chooser again. */
-export function useResumeWallet(enabled: boolean): { pending: boolean } {
+export function useResumeWallet(enabled: boolean): { pending: boolean; saved: LastWallet | null } {
   const account = useCurrentAccount();
   const wallets = useWallets();
   const { mutateAsync: connectWallet } = useConnectWallet();
@@ -50,7 +54,7 @@ export function useResumeWallet(enabled: boolean): { pending: boolean } {
     };
   }, [connectWallet, match, pending, savedAddress, savedName]);
 
-  return { pending };
+  return { pending, saved };
 }
 
 function storedWalletRecord(): string | null {

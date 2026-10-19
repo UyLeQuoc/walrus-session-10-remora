@@ -10,7 +10,7 @@ export function ExportPanel({ onError }: { onError: (message: string) => void })
       <CardHeader>
         <CardTitle>Take it with you</CardTitle>
         <CardDescription>
-          Every memory, read back from Walrus and checked against the hash hippo recorded.
+          Every memory, read back from Walrus and checked against the hash Remora recorded.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-2">

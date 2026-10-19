@@ -1,9 +1,11 @@
-import { useCurrentAccount } from "@mysten/dapp-kit";
+/**
+ * Memory → Chat (D6): what Remora remembers from the chat, where it lives on Walrus and Sui, and the
+ * controls to export, hide or revoke it. The old `/me` page lives here as the second tab.
+ */
 import { Library } from "lucide-react";
-import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { useShellTitle } from "@/app/shell";
+import { Page } from "@/components/app/page";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChainPanel } from "@/features/me/chain-panel";
 import { ChangesPanel } from "@/features/me/changes-panel";
 import { ClaudeCodePanel } from "@/features/me/claude-code-panel";
@@ -26,49 +29,44 @@ import { useMe } from "@/features/me/use-me";
 import { useUsage } from "@/features/me/use-usage";
 import { WalletReadPanel } from "@/features/me/wallet-read-panel";
 import { WalletSignIn } from "@/features/me/wallet-signin";
-import { usePageMeta } from "@/hooks/use-page-meta";
 
-const PAGE_META = {
-  title: "My memory · hippo",
-  description:
-    "What hippo remembers about you, where it lives on Walrus and Sui, and the controls to export, hide or revoke it.",
-  path: "/me",
-  index: false,
-};
-
-export function MePage() {
-  const { me, memories, error, load, signOut } = useMe();
+export function ChatMemory() {
+  const { me, memories, error, load } = useMe();
   const usage = useUsage();
-  const account = useCurrentAccount();
-  const linked = Boolean(me?.walletAddress) || Boolean(account);
-  useShellTitle("My memory");
-  usePageMeta(PAGE_META);
+  const linked = Boolean(me?.walletAddress);
 
   if (!me) {
-    return <p className="px-4 py-6 text-sm text-muted-foreground">{error || "Loading…"}</p>;
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-24 w-full" />
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </div>
+    );
   }
 
   if (me.mode === "anonymous") {
     return (
-      <Page>
-        <Empty>
+      <div className="flex flex-col gap-6">
+        <Empty className="border">
           <EmptyHeader>
-            <EmptyMedia variant="icon" className="bg-brand/15 text-brand">
+            <EmptyMedia variant="icon" className="bg-primary/15 text-primary">
               <Library />
             </EmptyMedia>
             <EmptyTitle>Nothing remembered yet</EmptyTitle>
             <EmptyDescription>
-              Tell hippo something in the chat. It shows up here once it is on Walrus.
+              Tell a remora something in the chat. It shows up here once it is on Walrus.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button asChild>
-              <Link to="/">Start chatting</Link>
+              <Link to="/chat">Start chatting</Link>
             </Button>
           </EmptyContent>
         </Empty>
         {linked ? null : <WalletSignIn onSignedIn={load} />}
-      </Page>
+      </div>
     );
   }
 
@@ -76,25 +74,22 @@ export function MePage() {
   const stored = memories.filter((m) => m.status === "stored").length;
 
   return (
-    <Page>
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={owned ? "accent" : "outline"}>{owned ? "you own this" : "guest"}</Badge>
+          <Badge variant={owned ? "accent" : "outline"}>
+            {owned ? "you own this" : "Not owned yet"}
+          </Badge>
           <Badge variant="outline">{me.memoryEnabled ? "remembering" : "paused"}</Badge>
           {me.namespace ? (
             <span className="min-w-48 max-w-xs flex-1 text-sm text-muted-foreground">
               <Hash value={me.namespace} label="namespace" />
             </span>
           ) : null}
-          {me.signedIn ? (
-            <Button variant="outline" className="ml-auto" onClick={() => void signOut()}>
-              Sign out
-            </Button>
-          ) : null}
         </div>
         {owned ? null : (
           <p className="text-sm text-muted-foreground">
-            Right now hippo keeps it under its own account. Own it with a wallet below.
+            Right now Remora keeps it under its own account. Own it with a wallet below.
           </p>
         )}
       </div>
@@ -114,26 +109,24 @@ export function MePage() {
         <ChangesPanel />
       ) : null}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <ChainPanel owned={owned} onError={(message) => toast.error(message)} />
-        <div className="flex flex-col gap-6">
-          {stored > 0 ? <ExportPanel onError={(message) => toast.error(message)} /> : null}
-        </div>
-      </div>
+      <ChainPanel owned={owned} onError={(message) => toast.error(message)} />
+
+      {stored > 0 ? <ExportPanel onError={(message) => toast.error(message)} /> : null}
 
       {stored > 0 ? <WalletReadPanel memories={memories} /> : null}
 
       <ImportPanel onSaved={load} />
 
       <ClaudeCodePanel owned={owned} />
-    </Page>
+    </div>
   );
 }
 
-function Page({ children }: { children: ReactNode }) {
+/** `/me` is kept as a thin route for old links and tests; it renders the Chat tab content. */
+export function MePage() {
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-6 overflow-y-auto px-4 py-6">
-      {children}
-    </div>
+    <Page title="Memory" description="What Remora remembers from the chat.">
+      <ChatMemory />
+    </Page>
   );
 }

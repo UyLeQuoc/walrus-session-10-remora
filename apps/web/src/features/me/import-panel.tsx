@@ -11,7 +11,7 @@ export function ImportPanel({ onSaved }: { onSaved: () => void }) {
   return (
     <Section
       title="Bring your memory from another assistant"
-      description="Paste what another assistant knows about you. hippo keeps only the facts you tick."
+      description="Paste what another assistant knows about you. Remora keeps only the facts you tick."
     >
       <Textarea
         aria-label="What another assistant knows about you"

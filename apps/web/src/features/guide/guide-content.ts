@@ -25,7 +25,7 @@ export const MEMORY_FLOW: FlowStep[] = [
   { icon: MessageSquare, title: "You say it", detail: "“We moved this project to bun.”" },
   {
     icon: NotebookPen,
-    title: "hippo keeps the fact",
+    title: "Remora keeps the fact",
     detail: "One typed line. Keys and tokens stripped.",
   },
   { icon: Lock, title: "Sealed on Walrus", detail: "Encrypted, kept about seven months." },
@@ -43,7 +43,7 @@ export const CHAT_VS_MEMORY: [Contrast, Contrast] = [
   {
     title: "The chat",
     lines: [
-      { text: "Encrypted on hippo's server", yes: true },
+      { text: "Stored on Remora's server", yes: true },
       { text: "Reload shows it again", yes: true },
       { text: "Written to Walrus", yes: false },
       { text: "Yours to delete", yes: true },
@@ -68,17 +68,17 @@ export interface OwnershipStage {
 }
 
 export const OWNERSHIP: OwnershipStage[] = [
-  { icon: UserRound, title: "Guest", where: "In hippo's account, under hippo-guest:…" },
+  { icon: UserRound, title: "Guest", where: "In Remora's account, under remora-guest:…" },
   {
     icon: Wallet,
     title: "Yours",
-    where: "Your Sui account. hippo holds a key.",
+    where: "Your Sui account. Remora holds a key.",
     command: "/connect",
   },
   {
     icon: ShieldX,
     title: "Revoked",
-    where: "Key removed on chain. hippo can't read.",
+    where: "Key removed on chain. Remora can't read.",
     command: "/disconnect",
   },
 ];
@@ -107,25 +107,25 @@ export const PROOFS: Proof[] = [
     icon: Activity,
     title: "Memory at work",
     detail: "How many answers used your memory.",
-    where: "My memory",
+    where: "Memory",
   },
   {
     icon: KeyRound,
     title: "Read it with your wallet",
     detail: "Decrypt in the browser. No relayer.",
-    where: "My memory, once you own it",
+    where: "Memory, once you own it",
   },
   {
     icon: History,
     title: "How it changed",
     detail: "Each correction beside the fact it replaced.",
-    where: "My memory",
+    where: "Memory",
   },
   {
     icon: Import,
     title: "Bring it with you",
     detail: "Paste what another assistant knows. Keep what you tick.",
-    where: "My memory",
+    where: "Memory",
   },
 ];
 
@@ -138,7 +138,7 @@ export const COMMAND_GROUPS: CommandGroup[] = [
   {
     title: "Memory",
     commands: [
-      ["/memory", "what hippo remembers"],
+      ["/memory", "what Remora remembers"],
       ["/memory search", "read it back from Walrus"],
       ["/memory forget", "stop using one, or all"],
       ["/memory off", "stop keeping new facts"],
@@ -156,7 +156,7 @@ export const COMMAND_GROUPS: CommandGroup[] = [
     title: "Ownership",
     commands: [
       ["/connect", "own it in your account"],
-      ["/disconnect", "revoke hippo on chain"],
+      ["/disconnect", "revoke Remora on chain"],
       ["/whoami", "where your memory lives"],
     ],
   },
@@ -173,5 +173,5 @@ export const CLAUDE_CODE_STEPS = [
   "/plugin marketplace add MystenLabs/MemWal",
   "/plugin install memwal@memwal-plugins",
   "Log in to Walrus Memory with the same wallet",
-  'What does hippo know about me? Use memwal_recall with namespace "hippo".',
+  'What does Remora know about me? Use memwal_recall with namespace "remora".',
 ];

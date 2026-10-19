@@ -1,5 +1,5 @@
 import { sanitizeTable } from "@remora/core/command-table";
-import { Columns2, FileText, Pencil, RotateCcw } from "lucide-react";
+import { Columns2, Pencil, RotateCcw } from "lucide-react";
 import { useRef, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
@@ -10,10 +10,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { CommandTableView } from "@/features/chat/command-table";
 import { Markdown } from "@/features/chat/markdown";
 import { messageActionClass } from "@/features/chat/message-action";
-import { Recalled, type RecalledMemory } from "@/features/chat/recalled";
+import type { RecalledMemory } from "@/features/chat/recalled";
 import { selectedFact } from "@/features/chat/selected-fact";
 import { Thinking, useSmoothedText } from "@/features/chat/streaming-text";
 import { fileCiteOf } from "@/features/chat/transcript";
+import { TurnTrace } from "@/features/chat/turn-trace";
 import type { Comparison } from "@/features/chat/use-compare";
 import { WithoutMemory } from "@/features/chat/without-memory";
 
@@ -110,9 +111,7 @@ export function ChatTurn({
             </div>
           ) : (
             <Bubble align="end" variant="muted">
-              <BubbleContent className="whitespace-pre-wrap bg-[#E8F3FE]! dark:bg-muted!">
-                {spoken}
-              </BubbleContent>
+              <BubbleContent className="whitespace-pre-wrap bg-muted!">{spoken}</BubbleContent>
             </Bubble>
           )}
           {fact && !editor ? (
@@ -159,16 +158,7 @@ export function ChatTurn({
     <Message>
       <MessageContent className="gap-1" ref={rootRef} onMouseUp={readSelection}>
         <div className="flex w-full min-w-0 flex-col gap-2.5">
-          <Recalled memories={recalled} />
-          {file ? (
-            <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-              <FileText className="size-4 shrink-0" />
-              <span className="truncate">From your file {file.name}</span>
-            </p>
-          ) : null}
-          {tools.map((part, index) => (
-            <ToolLine key={`${String(part.type)}-${index}`} part={part} />
-          ))}
+          <TurnTrace recalled={recalled} file={file} tools={tools} />
           {table ? (
             <CommandTableView table={table} />
           ) : shown ? (
@@ -232,20 +222,5 @@ function AnswerCopy({ value, label }: { value: string; label: string }) {
       </TooltipTrigger>
       <TooltipContent>{`Copy ${label}`}</TooltipContent>
     </Tooltip>
-  );
-}
-
-function ToolLine({ part }: { part: Record<string, unknown> }) {
-  if (part.type === "tool-recall") {
-    return <p className="text-sm text-muted-foreground">⟶ recalled</p>;
-  }
-  const input = part.input as { type?: string; text?: string } | undefined;
-  const output = part.output as { saved?: boolean } | undefined;
-  const done = part.state === "output-available";
-  return (
-    <p className="text-sm text-muted-foreground">
-      {done && output?.saved === false ? "already knew" : "remembering"}
-      {input?.type ? ` [${input.type}]` : ""} {input?.text ?? ""}
-    </p>
   );
 }

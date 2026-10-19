@@ -1,11 +1,13 @@
 /**
- * N1 + N4 + N19: the activity feed. Each item says what happened in a sentence, links to its Wake
- * ("Why?"), and answers and pings take 👍/👎 so the remora learns which sources and pings matter.
+ * N1 + N4 + N19: the activity feed, one bordered list with a divider per row (§5.4). Each item says
+ * what happened in a sentence, links to its Wake ("Why?"), and answers and pings take 👍/👎 so the
+ * remora learns which sources and pings matter.
  */
 import type { FeedItem } from "@remora/schema";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Time } from "@/components/app/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usdc } from "@/lib/usdc";
@@ -13,17 +15,17 @@ import { api } from "./api";
 import { WhyButton } from "./why-drawer";
 
 const LABEL: Record<FeedItem["type"], string> = {
-  action: "action",
-  answer: "answer",
-  payment: "paid",
-  blocked: "blocked",
-  shadow: "shadow",
-  approval_needed: "needs you",
-  ping: "ping",
-  episode: "ignored",
-  rule_learned: "learned",
-  handoff: "handoff",
-  config_changed: "edited",
+  action: "Action",
+  answer: "Answer",
+  payment: "Paid",
+  blocked: "Blocked",
+  shadow: "Shadow",
+  approval_needed: "Needs you",
+  ping: "Ping",
+  episode: "Ignored",
+  rule_learned: "Learned",
+  handoff: "Handoff",
+  config_changed: "Edited",
 };
 
 /** A sentence for the item; amounts in USDC where the payload has one. */
@@ -48,18 +50,20 @@ function Feedback({ e }: { e: FeedItem }) {
     <span className="flex gap-1">
       <Button
         type="button"
-        size="icon"
+        size="icon-sm"
         variant={given === "useful" ? "secondary" : "ghost"}
         aria-label="Useful"
+        aria-pressed={given === "useful"}
         onClick={() => void send("useful")}
       >
         <ThumbsUp />
       </Button>
       <Button
         type="button"
-        size="icon"
+        size="icon-sm"
         variant={given === "noise" ? "secondary" : "ghost"}
         aria-label="Noise"
+        aria-pressed={given === "noise"}
         onClick={() => void send("noise")}
       >
         <ThumbsDown />
@@ -77,26 +81,20 @@ export function FeedList({
 }) {
   if (!items.length) return <p className="text-sm text-muted-foreground">Nothing yet.</p>;
   return (
-    <ol className="flex flex-col gap-2" aria-label="Activity">
+    <ol className="divide-y rounded-xl border" aria-label="Activity">
       {items.map((e) => {
         const answer =
           e.type === "answer" ? String((e.payload as { answer?: string }).answer ?? "") : "";
         return (
-          <li
-            key={e.id}
-            className="flex flex-col gap-1 rounded-md border p-3 text-sm"
-            data-testid="feed-item"
-          >
+          <li key={e.id} className="flex flex-col gap-1 p-3 text-sm" data-testid="feed-item">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="min-w-0">
-                <Badge
-                  variant={e.type === "blocked" || e.type === "ping" ? "destructive" : "outline"}
-                >
+                <Badge variant={e.type === "blocked" ? "destructive" : "outline"}>
                   {LABEL[e.type]}
                 </Badge>{" "}
                 <span className="text-muted-foreground">
                   {showRemora ? `${e.remora} · ` : ""}
-                  {new Date(e.createdAt).toLocaleString()} ·{" "}
+                  <Time value={e.createdAt} /> ·{" "}
                 </span>
                 {describeItem(e)}
               </span>

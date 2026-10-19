@@ -17,7 +17,7 @@ export function HowStrip() {
           <Fragment key={step.label}>
             {index > 0 ? <ArrowRight aria-hidden className="size-3.5" /> : null}
             <li className="flex items-center gap-1.5">
-              <step.icon aria-hidden className="size-4 text-brand" />
+              <step.icon aria-hidden className="size-4 text-primary" />
               {step.label}
             </li>
           </Fragment>
@@ -29,7 +29,7 @@ export function HowStrip() {
           href={TELEGRAM_BOT.url}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 font-medium text-brand underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
         >
           <Send aria-hidden className="size-3.5" />
           Open in Telegram
@@ -38,7 +38,7 @@ export function HowStrip() {
           href={DISCORD_BOT.url}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 font-medium text-brand underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
         >
           <MessagesSquare aria-hidden className="size-3.5" />
           Add to Discord

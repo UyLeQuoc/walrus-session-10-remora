@@ -1,5 +1,5 @@
 /**
- * What hippo says before the first message.
+ * What Remora says before the first message.
  *
  * `getHours` is local, so a machine in the evening is not greeted as morning
  * just because the server is on UTC. The hour only picks the bank. A reload
