@@ -52,3 +52,8 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0033](0033-w2-api-contract.md) | The W2 API shapes are a contract in `packages/schema` | Accepted |
 | [0034](0034-w2-web-live-pages.md) | W2 web pages run on the live API behind a wallet session | Accepted |
 | [0035](0035-w2-exit-fixes.md) | What the W2 exit e2e changed: a gas coin pool, unmetered W2 reads, unsettled ≠ paid | Accepted |
+| [0036](0036-ui-foundation.md) | UI foundation: warm theme, page components, a quieter kit | Accepted |
+| [0037](0037-network-dropdown.md) | Network dropdown instead of a toggle plus a badge | Accepted |
+| [0038](0038-home-dashboard-chat-route.md) | Home is the dashboard, chat moves to `/chat`, Memory gets two tabs | Accepted |
+| [0039](0039-electric-indigo-primary.md) | Primary colour: electric indigo (supersedes the teal part of ADR-0036) | Accepted |
+| [0040](0040-block-r-logo-and-trace.md) | Block "R" logo component, shadcn Trace for agent steps, full-width forms | Accepted |
