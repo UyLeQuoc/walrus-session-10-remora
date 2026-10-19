@@ -5,8 +5,10 @@ import {
   panelShown,
   parsePanelChoice,
 } from "@/features/chat/memory-panel-state";
+import { readStored, writeStored } from "@/lib/storage";
 
-const KEY = "hippo.memory-panel";
+const KEY = "remora.memory-panel";
+const OLD_KEY = "hippo.memory-panel";
 const SIDE_BY_SIDE_FROM = 1280;
 
 function useOverlay(): boolean {
@@ -22,19 +24,11 @@ function useOverlay(): boolean {
 }
 
 function readChoice(): PanelChoice | null {
-  try {
-    return parsePanelChoice(localStorage.getItem(KEY));
-  } catch {
-    return null;
-  }
+  return parsePanelChoice(readStored("local", KEY, OLD_KEY));
 }
 
 function writeChoice(open: boolean): void {
-  try {
-    localStorage.setItem(KEY, open ? "open" : "closed");
-  } catch {
-    // The panel still moves. The choice will not survive a reload.
-  }
+  writeStored("local", KEY, open ? "open" : "closed");
 }
 
 export function useMemoryPanel() {

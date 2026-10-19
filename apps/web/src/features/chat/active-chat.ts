@@ -1,13 +1,12 @@
-const KEY = "hippo.activeChat";
+import { readStored } from "@/lib/storage";
+
+const KEY = "remora.activeChat";
+const OLD_KEY = "hippo.activeChat";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function readActiveChat(): string | null {
-  try {
-    const value = sessionStorage.getItem(KEY);
-    return value && UUID.test(value) ? value : null;
-  } catch {
-    return null;
-  }
+  const value = readStored("session", KEY, OLD_KEY);
+  return value && UUID.test(value) ? value : null;
 }
 
 export function writeActiveChat(id: string): void {
