@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNewChatTick, useOpenTick, useShellTitle } from "@/app/shell";
+import { AsciiOcean, type SharkSpec } from "@/components/ascii-ocean";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -46,6 +47,13 @@ import { useSlashMenu } from "@/features/chat/use-slash-menu";
 import { useTranscript } from "@/features/chat/use-transcript";
 import { useMe } from "@/features/me/use-me";
 import { usePageMeta } from "@/hooks/use-page-meta";
+
+// The empty chat's showcase backdrop; gone once the first message lands.
+const OCEAN_SHARKS: SharkSpec[] = [
+  { kind: "classic", size: 1 },
+  { kind: "hammerhead", size: 0.8 },
+  { kind: "thresher", size: 0.72 },
+];
 
 export function ChatPage() {
   const chatModel = useChatModel();
@@ -173,24 +181,33 @@ export function ChatPage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-6">
-            <div data-slot="empty-cluster" className="flex w-full max-w-xl flex-col gap-10">
-              <div data-slot="greeting" className="flex flex-col gap-6 text-center">
-                <GreetingLine greeting={greeting} />
-              </div>
-              <ComposerDock
-                text={text}
-                setText={setText}
-                send={send}
-                stop={() => void stop()}
-                busy={busy}
-                messages={messages}
-                model={chatModel}
-                panelOpen={panel.open}
-                onTogglePanel={panel.open ? panel.close : panel.show}
-              />
-              <div className="flex flex-col items-start gap-3">
-                <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <AsciiOcean
+              sharks={OCEAN_SHARKS}
+              className="absolute inset-0 size-full opacity-70 [mask-image:radial-gradient(ellipse_34%_42%_at_50%_50%,rgb(0_0_0/0.15)_55%,black)] dark:opacity-85"
+            />
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-6">
+              <div data-slot="empty-cluster" className="flex w-full max-w-xl flex-col gap-10">
+                <div data-slot="greeting" className="flex flex-col gap-6 text-center">
+                  <GreetingLine greeting={greeting} />
+                </div>
+                {/* Liquid glass over the ocean; index.css clears the composer's own surface inside it. */}
+                <div className="liquid-glass rounded-3xl">
+                  <ComposerDock
+                    text={text}
+                    setText={setText}
+                    send={send}
+                    stop={() => void stop()}
+                    busy={busy}
+                    messages={messages}
+                    model={chatModel}
+                    panelOpen={panel.open}
+                    onTogglePanel={panel.open ? panel.close : panel.show}
+                  />
+                </div>
+                <div className="flex flex-col items-start gap-3">
+                  <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
+                </div>
               </div>
             </div>
           </div>

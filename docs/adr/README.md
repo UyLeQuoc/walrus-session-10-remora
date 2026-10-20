@@ -57,3 +57,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0038](0038-home-dashboard-chat-route.md) | Home is the dashboard, chat moves to `/chat`, Memory gets two tabs | Accepted |
 | [0039](0039-electric-indigo-primary.md) | Primary colour: electric indigo (supersedes the teal part of ADR-0036) | Accepted |
 | [0040](0040-block-r-logo-and-trace.md) | Block "R" logo component, shadcn Trace for agent steps, full-width forms | Accepted |
+| [0041](0041-ascii-ocean-empty-chat.md) | ASCII ocean behind the empty chat; liquid-glass composer and suggestions | Proposed |

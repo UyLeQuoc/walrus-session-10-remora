@@ -39,14 +39,14 @@ export function Examples({
 }) {
   const rows = taught ? ASK : TEACH;
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-start gap-2">
       {rows.map((row) => (
         <Button
           key={row.text}
           type="button"
           variant="ghost"
           size="sm"
-          className="h-auto justify-start px-1 py-1 text-left font-normal text-muted-foreground hover:text-foreground"
+          className="liquid-glass h-auto justify-start rounded-full px-3 py-1.5 text-left font-normal text-muted-foreground hover:bg-white/30 hover:text-foreground dark:hover:bg-white/10"
           onClick={() =>
             "reload" in row && row.reload
               ? onReloadAndAsk("What do my remoras remember?")

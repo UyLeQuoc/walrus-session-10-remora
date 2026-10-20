@@ -245,6 +245,50 @@
   }
 }
 
+/*
+ * Liquid glass: a frosted, see-through surface for the empty chat over the ASCII ocean. A bright
+ * rim and a specular top edge make it read as glass rather than a faded card.
+ */
+@utility liquid-glass {
+  background-color: transparent;
+  background-image: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.62) 0%,
+    rgb(255 255 255 / 0.28) 55%,
+    rgb(255 255 255 / 0.4) 100%
+  );
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  backdrop-filter: blur(14px) saturate(170%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.85),
+    inset 0 -1px 1px 0 rgb(255 255 255 / 0.25),
+    0 10px 30px -12px rgb(0 0 0 / 0.22);
+
+  &:is(.dark *) {
+    background-image: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.12) 0%,
+      rgb(255 255 255 / 0.04) 55%,
+      rgb(255 255 255 / 0.08) 100%
+    );
+    border-color: rgb(255 255 255 / 0.14);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.18),
+      inset 0 -1px 1px 0 rgb(255 255 255 / 0.05),
+      0 12px 32px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+/* Inside liquid glass the composer drops its own surface and lets the glass show; focus still rings. */
+.liquid-glass [data-slot="composer-shell"] {
+  background: transparent;
+  --tw-shadow: 0 0 #0000;
+}
+.liquid-glass [data-slot="composer-shell"]:not(:focus-within) {
+  border-color: transparent;
+}
+
 /* Trace (shadcn, Oct 2026): a running step's title shimmers; `shimmer-none` stops it. */
 @utility shimmer {
   background: linear-gradient(
