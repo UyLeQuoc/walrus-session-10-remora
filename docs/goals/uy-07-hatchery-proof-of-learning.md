@@ -19,7 +19,7 @@
 > 1. **Share and publish.** The burner shares a Scout.
 >    - The review screen lists exactly what is shared: no memories, keys, ids, Wakes or raw addresses.
 >    - The scrubber and the safety scan pass.
->    - Publishing stores the template on Walrus (blob id) and records `remora::hatchery` `Published` with **one signature**.
+>    - Publishing stores the template on Walrus (blob id) and records `remora_hatchery::hatchery` (ADR-0047) `Published` with **one signature**.
 > 2. **Gallery.** The template shows its author, tools, triggers, Reef payees, suggested budget and fork count.
 > 3. **Hatch.** A fresh test account opens the share link.
 >    - It sees a consent screen: permissions, Reef payees and *its own* budget.
@@ -56,7 +56,7 @@ Each shape comes with a fixture:
 - `LearningSeries`: a metric, its points and its source.
 - Memory items gain `hiddenAt`, `supersededBy` and `expiresAt` where the inspector shapes lack them. Add the export format.
 
-## Move PR: `remora::hatchery` (M6)
+## Move PR: `remora_hatchery::hatchery` (ADR-0047) (M6)
 - `Template { author, blob_id, version, parent }`, plus `Published`, `Forked` and `Deprecated` events.
 - Versions are immutable. Only the author can deprecate. Every entry point checks `version` (I6, like the Disc).
 - Decide in an ADR whether this is a new package or an upgrade of the Disc package (the spike key holds the testnet `UpgradeCap`, ADR-0025).
@@ -115,7 +115,7 @@ Each shape comes with a fixture:
 - Write a handoff to Huấn (what landed).
 
 ## Done when
-- [ ] The contract PR and the Move PR are merged; `remora::hatchery` is published on testnet.
+- [ ] The contract PR and the Move PR are merged; `remora_hatchery::hatchery` (ADR-0047) is published on testnet.
 - [ ] A + B are done with tests.
 - [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green.
 - [ ] The U7 exit passes on testnet, with timings, blob ids and digests.

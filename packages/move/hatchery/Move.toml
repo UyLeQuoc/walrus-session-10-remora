@@ -1,0 +1,5 @@
+[package]
+name = "remora_hatchery"
+edition = "2024"
+
+[dependencies]
