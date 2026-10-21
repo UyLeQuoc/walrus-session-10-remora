@@ -32,6 +32,21 @@
     "createdAt": "2026-11-03T02:13:06.000Z"
   },
   {
+    "id": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a00",
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "remora": "Scout",
+    "network": "testnet",
+    "type": "message",
+    "summary": "Is 0x2 safe to depend on?",
+    "payload": {
+      "text": "Is 0x2 safe to depend on?",
+      "from": "owner"
+    },
+    "receiptId": null,
+    "feedback": null,
+    "createdAt": "2026-11-03T02:13:00.000Z"
+  },
+  {
     "id": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a03",
     "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
     "remora": "Scout",

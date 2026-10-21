@@ -1,0 +1,11 @@
+{
+  "id": "4f3e2d1c-0b9a-4876-8543-210fedcba987",
+  "ownerAddress": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "network": "testnet",
+  "name": "Team",
+  "responder": "auto",
+  "leadId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+  "memberIds": ["0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10", "6c1d7e2a-3b4f-4a5e-8d9c-0e1f2a3b4c5d"],
+  "isDefault": true,
+  "createdAt": "2026-10-21T08:00:00.000Z"
+}

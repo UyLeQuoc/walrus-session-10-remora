@@ -1,0 +1,74 @@
+{
+  "team": {
+    "schema": "remora.team/v1",
+    "name": "Onchain desk",
+    "description": "A Scout that buys answers and a Sentinel that watches your wallet.",
+    "remoras": [
+      {
+        "template": "scout",
+        "name": "Scout",
+        "model": "anthropic/claude-haiku-5.5",
+        "budget": {
+          "monthlyUsd": 0.5,
+          "perPaymentUsd": 0.015
+        },
+        "watch": [],
+        "rules": [],
+        "schedules": [
+          {
+            "when": "weekdays at 8am",
+            "question": "Is package 0x2 safe to depend on?"
+          }
+        ]
+      },
+      {
+        "template": "sentinel",
+        "name": "Sentinel",
+        "watch": [],
+        "rules": ["Ignore incoming SUI under 0.01"],
+        "schedules": []
+      }
+    ],
+    "room": {
+      "name": "Team",
+      "responder": "auto",
+      "lead": "Scout"
+    }
+  },
+  "playbook": "# Onchain desk\n\nAsk Scout anything onchain; tell Sentinel what matters.\n",
+  "remoras": [
+    {
+      "name": "Scout",
+      "template": "scout",
+      "model": "anthropic/claude-haiku-5.5",
+      "budget": "0.50 USDC a month, at most 0.015 a payment",
+      "watch": 0,
+      "rules": [],
+      "schedules": [
+        {
+          "when": "weekdays at 8am",
+          "human": "weekdays at 8am UTC",
+          "question": "Is package 0x2 safe to depend on?"
+        }
+      ],
+      "needsDisc": true
+    },
+    {
+      "name": "Sentinel",
+      "template": "sentinel",
+      "model": null,
+      "budget": null,
+      "watch": 0,
+      "rules": [
+        {
+          "text": "Ignore incoming SUI under 0.01",
+          "understood": true
+        }
+      ],
+      "schedules": [],
+      "needsDisc": false
+    }
+  ],
+  "signatures": 1,
+  "warnings": ["Sentinel watches no address yet: it will watch yours."]
+}

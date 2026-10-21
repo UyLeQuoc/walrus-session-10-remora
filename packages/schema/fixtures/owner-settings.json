@@ -4,5 +4,6 @@
   "quietStart": "23:00",
   "quietEnd": "07:00",
   "language": "vi",
-  "notify": "important"
+  "notify": "important",
+  "telegramLinked": false
 }
