@@ -573,7 +573,7 @@ examples: ["Is 0xabc… a scam token?", "What changed in my wallet this week?"]
 **Lifecycle:**
 
 1. **Share** (M1): a review screen, the scrubber and a Sonar scan (M7).
-2. **Publish:** the blob goes to Walrus, then `remora::hatchery::publish(blob_id, parent)` emits
+2. **Publish:** the blob goes to Walrus, then `remora_hatchery::hatchery::publish` (or `publish_derived` with the parent, ADR-0047) emits
    `Published`. A link, QR code and Telegram deep link are generated.
 3. **Gallery** (M4): reads the onchain events plus the blob content.
 4. **Hatch** (M5): a consent screen listing tools, triggers and Reef payees, then the owner sets their own
