@@ -1,0 +1,37 @@
+Goal U7 on TESTNET: the Hatchery on Walrus (M1, M3, M4, M5, M6, M7), Proof of Learning (G5), learning charts (L1), and memory controls (F4, F5, F8, F9).
+
+Source of truth: docs/goals/uy-07-hatchery-proof-of-learning.md. Read it fully. Then do, in order: the contract PR, the Move PR, Phase A, Phase B, Phase C. Also read docs/remora-features.md §2 M/G/F/L, docs/tech-reference.md §1.11, ADR-0012/0025/0042, and packages/schema/src/team.ts + template.ts.
+
+Work in the main checkout on main. Before any UI, check Huấn's branches, PRs, handoffs and commits; claim only what he hasn't started (note in docs/handoffs, ADR-0027) and hand him the APIs for the rest. packages/schema: ONE contract PR; Move: a PR; Uy may merge both.
+
+Contract PR (ADR-0046): the template format; the proposal is remora.team/v1 as the template, a team of one. Also HatcheryListing, ShareReview, SafetyReport, HatchConsent, ProofOfLearning, LearningSeries, and memory hiddenAt/supersededBy/expiresAt plus the export format, each with a fixture.
+
+Move PR: remora::hatchery with Template {author, blob_id, version, parent} and the Published/Forked/Deprecated events. Only the author can deprecate, and every entry point checks version. Decide in an ADR between a new package and a Disc package upgrade. Publish on testnet, add it to DEPLOYMENTS, and cover it with sui move test.
+
+Phase A (backend, tests for each):
+1. Share: U6's exportTeam path, then the scrubber, then a ShareReview of what's shared and what was removed.
+2. Safety, before publish AND hatch: Sonar scans the persona and prompts; every payee resolves to Reef; an unknown address blocks it.
+3. Publish: Walrus testnet publisher → blob id → one owner tx calling hatchery::publish. Share link plus a Telegram tpl_<id> deep link.
+4. Gallery: indexed from the hatchery events through SubscribeCheckpoints (gRPC only). Search, filter, fork count.
+5. Hatch: aggregator fetch → safety again → HatchConsent → U6 applyTeam, with the Disc issue AND hatchery::fork in ONE PTB. It starts in shadow mode.
+6. Proof of Learning: pairs of decisions by the same remora on the same trigger kind, with different outcomes, where the later Wake's memories hold new blobs. API with verify links.
+7. Learning metrics from Wakes and feedback: noise rate, cost per useful answer, memory-hit rate; an API and a JSON export for the blog.
+8. Memory controls for remora namespaces: hide (local hidden_at honored by recall), correct ([correction] supersedes), forget all (index only, said plainly), expiry with an alert under 30 days, Markdown/JSON export, MCP mapping for remora:<id>:<ns>.
+
+Phase B (UI, as claimed): share review → safety → publish; /hatchery gallery; /hatchery/:id with Hatch, consent screen, one signature; "What changed?" from Why?; learning charts; inspector hide/correct/forget, expiry, export.
+
+Phase C (U7 exit e2e on testnet, Playwright, the burner plus a fresh test keypair given a little SUI for gas):
+- share and publish a Scout (blob id + Published, one signature);
+- the gallery lists it;
+- the second account hatches it through the consent screen (one signature, Forked with the parent, shadow mode);
+- a poisoned template is refused;
+- Sentinel pings, 👎, learns, then ignores the same shape, and the Proof view shows the memory delta;
+- the charts show this run's real data;
+- hide, correct, expiry, export and MCP recall all work.
+Record timings, blob ids and digests in docs/spikes; write a handoff to Huấn.
+
+Hard rules: no mainnet money or publish; burner/test keys only; never commit .env or keys or print key values; no deploys or force-push; avoid ports 8787/5173; never edit reference/; any decision gets an ADR in the same commit.
+
+Done when: contract + Move PRs merged and hatchery on testnet; A + B done with tests; typecheck, lint, test, sui move test, bun run e2e and CI green; the U7 exit passes on testnet; ADRs, docs and handoff written; all pushed to main.
+
+Finish with a short Vietnamese summary: what users can do now, digests, what's left.
