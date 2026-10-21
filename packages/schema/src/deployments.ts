@@ -7,7 +7,9 @@ export const Deployment = z.object({
   remoraPackageId: ObjectId.nullable(),
   /** Shared `remora::disc::Registry` (Disc key → ID, ADR-0020); null until published. */
   discRegistryId: ObjectId.nullable(),
-  /** Shared object of `remora::hatchery`; null until M6 lands. */
+  /** The `remora_hatchery` package (M6, ADR-0047), published apart from the Disc; null until published. */
+  hatcheryPackageId: ObjectId.nullable().default(null),
+  /** Shared `remora_hatchery::hatchery::Registry` (the version gate); null until published. */
   hatcheryRegistryId: ObjectId.nullable(),
   usdcCoinType: z.string().min(1),
   memwalRelayer: z.url(),
@@ -20,6 +22,7 @@ export const DEPLOYMENTS = {
     network: "mainnet",
     remoraPackageId: null,
     discRegistryId: null,
+    hatcheryPackageId: null,
     hatcheryRegistryId: null,
     usdcCoinType: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
     memwalRelayer: "https://relayer.memory.walrus.xyz",
@@ -29,6 +32,7 @@ export const DEPLOYMENTS = {
     network: "testnet",
     remoraPackageId: "0xcc05642d8f85d0ba4a229677c67a2a56214888dda38f3d95e3c69e88434a5d6d",
     discRegistryId: "0x479454d5ed1b44000b03948dc2935c656c031e09f1b9508f4af38c54bb83b371",
+    hatcheryPackageId: null,
     hatcheryRegistryId: null,
     // Circle's testnet USDC, a regulated coin (verified in U1).
     usdcCoinType: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",

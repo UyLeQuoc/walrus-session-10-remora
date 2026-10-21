@@ -1,0 +1,96 @@
+{
+  "listing": {
+    "templateId": "0x7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a",
+    "network": "testnet",
+    "blobId": "zdgXXpFxc9jm8oljSG7SGq0u1s16xINpIiRIZD8Vdfw",
+    "author": "0xd9703e08d5f4fe35acb3c520881bfba2106d8b63ac252648f4aca3917f634757",
+    "parent": null,
+    "name": "Package checker",
+    "description": "A Scout that checks Sui packages before you depend on them.",
+    "permissions": [
+      {
+        "remora": "Scout",
+        "template": "scout",
+        "tools": ["pay", "tatum_object", "web_fetch", "memory_recall", "schedule"],
+        "triggers": ["message", "cron"],
+        "payees": ["reef:sui-risk", "reef:odds", "reef:brief"],
+        "budget": "0.50 USDC a month, at most 0.015 a payment",
+        "model": "anthropic/claude-haiku-5.5"
+      }
+    ],
+    "forks": 1,
+    "deprecated": false,
+    "safety": "pass",
+    "publishedAt": "2026-10-22T03:01:00Z",
+    "publishDigest": "9ytVKmwkkkuhqFXyqpqaaDiPyM1TYHj1mmXCB4rsLX3s",
+    "stats": {
+      "hatched": 1,
+      "usefulAnswers": 3,
+      "costPerUsefulUsdc": "0.0100"
+    }
+  },
+  "team": {
+    "schema": "remora.team/v1",
+    "name": "Package checker",
+    "description": "A Scout that checks Sui packages before you depend on them.",
+    "remoras": [
+      {
+        "template": "scout",
+        "name": "Scout",
+        "model": "anthropic/claude-haiku-5.5",
+        "persona": "You are Scout. You check Sui packages and answer briefly, citing what each source cost.",
+        "budget": {
+          "monthlyUsd": 0.5,
+          "perPaymentUsd": 0.015
+        },
+        "watch": [],
+        "rules": [],
+        "schedules": [
+          {
+            "when": "weekdays at 8am",
+            "question": "Is package 0x2 safe to depend on?"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": [
+    {
+      "remora": "Scout",
+      "template": "scout",
+      "tools": ["memory.recall", "memory.remember", "pay", "notify", "handoff"],
+      "triggers": ["message", "cron"],
+      "payees": ["reef:sui-risk", "reef:odds", "reef:brief"],
+      "budget": "0.50 USDC a month, at most 0.015 a payment",
+      "model": "anthropic/claude-haiku-5.5"
+    }
+  ],
+  "payees": [
+    {
+      "ref": "reef:sui-risk",
+      "name": "Sui package risk",
+      "priceUsdc": "0.01",
+      "known": true
+    },
+    {
+      "ref": "reef:odds",
+      "name": "Sports odds snapshot",
+      "priceUsdc": "0.02",
+      "known": true
+    },
+    {
+      "ref": "reef:brief",
+      "name": "Page brief",
+      "priceUsdc": "0.005",
+      "known": true
+    }
+  ],
+  "safety": {
+    "verdict": "pass",
+    "findings": [],
+    "checks": ["scrubber", "patterns", "reef", "model"],
+    "checkedAt": "2026-10-22T03:00:00Z"
+  },
+  "startsInShadow": true,
+  "signatures": 1
+}

@@ -10,6 +10,8 @@ export * from "./deployments.ts";
 export * from "./errors.ts";
 export * from "./events.ts";
 export * from "./funds.ts";
+export * from "./hatchery.ts";
+export * from "./learning.ts";
 export * from "./memory.ts";
 export * from "./models.ts";
 export * from "./network.ts";

@@ -1,0 +1,37 @@
+{
+  "format": "remora.memory-export/v1",
+  "remora": {
+    "id": "6c1d7e2a-3b4f-4a5e-8d9c-0e1f2a3b4c5d",
+    "name": "Sentinel"
+  },
+  "network": "testnet",
+  "exportedAt": "2026-10-22T04:00:00Z",
+  "memories": [
+    {
+      "blobId": "Zr8_x2LmQe4TtY1",
+      "namespace": "rules",
+      "type": "rule",
+      "createdAt": "2026-10-22T03:12:00Z",
+      "expiresAt": "2027-05-20T00:00:00Z",
+      "hidden": false,
+      "supersededBy": null,
+      "text": "[rule] [by:@Sentinel] Ignore incoming SUI under 0.01",
+      "verified": true
+    },
+    {
+      "blobId": "MKP2-KVpB_q1aZ0",
+      "namespace": "episodes",
+      "type": "episode",
+      "createdAt": "2026-10-22T03:10:30Z",
+      "expiresAt": "2027-05-20T00:00:00Z",
+      "hidden": true,
+      "supersededBy": null,
+      "text": null,
+      "verified": false
+    }
+  ],
+  "notes": [
+    "Walrus Memory has no per-memory delete: hidden and superseded memories stay on Walrus until they expire.",
+    "The text is encrypted on Walrus; this file holds the text recall returned, not a key to decrypt it yourself."
+  ]
+}

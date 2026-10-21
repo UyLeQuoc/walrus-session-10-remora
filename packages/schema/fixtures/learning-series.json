@@ -1,0 +1,56 @@
+[
+  {
+    "remoraId": "6c1d7e2a-3b4f-4a5e-8d9c-0e1f2a3b4c5d",
+    "metric": "noise_rate",
+    "unit": "ratio",
+    "points": [
+      {
+        "day": "2026-10-21",
+        "value": 0.5,
+        "n": 4
+      },
+      {
+        "day": "2026-10-22",
+        "value": 0.0,
+        "n": 3
+      }
+    ],
+    "source": "Sentinel's pings and your 👍/👎 on them"
+  },
+  {
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "metric": "cost_per_useful",
+    "unit": "usdc",
+    "points": [
+      {
+        "day": "2026-10-21",
+        "value": 0.01,
+        "n": 2
+      },
+      {
+        "day": "2026-10-22",
+        "value": 0.005,
+        "n": 4
+      }
+    ],
+    "source": "Scout's payments divided by answers you marked useful"
+  },
+  {
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "metric": "memory_hit_rate",
+    "unit": "ratio",
+    "points": [
+      {
+        "day": "2026-10-21",
+        "value": 0.25,
+        "n": 4
+      },
+      {
+        "day": "2026-10-22",
+        "value": null,
+        "n": 0
+      }
+    ],
+    "source": "Answers that used a memory and bought nothing"
+  }
+]

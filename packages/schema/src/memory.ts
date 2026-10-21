@@ -42,10 +42,39 @@ export const MemoryRow = z.object({
   expiresAt: IsoDateTime.nullable(),
   /** Hidden locally (F4): recall and dedupe skip it, the blob stays on Walrus. */
   hidden: z.boolean(),
+  /** F4: the correction that replaced this fact; recall skips it, the blob stays on Walrus. */
+  supersededBy: BlobId.nullable().default(null),
   /** How many Wakes cited this memory. */
   usedIn: z.number().int().nonnegative(),
   text: z.string().optional(),
 });
 
+/**
+ * F8: `GET /api/remoras/:id/memory/export?format=json`. Metadata always; text when recall returns
+ * it, marked `verified` when it hashes to what was written. The Markdown export renders the same.
+ */
+export const RemoraMemoryExport = z.object({
+  format: z.literal("remora.memory-export/v1"),
+  remora: z.object({ id: z.uuid(), name: z.string().min(1) }),
+  network: z.enum(["testnet", "mainnet"]),
+  exportedAt: IsoDateTime,
+  memories: z.array(
+    z.object({
+      blobId: BlobId,
+      namespace: z.string().min(1),
+      type: MemoryType.nullable(),
+      createdAt: IsoDateTime,
+      expiresAt: IsoDateTime.nullable(),
+      hidden: z.boolean(),
+      supersededBy: BlobId.nullable(),
+      text: z.string().nullable(),
+      verified: z.boolean(),
+    }),
+  ),
+  /** Plain statements of what the file can't do (no per-memory delete, no self-decrypt…). */
+  notes: z.array(z.string().min(1)),
+});
+
 export type MemoryType = z.infer<typeof MemoryType>;
 export type MemoryRow = z.infer<typeof MemoryRow>;
+export type RemoraMemoryExport = z.infer<typeof RemoraMemoryExport>;
