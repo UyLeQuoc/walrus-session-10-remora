@@ -16,14 +16,22 @@ import {
   InboundMessage,
   InspectorResponse,
   intentHash,
+  isCatalogModel,
   MemoryRow,
+  MODEL_CATALOG,
+  ModelInfo,
   NetworksResponse,
   OutboundMessage,
   OwnerSettings,
   RemoraConfig,
   RemoraEvent,
   RemoraView,
+  Room,
+  RoomMessage,
+  Schedule,
   SchedulePreview,
+  TeamFile,
+  TeamPreview,
   Template,
   VerifyResult,
   Wake,
@@ -41,6 +49,11 @@ const FIXTURES: Record<string, z.ZodType> = {
   "inspector.json": InspectorResponse,
   "owner-settings.json": OwnerSettings,
   "remora-view.scout.json": RemoraView,
+  "room.team.json": Room,
+  "room-messages.json": z.array(RoomMessage),
+  "schedule.json": Schedule,
+  "team.json": TeamFile,
+  "team-preview.json": TeamPreview,
   "schedule-preview.json": SchedulePreview,
   "verify-result.payment.json": VerifyResult,
   "channel.inbound.json": InboundMessage,
@@ -96,5 +109,30 @@ describe("contract helpers", () => {
     const template = read("template.scout.json") as Record<string, unknown>;
     const bad = { ...template, payees: [`0x${"6d".repeat(32)}`] };
     expect(Template.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe("model catalog (D9, ADR-0042)", () => {
+  it("lists unique tool-calling models at most $1 per 1M tokens", () => {
+    for (const m of MODEL_CATALOG) ModelInfo.parse(m);
+    expect(new Set(MODEL_CATALOG.map((m) => m.id)).size).toBe(MODEL_CATALOG.length);
+    expect(isCatalogModel("anthropic/claude-haiku-5.5")).toBe(true);
+    expect(isCatalogModel("x/unknown")).toBe(false);
+    expect(isCatalogModel(undefined)).toBe(false);
+  });
+});
+
+describe("team files (ADR-0042)", () => {
+  it("reject a per-payment cap above the monthly limit and more than ten remoras", () => {
+    const team = TeamFile.parse(read("team.json"));
+    const scout = team.remoras[0];
+    if (!scout) throw new Error("no scout");
+    expect(
+      TeamFile.safeParse({
+        ...team,
+        remoras: [{ ...scout, budget: { monthlyUsd: 1, perPaymentUsd: 2 } }],
+      }).success,
+    ).toBe(false);
+    expect(TeamFile.safeParse({ ...team, remoras: Array(11).fill(scout) }).success).toBe(false);
   });
 });

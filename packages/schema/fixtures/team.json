@@ -1,0 +1,36 @@
+{
+  "schema": "remora.team/v1",
+  "name": "Onchain desk",
+  "description": "A Scout that buys answers and a Sentinel that watches your wallet.",
+  "remoras": [
+    {
+      "template": "scout",
+      "name": "Scout",
+      "model": "anthropic/claude-haiku-5.5",
+      "budget": {
+        "monthlyUsd": 0.5,
+        "perPaymentUsd": 0.015
+      },
+      "watch": [],
+      "rules": [],
+      "schedules": [
+        {
+          "when": "weekdays at 8am",
+          "question": "Is package 0x2 safe to depend on?"
+        }
+      ]
+    },
+    {
+      "template": "sentinel",
+      "name": "Sentinel",
+      "watch": [],
+      "rules": ["Ignore incoming SUI under 0.01"],
+      "schedules": []
+    }
+  ],
+  "room": {
+    "name": "Team",
+    "responder": "auto",
+    "lead": "Scout"
+  }
+}

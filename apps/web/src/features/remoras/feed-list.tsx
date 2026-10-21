@@ -16,6 +16,7 @@ import { WhyButton } from "./why-drawer";
 
 const LABEL: Record<FeedItem["type"], string> = {
   action: "Action",
+  message: "You",
   answer: "Answer",
   payment: "Paid",
   blocked: "Blocked",

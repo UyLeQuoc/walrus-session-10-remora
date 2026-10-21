@@ -38,6 +38,8 @@ export const CreateRemoraResponse = z.object({
 /** Every type a feed item can have (N1). */
 export const FEED_TYPES = [
   "action",
+  /** The owner's own line in a remora's 1-1 thread (ADR-0042). */
+  "message",
   "answer",
   "payment",
   "blocked",
@@ -107,6 +109,8 @@ export const OwnerSettings = z.object({
     .nullable(),
   language: z.enum(["en", "vi"]),
   notify: z.enum(["all", "important", "digest"]),
+  /** True once a Telegram chat redeemed this owner's link code (A5). */
+  telegramLinked: z.boolean().default(false),
 });
 
 /** N12: `POST /api/schedule/preview`. */

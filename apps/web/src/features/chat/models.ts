@@ -1,6 +1,8 @@
+import { MODEL_CATALOG } from "@remora/schema";
+
 /**
  * The chat model catalog (Phase 6 §4): a snapshot of OpenRouter on 2026-10-19, prices in USD per
- * 1M tokens. Every entry supports tool calling and costs at most $1 per 1M tokens in and out. The Remora default (empty id) means "let the server
+ * 1M tokens. The entries live in `packages/schema` so the server allowlists the same ids. Every entry supports tool calling and costs at most $1 per 1M tokens in and out. The Remora default (empty id) means "let the server
  * pick"; its id is never sent in the request body.
  */
 export type ModelInput = "text" | "image" | "audio" | "video" | "file";
@@ -18,6 +20,7 @@ export type ChatModel = {
 
 export const DEFAULT_MODEL_ID = "";
 
+/** The Remora default, then the shared catalog (`packages/schema` MODEL_CATALOG, ADR-0042). */
 export const MODELS: ChatModel[] = [
   {
     id: DEFAULT_MODEL_ID,
@@ -28,51 +31,7 @@ export const MODELS: ChatModel[] = [
     outputPerMillion: null,
     inputs: ["text"],
   },
-  {
-    id: "deepseek/deepseek-v4.1-flash",
-    label: "DeepSeek V4.1 Flash",
-    shortLabel: "V4.1 Flash",
-    vendor: "DeepSeek",
-    inputPerMillion: 0.04,
-    outputPerMillion: 0.08,
-    inputs: ["text", "image"],
-  },
-  {
-    id: "z-ai/glm-5.3-flash",
-    label: "GLM-5.3 Flash",
-    shortLabel: "GLM-5.3",
-    vendor: "Zhipu",
-    inputPerMillion: 0.05,
-    outputPerMillion: 0.16,
-    inputs: ["text", "image", "video"],
-  },
-  {
-    id: "anthropic/claude-haiku-5.5",
-    label: "Claude Haiku 5.5",
-    shortLabel: "Haiku 5.5",
-    vendor: "Anthropic",
-    inputPerMillion: 0.1,
-    outputPerMillion: 0.5,
-    inputs: ["text", "image", "file"],
-  },
-  {
-    id: "openai/gpt-6-luna",
-    label: "GPT-6 Luna",
-    shortLabel: "Luna",
-    vendor: "OpenAI",
-    inputPerMillion: 0.1,
-    outputPerMillion: 0.5,
-    inputs: ["text", "image", "file"],
-  },
-  {
-    id: "qwen/qwen3.8-omni-flash",
-    label: "Qwen3.8 Omni Flash",
-    shortLabel: "Omni Flash",
-    vendor: "Alibaba",
-    inputPerMillion: 0.15,
-    outputPerMillion: 0.47,
-    inputs: ["text", "image", "audio", "video"],
-  },
+  ...MODEL_CATALOG.map((m) => ({ ...m, inputs: [...m.inputs] })),
 ];
 
 export const MODEL_INPUT_LABEL: Record<ModelInput, string> = {

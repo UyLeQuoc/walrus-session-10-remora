@@ -66,6 +66,8 @@ export const RemoraConfig = z.object({
   }),
   /** Walrus Memory namespaces this remora reads and writes (memory.ts). */
   namespaces: z.array(z.string().min(1)),
+  /** Its brain: a `MODEL_CATALOG` id; absent means the server default (D9, ADR-0042). */
+  model: z.string().min(1).optional(),
 });
 
 export type ToolName = z.infer<typeof ToolName>;

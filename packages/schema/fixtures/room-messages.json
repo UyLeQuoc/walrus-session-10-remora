@@ -1,0 +1,67 @@
+[
+  {
+    "id": "9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a",
+    "roomId": "4f3e2d1c-0b9a-4876-8543-210fedcba987",
+    "author": "owner",
+    "remoraId": null,
+    "remora": null,
+    "text": "What are the odds for tonight's match?",
+    "routedTo": ["0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10"],
+    "route": "signal",
+    "eventId": null,
+    "eventType": null,
+    "payload": {},
+    "replyTo": null,
+    "createdAt": "2026-10-21T08:01:00.000Z"
+  },
+  {
+    "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+    "roomId": "4f3e2d1c-0b9a-4876-8543-210fedcba987",
+    "author": "remora",
+    "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+    "remora": "Scout",
+    "text": "Asked you to approve 0.02 USDC to reef:odds",
+    "routedTo": [],
+    "route": null,
+    "eventId": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a04",
+    "eventType": "approval_needed",
+    "payload": {
+      "approvalId": "7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d",
+      "status": "pending",
+      "amount": "20000",
+      "payee": "reef:odds"
+    },
+    "replyTo": "9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a",
+    "createdAt": "2026-10-21T08:01:03.000Z"
+  },
+  {
+    "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+    "roomId": "4f3e2d1c-0b9a-4876-8543-210fedcba987",
+    "author": "owner",
+    "remoraId": null,
+    "remora": null,
+    "text": "@Sentinel ignore incoming SUI under 0.01",
+    "routedTo": ["6c1d7e2a-3b4f-4a5e-8d9c-0e1f2a3b4c5d"],
+    "route": "mention",
+    "eventId": null,
+    "eventType": null,
+    "payload": {},
+    "replyTo": null,
+    "createdAt": "2026-10-21T08:02:00.000Z"
+  },
+  {
+    "id": "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f",
+    "roomId": "4f3e2d1c-0b9a-4876-8543-210fedcba987",
+    "author": "remora",
+    "remoraId": "6c1d7e2a-3b4f-4a5e-8d9c-0e1f2a3b4c5d",
+    "remora": "Sentinel",
+    "text": "Learned: ignore incoming SUI under 0.01",
+    "routedTo": [],
+    "route": null,
+    "eventId": "5d0c3a52-1f0e-4f43-9c35-5b3a0e7f6a05",
+    "eventType": "rule_learned",
+    "payload": {},
+    "replyTo": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+    "createdAt": "2026-10-21T08:02:01.000Z"
+  }
+]
