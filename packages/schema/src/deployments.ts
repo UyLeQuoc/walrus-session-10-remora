@@ -16,7 +16,7 @@ export const Deployment = z.object({
   tatumSuiGrpc: z.url(),
 });
 
-/** Mainnet IDs stay null until Uy's mainnet pass (ADR-0024). Testnet is the U2 publish. */
+/** Mainnet IDs stay null until Uy's mainnet pass (ADR-0024). Testnet: the U2 Disc and U7 hatchery publishes. */
 export const DEPLOYMENTS = {
   mainnet: {
     network: "mainnet",
@@ -32,8 +32,9 @@ export const DEPLOYMENTS = {
     network: "testnet",
     remoraPackageId: "0xcc05642d8f85d0ba4a229677c67a2a56214888dda38f3d95e3c69e88434a5d6d",
     discRegistryId: "0x479454d5ed1b44000b03948dc2935c656c031e09f1b9508f4af38c54bb83b371",
-    hatcheryPackageId: null,
-    hatcheryRegistryId: null,
+    // remora_hatchery, published in U7 (ADR-0047); its UpgradeCap stays with the spike key like the Disc's.
+    hatcheryPackageId: "0x68c7df0db31b372c0d19fdddbd04527848ad2121fcec694b2bb9ba47369de9a9",
+    hatcheryRegistryId: "0xb3d76fff500dcd341afefec1168a95fba516ec2e71bfa0e4228d0c03d20ad3d0",
     // Circle's testnet USDC, a regulated coin (verified in U1).
     usdcCoinType: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
     // Staging relayer; the hackathon's memory runs on mainnet (tech-reference §1.3).
