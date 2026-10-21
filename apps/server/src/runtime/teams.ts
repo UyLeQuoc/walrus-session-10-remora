@@ -206,14 +206,14 @@ export async function applyTeam(
   }
   const room = await defaultRoom(deps.db, owner, network);
   const lead = team.room?.lead ? made.find((r) => r.name === team.room?.lead) : undefined;
-  await deps.db
-    .update(rooms)
-    .set({
-      ...(team.room?.name ? { name: team.room.name } : {}),
-      ...(team.room?.responder ? { responder: team.room.responder } : {}),
-      ...(lead ? { leadId: lead.id } : {}),
-    })
-    .where(eq(rooms.id, room.id));
+  const roomSet = {
+    ...(team.room?.name ? { name: team.room.name } : {}),
+    ...(team.room?.responder ? { responder: team.room.responder } : {}),
+    ...(lead ? { leadId: lead.id } : {}),
+  };
+  // A shared remora (a team of one, ADR-0046) comes without a room: leave the owner's as it is.
+  if (Object.keys(roomSet).length)
+    await deps.db.update(rooms).set(roomSet).where(eq(rooms.id, room.id));
   // Disc-less remoras are ready now; the rest after the owner's one signature (confirmTeam).
   for (const r of made) if (r.status !== "creating") await queueFirstRun(deps, r.id);
   return { remoras: made.map((r) => r.id), transaction, roomId: room.id, skipped };
@@ -238,14 +238,25 @@ export async function confirmTeam(
   return { confirmed };
 }
 
-/** The owner's team on this network as a team file. */
-export async function exportTeam(deps: RuntimeDeps, owner: string, network: SuiNetwork) {
+/**
+ * The owner's team on this network as a team file. With `ids`, only those remoras, without the room:
+ * that's how one remora is shared in the Hatchery (a team of one, ADR-0046).
+ */
+export async function exportTeam(
+  deps: RuntimeDeps,
+  owner: string,
+  network: SuiNetwork,
+  opts: { ids?: string[]; name?: string; description?: string } = {},
+) {
   const mine = (
     await deps.db
       .select()
       .from(remoras)
       .where(and(eq(remoras.ownerAddress, owner), eq(remoras.network, network)))
-  ).filter((r) => r.status !== "retired" && r.status !== "creating");
+  ).filter(
+    (r) =>
+      r.status !== "retired" && r.status !== "creating" && (!opts.ids || opts.ids.includes(r.id)),
+  );
   if (!mine.length) throw new RemoraError("team.empty", "You have no remoras to export yet.", 404);
   const rules = await deps.db
     .select({ remoraId: sentinelRules.remoraId, text: sentinelRules.text })
@@ -271,8 +282,9 @@ export async function exportTeam(deps: RuntimeDeps, owner: string, network: SuiN
   const names = new Map(mine.map((r) => [r.id, unique(r.name)]));
   const team: Team = {
     schema: "remora.team/v1",
-    name: room.name === "Team" ? "My Remora team" : room.name,
-    description: `Exported from Remora on ${new Date().toISOString().slice(0, 10)}.`,
+    name: opts.name ?? (room.name === "Team" ? "My Remora team" : room.name),
+    description:
+      opts.description ?? `Exported from Remora on ${new Date().toISOString().slice(0, 10)}.`,
     remoras: mine.map((r) => {
       const c = r.config as {
         persona?: string;
@@ -300,11 +312,15 @@ export async function exportTeam(deps: RuntimeDeps, owner: string, network: SuiN
         schedules: (c.schedules ?? []).map((s) => ({ when: s.cron, question: s.question })),
       };
     }),
-    room: {
-      name: room.name,
-      responder: room.responder,
-      ...(lead ? { lead: names.get(lead.id) ?? lead.name } : {}),
-    },
+    ...(opts.ids
+      ? {}
+      : {
+          room: {
+            name: room.name,
+            responder: room.responder,
+            ...(lead ? { lead: names.get(lead.id) ?? lead.name } : {}),
+          },
+        }),
   };
   TeamFile.parse(team);
   const body = [
@@ -315,7 +331,9 @@ export async function exportTeam(deps: RuntimeDeps, owner: string, network: SuiN
         `- **${r.name}** (${r.template})${r.budget ? `: up to ${r.budget.monthlyUsd} USDC a month, at most ${r.budget.perPaymentUsd} a payment` : ""}`,
     ),
     "",
-    "Import it in Remora under Remoras → Import. Remoras start in shadow mode and schedules arrive paused. Sentinels watch the importer's own address until they're told otherwise.",
+    opts.ids
+      ? "Hatch it in Remora's Hatchery. It starts in shadow mode, its schedules arrive paused, and a Sentinel watches your own address."
+      : "Import it in Remora under Remoras → Import. Remoras start in shadow mode and schedules arrive paused. Sentinels watch the importer's own address until they're told otherwise.",
   ].join("\n");
   return `---\n${stringify(team).trimEnd()}\n---\n\n${body}\n`;
 }

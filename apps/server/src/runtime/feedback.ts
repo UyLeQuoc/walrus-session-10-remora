@@ -7,6 +7,7 @@ import { and, eq, remoraEvents, remoras, sentinelRules, sourceStats, sql } from 
 import type { RuntimeDeps } from "./deps.ts";
 import { RemoraError } from "./remoras.ts";
 import { SentinelRule } from "./rules.ts";
+import { rememberRule } from "./sentinel.ts";
 
 export async function giveFeedback(
   deps: RuntimeDeps,
@@ -61,17 +62,18 @@ export async function giveFeedback(
         when: { direction: p.direction, coin, under: Number((units * 2).toPrecision(2)) },
       });
       const text = `ignore ${p.direction === "in" ? "incoming" : "outgoing"} ${coin} under ${rule.when.under} (from 🔕)`;
-      await deps.db.insert(sentinelRules).values({ remoraId: r.id, text, rule });
+      const [learned] = await deps.db
+        .insert(sentinelRules)
+        .values({ remoraId: r.id, text, rule })
+        .returning({ id: sentinelRules.id });
       await deps.db.insert(remoraEvents).values({
         remoraId: r.id,
         network: r.network,
         type: "rule_learned",
         summary: `Learned: ${text}`,
-        payload: { rule },
+        payload: { rule, ruleId: learned?.id, fromEvent: e.id },
       });
-      void deps.memory
-        .remember(r, "rules", "rule", `RULE: ${text} → ${JSON.stringify(rule)}`)
-        .catch(() => {});
+      if (learned) rememberRule(deps, r, learned.id, text, rule);
       return { learned: text };
     }
   }

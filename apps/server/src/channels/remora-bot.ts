@@ -5,7 +5,16 @@
  * start of a message ("Scout, is 0x2 safe?") to talk to it. Returns null for everything else.
  */
 import type { SuiNetwork } from "@remora/chain";
-import { and, approvals, eq, receipts, remoraEvents, remoras } from "@remora/db";
+import {
+  and,
+  approvals,
+  eq,
+  hatcheryTemplates,
+  like,
+  receipts,
+  remoraEvents,
+  remoras,
+} from "@remora/db";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { giveFeedback } from "../runtime/feedback.ts";
 import type { Button } from "../runtime/notify.ts";
@@ -65,6 +74,18 @@ export function createRemoraBot(d: RemoraBotDeps) {
     // A5: /start link_<code> from the dashboard's deep link.
     if (cmd === "start" && /^link_[A-Za-z2-9]{6}$/.test(arg)) {
       return { text: await d.link(from.id, from.name, arg.slice(5)) };
+    }
+    // M3: /start tpl_<id prefix> from a Hatchery share link. Hatching needs the wallet, so it's the web.
+    if (cmd === "start" && /^tpl_[0-9a-f]{8,62}$/.test(arg)) {
+      const [tpl] = await rt.db
+        .select({ id: hatcheryTemplates.templateId, name: hatcheryTemplates.name })
+        .from(hatcheryTemplates)
+        .where(like(hatcheryTemplates.templateId, `0x${arg.slice(4)}%`))
+        .limit(1);
+      if (!tpl) return { text: "That template isn't in the Hatchery (yet)." };
+      return {
+        text: `${tpl.name ?? "This remora"} is in the Hatchery. Review what it can do and hatch it with your wallet: ${web(`/hatchery/${tpl.id}`)}`,
+      };
     }
     const known = [
       "remoras",

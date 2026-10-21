@@ -64,3 +64,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0045](0045-u6-exit-fixes.md) | What the U6 exit changed: Sonar check model, hex addresses in YAML, reading owner transactions, room routing, the watcher filter, honest paid answers | Accepted |
 | [0046](0046-hatchery-team-files-and-learning-shapes.md) | The Hatchery shares team files; shapes for safety, Proof of Learning and memory controls | Accepted |
 | [0047](0047-hatchery-move-package.md) | `remora_hatchery` is its own Move package, with frozen templates | Accepted |
+| [0048](0048-u7-hatchery-learning-memory-runtime.md) | How the Hatchery, Proof of Learning, learning charts and memory controls run | Accepted |

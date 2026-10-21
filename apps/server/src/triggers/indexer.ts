@@ -1,7 +1,8 @@
 /**
  * D1 (chain part): the checkpoint indexer, one per network. It streams `SubscribeCheckpoints` through
- * Tatum, filtered to checkpoints where `remora::disc` emitted, and stores those events in
- * `disc_events`. It also marks a Wake anchored once its `Paid.intent` shows up (G2).
+ * Tatum, filtered to checkpoints where `remora::disc` (or `remora_hatchery::hatchery`) emitted, and
+ * stores the Disc events in `disc_events`. It also marks a Wake anchored once its `Paid.intent` shows
+ * up (G2), and hands hatchery events to the Hatchery (M4).
  *
  * gRPC has no event query and the stream starts at the tip (ADR-0021). On restart, gaps up to
  * `maxBackfill` checkpoints are filled with `GetCheckpoint`; bigger gaps are logged, and payments
@@ -12,6 +13,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { Logger, SuiNetwork } from "@remora/chain";
 import { and, type Db, discEvents, eq, indexerCursors, receipts, sql } from "@remora/db";
 import { DISC_EVENT_BCS, type DiscEventName } from "@remora/disc-sdk";
+import { decodeHatcheryEvents, type HatcheryEvent } from "../hatchery/events.ts";
 
 /** The slice of a gRPC `Checkpoint` the indexer reads. */
 export interface CheckpointLike {
@@ -139,6 +141,27 @@ export interface IndexerOptions {
   maxBackfill?: number;
   /** Called after each stored frame (tests and the e2e wait on it). */
   onFrame?: (cursor: bigint, rows: DiscEventRow[]) => void;
+  /** `remora_hatchery` (M4, ADR-0047): its events ride the same stream and cursor. */
+  hatcheryPackageId?: string | null;
+  onHatchery?: (events: { digest: string; events: HatcheryEvent[] }[]) => Promise<unknown>;
+}
+
+/** The hatchery events in a checkpoint, per transaction. */
+function hatcheryIn(o: IndexerOptions, cp: CheckpointLike | undefined) {
+  if (!o.hatcheryPackageId || !cp) return [];
+  const pkg = o.hatcheryPackageId;
+  return cp.transactions
+    .map((tx) => ({
+      digest: tx.digest ?? "",
+      events: decodeHatcheryEvents(
+        pkg,
+        tx.events?.events.map((e) => ({
+          ...(e.eventType ? { eventType: e.eventType } : {}),
+          ...(e.contents?.value ? { bcs: e.contents.value } : {}),
+        })),
+      ),
+    }))
+    .filter((x) => x.events.length);
 }
 
 /** Starts the stream with reconnects. Returns a stop function. */
@@ -146,20 +169,26 @@ export function startIndexer(o: IndexerOptions): () => void {
   let stopped = false;
   let abort: AbortController | null = null;
   const log = o.log.child({ indexer: o.network });
-  const filter = {
-    terms: [
+  const emitted = (module: string) => ({
+    literals: [
       {
-        literals: [
-          {
-            negated: false,
-            predicate: {
-              oneofKind: "emitModule" as const,
-              emitModule: { module: `${normalizeSuiAddress(o.packageId)}::disc` },
-            },
-          },
-        ],
+        negated: false,
+        predicate: { oneofKind: "emitModule" as const, emitModule: { module } },
       },
     ],
+  });
+  const filter = {
+    terms: [
+      emitted(`${normalizeSuiAddress(o.packageId)}::disc`),
+      ...(o.hatcheryPackageId
+        ? [emitted(`${normalizeSuiAddress(o.hatcheryPackageId)}::hatchery`)]
+        : []),
+    ],
+  };
+  const hatchery = async (cp: CheckpointLike | undefined) => {
+    const found = hatcheryIn(o, cp);
+    if (!found.length || !o.onHatchery) return;
+    await o.onHatchery(found).catch((err) => log.warn("indexer.hatchery_failed", { error: err }));
   };
 
   const backfill = async (from: bigint, to: bigint) => {
@@ -180,6 +209,7 @@ export function startIndexer(o: IndexerOptions): () => void {
       if (!response.checkpoint) continue;
       const rows = decodeDiscEvents(o.network, o.packageId, response.checkpoint as CheckpointLike);
       await storeCheckpoint(o.db, o.network, s, rows);
+      await hatchery(response.checkpoint as CheckpointLike);
     }
     log.info("indexer.backfilled", { from, to });
   };
@@ -207,6 +237,7 @@ export function startIndexer(o: IndexerOptions): () => void {
             ? decodeDiscEvents(o.network, o.packageId, frame.checkpoint as CheckpointLike)
             : [];
           await storeCheckpoint(o.db, o.network, cursor, rows);
+          await hatchery(frame.checkpoint as CheckpointLike | undefined);
           if (rows.length) log.info("indexer.events", { cursor, events: rows.map((r) => r.type) });
           o.onFrame?.(cursor, rows);
           delay = 1_000;

@@ -1,2 +1,2 @@
-/** @remora/mcp: MCP server: remoras_list, remora_ask, remora_budget, wake_get. Used next to the Walrus Memory MCP plugin. Scaffold only (see README.md). */
-export {};
+/** @remora/mcp: Remora as an MCP server (F9): remoras_list, remora_recall (remora:<id>:<ns>), wake_get. */
+export { createMcpServer, type McpOptions, PROTOCOL_VERSIONS, runStdio, TOOLS } from "./server.ts";

@@ -11,7 +11,7 @@ import { IDENTITY_HEADERS } from "./identity/names.ts";
 import { checkAddress, clientAddress, isUnmetered, refusal } from "./iplimit.ts";
 import { startMoneyRuntime } from "./money/index.ts";
 import { registerRoutes } from "./routes/registry.ts";
-import { remoraJobs, startRemoraRuntime } from "./runtime/index.ts";
+import { onHatcheryEvents, remoraJobs, startRemoraRuntime } from "./runtime/index.ts";
 
 const app = new Hono();
 app.use(logger());
@@ -71,7 +71,7 @@ if (!adapters.length)
       : "no channel tokens set; only the web API is running",
   );
 
-const stopMoney = startMoneyRuntime(remoraJobs);
+const stopMoney = startMoneyRuntime(remoraJobs, { onHatchery: onHatcheryEvents });
 const stopRemoras = startRemoraRuntime();
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) =>

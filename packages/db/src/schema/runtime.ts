@@ -251,10 +251,47 @@ export const sentinelRules = pgTable(
     text: text("text").notNull(),
     rule: jsonb("rule").$type<Record<string, unknown>>().notNull(),
     blobId: text("blob_id"),
+    /** The rule's memory (`remora_memories`), so a Wake can cite the blob that decided (G5). */
+    memoryId: uuid("memory_id"),
     active: boolean("active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("sentinel_rules_remora_idx").on(t.remoraId)],
+);
+
+/**
+ * F4/F8: the local index of a remora's memory writes (like hippo's `memory_index`, keyed by remora).
+ * The text stays on Walrus; this keeps the hash, the blob once it lands, and the owner's controls:
+ * hiding is our own filter on recall and dedupe, and a correction supersedes the fact it replaces.
+ */
+export const remoraMemories = pgTable(
+  "remora_memories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    remoraId: uuid("remora_id")
+      .notNull()
+      .references(() => remoras.id, { onDelete: "cascade" }),
+    /** The short namespace (`rules`, `sources`…), as the remora's config lists it. */
+    namespace: text("namespace").notNull(),
+    type: text("type"),
+    textSha256: text("text_sha256"),
+    jobId: text("job_id"),
+    /** Null until the relayer finishes writing (about 24 s). */
+    blobId: text("blob_id"),
+    status: text("status", { enum: ["pending", "stored", "failed", "duplicate"] })
+      .notNull()
+      .default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    /** This memory corrects `corrects` (a blob id); that one is superseded by this row's blob. */
+    corrects: text("corrects"),
+  },
+  (t) => [
+    index("remora_memories_remora_idx").on(t.remoraId, t.createdAt),
+    index("remora_memories_blob_idx").on(t.blobId),
+    index("remora_memories_job_idx").on(t.jobId),
+  ],
 );
 
 /** D9: model usage per remora per UTC day, for the daily token cap. */

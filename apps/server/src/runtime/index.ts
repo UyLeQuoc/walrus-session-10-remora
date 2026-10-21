@@ -3,6 +3,7 @@
  * (D9), Walrus Memory through the operator account (ADR-0030), Telegram notices (H5), the Reef (E7),
  * the D2 job handlers and one chain watcher per network (D1). Tests use the factories directly.
  */
+import type { SuiNetwork } from "@remora/chain";
 import { createModel } from "@remora/core";
 import {
   and,
@@ -20,6 +21,8 @@ import type { Context } from "hono";
 import { sendNotice, telegramBot } from "../channels/telegram-bot.ts";
 import { db, modelFor, operator } from "../context.ts";
 import { env } from "../env/load.ts";
+import { onIndexedEvents } from "../hatchery/service.ts";
+import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
 import { signedInOwner } from "../identity/session.ts";
 import { log, networks } from "../money/index.ts";
@@ -32,6 +35,7 @@ import type { JobHandler } from "./jobs.ts";
 import { PgKeyStore } from "./keys.ts";
 import { SlidingLimiter } from "./limits.ts";
 import { createRemoraMemory } from "./memory.ts";
+import { memoryIndexFor } from "./memory-controls.ts";
 import { createNotifier } from "./notify.ts";
 import { createRemoraService } from "./remoras.ts";
 import { createRemoraRoutes } from "./routes.ts";
@@ -60,7 +64,7 @@ export const runtime: RuntimeDeps = {
   signer,
   log,
   reef,
-  memory: createRemoraMemory(operator, log),
+  memory: createRemoraMemory(operator, log, memoryIndexFor(db)),
   brain: createBrain({
     answer: answer.primary,
     answerId: answer.id,
@@ -94,11 +98,25 @@ async function written(r: { id: string }) {
   return { receipts: Number(w?.n ?? 0), ...(rl?.n ? { rules: Number(rl.n) } : {}) };
 }
 
+const hatchery = {
+  walrus: createWalrusStore(),
+  webBase: env.WEB_BASE_URL,
+  telegramBot: env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") ?? null,
+};
+
+/** M4: templates published or hatched anywhere, from the checkpoint indexer. */
+export const onHatcheryEvents = (
+  network: SuiNetwork,
+  events: Parameters<typeof onIndexedEvents>[2],
+) => onIndexedEvents({ ...hatchery, runtime, service: remoraService }, network, events);
+
 export const remoraRoutes = createRemoraRoutes({
   service: remoraService,
   runtime,
   owner: async (c: Context) => (await signedInOwner(c))?.owner ?? null,
   inspect: (r, namespaces) => inspect(operator, r, namespaces),
+  operator,
+  hatchery,
   written,
   telegramLinked: async (owner: string) => {
     const [row] = await db

@@ -27,6 +27,9 @@ export interface NetworkConfig {
   reason?: string;
   packageId: string | null;
   discRegistryId: string | null;
+  /** `remora_hatchery` (M6, ADR-0047); null where it isn't published. */
+  hatcheryPackageId: string | null;
+  hatcheryRegistryId: string | null;
   usdcCoinType: string;
   facilitatorUrl: string | null;
 }
@@ -44,6 +47,8 @@ type Deployments = Record<
   {
     remoraPackageId: string | null;
     discRegistryId: string | null;
+    hatcheryPackageId?: string | null;
+    hatcheryRegistryId?: string | null;
     usdcCoinType: string;
   }
 >;
@@ -74,6 +79,8 @@ export function createNetworks(
       ...(reason ? { reason } : {}),
       packageId: d?.remoraPackageId ?? null,
       discRegistryId: d?.discRegistryId ?? null,
+      hatcheryPackageId: d?.hatcheryPackageId ?? null,
+      hatcheryRegistryId: d?.hatcheryRegistryId ?? null,
       usdcCoinType: d?.usdcCoinType ?? "",
       facilitatorUrl,
     });

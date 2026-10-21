@@ -24,12 +24,35 @@ import { Budget } from "@remora/schema";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { placeholders, render } from "../copy/keys.ts";
+import {
+  confirmDeprecate,
+  confirmHatch,
+  confirmPublish,
+  consent,
+  deprecateTx,
+  gallery,
+  type HatcheryDeps,
+  hatchTx,
+  listing,
+  publishTx,
+  shareLinks,
+  shareReview,
+} from "../hatchery/service.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
+import { learningSeries, proofBetween, proofsFor } from "./learning.ts";
+import {
+  correct,
+  enrichRows,
+  exportMarkdown,
+  exportMemories,
+  forgetNamespace,
+  setHidden,
+} from "./memory-controls.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
 import {
   defaultRoom,
@@ -70,6 +93,10 @@ export interface RemoraRouteDeps {
   telegramLinked?: (owner: string) => Promise<boolean>;
   /** Writes we made per namespace (memory_index), for the F6 comparison. */
   written?: (r: Remora) => Promise<Record<string, number>>;
+  /** The operator's Walrus Memory account: forget-all and export read it directly (F4, F8). */
+  operator?: { key: string; accountId: string; serverUrl: string };
+  /** The Hatchery (M1–M7): Walrus storage and share links. */
+  hatchery?: Omit<HatcheryDeps, "runtime" | "service">;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -125,6 +152,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/rooms",
     "/api/rooms/*",
     "/api/teams/*",
+    "/api/proofs/*",
+    "/api/learning/*",
+    "/api/hatchery/publish",
+    "/api/hatchery/publish/*",
+    "/api/hatchery/:id/hatch",
+    "/api/hatchery/:id/hatch/*",
+    "/api/hatchery/:id/deprecate",
+    "/api/hatchery/:id/deprecate/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -641,22 +676,233 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         );
   });
 
+  const inspectRows = async (r: Remora, namespaces: string[]) => {
+    const stored = d.inspect
+      ? await d.inspect(r, namespaces)
+      : { rows: [] as InspectorRow[], counts: {} as Record<string, number> };
+    return { ...stored, rows: await enrichRows(rt.db, r, stored.rows) };
+  };
+
   app.get("/api/remoras/:id/memory", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     const namespaces = service.config(r).namespaces;
     const q = c.req.query("q");
+    // `ns` narrows a search to one namespace (the MCP mapping, F9).
+    const ns = c.req.query("ns");
+    if (ns && !namespaces.includes(ns))
+      throw new RemoraError("memory.bad_namespace", `This remora has no ${ns} memories.`);
     const [stored, found, written] = await Promise.all([
-      d.inspect
-        ? d.inspect(r, namespaces)
-        : Promise.resolve({ rows: [] as InspectorRow[], counts: {} as Record<string, number> }),
-      q ? rt.memory.recall(r, q, namespaces, 10) : Promise.resolve([]),
+      inspectRows(r, namespaces),
+      q ? rt.memory.recall(r, q, ns ? [ns] : namespaces, 10) : Promise.resolve([]),
       d.written ? d.written(r) : Promise.resolve({} as Record<string, number>),
     ]);
     // F6: our writes against what the relayer reports; a gap is a warning, never a restore().
     const mismatches = Object.entries(written)
-      .filter(([ns, n]) => (stored.counts[ns] ?? 0) < n)
-      .map(([ns, n]) => ({ namespace: ns, written: n, relayer: stored.counts[ns] ?? 0 }));
+      .filter(([n, count]) => (stored.counts[n] ?? 0) < count)
+      .map(([n, count]) => ({ namespace: n, written: count, relayer: stored.counts[n] ?? 0 }));
     return c.json({ namespaces, ...stored, written, mismatches, results: found });
+  });
+
+  // ── M1–M7: the Hatchery ────────────────────────────────────────────────────
+  const hatch = (): HatcheryDeps => {
+    if (!d.hatchery)
+      throw new RemoraError("hatchery.unavailable", "The Hatchery isn't set up here.", 409);
+    return { ...d.hatchery, runtime: rt, service };
+  };
+  const OBJECT_ID = /^0x[0-9a-fA-F]{64}$/;
+  const templateId = (c: Context) => {
+    const id = c.req.param("id") ?? "";
+    if (!OBJECT_ID.test(id))
+      throw new RemoraError("hatchery.not_found", "No template with that id here.", 404);
+    return id;
+  };
+  const networkOf = (c: Context) => resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER));
+
+  app.post("/api/remoras/:id/share", async (c) =>
+    c.json({ review: await shareReview(hatch(), c.get("owner"), c.req.param("id")) }),
+  );
+
+  app.post("/api/hatchery/publish", async (c) => {
+    const b = await body<{ markdown?: string; parent?: string | null }>(c);
+    if (typeof b.markdown !== "string")
+      throw new RemoraError("hatchery.bad_request", "Send the reviewed file.");
+    if (b.parent && !OBJECT_ID.test(b.parent))
+      throw new RemoraError("hatchery.bad_request", "The parent isn't a template id.");
+    return c.json(
+      await publishTx(hatch(), c.get("owner"), c.get("network"), {
+        markdown: b.markdown,
+        parent: b.parent ?? null,
+      }),
+    );
+  });
+
+  app.post("/api/hatchery/publish/confirm", async (c) => {
+    const { digest } = await body<{ digest?: string }>(c);
+    const h = hatch();
+    const { listing: l } = await confirmPublish(
+      h,
+      c.get("owner"),
+      c.get("network"),
+      digestOf(digest),
+    );
+    return c.json({ listing: l, links: shareLinks(h, l.templateId) });
+  });
+
+  // Public reads: anyone can browse the gallery and read a consent screen before signing in.
+  app.get("/api/hatchery", async (c) => {
+    const kind = c.req.query("kind");
+    const q = c.req.query("q");
+    return c.json({
+      templates: await gallery(hatch(), networkOf(c), {
+        ...(q ? { q } : {}),
+        ...(kind ? { kind } : {}),
+      }),
+    });
+  });
+
+  app.get("/api/hatchery/:id", async (c) => {
+    const h = hatch();
+    const { listing: l, row } = await listing(h, networkOf(c), templateId(c));
+    return c.json({ listing: l, links: shareLinks(h, l.templateId), markdown: row.markdown });
+  });
+
+  app.get("/api/hatchery/:id/consent", async (c) => {
+    const { markdown: _m, ...rest } = await consent(hatch(), networkOf(c), templateId(c));
+    return c.json({ consent: rest });
+  });
+
+  app.post("/api/hatchery/:id/hatch", async (c) =>
+    c.json(await hatchTx(hatch(), c.get("owner"), c.get("network"), templateId(c))),
+  );
+
+  app.post("/api/hatchery/:id/hatch/confirm", async (c) => {
+    const b = await body<{ remoraIds?: string[]; digest?: string }>(c);
+    const ids = (b.remoraIds ?? []).filter((x) => UUID.test(x));
+    return c.json(
+      await confirmHatch(hatch(), c.get("owner"), c.get("network"), {
+        templateId: templateId(c),
+        remoraIds: ids,
+        digest: digestOf(b.digest),
+      }),
+    );
+  });
+
+  app.post("/api/hatchery/:id/deprecate", async (c) =>
+    c.json(await deprecateTx(hatch(), c.get("owner"), c.get("network"), templateId(c))),
+  );
+
+  app.post("/api/hatchery/:id/deprecate/confirm", async (c) => {
+    const { digest } = await body<{ digest?: string }>(c);
+    const { listing: l } = await confirmDeprecate(
+      hatch(),
+      c.get("owner"),
+      c.get("network"),
+      digestOf(digest),
+    );
+    return c.json({ listing: l });
+  });
+
+  // ── G5 + L1: Proof of Learning and learning charts ─────────────────────────
+  app.get("/api/remoras/:id/proofs", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ proofs: await proofsFor(rt.db, r) });
+  });
+
+  app.get("/api/proofs/:before/:after", async (c) => {
+    const before = c.req.param("before");
+    const after = c.req.param("after");
+    if (!UUID.test(before) || !UUID.test(after))
+      throw new RemoraError("proof.not_found", "Those aren't decision ids.", 404);
+    const [row] = await rt.db
+      .select({ remoraId: receipts.remoraId })
+      .from(receipts)
+      .where(eq(receipts.id, after));
+    if (!row) throw new RemoraError("proof.not_found", "No such decision.", 404);
+    const r = await service.get(row.remoraId, c.get("owner"));
+    return c.json({ proof: await proofBetween(rt.db, r, before, after) });
+  });
+
+  app.get("/api/remoras/:id/learning", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ series: await learningSeries(rt.db, r) });
+  });
+
+  /** L1: every remora's series in one file, for the blog post's charts. */
+  app.get("/api/learning/export", async (c) => {
+    const mine = (await service.list(c.get("owner"), c.get("network"))).filter(
+      (r) => r.status !== "creating",
+    );
+    const out = [];
+    for (const r of mine)
+      out.push({
+        id: r.id,
+        name: r.name,
+        template: r.template,
+        series: await learningSeries(rt.db, r),
+      });
+    c.header(
+      "content-disposition",
+      `attachment; filename="remora-learning-${new Date().toISOString().slice(0, 10)}.json"`,
+    );
+    return c.json({
+      exportedAt: new Date().toISOString(),
+      network: c.get("network"),
+      remoras: out,
+    });
+  });
+
+  // ── F4/F8: the owner's controls over a remora's memory ────────────────────
+  app.post("/api/remoras/:id/memory/hide", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ blobId?: string; namespace?: string; hidden?: boolean }>(c);
+    if (!b.blobId || !b.namespace)
+      throw new RemoraError("memory.bad_request", "Say which memory (blob id and namespace).");
+    return c.json(
+      await setHidden(rt.db, r, service.config(r).namespaces, {
+        blobId: b.blobId,
+        namespace: b.namespace,
+        hidden: b.hidden !== false,
+      }),
+    );
+  });
+
+  app.post("/api/remoras/:id/memory/correct", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ blobId?: string; namespace?: string; text?: string }>(c);
+    if (!b.blobId || !b.namespace || typeof b.text !== "string")
+      throw new RemoraError("memory.bad_request", "Say which memory and what the right fact is.");
+    return c.json(
+      await correct(rt.db, rt.memory, r, service.config(r).namespaces, {
+        blobId: b.blobId,
+        namespace: b.namespace,
+        text: b.text,
+      }),
+    );
+  });
+
+  app.post("/api/remoras/:id/memory/forget", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ namespace?: string }>(c);
+    if (!d.operator) throw new RemoraError("memory.unavailable", "Memory isn't set up here.", 409);
+    if (!b.namespace) throw new RemoraError("memory.bad_request", "Say which namespace.");
+    return c.json(
+      await forgetNamespace(rt.db, d.operator, r, service.config(r).namespaces, b.namespace),
+    );
+  });
+
+  app.get("/api/remoras/:id/memory/export", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!d.operator) throw new RemoraError("memory.unavailable", "Memory isn't set up here.", 409);
+    const { rows } = await inspectRows(r, service.config(r).namespaces);
+    const file = await exportMemories(rt.db, d.operator, r, rows);
+    const stem = `${r.name.replace(/[^\w-]+/g, "-").toLowerCase()}-memory-${file.exportedAt.slice(0, 10)}`;
+    if (c.req.query("format") === "md") {
+      c.header("content-type", "text/markdown; charset=utf-8");
+      c.header("content-disposition", `attachment; filename="${stem}.md"`);
+      return c.body(exportMarkdown(file));
+    }
+    c.header("content-disposition", `attachment; filename="${stem}.json"`);
+    return c.json(file);
   });
 
   // ── Settings (A7, H5) and Telegram linking (A5) ───────────────────────────

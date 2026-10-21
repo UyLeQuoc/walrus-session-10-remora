@@ -3,7 +3,7 @@
  * The owner teaches it in free text ("ignore incoming SUI under 0.01"); each rule is kept in Postgres
  * for triage and written to the remora's `rules` namespace as the owned record (F2).
  */
-import { and, desc, eq, remoraEvents, sentinelRules } from "@remora/db";
+import { and, desc, eq, remoraEvents, remoraMemories, sentinelRules } from "@remora/db";
 import type { RuntimeDeps } from "./deps.ts";
 import { addUsage } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -29,9 +29,7 @@ export async function teach(deps: RuntimeDeps, r: Remora, text: string) {
     .insert(sentinelRules)
     .values({ remoraId: r.id, text, rule: SentinelRule.parse(rule) })
     .returning();
-  void deps.memory
-    .remember(r, "rules", "rule", `RULE: ${text} → ${JSON.stringify(rule)}`)
-    .catch((err) => deps.log.warn("rule.memory_failed", { remora: r.id, error: err }));
+  if (row) rememberRule(deps, r, row.id, text, rule);
   const [ev] = await deps.db
     .insert(remoraEvents)
     .values({
@@ -43,6 +41,29 @@ export async function teach(deps: RuntimeDeps, r: Remora, text: string) {
     })
     .returning({ id: remoraEvents.id });
   return row ? { ...row, eventId: ev?.id ?? "" } : row;
+}
+
+/**
+ * Writes a rule to the `rules` namespace and links the rule to that memory, so a decision the rule
+ * makes can cite the blob in its Wake (G5). The write settles in the background.
+ */
+export function rememberRule(
+  deps: RuntimeDeps,
+  r: Remora,
+  ruleId: string,
+  text: string,
+  rule: unknown,
+) {
+  void deps.memory
+    .remember(r, "rules", "rule", `RULE: ${text} → ${JSON.stringify(rule)}`)
+    .then(async (res) => {
+      if (res.indexId)
+        await deps.db
+          .update(sentinelRules)
+          .set({ memoryId: res.indexId })
+          .where(eq(sentinelRules.id, ruleId));
+    })
+    .catch((err) => deps.log.warn("rule.memory_failed", { remora: r.id, error: err }));
 }
 
 /** Triage one chain event: newest matching rule decides; default is a ping. */
@@ -62,6 +83,14 @@ export async function onChainEvent(
     rules.map((x) => ({ rule: SentinelRule.parse(x.rule), text: x.text })),
     e,
   );
+  // The rule that decided, cited by its memory once that blob has landed (G5).
+  const decidedBy = t.because ? rules.find((x) => x.text === t.because) : undefined;
+  const [ruleMemory] = decidedBy?.memoryId
+    ? await deps.db
+        .select({ blobId: remoraMemories.blobId })
+        .from(remoraMemories)
+        .where(eq(remoraMemories.id, decidedBy.memoryId))
+    : [];
   const what = describeEvent(e);
   const reason = t.because ? `rule: ${t.because}` : "no rule matched, so it's worth a look";
   const wake = await recordWake(
@@ -70,7 +99,9 @@ export async function onChainEvent(
     intentBase({
       trigger: { kind: "chain", ref: e.digest },
       trustedInput: JSON.stringify({ ...e, amount: e.amount.toString() }),
-      memories: [],
+      memories: ruleMemory?.blobId
+        ? [{ blobId: ruleMemory.blobId, namespace: "rules", text: t.because ?? "", distance: 0 }]
+        : [],
       model: "rules",
       prompt: reason,
       ...(checkpoint ? { checkpoint } : {}),
