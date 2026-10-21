@@ -1,0 +1,24 @@
+Goal U6: the Grok-bots shape on TESTNET: remoras you chat with, rooms, a model per remora, teams from Markdown.
+
+Source of truth: docs/goals/uy-06-grok-bots-shape.md. Read it fully and do the contract PR, then Phase A, then B, then C, in order. Also read ADR-0042, ADR-0027, ADR-0032/0033, docs/remora-spec.md §3, §4, §10, and reference/openmausbot (read-only, Apache-2.0): README, docs/decision-model.md, docs/team-sharing.md, docs/routine-schedules.md.
+
+Work in the main checkout on main. The UI items are claimed in docs/handoffs/2026-10-21-uy-to-huan-u6-claim.md; skip anything Huấn starts after it. packages/schema changes go through ONE contract PR (Uy may merge it).
+
+Contract PR: MODEL_CATALOG (+ RemoraConfig.model), FEED_TYPES + "message", Room/RoomMessage/RoomResponder, TeamFile (remora.team/v1 YAML frontmatter) + TeamPreview, OwnerSettings.telegramLinked, Schedule.paused — each with a fixture.
+
+Phase A (backend, tests for each):
+1. Model per remora from the catalog (fallback to default); PATCH remora model; the Wake records the model used; /api/chat accepts `model` (Huấn's handoff).
+2. 1-1 threads: POST /api/remoras/:id/messages (owner line as a `message` event; Scout answers, Sentinel learns a rule or answers about what it watches); approval events carry their state for inline cards.
+3. Rooms: rooms + room_messages tables, a default Team room; routing = @mentions → deterministic signal → auto small model (p ≥ 0.6) → lead; Sentinel pings post to the room.
+4. Teams from Markdown: preview (no writes), apply (all Disc issues in ONE owner PTB; confirm matches each Disc by name), export (no keys, memories, ids or watched addresses); imports start in shadow, schedules paused.
+5. Rebrand hippo strings the web can't reach (old cookie/header names still accepted for one release).
+
+Phase B (UI, claimed): sidebar Remoras (contacts) + Rooms; /chat/r/:id thread with chips, inline approval/schedule cards, Why?, 👍/👎, typing, model picker; /chat/room/:id with responder mode, lead, @ autocomplete; /remoras/import with preview + one signature, export; model select in remora settings.
+
+Phase C (U6 exit e2e on testnet, Playwright + the burner): import a team .md with one signature for all Discs; chat with Scout (pays, answers in thread, payment chip + Why? inline); in the Team room @Sentinel learns a rule and an un-mentioned odds question routes to Scout; Scout's over-cap request shows an inline approval card, Pay once answers in the room; Scout's answer is written by its chosen model and the Wake records it. Record timings and digests in docs/spikes. The model line needs a real OPENROUTER_API_KEY; if it's missing, ask me, and record it as unverified if I skip it.
+
+Hard rules: no mainnet money; burner/test keys only; never commit .env or keys; no deploys; avoid ports 8787/5173; no OpenMausBot code without its Apache-2.0 notice; any decision gets an ADR in the same commit.
+
+Done when: contract PR merged; A + B done with tests; typecheck, lint, test, sui move test, bun run e2e green and CI green; the U6 exit passes on testnet with timings and digests; ADRs, docs and a handoff to Huấn written; everything pushed to main.
+
+Finish with a short summary: what users can do now, digests, timings, and what's left.
