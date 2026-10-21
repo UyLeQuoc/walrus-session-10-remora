@@ -28,6 +28,6 @@
     "@remora/merchant": "workspace:*",
     "@remora/schema": "workspace:*",
     "ai": "^7.0.0",
-    "hono": "^4.13.8"
+    "hono": "^4.13.13"
   }
 }

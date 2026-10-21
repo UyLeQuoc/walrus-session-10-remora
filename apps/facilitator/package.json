@@ -27,6 +27,6 @@
     "@remora/memory": "workspace:*",
     "@remora/schema": "workspace:*",
     "@remora/signer": "workspace:*",
-    "hono": "^4.13.8"
+    "hono": "^4.13.13"
   }
 }

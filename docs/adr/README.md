@@ -59,3 +59,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0040](0040-block-r-logo-and-trace.md) | Block "R" logo component, shadcn Trace for agent steps, full-width forms | Accepted |
 | [0041](0041-ascii-ocean-empty-chat.md) | ASCII ocean behind the empty chat; liquid-glass composer and suggestions | Proposed |
 | [0042](0042-grok-bots-shape.md) | Remora takes the Grok-bots shape: chat with remoras, rooms, a model each, teams from Markdown | Accepted |
+| [0043](0043-patched-transitive-deps.md) | Pin patched versions with root `overrides` when the install scanner blocks | Accepted |

@@ -19,7 +19,7 @@
     "@remora/schema": "workspace:*",
     "@remora/server": "workspace:*",
     "@remora/signer": "workspace:*",
-    "hono": "^4.13.8"
+    "hono": "^4.13.13"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
