@@ -33,6 +33,7 @@
     "discord.js": "^14.27.0",
     "grammy": "^1.46.0",
     "hono": "^4.13.13",
+    "yaml": "^2.9.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {

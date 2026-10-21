@@ -18,7 +18,7 @@ track only: Smart Agents for Real Life**.
 |---|---|
 | [remora-spec.md](remora-spec.md) | **Product & technical design:** the gap, positioning against Grok Bot/Dots/Muse, what a remora is, architecture, the Disc Move module, x402 facilitator, memory design, Wake receipts, safety model, Tatum usage |
 | [goals/](goals/README.md) | **Paste-ready agent goals:** U0 bootstrap (Mon Oct 20, from 07:00 VN), U1 allowance spike (Oct 21), H0 web shell + E2E harness (Huấn) |
-| [adr/](adr/README.md) | **Architecture Decision Records:** every decision and change of direction (43 so far). New decisions must add one here, agents included |
+| [adr/](adr/README.md) | **Architecture Decision Records:** every decision and change of direction (44 so far). New decisions must add one here, agents included |
 | [remora-features.md](remora-features.md) | **Scope:** the **MVP ship set (69)** + backlog (133 total), review of gaps, the **address-balance funds model**, 133 features in 14 epics (including **Hatchery**: share, duplicate, publish, and **UX**) with waves, workstreams, scope rules |
 | [remora-plan.md](remora-plan.md) | **Build plan:** week 0 prep, waves W1–W4 by workstream with exit criteria, demo script, blog outline, scoring map, risks, submission checklist |
 | [team-split.md](team-split.md) | **Two-person split.** Uy Le: Sui, Walrus Memory, Move, backend, deploy, video, submission. Huấn: UI/UX, E2E. Infra and UI are a flex pool. Covers lanes, CODEOWNERS, `·be`/`·ui` split by wave, frozen contracts, dependency dates, git workflow, **rules for long-running agent goals**, dev env isolation, hotspots, setup checklist |

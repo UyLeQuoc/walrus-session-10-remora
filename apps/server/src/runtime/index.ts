@@ -4,11 +4,21 @@
  * the D2 job handlers and one chain watcher per network (D1). Tests use the factories directly.
  */
 import { createModel } from "@remora/core";
-import { and, count, eq, isNotNull, receipts, remoras, sentinelRules } from "@remora/db";
+import {
+  and,
+  channelIdentities,
+  count,
+  eq,
+  isNotNull,
+  people,
+  receipts,
+  remoras,
+  sentinelRules,
+} from "@remora/db";
 import { parseKek, RemoraSigner } from "@remora/signer";
 import type { Context } from "hono";
 import { sendNotice, telegramBot } from "../channels/telegram-bot.ts";
-import { db, operator } from "../context.ts";
+import { db, modelFor, operator } from "../context.ts";
 import { env } from "../env/load.ts";
 import { createLinkCode } from "../identity/link.ts";
 import { signedInOwner } from "../identity/session.ts";
@@ -52,6 +62,7 @@ export const runtime: RuntimeDeps = {
   brain: createBrain({
     answer: answer.primary,
     answerId: answer.id,
+    answerFor: (id) => modelFor(id).primary,
     check: small.primary,
     parse: small.primary,
   }),
@@ -87,6 +98,20 @@ export const remoraRoutes = createRemoraRoutes({
   owner: async (c: Context) => (await signedInOwner(c))?.owner ?? null,
   inspect: (r, namespaces) => inspect(operator, r, namespaces),
   written,
+  telegramLinked: async (owner: string) => {
+    const [row] = await db
+      .select({ id: channelIdentities.id })
+      .from(people)
+      .innerJoin(channelIdentities, eq(channelIdentities.personId, people.id))
+      .where(
+        and(
+          eq(people.walletAddress, owner.toLowerCase()),
+          eq(channelIdentities.channel, "telegram"),
+        ),
+      )
+      .limit(1);
+    return !!row;
+  },
   telegramLink: async (c: Context) => {
     if (!env.TELEGRAM_BOT_TOKEN) return null;
     const who = await signedInOwner(c);

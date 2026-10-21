@@ -4,7 +4,7 @@
 
 import { createSuiClient } from "@remora/memory";
 import { type Context, Hono } from "hono";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
 import { z } from "zod";
 import { env } from "../env/load.ts";
 import {
@@ -14,6 +14,15 @@ import {
   signInWithWallet,
   signOut,
 } from "../identity/auth.ts";
+import {
+  GUEST_COOKIE,
+  guestCookie,
+  guestHeader,
+  LEGACY_SESSION_COOKIE,
+  SESSION_COOKIE,
+  sessionCookie,
+  sessionHeader,
+} from "../identity/names.ts";
 import { personByChannel } from "../identity/persons.ts";
 
 const verifyBody = z.object({
@@ -21,8 +30,6 @@ const verifyBody = z.object({
   signature: z.string().min(1),
 });
 
-const SESSION_COOKIE = "hippo_session";
-const GUEST_COOKIE = "hippo_guest";
 const sui = createSuiClient(env.SUI_NETWORK);
 
 const cookieOptions = {
@@ -82,23 +89,24 @@ export const authRoutes = new Hono()
   })
 
   .post("/api/auth/signout", async (c) => {
-    const sessionId = getCookie(c, SESSION_COOKIE) ?? c.req.header("x-hippo-session");
+    const sessionId = sessionCookie(c) ?? sessionHeader(c);
     if (sessionId) await signOut(sessionId);
     deleteCookie(c, SESSION_COOKIE, { path: "/" });
+    deleteCookie(c, LEGACY_SESSION_COOKIE, { path: "/" });
     return c.json({ ok: true });
   });
 
 function readGuestId(c: Context): string | undefined {
-  const cookie = getCookie(c, GUEST_COOKIE);
+  const cookie = guestCookie(c);
   if (cookie) return cookie;
-  const header = c.req.header("x-hippo-guest");
+  const header = guestHeader(c);
   return header && /^[0-9a-f-]{36}$/i.test(header) ? header : undefined;
 }
 
 function readSessionId(c: Context): string | undefined {
-  const cookie = getCookie(c, SESSION_COOKIE);
+  const cookie = sessionCookie(c);
   if (cookie) return cookie;
-  const header = c.req.header("x-hippo-session");
+  const header = sessionHeader(c);
   return header && /^[0-9a-f]{64}$/i.test(header) ? header : undefined;
 }
 

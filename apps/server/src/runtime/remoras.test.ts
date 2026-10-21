@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
+import { Transaction } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { createLogger } from "@remora/chain";
 import { createDb, eq, remoraEvents, remoras } from "@remora/db";
-import { DiscBcs } from "@remora/disc-sdk";
+import { AllowanceBcs, AllowanceCapBcs, DiscBcs } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
 import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { afterAll, describe, expect, it } from "vitest";
@@ -85,15 +86,37 @@ describe.skipIf(!local)("remora service (B1, B3, B8, N5)", () => {
         object: {
           objectId,
           type: "",
-          content: DiscBcs.serialize({
-            id: DISC,
-            owner: OWNER,
-            name: discName,
-            payees: { contents: [PAYTO] },
-            per_payment_cap: 50_000n,
-            paused: false,
-            version: 1n,
-          }).toBytes(),
+          // Confirm matches each created object by the Disc name (team imports issue several).
+          content:
+            objectId === normalizeSuiAddress("0xa11")
+              ? AllowanceBcs.serialize({
+                  id: objectId,
+                  settings: {
+                    funder: OWNER,
+                    spender: null,
+                    app: null,
+                    lifetime_cap: null,
+                    start_timestamp_ms: null,
+                    expiration_timestamp_ms: null,
+                    rate_limit: null,
+                    name: discName,
+                  },
+                  current_spend: 0n,
+                }).toBytes()
+              : objectId === normalizeSuiAddress("0xca")
+                ? AllowanceCapBcs.serialize({
+                    id: objectId,
+                    allowance: normalizeSuiAddress("0xa11"),
+                  }).toBytes()
+                : DiscBcs.serialize({
+                    id: DISC,
+                    owner: OWNER,
+                    name: discName,
+                    payees: { contents: [PAYTO] },
+                    per_payment_cap: 50_000n,
+                    paused: false,
+                    version: 1n,
+                  }).toBytes(),
         },
       }),
     },
@@ -193,5 +216,22 @@ describe.skipIf(!local)("remora service (B1, B3, B8, N5)", () => {
     ).rejects.toMatchObject({
       code: "network.unavailable",
     });
+  });
+
+  it("issues a whole team's Discs in ONE owner transaction (ADR-0042)", async () => {
+    const team = await service.createTeam(OWNER, "testnet", [
+      { template: "scout", name: "Scout A" },
+      { template: "scout", name: "Scout B" },
+      { template: "sentinel", name: "Watcher" },
+    ]);
+    for (const r of team.remoras) created.push(r.id);
+    expect(team.remoras.map((r) => r.status)).toEqual(["creating", "creating", "shadow"]);
+    const tx = Transaction.from(team.transaction ?? "").getData();
+    const calls = tx.commands.map(
+      (c) => c.MoveCall && `${c.MoveCall.module}::${c.MoveCall.function}`,
+    );
+    expect(calls.filter((c) => c === "disc::issue")).toHaveLength(2);
+    expect(calls.filter((c) => c === "allowance::propose_for_app")).toHaveLength(2);
+    expect(tx.sender).toBe(OWNER);
   });
 });

@@ -4,7 +4,7 @@ import { and, delegateKeys, desc, eq, memoryIndex } from "@remora/db";
 import { createSuiClient, explorer, RelayerExtras, readAccount } from "@remora/memory";
 import { generateText } from "ai";
 import { type Context, Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { setCookie } from "hono/cookie";
 import { z } from "zod";
 import { citationsOf } from "../chat/citations.ts";
 import { type CommandContext, handleCommand } from "../chat/commands.ts";
@@ -25,10 +25,19 @@ import { tooLong } from "../chat/limits.ts";
 import { checkRate, noteCommand, noteModelCall } from "../chat/ratelimit.ts";
 import { followUpRequest, parseSuggestions } from "../chat/suggestions.ts";
 import { startConnect, startDisconnect } from "../connect/tokens.ts";
-import { db, model } from "../context.ts";
+import { db, model, modelFor } from "../context.ts";
 import { describeFailure } from "../copy/index.ts";
 import { env } from "../env/load.ts";
 import { personFromSession } from "../identity/auth.ts";
+import {
+  channelHeader,
+  GUEST_COOKIE,
+  guestCookie,
+  guestHeader,
+  legacyGuestOnly,
+  sessionCookie,
+  sessionHeader,
+} from "../identity/names.ts";
 import {
   hasCorrections,
   knownSoFar,
@@ -49,8 +58,6 @@ const CHANNEL = "web";
 
 /** Reads only. The chain, not the relayer, is the authority on who may read a memory. */
 const sui = createSuiClient(env.SUI_NETWORK);
-const COOKIE = "hippo_guest";
-const SESSION_COOKIE = "hippo_session";
 
 /**
  * Cross-origin fallbacks for the cookies.
@@ -68,21 +75,19 @@ const SESSION_COOKIE = "hippo_session";
  * bug on the page could read it. Same-origin deployments keep the cookie and
  * never touch this path.
  */
-const GUEST_HEADER = "x-hippo-guest";
-const SESSION_HEADER = "x-hippo-session";
 
 /** A guest id is opaque, but it must still look like one we would have minted. */
 function readGuestId(c: Context): string | undefined {
-  const cookie = getCookie(c, COOKIE);
+  const cookie = guestCookie(c);
   if (cookie) return cookie;
-  const header = c.req.header(GUEST_HEADER);
+  const header = guestHeader(c);
   return header && /^[0-9a-f-]{36}$/i.test(header) ? header : undefined;
 }
 
 function readSessionId(c: Context): string | undefined {
-  const cookie = getCookie(c, SESSION_COOKIE);
+  const cookie = sessionCookie(c);
   if (cookie) return cookie;
-  const header = c.req.header(SESSION_HEADER);
+  const header = sessionHeader(c);
   return header && /^[0-9a-f]{64}$/i.test(header) ? header : undefined;
 }
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 90;
@@ -103,7 +108,8 @@ async function webPerson(
     if (signedIn) return signedIn;
   }
   const id = cookie ?? crypto.randomUUID();
-  if (!cookie) setId(id);
+  // A guest still on the hippo cookie moves to the Remora one (ADR-0044).
+  if (!cookie || legacyGuestOnly(c)) setId(id);
   return resolvePerson(channel, id, channel);
 }
 
@@ -112,6 +118,8 @@ const chatBody = z.object({
   conversationId: z.uuid().optional(),
   clientMessageId: z.string().trim().min(1).max(128).optional(),
   regenerate: z.boolean().optional(),
+  /** A `MODEL_CATALOG` id from the composer's picker; anything else runs on the default (D9). */
+  model: z.string().max(120).optional(),
 });
 
 const compareBody = z.object({
@@ -162,9 +170,9 @@ export const chatRoutes = new Hono()
     const parsed = chatBody.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: "Send a message to continue." }, 400);
     const body = parsed.data;
-    const channel = c.req.header("x-hippo-channel") === "cli" ? "cli" : CHANNEL;
+    const channel = channelHeader(c) === "cli" ? "cli" : CHANNEL;
     const person = await webPerson(c, channel, readGuestId(c), (id) =>
-      setCookie(c, COOKIE, id, {
+      setCookie(c, GUEST_COOKIE, id, {
         httpOnly: true,
         sameSite: "Lax",
         secure: env.WEB_BASE_URL.startsWith("https"),
@@ -271,8 +279,9 @@ export const chatRoutes = new Hono()
       body.regenerate && placed.userSince
         ? await knownMemoryHashes(person.id, placed.userSince)
         : undefined;
+    const chosenModel = modelFor(body.model);
     const input = {
-      model,
+      model: chosenModel,
       port,
       messages,
       channel,
@@ -323,7 +332,7 @@ export const chatRoutes = new Hono()
           "turn",
           citationsOf(turnCtx.injected),
         ).catch((e) => console.error(`[${channel}] history`, e));
-        await logTurn(person, channel, turnCtx, writes, model.id).catch((e) =>
+        await logTurn(person, channel, turnCtx, writes, chosenModel.id).catch((e) =>
           console.error("[web] logTurn", e),
         );
       },

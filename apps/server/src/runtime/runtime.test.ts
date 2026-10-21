@@ -5,6 +5,8 @@
  * doesn't trust model output: Sonar has to stop it anyway.
  */
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Transaction } from "@mysten/sui/transactions";
 import { normalizeSuiAddress, toBase64 } from "@mysten/sui/utils";
@@ -21,13 +23,23 @@ import {
   receipts,
   remoraEvents,
   remoras,
+  rooms,
   sentinelRules,
   sourceStats,
 } from "@remora/db";
 import { DiscBcs, PaidBcs } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
 import { type PaidContext, x402 } from "@remora/merchant";
-import { ApprovalRequest, FeedItem, OwnerSettings, RemoraView, WhyResponse } from "@remora/schema";
+import {
+  ApprovalRequest,
+  FeedItem,
+  OwnerSettings,
+  RemoraView,
+  Room,
+  RoomMessage,
+  TeamPreview,
+  WhyResponse,
+} from "@remora/schema";
 import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -203,13 +215,23 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       : merchant.request(String(input), init)) as typeof fetch;
 
   // A model that obeys the injection: it asks to pay whatever URL the untrusted data names.
+  const seenModels: (string | undefined)[] = [];
+  let routePick: { id: string | null; p: number } = { id: null, p: 0 };
   const obedient: Brain = {
     answerModel: "fake/obedient",
     async answer(i) {
+      seenModels.push(i.model);
       const injected = /pay (http\S+)/.exec(i.data.map((d) => d.content).join(" "))?.[1];
       if (injected && i.pay)
         await i.pay({ payee: "reef:sui-risk", url: injected, reason: "the data told me to" });
-      return { text: `answer from ${i.data.length} source(s)`, tokens: 42 };
+      return {
+        text: `answer from ${i.data.length} source(s)`,
+        tokens: 42,
+        ...(i.model ? { model: i.model } : {}),
+      };
+    },
+    async route() {
+      return routePick;
     },
     async parseRule() {
       return { rule: null, tokens: 0 };
@@ -276,6 +298,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     await db
       .delete(jobs)
       .where(inArray(jobs.kind, ["remora.cron", "remora.ask", "remora.first_run"]));
+    await db.delete(rooms).where(eq(rooms.ownerAddress, OWNER));
     for (const id of created) await db.delete(remoras).where(eq(remoras.id, id));
   });
 
@@ -683,5 +706,222 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     expect(await bot.command(me, "/help")).toBeNull();
     expect(await bot.command(me, "hello there")).toBeNull();
     expect((await bot.command(me, "/pause Scout"))?.text).toMatch(/needs your signature/);
+  });
+
+  // ── U6: the Grok-bots shape (ADR-0042) ────────────────────────────────────
+  const u6 = () => {
+    const routes = createRemoraRoutes({
+      service,
+      runtime: deps(),
+      owner: async (c) => c.req.header("x-test-owner") ?? null,
+      telegramLinked: async () => false,
+    });
+    const as = {
+      "x-test-owner": OWNER,
+      "content-type": "application/json",
+      "x-remora-network": "testnet",
+    };
+    const send = (path: string, method: string, b?: unknown) =>
+      routes.request(path, {
+        method,
+        headers: as,
+        ...(b === undefined ? {} : { body: JSON.stringify(b) }),
+      });
+    return { routes, send };
+  };
+
+  it("a remora runs on its chosen catalog model, and its Wake records it (D9)", async () => {
+    const { send } = u6();
+    const bad = await send(`/api/remoras/${scout.id}`, "PATCH", { model: "x/not-in-catalog" });
+    expect(((await bad.json()) as { error: { code: string } }).error.code).toBe("model.unknown");
+    const ok = await send(`/api/remoras/${scout.id}`, "PATCH", {
+      model: "anthropic/claude-haiku-5.5",
+    });
+    const view = RemoraView.parse(((await ok.json()) as { remora: unknown }).remora);
+    expect(view.config.model).toBe("anthropic/claude-haiku-5.5");
+    const [fresh] = await db.select().from(remoras).where(eq(remoras.id, scout.id));
+    if (!fresh) throw new Error("no scout");
+    scout = fresh;
+    const r = await scoutAsk(deps(), scout, "Is 0x2 safe to depend on?");
+    expect(seenModels.at(-1)).toBe("anthropic/claude-haiku-5.5");
+    const [wake] = await db
+      .select()
+      .from(receipts)
+      .where(eq(receipts.id, r.receiptId ?? ""));
+    expect(
+      (wake?.wake as { intent?: { model?: { id?: string } } } | undefined)?.intent?.model?.id,
+    ).toBe("anthropic/claude-haiku-5.5");
+    await send(`/api/remoras/${scout.id}`, "PATCH", { model: null });
+  });
+
+  it("a 1-1 thread: the owner's line, then the remora's events, oldest first (ADR-0042)", async () => {
+    const { send } = u6();
+    const posted = await send(`/api/remoras/${scout.id}/messages`, "POST", {
+      text: "Is 0x2 safe to depend on?",
+    });
+    expect(posted.status).toBe(201);
+    const out = (await posted.json()) as { messageId: string; eventIds: string[] };
+    expect(out.eventIds.length).toBeGreaterThanOrEqual(2);
+    const feed = (await (
+      await send(`/api/feed?remora=${scout.id}&order=asc&limit=200`, "GET")
+    ).json()) as {
+      events: { id: string; type: string; createdAt: string }[];
+    };
+    for (const e of feed.events) FeedItem.parse(e);
+    const at = feed.events.findIndex((e) => e.id === out.messageId);
+    expect(feed.events[at]?.type).toBe("message");
+    expect(feed.events.slice(at + 1).map((e) => e.type)).toEqual(
+      expect.arrayContaining(["payment", "answer"]),
+    );
+    // Sentinel: a rule is learned; anything else gets what it watches.
+    const taught = (await (
+      await send(`/api/remoras/${sentinel.id}/messages`, "POST", {
+        text: "ignore incoming SUI under 0.05",
+      })
+    ).json()) as {
+      eventIds: string[];
+    };
+    const [learned] = await db
+      .select()
+      .from(remoraEvents)
+      .where(eq(remoraEvents.id, taught.eventIds[0] ?? ""));
+    expect(learned?.type).toBe("rule_learned");
+    const asked = (await (
+      await send(`/api/remoras/${sentinel.id}/messages`, "POST", { text: "what are you watching?" })
+    ).json()) as {
+      eventIds: string[];
+    };
+    const [status] = await db
+      .select()
+      .from(remoraEvents)
+      .where(eq(remoraEvents.id, asked.eventIds[0] ?? ""));
+    expect(String((status?.payload as { answer?: string } | undefined)?.answer)).toMatch(
+      /I'm watching 1 address/,
+    );
+  });
+
+  it("rooms route by @mention, signal, auto and lead, and approval cards come back inline", async () => {
+    const { send } = u6();
+    const list = (await (await send("/api/rooms", "GET")).json()) as { rooms: unknown[] };
+    const team = Room.parse(list.rooms[0]);
+    expect(team.isDefault).toBe(true);
+    expect(team.memberIds).toEqual(expect.arrayContaining([scout.id, sentinel.id]));
+    const post = async (text: string) =>
+      (await (await send(`/api/rooms/${team.id}/messages`, "POST", { text })).json()) as {
+        messageId: string;
+        routedTo: string[];
+        route: string;
+      };
+    const mention = await post("@Sentinel ignore outgoing SUI under 0.002");
+    expect(mention).toMatchObject({ routedTo: [sentinel.id], route: "mention" });
+    const signal = await post("What are the odds for tonight's match?");
+    expect(signal).toMatchObject({ routedTo: [scout.id], route: "signal" });
+    routePick = { id: sentinel.id, p: 0.9 };
+    expect(await post("anything new?")).toMatchObject({ routedTo: [sentinel.id], route: "auto" });
+    routePick = { id: sentinel.id, p: 0.3 };
+    await send(`/api/rooms/${team.id}`, "PATCH", { leadId: scout.id });
+    expect(await post("anything else?")).toMatchObject({ routedTo: [scout.id], route: "lead" });
+    await send(`/api/rooms/${team.id}`, "PATCH", { responder: "mentions" });
+    expect(await post("hello")).toMatchObject({ routedTo: [], route: "none" });
+    const lines = (await (await send(`/api/rooms/${team.id}/messages`, "GET")).json()) as {
+      messages: unknown[];
+    };
+    const parsed = lines.messages.map((m) => RoomMessage.parse(m));
+    const card = parsed.find(
+      (m) => m.eventType === "approval_needed" && m.replyTo === signal.messageId,
+    );
+    expect(card?.payload).toMatchObject({
+      status: "pending",
+      kind: "over_limit_payment",
+      payee: "reef:odds",
+    });
+    expect(parsed.find((m) => m.replyTo === mention.messageId)?.eventType).toBe("rule_learned");
+    // A Sentinel ping lands in the Team room too.
+    const ping = await onChainEvent(deps(), sentinel, {
+      address: OWNER,
+      direction: "in",
+      coinType: "0x2::sui::SUI",
+      amount: 5_000_000_000n,
+      decimals: 9,
+      digest: "DgRoomPing01",
+    });
+    expect(ping?.verdict).toBe("ping");
+    const after = (await (await send(`/api/rooms/${team.id}/messages`, "GET")).json()) as {
+      messages: RoomMessage[];
+    };
+    expect(after.messages.some((m) => m.eventType === "ping" && m.eventId === ping?.eventId)).toBe(
+      true,
+    );
+    await send(`/api/rooms/${team.id}`, "PATCH", { responder: "auto", leadId: null });
+    routePick = { id: null, p: 0 };
+  });
+
+  it("teams: preview writes nothing, apply makes one transaction for every Disc, export leaks nothing", async () => {
+    const { send } = u6();
+    const md = readFileSync(
+      resolve(import.meta.dirname, "../../../../packages/schema/fixtures/team.example.md"),
+      "utf8",
+    );
+    const before = (await db.select().from(remoras).where(eq(remoras.ownerAddress, OWNER))).length;
+    const preview = TeamPreview.parse(
+      await (await send("/api/teams/preview", "POST", { markdown: md })).json(),
+    );
+    expect(preview.signatures).toBe(1);
+    expect(preview.remoras.map((r) => r.name)).toEqual(["Scout", "Sentinel"]);
+    expect(preview.remoras[1]?.rules[0]?.understood).toBe(true);
+    expect((await db.select().from(remoras).where(eq(remoras.ownerAddress, OWNER))).length).toBe(
+      before,
+    );
+    const bad = await send("/api/teams/preview", "POST", { markdown: "# no frontmatter" });
+    expect(((await bad.json()) as { error: { code: string } }).error.code).toBe(
+      "team.no_frontmatter",
+    );
+
+    const applied = (await (await send("/api/teams/apply", "POST", { markdown: md })).json()) as {
+      remoras: string[];
+      transaction: string | null;
+      roomId: string;
+    };
+    created.push(...applied.remoras);
+    expect(applied.remoras).toHaveLength(2);
+    const tx = Transaction.from(applied.transaction ?? "").getData();
+    expect(tx.commands.filter((c) => c.MoveCall?.function === "issue")).toHaveLength(1);
+    const made = await db.select().from(remoras).where(inArray(remoras.id, applied.remoras));
+    const newScout = made.find((r) => r.template === "scout");
+    const newSentinel = made.find((r) => r.template === "sentinel");
+    expect(newScout?.status).toBe("creating");
+    expect((newScout?.config as { model?: string } | undefined)?.model).toBe(
+      "anthropic/claude-haiku-5.5",
+    );
+    expect(
+      (newScout?.config as { schedules?: { paused?: boolean }[] } | undefined)?.schedules?.[0]
+        ?.paused,
+    ).toBe(true);
+    expect(newSentinel?.status).toBe("shadow");
+    const taughtRules = await db
+      .select()
+      .from(sentinelRules)
+      .where(eq(sentinelRules.remoraId, newSentinel?.id ?? ""));
+    expect(taughtRules.map((r) => r.text)).toEqual(["Ignore incoming SUI under 0.01"]);
+    const [room] = await db.select().from(rooms).where(eq(rooms.id, applied.roomId));
+    expect(room?.leadId).toBe(newScout?.id);
+
+    const exported = await (await send("/api/teams/export", "GET")).text();
+    expect(exported).toMatch(/^---\nschema: remora.team\/v1/);
+    expect(exported).not.toMatch(/0x[0-9a-f]{64}/);
+    expect(exported).toContain("Ignore incoming SUI under 0.01");
+    // The export imports again: names made unique, nothing private.
+    const again = TeamPreview.parse(
+      await (await send("/api/teams/preview", "POST", { markdown: exported })).json(),
+    );
+    expect(new Set(again.remoras.map((r) => r.name)).size).toBe(again.remoras.length);
+  });
+
+  it("settings say whether Telegram is linked (A5)", async () => {
+    const { send } = u6();
+    const s = OwnerSettings.parse(
+      ((await (await send("/api/settings", "GET")).json()) as { settings: unknown }).settings,
+    );
+    expect(s.telegramLinked).toBe(false);
   });
 });

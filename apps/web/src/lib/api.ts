@@ -15,20 +15,22 @@
  * the id sits in `localStorage` instead of an `HttpOnly` cookie.
  */
 import { currentNetwork, NETWORK_HEADER } from "@/lib/network";
+import { readStored } from "@/lib/storage";
 
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 
 export const isSameOrigin = API_URL === "" || API_URL.startsWith(window.location.origin);
 
-const GUEST_KEY = "hippo.guest";
-const SESSION_KEY = "hippo.session";
+const GUEST_KEY = "remora.guest";
+const SESSION_KEY = "remora.session";
+/** The hippo names, read once and moved (D10; the server reads both until ADR-0044's release). */
+const LEGACY: Record<string, string> = {
+  [GUEST_KEY]: "hippo.guest",
+  [SESSION_KEY]: "hippo.session",
+};
 
 function stored(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  return readStored("local", key, LEGACY[key]);
 }
 
 function store(key: string, value: string): void {
@@ -55,6 +57,7 @@ export function rememberSession(sessionId: string): void {
 export function forgetSession(): void {
   try {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem("hippo.session");
   } catch {
     // Nothing to do; the server has already invalidated it.
   }
@@ -63,9 +66,9 @@ export function forgetSession(): void {
 /** Headers that carry identity when the cookie cannot. The guest id is cross-origin only. */
 export function identityHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
-  if (!isSameOrigin) headers["x-hippo-guest"] = guestId();
+  if (!isSameOrigin) headers["x-remora-guest"] = guestId();
   const session = stored(SESSION_KEY);
-  if (session) headers["x-hippo-session"] = session;
+  if (session) headers["x-remora-session"] = session;
   return headers;
 }
 

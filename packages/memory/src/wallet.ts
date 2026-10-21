@@ -11,7 +11,7 @@ import { verifyPersonalMessageSignature } from "@mysten/sui/verify";
 /** The message a wallet is asked to sign. Readable, so a signer sees the intent. */
 export function signInMessage(nonce: string): string {
   return [
-    "Sign in to hippo.",
+    "Sign in to Remora.",
     "",
     "This proves you control this wallet. It authorises nothing else: no",
     "transaction, no spending, no access to your funds.",

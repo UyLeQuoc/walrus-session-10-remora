@@ -10,6 +10,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, remoraEvents, sourceStats, sql } from "@remora/db";
 import { getDisc, toDiscError } from "@remora/disc-sdk";
 import { PaymentStopped, payWithDisc } from "../money/pay.ts";
+import { modelIdFor } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { REMORA_LIMITS } from "../runtime/limits.ts";
 import type { Recalled } from "../runtime/memory.ts";
@@ -99,7 +100,7 @@ export async function requestPayment(
     trigger: p.trigger,
     trustedInput: `${p.question}\n${p.reason}`,
     memories: p.memories,
-    model: deps.brain.answerModel,
+    model: modelIdFor(r, deps.brain.answerModel),
     prompt: p.reason,
   });
   let shadow = false;

@@ -7,6 +7,7 @@ import { and, desc, eq, remoraEvents, sentinelRules } from "@remora/db";
 import type { RuntimeDeps } from "./deps.ts";
 import { addUsage } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
+import { postToTeam } from "./rooms.ts";
 import { type ChainEvent, describeEvent, parseRule, SentinelRule, triage } from "./rules.ts";
 import { intentBase, recordWake } from "./wake.ts";
 
@@ -31,14 +32,17 @@ export async function teach(deps: RuntimeDeps, r: Remora, text: string) {
   void deps.memory
     .remember(r, "rules", "rule", `RULE: ${text} → ${JSON.stringify(rule)}`)
     .catch((err) => deps.log.warn("rule.memory_failed", { remora: r.id, error: err }));
-  await deps.db.insert(remoraEvents).values({
-    remoraId: r.id,
-    network: r.network,
-    type: "rule_learned",
-    summary: `Learned: ${text}`,
-    payload: { rule, ruleId: row?.id },
-  });
-  return row;
+  const [ev] = await deps.db
+    .insert(remoraEvents)
+    .values({
+      remoraId: r.id,
+      network: r.network,
+      type: "rule_learned",
+      summary: `Learned: ${text}`,
+      payload: { rule, ruleId: row?.id },
+    })
+    .returning({ id: remoraEvents.id });
+  return row ? { ...row, eventId: ev?.id ?? "" } : row;
 }
 
 /** Triage one chain event: newest matching rule decides; default is a ping. */
@@ -87,6 +91,11 @@ export async function onChainEvent(
     })
     .returning({ id: remoraEvents.id });
   if (t.verdict === "ping") {
+    // The ping also lands in the owner's Team room (ADR-0042).
+    if (ev?.id)
+      await postToTeam(deps, r, ev.id).catch((err) =>
+        deps.log.warn("room.ping_failed", { remora: r.id, error: err }),
+      );
     await deps.notifier.send(r.ownerAddress, {
       text: `${r.name}: ${what}`,
       urgent: true,

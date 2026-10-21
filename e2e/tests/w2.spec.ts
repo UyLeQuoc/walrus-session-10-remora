@@ -28,12 +28,12 @@ const ms = (from: number) => Date.now() - from;
 /** Same-origin API reads with the page's own session. */
 const api = <T>(page: Page, path: string): Promise<T> =>
   page.evaluate(async (p) => {
-    const session = localStorage.getItem("hippo.session");
+    const session = localStorage.getItem("remora.session");
     const res = await fetch(p, {
       credentials: "include",
       headers: {
         "x-remora-network": "testnet",
-        ...(session ? { "x-hippo-session": session } : {}),
+        ...(session ? { "x-remora-session": session } : {}),
       },
     });
     return res.json();

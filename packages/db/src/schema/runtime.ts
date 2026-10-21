@@ -268,3 +268,48 @@ export const remoraUsage = pgTable(
   },
   (t) => [uniqueIndex("remora_usage_day_idx").on(t.remoraId, t.day)],
 );
+
+/**
+ * Rooms (ADR-0042): several of an owner's remoras in one chat. The default Team room always holds
+ * every live remora; other rooms list their members.
+ */
+export const rooms = pgTable(
+  "rooms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAddress: text("owner_address").notNull(),
+    network: net(),
+    name: text("name").notNull(),
+    responder: text("responder", { enum: ["mentions", "lead", "auto"] })
+      .notNull()
+      .default("auto"),
+    leadId: uuid("lead_id").references(() => remoras.id, { onDelete: "set null" }),
+    memberIds: jsonb("member_ids").$type<string[]>().notNull().default([]),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("rooms_owner_idx").on(t.ownerAddress, t.network),
+    uniqueIndex("rooms_one_default_idx").on(t.ownerAddress, t.network).where(sql`${t.isDefault}`),
+  ],
+);
+
+/** One line in a room: the owner's, or a remora's (mirroring one of its events). */
+export const roomMessages = pgTable(
+  "room_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    roomId: uuid("room_id")
+      .notNull()
+      .references(() => rooms.id, { onDelete: "cascade" }),
+    author: text("author", { enum: ["owner", "remora", "system"] }).notNull(),
+    remoraId: uuid("remora_id").references(() => remoras.id, { onDelete: "set null" }),
+    text: text("text").notNull(),
+    routedTo: jsonb("routed_to").$type<string[]>().notNull().default([]),
+    route: text("route", { enum: ["mention", "everyone", "signal", "auto", "lead", "none"] }),
+    eventId: uuid("event_id").references(() => remoraEvents.id, { onDelete: "set null" }),
+    replyTo: uuid("reply_to"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("room_messages_room_idx").on(t.roomId, t.createdAt)],
+);

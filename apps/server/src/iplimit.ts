@@ -75,7 +75,7 @@ export function isUnmetered(method: string, path: string): boolean {
  * Memory search, verify, funds and every write still count.
  */
 const W2_READS =
-  /^\/api\/(networks|templates|feed|approvals|settings|remoras(\/[0-9a-f-]{36}(\/(budget|rules|sources|schedules))?)?|events\/[0-9a-f-]{36}\/why)$/i;
+  /^\/api\/(networks|templates|feed|approvals|settings|rooms(\/[0-9a-f-]{36}\/messages)?|remoras(\/[0-9a-f-]{36}(\/(budget|rules|sources|schedules))?)?|events\/[0-9a-f-]{36}\/why)$/i;
 
 export function clientAddress(headers: { get(name: string): string | null | undefined }): string {
   const forwarded = headers.get("x-forwarded-for");

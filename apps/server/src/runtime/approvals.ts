@@ -18,6 +18,7 @@ import {
   toX402Network,
   X402_VERSION,
 } from "@remora/disc-sdk";
+import { modelIdFor } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { RemoraError } from "./remoras.ts";
 import { intentBase, recordWake, sha256Hex } from "./wake.ts";
@@ -162,7 +163,7 @@ export async function approvalPay(
       trigger: { kind: "message", ref: `approval:${id}` },
       trustedInput: question,
       memories: [],
-      model: deps.brain.answerModel,
+      model: modelIdFor(r, deps.brain.answerModel),
       prompt: question,
     }),
     {

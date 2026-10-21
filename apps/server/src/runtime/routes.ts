@@ -9,12 +9,14 @@ import {
   and,
   desc,
   eq,
+  gt,
   inArray,
   lt,
   ownerSettings,
   receipts,
   remoraEvents,
   remoras,
+  rooms,
   sentinelRules,
   sourceStats,
 } from "@remora/db";
@@ -29,9 +31,25 @@ import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
-import { addSchedule, approveSchedule, queueFirstRun, removeSchedule } from "./schedules.ts";
+import {
+  defaultRoom,
+  postToRoom,
+  RESPONDERS,
+  type Room as RoomRow,
+  roomLines,
+  roomView,
+} from "./rooms.ts";
+import {
+  addSchedule,
+  approveSchedule,
+  queueFirstRun,
+  removeSchedule,
+  setSchedulePaused,
+} from "./schedules.ts";
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
+import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
+import { postMessage, withApprovalState } from "./threads.ts";
 import { verifyWake } from "./verify.ts";
 
 export interface RemoraRouteDeps {
@@ -48,6 +66,8 @@ export interface RemoraRouteDeps {
   telegramLink?: (
     c: Context,
   ) => Promise<{ code: string; url: string | null; expiresInMinutes: number } | null>;
+  /** A5: whether a Telegram chat redeemed this owner's link code (Huấn's handoff). */
+  telegramLinked?: (owner: string) => Promise<boolean>;
   /** Writes we made per namespace (memory_index), for the F6 comparison. */
   written?: (r: Remora) => Promise<Record<string, number>>;
 }
@@ -102,6 +122,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/panic",
     "/api/panic/*",
     "/api/telegram/*",
+    "/api/rooms",
+    "/api/rooms/*",
+    "/api/teams/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -122,6 +145,8 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/remoras/:id/*",
     "/api/approvals/:id/*",
     "/api/events/:id/*",
+    "/api/rooms/:id",
+    "/api/rooms/:id/*",
   ]) {
     app.use(path, async (c, next) => {
       if (!UUID.test(c.req.param("id") ?? ""))
@@ -173,7 +198,12 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   );
 
   app.patch("/api/remoras/:id", async (c) => {
-    const b = await body<{ name?: string; persona?: string; watch?: string[] }>(c);
+    const b = await body<{
+      name?: string;
+      persona?: string;
+      watch?: string[];
+      model?: string | null;
+    }>(c);
     if (b.watch?.some((a) => !ADDRESS.test(a)))
       throw new RemoraError("funds.bad_address", "Every watched address must be 0x + hex.");
     return c.json({ remora: await view(await service.edit(c.req.param("id"), c.get("owner"), b)) });
@@ -352,6 +382,17 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     return c.json({ schedules: (r.config as { schedules?: unknown[] }).schedules ?? [] });
   });
 
+  app.post("/api/remoras/:id/schedules/:scheduleId/:action{pause|resume}", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const s = await setSchedulePaused(
+      rt,
+      r,
+      c.req.param("scheduleId"),
+      c.req.param("action") === "pause",
+    );
+    return c.json({ schedule: s });
+  });
+
   app.delete("/api/remoras/:id/schedules/:scheduleId", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     await removeSchedule(rt, r, c.req.param("scheduleId"));
@@ -366,22 +407,153 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     if (!ids.length) return c.json({ events: [] });
     const type = c.req.query("type");
     const before = c.req.query("before");
-    const events = await rt.db
+    const after = c.req.query("after");
+    const valid = (d: string | undefined) => !!d && !Number.isNaN(Date.parse(d));
+    const rows = await rt.db
       .select()
       .from(remoraEvents)
       .where(
         and(
           inArray(remoraEvents.remoraId, ids),
           ...(type ? [inArray(remoraEvents.type, type.split(","))] : []),
-          ...(before && !Number.isNaN(Date.parse(before))
-            ? [lt(remoraEvents.createdAt, new Date(before))]
-            : []),
+          ...(valid(before) ? [lt(remoraEvents.createdAt, new Date(before as string))] : []),
+          ...(valid(after) ? [gt(remoraEvents.createdAt, new Date(after as string))] : []),
         ),
       )
       .orderBy(desc(remoraEvents.createdAt))
       .limit(Math.min(Number(c.req.query("limit") ?? 50) || 50, 200));
+    // A thread reads oldest first (ADR-0042); approval cards carry their current state.
+    const ordered = c.req.query("order") === "asc" ? rows.reverse() : rows;
+    const events = await withApprovalState(rt.db, ordered);
     const names = new Map(mine.map((r) => [r.id, r.name]));
     return c.json({ events: events.map((e) => ({ ...e, remora: names.get(e.remoraId) ?? "" })) });
+  });
+
+  // ── 1-1 threads and rooms (ADR-0042) ──────────────────────────────────────
+  app.post("/api/remoras/:id/messages", async (c) => {
+    const { text } = await body<{ text?: string }>(c);
+    if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000)), 201);
+  });
+
+  const myRoom = async (c: Context): Promise<RoomRow> => {
+    const [room] = await rt.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, c.req.param("id") ?? ""));
+    if (!room || room.ownerAddress !== c.get("owner") || room.network !== c.get("network"))
+      throw new RemoraError("room.not_found", "No such room.", 404);
+    return room;
+  };
+
+  app.get("/api/rooms", async (c) => {
+    await defaultRoom(rt.db, c.get("owner"), c.get("network"));
+    const mine = await rt.db
+      .select()
+      .from(rooms)
+      .where(and(eq(rooms.ownerAddress, c.get("owner")), eq(rooms.network, c.get("network"))))
+      .orderBy(desc(rooms.isDefault), rooms.createdAt);
+    return c.json({ rooms: await Promise.all(mine.map((r) => roomView(rt.db, r))) });
+  });
+
+  const roomPatch = async (
+    c: Context,
+    b: { name?: string; responder?: string; leadId?: string | null; memberIds?: string[] },
+  ) => {
+    if (b.responder !== undefined && !RESPONDERS.includes(b.responder as never))
+      throw new RemoraError("room.bad_responder", "Mentions, lead or auto.");
+    const mine = await service.list(c.get("owner"), c.get("network"));
+    const ids = new Set(mine.map((r) => r.id));
+    if (b.memberIds?.some((id) => !ids.has(id)))
+      throw new RemoraError("room.bad_member", "Only your own remoras can join.");
+    if (b.leadId && !ids.has(b.leadId))
+      throw new RemoraError("room.bad_lead", "The lead must be one of your remoras.");
+    return {
+      ...(b.name !== undefined ? { name: b.name.trim().slice(0, 40) || "Room" } : {}),
+      ...(b.responder !== undefined
+        ? { responder: b.responder as "mentions" | "lead" | "auto" }
+        : {}),
+      ...(b.leadId !== undefined ? { leadId: b.leadId } : {}),
+      ...(b.memberIds !== undefined ? { memberIds: [...new Set(b.memberIds)] } : {}),
+    };
+  };
+
+  app.post("/api/rooms", async (c) => {
+    const b = await body<{
+      name?: string;
+      responder?: string;
+      leadId?: string | null;
+      memberIds?: string[];
+    }>(c);
+    const patch = await roomPatch(c, { ...b, name: b.name ?? "Room" });
+    const [room] = await rt.db
+      .insert(rooms)
+      .values({ ownerAddress: c.get("owner"), network: c.get("network"), name: "Room", ...patch })
+      .returning();
+    if (!room) throw new RemoraError("room.create_failed", "Couldn't make that room.");
+    return c.json({ room: await roomView(rt.db, room) }, 201);
+  });
+
+  app.patch("/api/rooms/:id", async (c) => {
+    const room = await myRoom(c);
+    const b = await body<{
+      name?: string;
+      responder?: string;
+      leadId?: string | null;
+      memberIds?: string[];
+    }>(c);
+    // The Team room always holds every live remora.
+    const patch = await roomPatch(c, room.isDefault ? { ...b, memberIds: undefined } : b);
+    const [updated] = await rt.db.update(rooms).set(patch).where(eq(rooms.id, room.id)).returning();
+    return c.json({ room: await roomView(rt.db, updated ?? room) });
+  });
+
+  app.get("/api/rooms/:id/messages", async (c) => {
+    const room = await myRoom(c);
+    const after = c.req.query("after");
+    return c.json({
+      messages: await roomLines(
+        rt.db,
+        room,
+        after && !Number.isNaN(Date.parse(after)) ? new Date(after) : undefined,
+      ),
+    });
+  });
+
+  app.post("/api/rooms/:id/messages", async (c) => {
+    const room = await myRoom(c);
+    const { text } = await body<{ text?: string }>(c);
+    if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
+    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000)), 201);
+  });
+
+  // ── Teams from Markdown (ADR-0042) ────────────────────────────────────────
+  app.post("/api/teams/preview", async (c) => {
+    const { markdown } = await body<{ markdown?: string }>(c);
+    return c.json(previewTeam(String(markdown ?? "")));
+  });
+
+  app.post("/api/teams/apply", async (c) => {
+    const { markdown } = await body<{ markdown?: string }>(c);
+    return c.json(
+      await applyTeam(rt, service, c.get("owner"), c.get("network"), String(markdown ?? "")),
+      201,
+    );
+  });
+
+  app.post("/api/teams/confirm", async (c) => {
+    const b = await body<{ digest?: string; remoraIds?: string[] }>(c);
+    const ids = (b.remoraIds ?? []).filter((id) => UUID.test(id));
+    return c.json(await confirmTeam(rt, service, c.get("owner"), ids, digestOf(b.digest)));
+  });
+
+  app.get("/api/teams/export", async (c) => {
+    const md = await exportTeam(rt, c.get("owner"), c.get("network"));
+    return c.body(md, 200, {
+      "content-type": "text/markdown; charset=utf-8",
+      "content-disposition": 'attachment; filename="remora-team.md"',
+    });
   });
 
   app.get("/api/events/:id/why", async (c) => {
@@ -493,14 +665,18 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       .select()
       .from(ownerSettings)
       .where(eq(ownerSettings.ownerAddress, c.get("owner")));
+    const telegramLinked = d.telegramLinked ? await d.telegramLinked(c.get("owner")) : false;
     return c.json({
-      settings: s ?? {
-        ownerAddress: c.get("owner"),
-        timezone: "UTC",
-        quietStart: null,
-        quietEnd: null,
-        language: "en",
-        notify: "important",
+      settings: {
+        ...(s ?? {
+          ownerAddress: c.get("owner"),
+          timezone: "UTC",
+          quietStart: null,
+          quietEnd: null,
+          language: "en",
+          notify: "important",
+        }),
+        telegramLinked,
       },
     });
   });

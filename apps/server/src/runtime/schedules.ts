@@ -24,6 +24,8 @@ export interface Schedule {
   cron: string;
   human: string;
   question: string;
+  /** Paused schedules don't run; imported ones arrive paused (ADR-0042). */
+  paused?: boolean;
 }
 
 const schedulesOf = (r: Remora) =>
@@ -48,7 +50,13 @@ async function queueNext(deps: RuntimeDeps, r: Remora, s: Schedule, from: Date) 
 }
 
 /** The owner adds a schedule ("weekdays at 8am" + a question). */
-export async function addSchedule(deps: RuntimeDeps, r: Remora, when: string, question: string) {
+export async function addSchedule(
+  deps: RuntimeDeps,
+  r: Remora,
+  when: string,
+  question: string,
+  opts: { paused?: boolean } = {},
+) {
   if (r.template !== "scout")
     throw new RemoraError("schedule.unsupported", "Only Scouts answer on a schedule.");
   const p = previewSchedule(when);
@@ -58,6 +66,7 @@ export async function addSchedule(deps: RuntimeDeps, r: Remora, when: string, qu
     cron: p.cron,
     human: p.human,
     question: question.slice(0, 300),
+    ...(opts.paused ? { paused: true } : {}),
   };
   const schedules = [...schedulesOf(r), s].slice(-10);
   const [updated] = await deps.db
@@ -69,11 +78,32 @@ export async function addSchedule(deps: RuntimeDeps, r: Remora, when: string, qu
     remoraId: r.id,
     network: r.network,
     type: "action",
-    summary: `Scheduled ${p.human}: ${s.question.slice(0, 100)}`,
+    summary: `Scheduled ${p.human}${s.paused ? " (paused)" : ""}: ${s.question.slice(0, 100)}`,
     payload: { schedule: s },
   });
-  await queueNext(deps, updated ?? r, s, new Date());
+  if (!s.paused) await queueNext(deps, updated ?? r, s, new Date());
   return { schedule: s, next: p.next };
+}
+
+/** Pauses or resumes one schedule; resuming queues its next run. */
+export async function setSchedulePaused(
+  deps: RuntimeDeps,
+  r: Remora,
+  scheduleId: string,
+  paused: boolean,
+) {
+  const list = schedulesOf(r);
+  const s = list.find((x) => x.id === scheduleId);
+  if (!s) throw new RemoraError("schedule.not_found", "No such schedule.", 404);
+  const next = { ...s, paused };
+  const schedules = list.map((x) => (x.id === scheduleId ? next : x));
+  const [updated] = await deps.db
+    .update(remoras)
+    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
+    .where(eq(remoras.id, r.id))
+    .returning();
+  if (!paused) await queueNext(deps, updated ?? r, next, new Date());
+  return next;
 }
 
 export async function removeSchedule(deps: RuntimeDeps, r: Remora, scheduleId: string) {
@@ -191,7 +221,7 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
       const p = payload as { remoraId: string; scheduleId: string };
       const r = await load(deps, p.remoraId);
       const s = r && schedulesOf(r).find((x) => x.id === p.scheduleId);
-      if (!r || !s) return; // removed since: the chain of runs ends here
+      if (!r || !s || s.paused) return; // removed or paused since: the chain of runs ends here
       // From this run's slot, so a worker that picks it up early never queues the same slot again.
       await queueNext(deps, r, s, new Date(Math.max(Date.now(), job.runAt.getTime())));
       if (r.status !== "active" && r.status !== "shadow") return;

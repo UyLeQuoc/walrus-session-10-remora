@@ -4,11 +4,13 @@
  * changes any state. A remora's key comes from B4, its money is its Disc (ADR-0025).
  */
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
-import type { Transaction } from "@mysten/sui/transactions";
+import { Transaction } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { Logger, SuiNetwork } from "@remora/chain";
 import { and, type Db, desc, eq, gt, remoraEvents, remoras } from "@remora/db";
 import {
+  AllowanceCapBcs,
+  addIssue,
   buildIssue,
   buildPause,
   buildRevoke,
@@ -19,7 +21,7 @@ import {
   getDisc,
   type IssueArgs,
 } from "@remora/disc-sdk";
-import { type Budget, RemoraConfig } from "@remora/schema";
+import { type Budget, isCatalogModel, RemoraConfig } from "@remora/schema";
 import type { RemoraSigner } from "@remora/signer";
 import type { Networks } from "../money/networks.ts";
 import { type ResolvedReef, reefRef } from "../money/reef.ts";
@@ -102,6 +104,15 @@ const createdOf = (
   tx.effects?.changedObjects.find(
     (o) => o.idOperation === "Created" && re.test(tx.objectTypes?.[o.objectId] ?? ""),
   )?.objectId ?? null;
+
+export interface CreateInput {
+  owner: string;
+  network: SuiNetwork;
+  template: string;
+  name?: string;
+  budget?: Budget | null;
+  watch?: string[];
+}
 
 export function createRemoraService(deps: RemoraDeps) {
   const now = deps.now ?? (() => new Date());
@@ -193,6 +204,40 @@ export function createRemoraService(deps: RemoraDeps) {
     };
   }
 
+  /**
+   * The Disc, allowance and cap this remora's issue created. A team import issues several Discs in
+   * one transaction (ADR-0042), so each is matched by the remora's Disc name, not taken first.
+   */
+  async function issuedFor(r: Remora, tx: Awaited<ReturnType<typeof ownerTx>>) {
+    const core = deps.networks.client(r.network).core;
+    const created = (re: RegExp) =>
+      (tx.effects?.changedObjects ?? [])
+        .filter((o) => o.idOperation === "Created" && re.test(tx.objectTypes?.[o.objectId] ?? ""))
+        .map((o) => o.objectId);
+    const owner = normalizeSuiAddress(r.ownerAddress);
+    let discId: string | null = null;
+    for (const id of created(/::disc::Disc$/)) {
+      const disc = await getDisc(core, id);
+      if (disc.name === r.discName && normalizeSuiAddress(disc.owner) === owner) discId = id;
+    }
+    let allowanceId: string | null = null;
+    for (const id of created(/::allowance::Allowance</)) {
+      if ((await getAllowance(core, id)).name === r.discName) allowanceId = id;
+    }
+    let capId: string | null = null;
+    for (const id of created(/::allowance::AllowanceCap</)) {
+      const { object } = await core.getObject({ objectId: id, include: { content: true } });
+      const cap = AllowanceCapBcs.parse(object.content);
+      if (allowanceId && normalizeSuiAddress(cap.allowance) === normalizeSuiAddress(allowanceId))
+        capId = id;
+    }
+    if (!created(/::disc::Disc$/).length)
+      throw new RemoraError("tx.not_issue", "That transaction didn't issue a Disc.");
+    if (!discId || !allowanceId || !capId)
+      throw new RemoraError("tx.wrong_disc", "That transaction didn't issue this remora's Disc.");
+    return { discId, allowanceId, capId };
+  }
+
   const config = (r: Remora) =>
     RemoraConfig.parse({ ...r.config, status: r.status === "creating" ? "shadow" : r.status });
 
@@ -216,14 +261,37 @@ export function createRemoraService(deps: RemoraDeps) {
      * B1/B3: creates the remora's key and row, and for paying templates returns the owner's one-PTB
      * issue transaction (propose_for_app + disc::issue). Read-only templates are ready at once.
      */
-    async create(input: {
-      owner: string;
-      network: SuiNetwork;
-      template: string;
-      name?: string;
-      budget?: Budget | null;
-      watch?: string[];
-    }): Promise<{ remora: Remora; transaction: string | null }> {
+    /**
+     * B1/B3: creates the remora's key and row, and for paying templates returns the owner's one-PTB
+     * issue transaction (propose_for_app + disc::issue). Read-only templates are ready at once.
+     */
+    async create(input: CreateInput): Promise<{ remora: Remora; transaction: string | null }> {
+      const { remora, issue } = await this.prepare(input);
+      if (!issue) return { remora, transaction: null };
+      const tx = buildIssue(discCfg(input.network), issue);
+      tx.setSender(normalizeSuiAddress(input.owner));
+      return { remora, transaction: await tx.toJSON() };
+    },
+
+    /** A whole team (ADR-0042): every Disc issue in ONE owner transaction. */
+    async createTeam(
+      owner: string,
+      network: SuiNetwork,
+      members: Omit<CreateInput, "owner" | "network">[],
+    ): Promise<{ remoras: Remora[]; transaction: string | null }> {
+      const made: { remora: Remora; issue: IssueArgs | null }[] = [];
+      for (const m of members) made.push(await this.prepare({ ...m, owner, network }));
+      const issues = made.flatMap((x) => (x.issue ? [x.issue] : []));
+      const team = made.map((x) => x.remora);
+      if (!issues.length) return { remoras: team, transaction: null };
+      const cfg = discCfg(network);
+      const tx = new Transaction();
+      for (const a of issues) addIssue(tx, cfg, a);
+      tx.setSender(normalizeSuiAddress(owner));
+      return { remoras: team, transaction: await tx.toJSON() };
+    },
+
+    async prepare(input: CreateInput): Promise<{ remora: Remora; issue: IssueArgs | null }> {
       if (!isTemplateSlug(input.template)) {
         throw new RemoraError("template.unknown", `No template called ${input.template}.`);
       }
@@ -291,14 +359,12 @@ export function createRemoraService(deps: RemoraDeps) {
       });
       if (!needsDisc || !budget) {
         await event(remora, "action", `${name} is ready and starts in shadow mode.`);
-        return { remora, transaction: null };
+        return { remora, issue: null };
       }
-      const tx = buildIssue(
-        cfg,
-        issueArgs(discName, address, budget, deps.reef(input.network), now()),
-      );
-      tx.setSender(owner);
-      return { remora, transaction: await tx.toJSON() };
+      return {
+        remora,
+        issue: issueArgs(discName, address, budget, deps.reef(input.network), now()),
+      };
     },
 
     /** After the owner executed the issue PTB: record the Disc, allowance and cap, enter shadow mode. */
@@ -307,18 +373,7 @@ export function createRemoraService(deps: RemoraDeps) {
       if (r.status !== "creating")
         throw new RemoraError("remora.already_confirmed", "Already confirmed.", 409);
       const tx = await ownerTx(r, digest);
-      const discId = createdOf(tx, /::disc::Disc$/);
-      const allowanceId = createdOf(tx, /::allowance::Allowance</);
-      const capId = createdOf(tx, /::allowance::AllowanceCap</);
-      if (!discId || !allowanceId || !capId)
-        throw new RemoraError("tx.not_issue", "That transaction didn't issue a Disc.");
-      const disc = await getDisc(deps.networks.client(r.network).core, discId);
-      if (
-        disc.name !== r.discName ||
-        normalizeSuiAddress(disc.owner) !== normalizeSuiAddress(r.ownerAddress)
-      ) {
-        throw new RemoraError("tx.wrong_disc", "That Disc isn't this remora's.");
-      }
+      const { discId, allowanceId, capId } = await issuedFor(r, tx);
       const updated = await setRow(id, {
         discId,
         allowanceId,
@@ -490,13 +545,20 @@ export function createRemoraService(deps: RemoraDeps) {
     async edit(
       id: string,
       owner: string,
-      patch: { name?: string; persona?: string; watch?: string[] },
+      patch: { name?: string; persona?: string; watch?: string[]; model?: string | null },
     ) {
       const r = await mine(id, owner);
       const prev = r.config as Record<string, unknown> & { revision?: number };
       const next: Record<string, unknown> = { ...prev, revision: (prev.revision ?? 1) + 1 };
       if (patch.name !== undefined) next.name = patch.name.trim().slice(0, 40);
       if (patch.persona !== undefined) next.persona = patch.persona.trim().slice(0, 2_000);
+      if (patch.model !== undefined) {
+        // D9 (ADR-0042): a catalog id, or null for the server default.
+        if (patch.model !== null && !isCatalogModel(patch.model))
+          throw new RemoraError("model.unknown", "That model isn't in the catalog.");
+        if (patch.model === null) delete next.model;
+        else next.model = patch.model;
+      }
       if (patch.watch !== undefined) {
         if (r.template !== "sentinel")
           throw new RemoraError("remora.no_watch", "Only Sentinels watch addresses.");

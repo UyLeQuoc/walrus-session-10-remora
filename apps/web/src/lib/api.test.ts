@@ -21,10 +21,18 @@ describe("identityHeaders", () => {
   it("sends a stored session even when the page is same-origin", () => {
     const sessionId = "ab".repeat(32);
     rememberSession(sessionId);
-    expect(identityHeaders()["x-hippo-session"]).toBe(sessionId);
+    expect(identityHeaders()["x-remora-session"]).toBe(sessionId);
   });
 
   it("sends nothing when there is no stored session", () => {
-    expect(identityHeaders()["x-hippo-session"]).toBeUndefined();
+    expect(identityHeaders()["x-remora-session"]).toBeUndefined();
+  });
+
+  it("moves a session stored under the hippo name (D10)", () => {
+    const sessionId = "cd".repeat(32);
+    memory.set("hippo.session", sessionId);
+    expect(identityHeaders()["x-remora-session"]).toBe(sessionId);
+    expect(memory.get("remora.session")).toBe(sessionId);
+    expect(memory.has("hippo.session")).toBe(false);
   });
 });

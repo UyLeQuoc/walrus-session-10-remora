@@ -11,6 +11,7 @@ import type { ResolvedReef } from "../money/reef.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import { handoff, proposeSchedule } from "../tools/propose.ts";
 import { readTools } from "../tools/read.ts";
+import { modelIdFor } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { addUsage, REMORA_LIMITS, tokensToday } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -98,8 +99,11 @@ export async function scoutAsk(
   const persona = String((r.config as { persona?: string }).persona ?? "You are Scout.");
   let answer: string;
   let tokens = 0;
+  // The Wake records the model that actually answered (D9).
+  let usedModel = modelIdFor(r, deps.brain.answerModel);
   try {
     const res = await deps.brain.answer({
+      model: modelIdFor(r, deps.brain.answerModel),
       persona,
       question,
       memories: memories.map((m) => m.text),
@@ -121,6 +125,7 @@ export async function scoutAsk(
     });
     answer = res.text;
     tokens = res.tokens;
+    usedModel = res.model ?? usedModel;
   } catch {
     // The model is down: still answer with what was bought.
     answer = data.length
@@ -136,7 +141,7 @@ export async function scoutAsk(
       trigger,
       trustedInput: question,
       memories,
-      model: deps.brain.answerModel,
+      model: usedModel,
       prompt: `${persona}\n${question}`,
     }),
     {
