@@ -15,6 +15,9 @@ const PAGES: [string, RegExp][] = [
   ["/settings", /Sign in with your wallet to see your settings/],
   ["/verify", /Check|Verify/],
   ["/funds", /Sign in with your wallet to see your funds/],
+  ["/remoras/import", /Sign in with your wallet to see team import/],
+  ["/chat/r/0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10", /Sign in with your wallet to see this chat/],
+  ["/chat/room/4f3e2d1c-0b9a-4876-8543-210fedcba987", /Sign in with your wallet to see this room/],
 ];
 
 for (const [path, text] of PAGES) {
@@ -32,7 +35,13 @@ for (const [path, text] of PAGES) {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow, "no horizontal scroll").toBeLessThanOrEqual(1);
-    const name = path === "/" ? "home" : path.slice(1).replaceAll("/", "-");
+    const name =
+      path === "/"
+        ? "home"
+        : path
+            .slice(1)
+            .replaceAll("/", "-")
+            .replace(/-[0-9a-f-]{36}$/, "");
     await page.screenshot({ path: `screenshots/${info.project.name}-${name}.png`, fullPage: true });
   });
 }

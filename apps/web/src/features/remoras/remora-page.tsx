@@ -5,7 +5,7 @@
  * about one screen; destructive actions live in Settings → Danger zone behind ConfirmAction.
  */
 import type { RemoraView } from "@remora/schema";
-import { AlertTriangle, Ellipsis, KeyRound, Trash2 } from "lucide-react";
+import { AlertTriangle, Ellipsis, KeyRound, MessageCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -28,6 +28,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ModelPicker } from "@/features/chat/model-picker";
+import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { api } from "./api";
@@ -93,6 +95,13 @@ function PauseButton({ r, reload }: { r: RemoraView; reload: () => void }) {
 function headerActions(r: RemoraView, reload: () => void, setTab: (t: Tab) => void) {
   return (
     <>
+      {r.status === "shadow" || r.status === "active" ? (
+        <Button asChild type="button" variant="outline" size="sm">
+          <Link to={`/chat/r/${r.id}`}>
+            <MessageCircle /> Chat
+          </Link>
+        </Button>
+      ) : null}
       {r.status === "shadow" ? (
         <GoLive r={r} reload={reload} />
       ) : (
@@ -345,6 +354,37 @@ function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
   );
 }
 
+/** D9 (ADR-0042): the model this remora thinks with, from the shared catalog. */
+function BrainSection({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const choose = async (id: string) => {
+    setBusy(true);
+    const out = await api.edit(r.id, { model: id || null });
+    setBusy(false);
+    if (!out.ok) return void toast.error(out.error);
+    toast.success(
+      id
+        ? `${r.name} now thinks with ${modelById(id).label}.`
+        : `${r.name} uses the default model.`,
+    );
+    reload();
+  };
+  return (
+    <Section
+      title="Brain"
+      description="The model it answers with. Every choice can call tools and costs at most $1 per 1M tokens."
+    >
+      <div className="flex items-center gap-2" data-testid="remora-model">
+        <ModelPicker
+          value={r.config.model ?? DEFAULT_MODEL_ID}
+          onChange={(id) => void choose(id)}
+        />
+        {busy ? <Spinner /> : null}
+      </div>
+    </Section>
+  );
+}
+
 function SchedulesSection({ r }: { r: RemoraView }) {
   const [when, setWhen] = useState("weekdays at 8am");
   const [question, setQuestion] = useState("");
@@ -389,7 +429,21 @@ function SchedulesSection({ r }: { r: RemoraView }) {
           <li key={s.id} className="flex items-center justify-between gap-2 text-sm">
             <span>
               {s.human}: {s.question}
+              {s.paused ? <span className="ml-2 text-muted-foreground">(paused)</span> : null}
             </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                void api.pauseSchedule(r.id, s.id, !s.paused).then((out) => {
+                  if (!out.ok) toast.error(out.error);
+                  void list.refresh();
+                })
+              }
+            >
+              {s.paused ? "Resume" : "Pause"}
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -498,6 +552,7 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
   return (
     <div className="flex flex-col gap-8">
       <IdentitySection r={r} reload={reload} />
+      <BrainSection r={r} reload={reload} />
       <BudgetSection r={r} reload={reload} />
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}

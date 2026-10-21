@@ -2,19 +2,32 @@
  * `/remoras` (H4 dashboard): your remoras with status and budget, what is waiting for you (N2),
  * and one feed across all of them (N1). The empty state is one block with two templates.
  */
-import { AlertTriangle, Fish, Plus } from "lucide-react";
+import { AlertTriangle, Download, Fish, Plus, Upload } from "lucide-react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNetwork } from "@/lib/network";
-import { api } from "./api";
+import { api, exportTeam } from "./api";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
 import { RemoraCard } from "./remora-card";
 import { TemplateCard } from "./template-card";
+
+/** ADR-0042: the team as one Markdown file, without keys, memories or watched addresses. */
+async function downloadTeam() {
+  const out = await exportTeam();
+  if (!out.ok) return void toast.error(out.error);
+  const url = URL.createObjectURL(new Blob([out.data], { type: "text/markdown" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "remora-team.md";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function Dashboard() {
   const network = useNetwork();
@@ -32,11 +45,23 @@ function Dashboard() {
         title="Remoras"
         description={`${live.length} on ${network}`}
         actions={
-          <Button asChild>
-            <Link to="/remoras/new">
-              <Plus /> New remora
-            </Link>
-          </Button>
+          <>
+            {live.length ? (
+              <Button type="button" variant="ghost" onClick={() => void downloadTeam()}>
+                <Download /> Export team
+              </Button>
+            ) : null}
+            <Button asChild variant="outline">
+              <Link to="/remoras/import">
+                <Upload /> Import a team
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/remoras/new">
+                <Plus /> New remora
+              </Link>
+            </Button>
+          </>
         }
       />
 

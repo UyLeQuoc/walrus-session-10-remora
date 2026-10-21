@@ -12,7 +12,12 @@ import {
   InspectorResponse,
   OwnerSettings,
   RemoraView,
+  Room,
+  RoomMessage,
+  type RoomResponder,
+  Schedule,
   SchedulePreview,
+  TeamPreview,
   Template,
   VerifyResult,
   WhyResponse,
@@ -58,8 +63,10 @@ export const api = {
     call("POST", "/api/remoras", CreateRemoraResponse, b),
   confirm: (id: string, digest: string) =>
     call("POST", `/api/remoras/${id}/confirm`, Remora, { digest }),
-  edit: (id: string, b: { name?: string; persona?: string; watch?: string[] }) =>
-    call("PATCH", `/api/remoras/${id}`, Remora, b),
+  edit: (
+    id: string,
+    b: { name?: string; persona?: string; watch?: string[]; model?: string | null },
+  ) => call("PATCH", `/api/remoras/${id}`, Remora, b),
   activate: (id: string) => call("POST", `/api/remoras/${id}/activate`, Remora),
   pause: (id: string, paused: boolean) =>
     call(
@@ -135,18 +142,19 @@ export const api = {
       question,
     }),
   schedules: (id: string) =>
-    call(
-      "GET",
-      `/api/remoras/${id}/schedules`,
-      z.object({
-        schedules: z.array(
-          z.object({ id: z.string(), cron: z.string(), human: z.string(), question: z.string() }),
-        ),
-      }),
-    ),
+    call("GET", `/api/remoras/${id}/schedules`, z.object({ schedules: z.array(Schedule) })),
   removeSchedule: (id: string, scheduleId: string) =>
     call("DELETE", `/api/remoras/${id}/schedules/${scheduleId}`, Ok),
-  feed: (o: { remora?: string; type?: string; before?: string } = {}) => {
+  feed: (
+    o: {
+      remora?: string;
+      type?: string;
+      before?: string;
+      after?: string;
+      order?: "asc";
+      limit?: string;
+    } = {},
+  ) => {
     const q = new URLSearchParams(Object.entries(o).filter(([, v]) => v) as [string, string][]);
     return call(
       "GET",
@@ -198,4 +206,76 @@ export const api = {
       "/api/telegram/link",
       z.object({ code: z.string(), url: z.string().nullable(), expiresInMinutes: z.number() }),
     ),
+  // ── U6 (ADR-0042): 1-1 threads, rooms, teams, paused schedules ─────────────
+  message: (id: string, text: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/messages`,
+      z.object({ messageId: z.string(), eventIds: z.array(z.string()) }),
+      { text },
+    ),
+  pauseSchedule: (id: string, scheduleId: string, paused: boolean) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/schedules/${scheduleId}/${paused ? "pause" : "resume"}`,
+      z.object({ schedule: Schedule }),
+    ),
+  rooms: () => call("GET", "/api/rooms", z.object({ rooms: z.array(Room) })),
+  createRoom: (b: {
+    name: string;
+    memberIds: string[];
+    responder?: RoomResponder;
+    leadId?: string | null;
+  }) => call("POST", "/api/rooms", z.object({ room: Room }), b),
+  editRoom: (
+    id: string,
+    b: { name?: string; responder?: RoomResponder; leadId?: string | null; memberIds?: string[] },
+  ) => call("PATCH", `/api/rooms/${id}`, z.object({ room: Room }), b),
+  roomMessages: (id: string, after?: string) =>
+    call(
+      "GET",
+      `/api/rooms/${id}/messages${after ? `?after=${encodeURIComponent(after)}` : ""}`,
+      z.object({ messages: z.array(RoomMessage) }),
+    ),
+  postToRoom: (id: string, text: string) =>
+    call(
+      "POST",
+      `/api/rooms/${id}/messages`,
+      z.object({
+        messageId: z.string(),
+        routedTo: z.array(z.string()),
+        route: z.string(),
+        replies: z.array(z.string()),
+      }),
+      { text },
+    ),
+  teamPreview: (markdown: string) => call("POST", "/api/teams/preview", TeamPreview, { markdown }),
+  teamApply: (markdown: string) =>
+    call(
+      "POST",
+      "/api/teams/apply",
+      z.object({
+        remoras: z.array(z.string()),
+        transaction: z.string().nullable(),
+        roomId: z.string(),
+        skipped: z.array(z.string()),
+      }),
+      { markdown },
+    ),
+  teamConfirm: (digest: string, remoraIds: string[]) =>
+    call("POST", "/api/teams/confirm", z.object({ confirmed: z.array(z.string()) }), {
+      digest,
+      remoraIds,
+    }),
 };
+
+/** `GET /api/teams/export` is a Markdown file, not JSON. */
+export async function exportTeam(): Promise<Result<string>> {
+  try {
+    const res = await apiFetch("/api/teams/export");
+    if (!res.ok) return { ok: false, error: await errorMessage(res, "Couldn't export the team.") };
+    return { ok: true, data: await res.text() };
+  } catch {
+    return { ok: false, error: "Can't reach the server." };
+  }
+}

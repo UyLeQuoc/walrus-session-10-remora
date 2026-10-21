@@ -13,6 +13,9 @@ import { NewRemoraPage } from "../features/remoras/new-remora-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
 import { SettingsPage } from "../features/settings/settings-page";
+import { ImportTeamPage } from "../features/teams/import-page";
+import { RoomPage } from "../features/threads/room-page";
+import { ThreadPage } from "../features/threads/thread-page";
 import { VerifyPage } from "../features/verify/verify-page";
 
 export interface AppRoute {
@@ -44,4 +47,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "settings", element: <SettingsPage /> },
   { path: "verify", element: <VerifyPage /> },
   { path: "verify/:ref", element: <VerifyPage /> },
+  { path: "chat/r/:id", element: <ThreadPage /> },
+  { path: "chat/room/:id", element: <RoomPage /> },
+  { path: "remoras/import", element: <ImportTeamPage /> },
 ];

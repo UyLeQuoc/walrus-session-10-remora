@@ -30,6 +30,7 @@ import { filterConversations } from "@/features/chat/conversations-filter";
 import { useConversations } from "@/features/chat/use-conversations";
 import { api } from "@/features/remoras/api";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
+import { SidebarTeam } from "@/features/threads/sidebar-team";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 const NAV = [
@@ -106,6 +107,7 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {!collapsed ? <SidebarTeam onNavigate={closeOnPhone} /> : null}
         {!collapsed && items.length > 0 && (
           <SidebarGroup className="min-h-0 flex-1">
             <SidebarGroupLabel>Recents</SidebarGroupLabel>
