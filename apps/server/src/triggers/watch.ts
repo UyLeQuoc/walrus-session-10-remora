@@ -1,6 +1,6 @@
 /**
  * D1 chain trigger: one checkpoint stream per network, filtered to the addresses Sentinels watch
- * (`affectedAddress` terms, OR-ed). Balance changes of a watched address become `ChainEvent`s and go
+ * (`affectedAddress` terms, OR-ed, up to the filter's 10 literals; unfiltered past that). Balance changes of a watched address become `ChainEvent`s and go
  * to every Sentinel watching it. The watched set is re-read periodically; a change re-subscribes.
  * The stream starts at the tip, so after a reconnect the checkpoints in between are fetched with
  * `GetCheckpoint` (up to `maxBackfill`), as the indexer does: a ping is never lost to a reconnect.
@@ -69,6 +69,27 @@ export async function watchedOn(db: Db, network: SuiNetwork): Promise<Watched[]>
     const addresses = triggers.flatMap((t) => (t.kind === "chain" ? (t.addresses ?? []) : []));
     return { remoraId: r.id, addresses: addresses.map((a) => normalizeSuiAddress(a)) };
   });
+}
+
+/** A checkpoint filter takes at most 10 literals (the fullnode rejects more). */
+export const MAX_FILTER_LITERALS = 10;
+
+/**
+ * `affectedAddress` terms, OR-ed. Past the literal limit there's no filter: the stream carries every
+ * checkpoint and `eventsFrom` keeps the watched addresses' changes.
+ */
+export function filterFor(addresses: string[]) {
+  if (addresses.length > MAX_FILTER_LITERALS) return undefined;
+  return {
+    terms: addresses.map((address) => ({
+      literals: [
+        {
+          negated: false,
+          predicate: { oneofKind: "affectedAddress" as const, affectedAddress: { address } },
+        },
+      ],
+    })),
+  };
 }
 
 export function startWatcher(o: {
@@ -149,23 +170,14 @@ export function startWatcher(o: {
         const call = o.client.subscriptionService.subscribeCheckpoints(
           {
             readMask: READ_MASK,
-            filter: {
-              terms: [...byAddress.keys()].map((address) => ({
-                literals: [
-                  {
-                    negated: false,
-                    predicate: {
-                      oneofKind: "affectedAddress" as const,
-                      affectedAddress: { address },
-                    },
-                  },
-                ],
-              })),
-            },
+            filter: filterFor([...byAddress.keys()]),
           },
           { abort: abort.signal },
         );
-        log.info("watcher.subscribed", { addresses: byAddress.size });
+        log.info("watcher.subscribed", {
+          addresses: byAddress.size,
+          filtered: byAddress.size <= MAX_FILTER_LITERALS,
+        });
         let first = true;
         for await (const frame of call.responses) {
           if (stopped) continue;

@@ -89,6 +89,10 @@ function fakeApi(extra: Record<string, unknown> = {}) {
           question: "Is 0x2 safe?",
           answer: "0x2 is the Sui framework.",
         }),
+        ev(uuid(5), "answer", "Is the Disc package safe?", {
+          question: "Is the Disc package safe?",
+          answer: "It's **two days** old.",
+        }),
         ev(uuid(4), "approval_needed", "Asked you", {
           approvalId: uuid(9),
           status: "pending",
@@ -207,6 +211,12 @@ describe("1-1 thread (ADR-0042)", () => {
       /Paid 0.01 USDC to reef:sui-risk/,
     );
     expect(screen.getByRole("button", { name: /Pay once \(0.02 USDC\)/ })).toBeDefined();
+    // Only the first-run answer, not the answer to the owner's line, says what it answers.
+    expect(screen.getAllByTestId("thread-context").map((n) => n.textContent)).toEqual([
+      "Re: Is the Disc package safe?",
+    ]);
+    // Answers render as Markdown.
+    expect(screen.getByText("two days").tagName).toBe("STRONG");
     await userEvent.type(screen.getByLabelText("Message"), "Odds for tonight?{Enter}");
     await waitFor(() =>
       expect(calls.find((c) => c.method === "POST" && c.url.endsWith("/messages"))?.body).toEqual({

@@ -47,6 +47,10 @@ function Importer() {
   const [preview, setPreview] = useState<TeamPreview | null>(null);
   const [error, setError] = useState("");
   const [step, setStep] = useState("");
+  // Signed but not confirmed yet (the server's node can lag the wallet's): confirm again, no new signature.
+  const [signed, setSigned] = useState<{ digest: string; ids: string[]; roomId: string } | null>(
+    null,
+  );
 
   const check = async (md = markdown) => {
     setError("");
@@ -69,9 +73,11 @@ function Importer() {
       if (out.data.transaction) {
         setStep("Sign once in your wallet: every Disc in one transaction…");
         const digest = await run(out.data.transaction);
+        setSigned({ digest, ids: out.data.remoras, roomId: out.data.roomId });
         setStep("Confirming onchain…");
         const done = await api.teamConfirm(digest, out.data.remoras);
         if (!done.ok) throw new Error(done.error);
+        setSigned(null);
       }
       if (out.data.skipped.length) toast(`Skipped: ${out.data.skipped.join("; ")}`);
       toast.success("Your team is in. Say hello in the room.");
@@ -81,6 +87,18 @@ function Importer() {
     } finally {
       setStep("");
     }
+  };
+
+  const confirmAgain = async () => {
+    if (!signed) return;
+    setError("");
+    setStep("Confirming onchain…");
+    const done = await api.teamConfirm(signed.digest, signed.ids);
+    setStep("");
+    if (!done.ok) return setError(done.error);
+    setSigned(null);
+    toast.success("Your team is in. Say hello in the room.");
+    navigate(`/chat/room/${signed.roomId}`);
   };
 
   return (
@@ -136,7 +154,19 @@ function Importer() {
           </div>
           {error ? (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+                <span>{error}</span>
+                {signed ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void confirmAgain()}
+                  >
+                    Check again (already signed)
+                  </Button>
+                ) : null}
+              </AlertDescription>
             </Alert>
           ) : null}
         </div>

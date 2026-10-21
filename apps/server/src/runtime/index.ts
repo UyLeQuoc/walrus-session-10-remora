@@ -49,7 +49,9 @@ const reef = (n: Parameters<typeof reefFor>[1]) => reefFor(merchants, n);
 const answer = createModel({ apiKey: env.OPENROUTER_API_KEY, model: env.LLM_MODEL });
 const small = createModel({
   apiKey: env.OPENROUTER_API_KEY,
-  model: env.LLM_SMALL_MODEL ?? env.LLM_FALLBACK_MODEL ?? env.LLM_MODEL,
+  // Sonar's check and rule parsing. Not the fallback model: qwen3.7-flash answers checks with
+  // reasons too long for the schema and blocked a legitimate purchase (U6 spike, ADR-0045).
+  model: env.LLM_SMALL_MODEL ?? env.LLM_MODEL,
 });
 
 export const runtime: RuntimeDeps = {

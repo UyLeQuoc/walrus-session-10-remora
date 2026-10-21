@@ -18,7 +18,12 @@ import type { CheckModel } from "./sonar.ts";
 export interface UntrustedData {
   source: string;
   content: string;
+  /** What it cost (e.g. "0.02 USDC"), so the answer cites the real price instead of a guess. */
+  cost?: string;
 }
+
+/** Atomic USDC (6 decimals) as the answer cites it. */
+export const usdcLabel = (atomic: string) => `${Number(atomic) / 1e6} USDC`;
 
 export interface PayRequestArgs {
   payee: string;
@@ -34,7 +39,7 @@ export interface Brain {
     memories: string[];
     data: UntrustedData[];
     /** Follow-up purchases; every call still goes through Sonar and the Disc. */
-    pay?: (args: PayRequestArgs) => Promise<string>;
+    pay?: (args: PayRequestArgs) => Promise<string | UntrustedData>;
     /** D4 read tools; results that come from outside are wrapped as untrusted. */
     tools?: AnswerTools;
     /** The remora's chosen `MODEL_CATALOG` id (D9, ADR-0042); absent or unknown runs the default. */
@@ -79,7 +84,7 @@ export function wrapUntrusted(d: UntrustedData[]): string {
   return d
     .map(
       (x) =>
-        `<untrusted source="${x.source.replace(/"/g, "'")}">\n${x.content.slice(0, 6_000)}\n</untrusted>`,
+        `<untrusted source="${x.source.replace(/"/g, "'")}"${x.cost ? ` cost="${x.cost}"` : ""}>\n${x.content.slice(0, 6_000)}\n</untrusted>`,
     )
     .join("\n");
 }
@@ -123,8 +128,13 @@ export function createBrain(models: {
                   url: z.string().url(),
                   reason: z.string().max(200),
                 }),
-                execute: async (args) =>
-                  i.pay ? untrusted(args.payee)(await i.pay(args)) : "payments are off",
+                execute: async (args) => {
+                  if (!i.pay) return "payments are off";
+                  const out = await i.pay(args);
+                  return typeof out === "string"
+                    ? untrusted(args.payee)(out)
+                    : wrapUntrusted([out]);
+                },
               }),
             }
           : {}),
@@ -221,9 +231,10 @@ export function createBrain(models: {
       async check({ intent, policy }) {
         const r = await generateObject({
           model: models.check,
+          // No length limit in the schema: a model that explains too much shouldn't fail the check.
           schema: z.object({
             verdict: z.enum(["allow", "block", "ask"]),
-            reason: z.string().max(200),
+            reason: z.string(),
           }),
           system:
             "You are Sonar, an independent payment check. You see only the trusted intent and the policy. " +
@@ -234,7 +245,7 @@ export function createBrain(models: {
           }),
           maxRetries: 1,
         });
-        return r.object;
+        return { verdict: r.object.verdict, reason: r.object.reason.slice(0, 200) };
       },
     },
   };

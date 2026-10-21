@@ -13,7 +13,7 @@ import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
-import { type Line, lineFromFeed } from "./lines";
+import { type Line, lineFromFeed, withContext } from "./lines";
 import { ThreadComposer } from "./thread-composer";
 import { ThreadView } from "./thread-view";
 
@@ -28,7 +28,7 @@ function Thread({ id }: { id: string }) {
   );
   const r = remora.data?.remora;
   useShellTitle(r?.name ?? "Chat");
-  const lines = (feed.data?.events ?? []).map(lineFromFeed);
+  const lines = withContext((feed.data?.events ?? []).map(lineFromFeed));
   const shown =
     pending && !lines.some((l) => l.author === "owner" && l.text === pending.text)
       ? [...lines, pending]

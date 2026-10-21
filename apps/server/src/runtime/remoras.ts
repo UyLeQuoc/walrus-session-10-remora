@@ -48,6 +48,8 @@ export interface RemoraDeps {
   now?: () => Date;
   /** Shadow mode length (N3); 24 h in the spec. */
   shadowMs?: number;
+  /** Reads of an owner transaction before giving up (1.5 s apart); the wallet's node can be ahead. */
+  txReadAttempts?: number;
 }
 
 /** Testnet-sized defaults; the owner can change them before signing (B7 later). */
@@ -161,10 +163,26 @@ export function createRemoraService(deps: RemoraDeps) {
   /** Reads an owner transaction by digest and checks the owner sent it and it succeeded. */
   async function ownerTx(r: Remora, digest: string) {
     const client: SuiGrpcClient = deps.networks.client(r.network);
-    const res = await client.core.getTransaction({
-      digest,
-      include: { effects: true, objectTypes: true, transaction: true },
-    });
+    // The wallet executes through another fullnode; Tatum can be a few seconds behind it.
+    const read = () =>
+      client.core.getTransaction({
+        digest,
+        include: { effects: true, objectTypes: true, transaction: true },
+      });
+    let res: Awaited<ReturnType<typeof read>> | undefined;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        res = await read();
+        break;
+      } catch (err) {
+        if (
+          attempt >= (deps.txReadAttempts ?? 12) - 1 ||
+          !/not found/i.test(String((err as Error).message))
+        )
+          throw err;
+        await new Promise((ok) => setTimeout(ok, 1_500));
+      }
+    }
     const tx = res.Transaction ?? res.FailedTransaction;
     if (!tx.effects?.status.success)
       throw new RemoraError("tx.failed", "That transaction failed onchain.");

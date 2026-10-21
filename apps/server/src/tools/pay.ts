@@ -86,7 +86,16 @@ export async function requestPayment(
   }
 
   const core = deps.networks.client(r.network).core;
-  const disc = await getDisc(core, r.discId);
+  let disc: Awaited<ReturnType<typeof getDisc>>;
+  try {
+    disc = await getDisc(core, r.discId);
+  } catch (err) {
+    if (toDiscError(err).code !== "allowance.revoked") throw err;
+    // Revoked outside Remora, or not readable yet (the node lags a fresh issue): nothing is signed.
+    return blocked("allowance.revoked", [
+      `${r.name}'s Disc can't be read onchain (revoked, or not visible yet), so it can't pay.`,
+    ]);
+  }
   const budget = (r.config as { budget?: { perPaymentCap?: string } }).budget;
   const policy = {
     status: r.status,

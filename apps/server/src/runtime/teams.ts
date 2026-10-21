@@ -16,7 +16,7 @@ import {
   TeamFile,
   type TeamPreview,
 } from "@remora/schema";
-import { parse, stringify } from "yaml";
+import { parseDocument, stringify, visit } from "yaml";
 import { TEMPLATES } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -44,7 +44,21 @@ export function parseTeamMarkdown(markdown: string): { team: Team; playbook: str
   let data: unknown;
   try {
     // Plain data only: no custom tags, no anchors expanded into huge documents.
-    data = parse(m[1] ?? "", { maxAliasCount: 0, customTags: [] });
+    const doc = parseDocument(m[1] ?? "", { customTags: [] });
+    if (doc.errors.length) throw doc.errors[0];
+    // YAML reads an unquoted 0x… address as a hex number (and loses digits); keep its text.
+    visit(doc, {
+      Scalar(_key, node) {
+        const source = (node as { source?: unknown }).source;
+        if (
+          typeof node.value === "number" &&
+          typeof source === "string" &&
+          /^0x[0-9a-f]+$/i.test(source)
+        )
+          node.value = source;
+      },
+    });
+    data = doc.toJS({ maxAliasCount: 0 });
   } catch (err) {
     throw new RemoraError(
       "team.bad_yaml",

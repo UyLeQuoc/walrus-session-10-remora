@@ -3,7 +3,7 @@ import { createLogger } from "@remora/chain";
 import { describe, expect, it, vi } from "vitest";
 import { human, nextRun } from "./cron.ts";
 import { parseSchedule, previewSchedule } from "./schedule.ts";
-import { decimalsOf, eventsFrom, startWatcher } from "./watch.ts";
+import { decimalsOf, eventsFrom, filterFor, MAX_FILTER_LITERALS, startWatcher } from "./watch.ts";
 
 describe("cron (D1, N12)", () => {
   const from = new Date("2026-10-19T08:30:15Z"); // a Monday
@@ -96,6 +96,15 @@ describe("human schedules (N12)", () => {
     });
     expect(human("0 19 * * 1,3")).toBe("every Monday and Wednesday at 7pm UTC");
     expect(human("0 */2 * * *")).toBe("every 2 hours");
+  });
+});
+
+describe("chain watcher filter", () => {
+  it("filters by address up to the node's 10 literals, and streams everything past that", () => {
+    const addrs = (n: number) =>
+      Array.from({ length: n }, (_, i) => normalizeSuiAddress(`0x${i + 1}`));
+    expect(filterFor(addrs(MAX_FILTER_LITERALS))?.terms).toHaveLength(10);
+    expect(filterFor(addrs(MAX_FILTER_LITERALS + 1))).toBeUndefined();
   });
 });
 

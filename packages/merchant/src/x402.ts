@@ -94,9 +94,9 @@ export function x402(o: X402Options): MiddlewareHandler<{ Variables: { x402: Pai
 
     const verified = await call<VerifyResponse>("/verify");
     if (!verified.isValid) return required(c, verified.invalidReason ?? "invalid payment");
-    const settled = await call<SettleResponse>("/settle");
+    const settled = await call<SettleResponse & { error?: { message?: string } }>("/settle");
     if (!settled.success || !settled.transaction)
-      return required(c, settled.errorReason ?? "settlement failed");
+      return required(c, settled.errorReason ?? settled.error?.message ?? "settlement failed");
 
     c.header(PAYMENT_RESPONSE_HEADER, encodeHeader(settled));
     c.set("x402", {

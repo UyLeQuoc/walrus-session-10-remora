@@ -83,11 +83,13 @@ Changes to `packages/schema`, each with a fixture:
 - The model line needs a real `OPENROUTER_API_KEY`. Without one, record it as unverified and say so.
 
 ## Done when
-- [ ] Contract PR merged.
-- [ ] A + B are done with tests.
-- [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green.
-- [ ] The U6 exit passes on testnet, with timings and digests.
-- [ ] The ADRs, docs and a handoff to Huấn (what landed) are written; everything is pushed to `main`.
+- [x] Contract PR merged (#7).
+- [x] A + B are done with tests.
+- [x] `typecheck`, `lint`, `test`, `sui move test` (31/31) and `bun run e2e` (33/33) are green; CI is green.
+- [x] The U6 exit passes on testnet, with timings and digests
+      ([2026-10-21-u6-exit.md](../spikes/2026-10-21-u6-exit.md)).
+- [x] The ADRs (0042–0045), docs and a handoff to Huấn
+      ([u6-landed](../handoffs/2026-10-21-uy-to-huan-u6-landed.md)) are written; everything is pushed to `main`.
 
 ## Never
 - Mainnet money. Real owner accounts in tests. Committing `.env` or keys. Deploying.

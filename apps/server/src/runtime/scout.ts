@@ -11,7 +11,7 @@ import type { ResolvedReef } from "../money/reef.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import { handoff, proposeSchedule } from "../tools/propose.ts";
 import { readTools } from "../tools/read.ts";
-import { modelIdFor } from "./brain.ts";
+import { modelIdFor, type UntrustedData, usdcLabel } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { addUsage, REMORA_LIMITS, tokensToday } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -83,14 +83,18 @@ export async function scoutAsk(
   }
   const memories = await deps.memory.recall(r, question, ["me", "sources", "feedback"]);
   const outcomes: PayOutcome[] = [];
-  const data: { source: string; content: string }[] = [];
+  const data: UntrustedData[] = [];
   const paidPayees: string[] = [];
   const buy = async (payee: string, url: string, reason: string) => {
     const o = await requestPayment(deps, r, { payee, url, reason, trigger, question, memories });
     outcomes.push(o);
     if (o.kind === "paid") {
       paidPayees.push(payee);
-      data.push({ source: payee, content: await o.response.clone().text() });
+      data.push({
+        source: payee,
+        content: await o.response.clone().text(),
+        cost: usdcLabel(o.amount),
+      });
     }
     return o;
   };
@@ -110,7 +114,9 @@ export async function scoutAsk(
       data,
       pay: async ({ payee, url, reason }) => {
         const o = await buy(payee, url, reason);
-        return o.kind === "paid" ? await o.response.clone().text() : outcomeLine(o);
+        return o.kind === "paid"
+          ? { source: payee, content: await o.response.clone().text(), cost: usdcLabel(o.amount) }
+          : outcomeLine(o);
       },
       tools: {
         ...readTools({
@@ -127,7 +133,8 @@ export async function scoutAsk(
     tokens = res.tokens;
     usedModel = res.model ?? usedModel;
   } catch {
-    // The model is down: still answer with what was bought.
+    // The model is down: still answer with what was bought, and the Wake says no model wrote it.
+    usedModel = "remora/no-model";
     answer = data.length
       ? `Here's what I found:\n${data.map((d) => `• ${d.source}: ${d.content.slice(0, 400)}`).join("\n")}`
       : "I couldn't reach my model right now, and nothing needed buying.";

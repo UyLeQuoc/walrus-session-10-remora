@@ -18,9 +18,10 @@ import {
   toX402Network,
   X402_VERSION,
 } from "@remora/disc-sdk";
-import { modelIdFor } from "./brain.ts";
+import { modelIdFor, usdcLabel } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { RemoraError } from "./remoras.ts";
+import { followUpInRooms } from "./rooms.ts";
 import { intentBase, recordWake, sha256Hex } from "./wake.ts";
 
 async function pendingOf(deps: RuntimeDeps, owner: string, id: string) {
@@ -133,29 +134,43 @@ export async function approvalPay(
     .update(approvals)
     .set({ status: "approved", decidedAt: new Date() })
     .where(eq(approvals.id, id));
-  await deps.db.insert(remoraEvents).values({
-    remoraId: r.id,
-    network: r.network,
-    type: "payment",
-    summary: `You paid ${payload.amount} to ${payload.payee} (approved)`,
-    payload: {
-      payee: payload.payee,
-      amount: payload.amount,
-      digest: settle?.transaction ?? null,
-      approvalId: id,
-      approvedBy: "owner",
-    },
-  });
+  const [paid] = await deps.db
+    .insert(remoraEvents)
+    .values({
+      remoraId: r.id,
+      network: r.network,
+      type: "payment",
+      summary: `You paid ${payload.amount} to ${payload.payee} (approved)`,
+      payload: {
+        payee: payload.payee,
+        amount: payload.amount,
+        digest: settle?.transaction ?? null,
+        approvalId: id,
+        approvedBy: "owner",
+      },
+    })
+    .returning({ id: remoraEvents.id });
   const question = String(payload.question ?? payload.reason ?? "approved purchase");
+  // The remora's own model writes it, and the Wake records the model that did (D9, ADR-0042).
+  let usedModel = modelIdFor(r, deps.brain.answerModel);
   const answer = await deps.brain
     .answer({
+      model: usedModel,
       persona: String((r.config as { persona?: string }).persona ?? ""),
       question,
       memories: [],
-      data: [{ source: String(payload.payee), content: data }],
+      data: [
+        { source: String(payload.payee), content: data, cost: usdcLabel(String(payload.amount)) },
+      ],
     })
-    .then((x) => x.text)
-    .catch(() => `Here's what the approved purchase returned:\n${data.slice(0, 800)}`);
+    .then((x) => {
+      usedModel = x.model ?? usedModel;
+      return x.text;
+    })
+    .catch(() => {
+      usedModel = "remora/no-model";
+      return `Here's what the approved purchase returned:\n${data.slice(0, 800)}`;
+    });
   const wake = await recordWake(
     { db: deps.db, memory: deps.memory, log: deps.log },
     r,
@@ -163,7 +178,7 @@ export async function approvalPay(
       trigger: { kind: "message", ref: `approval:${id}` },
       trustedInput: question,
       memories: [],
-      model: modelIdFor(r, deps.brain.answerModel),
+      model: usedModel,
       prompt: question,
     }),
     {
@@ -187,6 +202,12 @@ export async function approvalPay(
       receiptId: wake?.id ?? null,
     })
     .returning({ id: remoraEvents.id });
+  // Where the card was (a room, ADR-0042), the payment and the answer follow it.
+  await followUpInRooms(
+    deps.db,
+    id,
+    [paid?.id, e?.id].filter((x): x is string => !!x),
+  ).catch((err) => deps.log.warn("room.follow_up_failed", { approval: id, error: err }));
   return { answer, digest: settle?.transaction ?? null, eventId: e?.id ?? "" };
 }
 

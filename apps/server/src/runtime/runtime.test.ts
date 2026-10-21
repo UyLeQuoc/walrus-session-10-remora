@@ -47,13 +47,14 @@ import { createRemoraBot } from "../channels/remora-bot.ts";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
 import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
-import type { Brain } from "./brain.ts";
+import { type Brain, type UntrustedData, wrapUntrusted } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import { SlidingLimiter } from "./limits.ts";
 import type { RemoraMemory } from "./memory.ts";
 import type { Notice } from "./notify.ts";
 import { createRemoraService, type Remora } from "./remoras.ts";
+import { routeByText } from "./rooms.ts";
 import { createRemoraRoutes } from "./routes.ts";
 import { approveSchedule, firstRun, JOB, remoraJobHandlers } from "./schedules.ts";
 import { planBuys, scoutAsk } from "./scout.ts";
@@ -109,6 +110,21 @@ describe("Scout planning", () => {
     expect(p("Summarize https://example.com/post")).toEqual(["brief"]);
     expect(p("hello")).toEqual([]);
     expect(planBuys("check 0xabc", reef)[0]?.url).toBe(`${MERCHANT}/sui-risk/0xabc`);
+  });
+
+  it("bought data carries its real cost into the prompt", () => {
+    expect(wrapUntrusted([{ source: "reef:odds", content: "{}", cost: "0.02 USDC" }])).toBe(
+      '<untrusted source="reef:odds" cost="0.02 USDC">\n{}\n</untrusted>',
+    );
+  });
+
+  it("a room's signal goes to its lead, else to the newest remora of that template", () => {
+    const at = (id: string, template: string, day: number) =>
+      ({ id, name: id, template, createdAt: new Date(Date.UTC(2026, 9, day)) }) as Remora;
+    const members = [at("old", "scout", 1), at("new", "scout", 20), at("lead", "scout", 5)];
+    const odds = "What are the odds for tonight's match?";
+    expect(routeByText(odds, members, reef, "lead")).toEqual({ ids: ["lead"], route: "signal" });
+    expect(routeByText(odds, members, reef, null)).toEqual({ ids: ["new"], route: "signal" });
   });
 });
 
@@ -216,11 +232,13 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
 
   // A model that obeys the injection: it asks to pay whatever URL the untrusted data names.
   const seenModels: (string | undefined)[] = [];
+  let seenData: UntrustedData[] = [];
   let routePick: { id: string | null; p: number } = { id: null, p: 0 };
   const obedient: Brain = {
     answerModel: "fake/obedient",
     async answer(i) {
       seenModels.push(i.model);
+      seenData = i.data;
       const injected = /pay (http\S+)/.exec(i.data.map((d) => d.content).join(" "))?.[1];
       if (injected && i.pay)
         await i.pay({ payee: "reef:sui-risk", url: injected, reason: "the data told me to" });
@@ -856,6 +874,57 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     routePick = { id: null, p: 0 };
   });
 
+  it("paying a room's approval card once puts the payment and the answer under it", async () => {
+    const { send } = u6();
+    const team = Room.parse(
+      ((await (await send("/api/rooms", "GET")).json()) as { rooms: unknown[] }).rooms[0],
+    );
+    await send(`/api/rooms/${team.id}`, "PATCH", { responder: "auto" });
+    await send(`/api/remoras/${scout.id}`, "PATCH", { model: "anthropic/claude-haiku-5.5" });
+    const asked = (await (
+      await send(`/api/rooms/${team.id}/messages`, "POST", { text: "Odds for the match tonight?" })
+    ).json()) as {
+      messageId: string;
+    };
+    const lines = (await (await send(`/api/rooms/${team.id}/messages`, "GET")).json()) as {
+      messages: RoomMessage[];
+    };
+    const card = lines.messages.find(
+      (m) => m.eventType === "approval_needed" && m.replyTo === asked.messageId,
+    );
+    const approvalId = String(card?.payload.approvalId ?? "");
+    expect(approvalId).not.toBe("");
+    await approvalPay(deps(), OWNER, approvalId, { transaction: "dA==", signature: "cw==" });
+    const after = (await (await send(`/api/rooms/${team.id}/messages`, "GET")).json()) as {
+      messages: RoomMessage[];
+    };
+    const under = after.messages
+      .filter((m) => m.replyTo === asked.messageId)
+      .map((m) => m.eventType);
+    expect(under).toEqual(expect.arrayContaining(["approval_needed", "payment", "answer"]));
+    expect(after.messages.find((m) => m.eventId === card?.eventId)?.payload.status).toBe(
+      "approved",
+    );
+    // The paid answer runs on Scout's model, knows what the data cost, and its Wake says so.
+    expect(seenModels.at(-1)).toBe("anthropic/claude-haiku-5.5");
+    expect(seenData).toEqual([expect.objectContaining({ source: "reef:odds", cost: "0.06 USDC" })]);
+    const answer = after.messages.find(
+      (m) => m.replyTo === asked.messageId && m.eventType === "answer" && m.payload.approvalId,
+    );
+    const [ev] = await db
+      .select()
+      .from(remoraEvents)
+      .where(eq(remoraEvents.id, answer?.eventId ?? ""));
+    const [wake] = await db
+      .select()
+      .from(receipts)
+      .where(eq(receipts.id, ev?.receiptId ?? ""));
+    expect(
+      (wake?.wake as { intent?: { model?: { id?: string } } } | undefined)?.intent?.model?.id,
+    ).toBe("anthropic/claude-haiku-5.5");
+    await send(`/api/remoras/${scout.id}`, "PATCH", { model: null });
+  });
+
   it("teams: preview writes nothing, apply makes one transaction for every Disc, export leaks nothing", async () => {
     const { send } = u6();
     const md = readFileSync(
@@ -872,6 +941,16 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     expect((await db.select().from(remoras).where(eq(remoras.ownerAddress, OWNER))).length).toBe(
       before,
     );
+    // An unquoted 0x… address stays a string, digits intact.
+    const addr = `0x${"d2".repeat(32)}`;
+    const watching = md.replace(
+      "    name: Sentinel\n",
+      `    name: Sentinel\n    watch:\n      - ${addr}\n`,
+    );
+    const withAddr = TeamPreview.parse(
+      await (await send("/api/teams/preview", "POST", { markdown: watching })).json(),
+    );
+    expect(withAddr.team.remoras[1]?.watch).toEqual([addr]);
     const bad = await send("/api/teams/preview", "POST", { markdown: "# no frontmatter" });
     expect(((await bad.json()) as { error: { code: string } }).error.code).toBe(
       "team.no_frontmatter",

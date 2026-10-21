@@ -20,6 +20,8 @@ export interface Line {
   /** Rooms: who an owner line was routed to, and how. */
   routedTo?: string[];
   route?: string | null;
+  /** An answer to a question other than the owner's last line (a first run, a schedule): that question. */
+  context?: string;
 }
 
 /** Event types shown as a chip under the conversation rather than a bubble. */
@@ -94,4 +96,17 @@ export function lineFromRoom(m: RoomMessage): Line {
     routedTo: m.routedTo,
     route: m.route,
   };
+}
+
+/**
+ * A thread mixes answers to the owner's lines with answers the remora asked itself (its first run, a
+ * schedule). Those carry their question, so they don't read as the answer to the owner's last line.
+ */
+export function withContext(lines: Line[]): Line[] {
+  let asked = "";
+  return lines.map((l) => {
+    if (l.author === "owner") asked = l.text.trim();
+    const question = typeof l.payload.question === "string" ? l.payload.question.trim() : "";
+    return l.type === "answer" && question && question !== asked ? { ...l, context: question } : l;
+  });
 }

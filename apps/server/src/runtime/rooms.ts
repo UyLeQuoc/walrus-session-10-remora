@@ -9,7 +9,18 @@
  * the room as lines linked to them. Sentinel pings land in the owner's default Team room too.
  */
 import type { SuiNetwork } from "@remora/chain";
-import { and, asc, eq, gt, inArray, remoraEvents, remoras, roomMessages, rooms } from "@remora/db";
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  inArray,
+  remoraEvents,
+  remoras,
+  roomMessages,
+  rooms,
+  sql,
+} from "@remora/db";
 import type { RoomResponder, RoomRoute } from "@remora/schema";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -72,6 +83,7 @@ export function routeByText(
   text: string,
   members: Remora[],
   reef: Parameters<typeof planBuys>[1],
+  leadId?: string | null,
 ): { ids: string[]; route: RoomRoute } | null {
   if (/(^|\s)@everyone\b/i.test(text)) return { ids: members.map((m) => m.id), route: "everyone" };
   // Longest names first, so "@Scout two" isn't read as "@Scout".
@@ -86,11 +98,20 @@ export function routeByText(
     }
   }
   if (mentioned.length) return { ids: mentioned, route: "mention" };
-  const sentinel = members.find((m) => m.template === "sentinel");
+  const sentinel = pick(members, "sentinel", leadId);
   if (sentinel && parseRule(text)) return { ids: [sentinel.id], route: "signal" };
-  const scout = members.find((m) => m.template === "scout");
+  const scout = pick(members, "scout", leadId);
   if (scout && planBuys(text, reef).length) return { ids: [scout.id], route: "signal" };
   return null;
+}
+
+/** Of several remoras of one template, the room's lead, else the newest. */
+function pick(members: Remora[], template: string, leadId?: string | null) {
+  const of = members.filter((m) => m.template === template);
+  return (
+    of.find((m) => m.id === leadId) ??
+    [...of].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+  );
 }
 
 /** The line without its @mentions, which is what a remora is asked. */
@@ -111,7 +132,7 @@ export async function route(
   text: string,
 ): Promise<{ ids: string[]; route: RoomRoute }> {
   if (!members.length) return { ids: [], route: "none" };
-  const found = routeByText(text, members, deps.reef(room.network));
+  const found = routeByText(text, members, deps.reef(room.network), room.leadId);
   if (found) return found;
   if (room.responder === "mentions") return { ids: [], route: "none" };
   if (room.responder === "auto" && deps.brain.route) {
@@ -176,6 +197,7 @@ export async function postToRoom(deps: RuntimeDeps, room: Room, text: string) {
         if (m) replies.push(m.id);
       }
     } catch (err) {
+      deps.log.warn("room.remora_failed", { room: room.id, remora: r.id, error: err });
       const message = err instanceof RemoraError ? err.message : "Something went wrong.";
       const [sys] = await deps.db
         .insert(roomMessages)
@@ -243,3 +265,35 @@ export async function roomView(db: RuntimeDeps["db"], room: Room) {
 }
 
 export const RESPONDERS: RoomResponder[] = ["mentions", "lead", "auto"];
+
+/**
+ * After the owner decides an approval from a room's card, the payment and the answer appear in that
+ * room under the card (ADR-0042). Rooms without the card are left alone.
+ */
+export async function followUpInRooms(
+  db: RuntimeDeps["db"],
+  approvalId: string,
+  eventIds: string[],
+) {
+  if (!eventIds.length) return [];
+  const cards = await db
+    .select({ id: remoraEvents.id, remoraId: remoraEvents.remoraId })
+    .from(remoraEvents)
+    .where(
+      and(
+        eq(remoraEvents.type, "approval_needed"),
+        sql`${remoraEvents.payload}->>'approvalId' = ${approvalId}`,
+      ),
+    );
+  const out: string[] = [];
+  for (const card of cards) {
+    const lines = await db.select().from(roomMessages).where(eq(roomMessages.eventId, card.id));
+    for (const line of lines) {
+      for (const eventId of eventIds) {
+        const m = await mirror(db, line.roomId, { id: card.remoraId }, eventId, line.replyTo);
+        if (m) out.push(m.id);
+      }
+    }
+  }
+  return out;
+}

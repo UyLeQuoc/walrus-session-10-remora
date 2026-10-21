@@ -11,6 +11,7 @@ import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent } from "@/components/ui/message";
 import { Spinner } from "@/components/ui/spinner";
+import { Markdown } from "@/features/chat/markdown";
 import { api } from "@/features/remoras/api";
 import { WhyButton } from "@/features/remoras/why-drawer";
 import { cn } from "@/lib/utils";
@@ -96,19 +97,23 @@ function RemoraLine({
         {showName && line.remora ? (
           <span className="pl-1 text-xs font-medium text-muted-foreground">{line.remora}</span>
         ) : null}
+        {line.context ? (
+          <span className="pl-1 text-xs text-muted-foreground" data-testid="thread-context">
+            Re: {line.context}
+          </span>
+        ) : null}
         {line.type === "approval_needed" ? (
           <InlineApproval payload={line.payload} onDone={onChanged} />
         ) : (
           <Bubble align="start">
-            <BubbleContent
-              className={cn("whitespace-pre-wrap", line.type === "ping" && "border-amber-500/50")}
-            >
+            <BubbleContent className={cn(line.type === "ping" && "border-amber-500/50")}>
               {line.type === "ping" ? (
-                <Badge variant="outline" className="mr-2">
+                <Badge variant="outline" className="mb-1">
                   Ping
                 </Badge>
               ) : null}
-              {line.text}
+              {/* Models answer in Markdown; the renderer escapes HTML, so untrusted text stays text. */}
+              <Markdown>{line.text}</Markdown>
             </BubbleContent>
           </Bubble>
         )}

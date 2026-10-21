@@ -49,6 +49,7 @@ export default defineConfig({
     { name: "mobile", testMatch: /smoke\.spec\.ts/, use: { ...devices["Pixel 7"] } },
     { name: "testnet", testMatch: /testnet\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "w2", testMatch: /w2\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "u6", testMatch: /u6\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // The signed-in light/dark screenshot pass (plan §7.3). Opt in with AUDIT=1 so the default run
     // stays fast and only spends the burner when someone asks for the pictures.
     ...(process.env.AUDIT === "1"
