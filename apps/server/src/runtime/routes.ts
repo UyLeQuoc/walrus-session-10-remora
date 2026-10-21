@@ -45,6 +45,7 @@ import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
 import { learningSeries, proofBetween, proofsFor } from "./learning.ts";
+import { MemoryTimeout } from "./memory.ts";
 import {
   correct,
   enrichRows,
@@ -129,6 +130,13 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     }
     if (err instanceof NetworkUnavailableError) {
       return c.json({ error: { code: err.code, message: err.message } }, 400);
+    }
+    // A throttled relayer is a "try again", not a server failure (ADR-0049).
+    if (err instanceof MemoryTimeout) {
+      return c.json(
+        { error: { code: "relayer.slow", message: humanError("relayer.slow", err.message) } },
+        409,
+      );
     }
     rt.log.error("api.remora_failed", { path: c.req.path, error: err });
     return c.json(

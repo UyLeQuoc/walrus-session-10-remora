@@ -66,3 +66,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0047](0047-hatchery-move-package.md) | `remora_hatchery` is its own Move package, with frozen templates | Accepted |
 | [0048](0048-u7-hatchery-learning-memory-runtime.md) | How the Hatchery, Proof of Learning, learning charts and memory controls run | Accepted |
 | [0049](0049-u7-exit-fixes.md) | What the U7 exit changed | Accepted |
+| [0050](0050-memory-write-timeout.md) | A correction waits 60 s for the relayer, and a timeout is "try again" | Accepted |

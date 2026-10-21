@@ -53,7 +53,7 @@ export const namespaceFor = (r: RemoraRef, ns: string) =>
 
 /** Never let memory hold up a reply: a slow relayer (it can answer 429 for minutes) is skipped. */
 const RECALL_TIMEOUT_MS = 15_000;
-const REMEMBER_TIMEOUT_MS = 30_000;
+const REMEMBER_TIMEOUT_MS = 60_000;
 
 function within<T>(ms: number, p: Promise<T>, what: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;

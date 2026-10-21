@@ -308,7 +308,7 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
   // 4. A fresh account hatches it: the consent screen, then one signature.
   const hatcher = new Ed25519Keypair();
   results.hatcher = hatcher.toSuiAddress();
-  results.hatcherFunding = await sendSui(hatcher.toSuiAddress(), 50_000_000n);
+  results.hatcherFunding = await sendSui(hatcher.toSuiAddress(), 30_000_000n);
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();
   const walletB = await installTestWallet(pageB, hatcher);

@@ -70,4 +70,4 @@ It passed on testnet; [docs/spikes/2026-10-22-u7-exit.md](../spikes/2026-10-22-u
 - **Labels the e2e relies on:**
   - "Publish to the Hatchery (one signature)", "Hatch it (one signature)";
   - "Search the Hatchery", "Team file".
-- **E2E.** `e2e/tests/u7.spec.ts` is the U7 exit (`--project=u7`). It uses a second browser context for the hatcher, a fresh test keypair funded with 0.05 testnet SUI by the burner.
+- **E2E.** `e2e/tests/u7.spec.ts` is the U7 exit (`--project=u7`). It uses a second browser context for the hatcher, a fresh test keypair funded with 0.03 testnet SUI by the burner.

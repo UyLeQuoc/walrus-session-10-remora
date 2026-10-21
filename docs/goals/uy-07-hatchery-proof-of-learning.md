@@ -117,10 +117,11 @@ Each shape comes with a fixture:
 ## Done when
 - [x] The contract PR (#8) and the Move PR (#9) are merged; `remora_hatchery::hatchery` (ADR-0047) is published on testnet.
 - [x] A + B are done with tests.
-- [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green.
+- [x] `typecheck`, `lint`, `test`, `sui move test` (31 + 11) and `bun run e2e` (38/38) are green; CI is green.
 - [x] The U7 exit passes on testnet, with timings, blob ids and digests
       ([2026-10-22-u7-exit.md](../spikes/2026-10-22-u7-exit.md)).
-- [ ] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
+- [x] The ADRs (0046–0050), docs and a handoff to Huấn
+      ([u7-landed](../handoffs/2026-10-22-uy-to-huan-u7-landed.md)) are written; everything is pushed to `main`.
 
 ## Never
 - Mainnet money, or a mainnet publish (that's the mainnet pass, which Uy calls).
