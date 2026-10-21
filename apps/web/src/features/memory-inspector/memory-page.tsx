@@ -1,8 +1,10 @@
 /**
  * `/memory` (F3·ui + F6): one place with two tabs. Remoras lists each remora's namespaces as the
- * relayer holds them (a Walrus blob per row, real recall search, an index-check warning); Chat is
- * the memory Remora keeps from conversations (the old `/me`).
+ * relayer holds them (a Walrus blob per row, real recall search, an index-check warning) with the
+ * owner's controls (F4 hide/correct/forget all, F5 expiry, F8 export, F9 Claude Code); Chat is the
+ * memory Remora keeps from conversations (the old `/me`).
  */
+import type { InspectorResponse } from "@remora/schema";
 import { Brain, Fish } from "lucide-react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -27,6 +29,15 @@ import { ChatMemory } from "@/features/me/me-page";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { cn } from "@/lib/utils";
+import {
+  ClaudeCodeCard,
+  CorrectDialog,
+  ExpiryAlert,
+  ExportButtons,
+  ForgetButton,
+  HideButton,
+} from "./memory-controls";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—");
 const size = (bytes: number) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);
@@ -45,6 +56,8 @@ function RemorasTab() {
     [id, query],
   );
   const m = mem.data;
+  const current = list.find((r) => r.id === id);
+  const refresh = () => void mem.refresh();
   const active = namespace && m?.namespaces.includes(namespace) ? namespace : null;
   const rows = (m?.rows ?? []).filter((row) => !active || row.namespace === active);
   const results = (m?.results ?? []).filter((x) => !active || x.namespace === active);
@@ -119,6 +132,20 @@ function RemorasTab() {
         ))}
       </div>
 
+      <ExpiryAlert count={(m?.rows ?? []).filter((x) => x.expiresSoon && !x.hiddenAt).length} />
+      {current ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButtons remoraId={current.id} name={current.name} />
+          {active && active !== "me" ? (
+            <ForgetButton
+              remoraId={current.id}
+              namespace={active}
+              onDone={() => void mem.refresh()}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       {m?.mismatches.length ? (
         <p
           className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm text-warning-foreground"
@@ -136,9 +163,19 @@ function RemorasTab() {
       {results.length ? (
         <ul className="flex flex-col gap-2 text-sm" aria-label="Search results">
           {results.map((x) => (
-            <li key={x.blobId} className="rounded-lg border p-3">
-              <Badge variant="outline">{x.namespace}</Badge>{" "}
-              <span className="whitespace-pre-wrap">{x.text}</span>
+            <li
+              key={x.blobId}
+              className="flex flex-wrap items-start justify-between gap-2 rounded-lg border p-3"
+              data-testid="memory-result"
+            >
+              <span className="min-w-0 flex-1">
+                <Badge variant="outline">{x.namespace}</Badge>{" "}
+                <span className="whitespace-pre-wrap">{x.text}</span>
+              </span>
+              <span className="flex gap-1">
+                <HideButton remoraId={id} m={x} hidden={false} onDone={refresh} />
+                <CorrectDialog remoraId={id} m={x} current={x.text} onDone={refresh} />
+              </span>
             </li>
           ))}
         </ul>
@@ -155,13 +192,17 @@ function RemorasTab() {
               <th className="px-3 py-2 font-medium">Stored</th>
               <th className="px-3 py-2 font-medium">Expires</th>
               <th className="px-3 py-2 text-right font-medium">Size</th>
+              <th className="px-3 py-2 text-right font-medium">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.blobId} className="border-t">
+              <tr key={row.blobId} className="border-t" data-testid="memory-row">
                 <td className="w-64 max-w-64 px-3 py-2">
                   <Hash value={row.blobId} label="blob" />
+                  <RowFlags row={row} />
                 </td>
                 <td className="max-w-52 truncate px-3 py-2" title={row.namespace}>
                   {row.namespace}
@@ -176,13 +217,24 @@ function RemorasTab() {
                 <td className="px-3 py-2 text-muted-foreground">
                   <Time value={row.createdAt} />
                 </td>
-                <td className="px-3 py-2 text-muted-foreground">{day(row.expiresAt)}</td>
+                <td
+                  className={cn(
+                    "px-3 py-2 text-muted-foreground",
+                    row.expiresSoon && "font-medium text-warning-foreground",
+                  )}
+                >
+                  {row.expiresAt ? day(row.expiresAt) : "pending"}
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums">{size(row.size)}</td>
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <HideButton remoraId={id} m={row} hidden={!!row.hiddenAt} onDone={refresh} />
+                  <CorrectDialog remoraId={id} m={row} onDone={refresh} />
+                </td>
               </tr>
             ))}
             {m && !rows.length ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
                   {active ? `Nothing in ${active} yet.` : "Nothing stored yet."}
                 </td>
               </tr>
@@ -196,6 +248,7 @@ function RemorasTab() {
         {rows.map((row) => (
           <li key={row.blobId} className="flex flex-col gap-1 rounded-lg border p-3 text-sm">
             <Hash value={row.blobId} label="blob" />
+            <RowFlags row={row} />
             <span className="truncate text-muted-foreground" title={row.namespace}>
               {row.namespace}
             </span>
@@ -206,8 +259,13 @@ function RemorasTab() {
                 <Badge variant="outline">expired</Badge>
               )}
               <span>
-                {row.expiresAt ? `expires ${day(row.expiresAt)}` : "no expiry"} · {size(row.size)}
+                {row.expiresAt ? `expires ${day(row.expiresAt)}` : "expiry pending"} ·{" "}
+                {size(row.size)}
               </span>
+            </span>
+            <span className="flex gap-1">
+              <HideButton remoraId={id} m={row} hidden={!!row.hiddenAt} onDone={refresh} />
+              <CorrectDialog remoraId={id} m={row} onDone={refresh} />
             </span>
           </li>
         ))}
@@ -217,7 +275,25 @@ function RemorasTab() {
           </li>
         ) : null}
       </ul>
+      {current && m ? <ClaudeCodeCard remoraId={current.id} namespaces={m.namespaces} /> : null}
     </div>
+  );
+}
+
+/** F4/F5: what the owner did to a memory, and whether it's about to expire. */
+function RowFlags({ row }: { row: InspectorResponse["rows"][number] }) {
+  if (!row.hiddenAt && !row.supersededBy && !row.expiresSoon && !row.type) return null;
+  return (
+    <span className="mt-1 flex flex-wrap gap-1">
+      {row.type ? <Badge variant="outline">{row.type}</Badge> : null}
+      {row.hiddenAt ? <Badge variant="secondary">hidden</Badge> : null}
+      {row.supersededBy ? (
+        <Badge variant="secondary" title={row.supersededBy}>
+          corrected
+        </Badge>
+      ) : null}
+      {row.expiresSoon ? <Badge variant="outline">expires soon</Badge> : null}
+    </span>
   );
 }
 

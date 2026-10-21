@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router";
+import { HatcheryPage } from "@/features/hatchery/gallery-page";
+import { SharePage } from "@/features/hatchery/share-page";
+import { TemplatePage } from "@/features/hatchery/template-page";
 import { ApprovalsPage } from "../features/approvals/approvals-page";
 import { ChatPage } from "../features/chat/chat-page";
 import { ConnectPage } from "../features/connect/connect-page";
@@ -50,4 +53,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "chat/r/:id", element: <ThreadPage /> },
   { path: "chat/room/:id", element: <RoomPage /> },
   { path: "remoras/import", element: <ImportTeamPage /> },
+  { path: "remoras/:id/share", element: <SharePage /> },
+  { path: "hatchery", element: <HatcheryPage /> },
+  { path: "hatchery/:id", element: <TemplatePage /> },
 ];

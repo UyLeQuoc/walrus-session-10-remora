@@ -1,5 +1,5 @@
 /** N4: "Why?" opens the Wake behind an action: what triggered it, what it read, what it decided. */
-import type { WakeView } from "@remora/schema";
+import type { ProofOfLearning, WakeView } from "@remora/schema";
 import { useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { ProofView } from "@/features/learning/learning";
 import { useNetwork } from "@/lib/network";
 import { explorerTx, formatUsdc } from "@/lib/usdc";
 import { api } from "./api";
@@ -111,18 +112,23 @@ export function WhyButton({ eventId }: { eventId: string }) {
     view: WakeView | null;
     summary: string;
     error: string;
+    /** G5: the proof this decision is the "after" of, if any. */
+    proof: ProofOfLearning | null;
   } | null>(null);
+  const [showProof, setShowProof] = useState(false);
   const open = async () => {
     if (state) return;
     const r = await api.why(eventId);
-    if (!r.ok) return setState({ view: null, summary: "", error: r.error });
+    if (!r.ok) return setState({ view: null, summary: "", error: r.error, proof: null });
     const w = r.data.wake;
+    const proofs = w ? await api.proofs(r.data.event.remoraId) : null;
     setState({
       view: w
         ? { wakeBlobId: null, intentHash: w.intentHash, anchored: w.anchored, wake: w.wake }
         : null,
       summary: r.data.event.summary,
       error: "",
+      proof: (proofs?.ok && proofs.data.proofs.find((p) => p.after.receiptId === w?.id)) || null,
     });
   };
   return (
@@ -145,6 +151,21 @@ export function WhyButton({ eventId }: { eventId: string }) {
           <p className="px-4 text-sm text-muted-foreground">
             No receipt for this one: nothing was decided.
           </p>
+        ) : null}
+        {state?.proof ? (
+          <div className="flex flex-col gap-2 px-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              aria-expanded={showProof}
+              onClick={() => setShowProof((v) => !v)}
+            >
+              What changed?
+            </Button>
+            {showProof ? <ProofView proof={state.proof} /> : null}
+          </div>
         ) : null}
         {state?.view ? <WakeDetails view={state.view} /> : null}
       </SheetContent>

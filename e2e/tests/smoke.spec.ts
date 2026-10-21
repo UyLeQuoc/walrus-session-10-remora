@@ -18,6 +18,12 @@ const PAGES: [string, RegExp][] = [
   ["/remoras/import", /Sign in with your wallet to see team import/],
   ["/chat/r/0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10", /Sign in with your wallet to see this chat/],
   ["/chat/room/4f3e2d1c-0b9a-4876-8543-210fedcba987", /Sign in with your wallet to see this room/],
+  // The Hatchery is public to browse (U7, ADR-0046); sharing needs a wallet.
+  ["/hatchery", /Remoras people shared/],
+  [
+    "/remoras/0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10/share",
+    /Sign in with your wallet to see sharing this remora/,
+  ],
 ];
 
 for (const [path, text] of PAGES) {
@@ -41,7 +47,7 @@ for (const [path, text] of PAGES) {
         : path
             .slice(1)
             .replaceAll("/", "-")
-            .replace(/-[0-9a-f-]{36}$/, "");
+            .replace(/-[0-9a-f-]{36}(-share)?$/, "$1");
     await page.screenshot({ path: `screenshots/${info.project.name}-${name}.png`, fullPage: true });
   });
 }

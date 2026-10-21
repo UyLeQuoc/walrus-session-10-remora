@@ -51,10 +51,31 @@ export interface MemoryIndex {
 export const namespaceFor = (r: RemoraRef, ns: string) =>
   ns === "me" ? `owner:${r.ownerAddress.toLowerCase()}:me` : `remora:${r.id}:${ns}`;
 
+/** Never let memory hold up a reply: a slow relayer (it can answer 429 for minutes) is skipped. */
+const RECALL_TIMEOUT_MS = 15_000;
+const REMEMBER_TIMEOUT_MS = 30_000;
+
+function within<T>(ms: number, p: Promise<T>, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new MemoryTimeout(what)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+export class MemoryTimeout extends Error {
+  constructor(what: string) {
+    super(`Walrus Memory took too long to ${what}.`);
+  }
+}
+
 export function createRemoraMemory(
   operator: { key: string; accountId: string; serverUrl: string },
   log: Logger,
   index?: MemoryIndex,
+  timeouts: { recallMs?: number; rememberMs?: number } = {},
 ): RemoraMemory {
   const ports = new Map<string, MemoryPort>();
   /** One live set per remora, refilled before each call; the ports read it by reference. */
@@ -107,7 +128,11 @@ export function createRemoraMemory(
       const out: Recalled[] = [];
       for (const ns of namespaces) {
         try {
-          const hits = await port(r, ns).recall({ query: query.slice(0, 300), limit });
+          const hits = await within(
+            timeouts.recallMs ?? RECALL_TIMEOUT_MS,
+            port(r, ns).recall({ query: query.slice(0, 300), limit }),
+            "recall",
+          );
           out.push(
             ...hits.map((h) => ({
               blobId: h.blob_id,
@@ -124,12 +149,16 @@ export function createRemoraMemory(
     },
     async remember(r, ns, type, text, opts) {
       await refresh(r);
-      const res = await port(r, ns).remember({
-        type,
-        text,
-        channel: "remora",
-        ...(opts?.replaces ? { replaces: opts.replaces } : {}),
-      });
+      const res = await within(
+        timeouts.rememberMs ?? REMEMBER_TIMEOUT_MS,
+        port(r, ns).remember({
+          type,
+          text,
+          channel: "remora",
+          ...(opts?.replaces ? { replaces: opts.replaces } : {}),
+        }),
+        "accept the write",
+      );
       return {
         saved: res.saved,
         note: res.note,

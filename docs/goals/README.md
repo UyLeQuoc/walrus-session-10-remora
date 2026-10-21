@@ -13,7 +13,7 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 5 | [U4: Take Huấn's open W1 items (web, funds UI, network switch, E2E)](uy-04-w1-ui-takeover.md) ([prompt](uy-04-w1-ui-takeover.prompt.txt)) | Uy's agent ([ADR-0027](../adr/0027-flex-takeover.md)) | ✅ **Done Oct 19** ([handoff](../handoffs/2026-10-19-uy-to-huan-u4-landed.md)) | U3 ✅ |
 | 6 | [U5: W2 core product end to end (both lanes)](uy-05-w2-core-product.md) ([prompt](uy-05-w2-core-product.prompt.txt)) | Uy's agent (+ Huấn's W2 UI, ADR-0027) | ✅ Done (W2 exit on testnet; model path and Telegram unverified) | U3 ✅, U4 ✅ |
 | 7 | [U6: the Grok-bots shape (chat, rooms, model each, teams from Markdown)](uy-06-grok-bots-shape.md) ([prompt](uy-06-grok-bots-shape.prompt.txt)) | Uy's agent (+ claimed UI, ADR-0027) | ✅ **Done Oct 21: U6 exit on testnet, model path verified** ([notes](../spikes/2026-10-21-u6-exit.md), [handoff](../handoffs/2026-10-21-uy-to-huan-u6-landed.md); Telegram unverified) | U5 ✅ |
-| 8 | [U7: Hatchery on Walrus, Proof of Learning, memory controls](uy-07-hatchery-proof-of-learning.md) ([prompt](uy-07-hatchery-proof-of-learning.prompt.txt)) | Uy's agent (+ UI items Huấn hasn't started, ADR-0027) | Next | U6 ✅ |
+| 8 | [U7: Hatchery on Walrus, Proof of Learning, memory controls](uy-07-hatchery-proof-of-learning.md) ([prompt](uy-07-hatchery-proof-of-learning.prompt.txt)) | Uy's agent (+ UI items Huấn hasn't started, ADR-0027) | ✅ **Done Oct 22: U7 exit on testnet** ([notes](../spikes/2026-10-22-u7-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u7-landed.md); Telegram unverified) | U6 ✅ |
 
 ## How to run one
 ```bash

@@ -1,7 +1,7 @@
 import { gatherContext, runTurn } from "@remora/core";
 import { type CommandTable, packCommandBody } from "@remora/core/command-table";
 import { and, delegateKeys, desc, eq, memoryIndex } from "@remora/db";
-import { createSuiClient, explorer, RelayerExtras, readAccount } from "@remora/memory";
+import { createSuiClient, explorer, readAccount } from "@remora/memory";
 import { generateText } from "ai";
 import { type Context, Hono } from "hono";
 import { setCookie } from "hono/cookie";
@@ -51,6 +51,7 @@ import {
 import { meIdentity } from "../identity/predicates.ts";
 import { asDownload, exportFor } from "../memory/export-person.ts";
 import { searchResult } from "../memory/search-result.ts";
+import { listAccount } from "../runtime/inspector.ts";
 import { plainReply, textReply } from "./reply.ts";
 
 /** The web page and the CLI share this route; the CLI identifies itself by header. */
@@ -416,8 +417,9 @@ export const chatRoutes = new Hono()
     const port = await portFor(person, CHANNEL);
     const expiry = new Map<string, string>();
     try {
-      const extras = new RelayerExtras(port.scope);
-      for (const m of await extras.allMemories()) {
+      // Every page asks for this (useMe), so the listing is shared for minutes: expiry changes rarely,
+      // and the account's relayer budget is about 1000 weighted requests an hour (ADR-0049).
+      for (const m of await listAccount(port.scope, { maxAgeMs: 300_000 })) {
         if (m.expires_at) expiry.set(m.blob_id, m.expires_at);
       }
     } catch (e) {

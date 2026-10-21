@@ -115,10 +115,11 @@ Each shape comes with a fixture:
 - Write a handoff to Huấn (what landed).
 
 ## Done when
-- [ ] The contract PR and the Move PR are merged; `remora_hatchery::hatchery` (ADR-0047) is published on testnet.
-- [ ] A + B are done with tests.
+- [x] The contract PR (#8) and the Move PR (#9) are merged; `remora_hatchery::hatchery` (ADR-0047) is published on testnet.
+- [x] A + B are done with tests.
 - [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green.
-- [ ] The U7 exit passes on testnet, with timings, blob ids and digests.
+- [x] The U7 exit passes on testnet, with timings, blob ids and digests
+      ([2026-10-22-u7-exit.md](../spikes/2026-10-22-u7-exit.md)).
 - [ ] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
 
 ## Never

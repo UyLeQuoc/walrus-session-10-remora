@@ -37,6 +37,7 @@ import type { ResolvedReef } from "../money/reef.ts";
 import type { Brain } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { giveFeedback } from "../runtime/feedback.ts";
+import { listAccount } from "../runtime/inspector.ts";
 import { learningSeries, proofsFor } from "../runtime/learning.ts";
 import { SlidingLimiter } from "../runtime/limits.ts";
 import type { RemoraMemory } from "../runtime/memory.ts";
@@ -199,6 +200,33 @@ describe("hatchery events and Walrus (M3, M6)", () => {
     await expect(store.put("mainnet", "hi")).rejects.toMatchObject({
       code: "hatchery.no_publisher",
     });
+  });
+});
+
+describe("inspector listing (F3, ADR-0049)", () => {
+  it("shares one listing for a while, and a failed read is an error, not an empty list", async () => {
+    const op = { key: "k", accountId: `acct-${process.pid}`, serverUrl: "http://r" };
+    let calls = 0;
+    const ok = async () => {
+      calls++;
+      return [];
+    };
+    await listAccount(op, { now: 1_000, list: ok });
+    await listAccount(op, { now: 20_000, list: ok });
+    expect(calls).toBe(1);
+    // A caller that needs it fresher gets a new listing.
+    await listAccount(op, { now: 20_000, maxAgeMs: 5_000, list: ok });
+    expect(calls).toBe(2);
+    const failing = async () => {
+      calls++;
+      throw new Error("429");
+    };
+    await expect(listAccount(op, { now: 60_000, list: failing })).rejects.toMatchObject({
+      code: "relayer.slow",
+    });
+    expect(calls).toBe(4); // one retry
+    await listAccount(op, { now: 60_001, list: ok }); // a failure isn't cached
+    expect(calls).toBe(5);
   });
 });
 

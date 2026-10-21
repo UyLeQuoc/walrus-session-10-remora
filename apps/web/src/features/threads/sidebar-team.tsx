@@ -2,7 +2,7 @@
  * The sidebar's Remoras and Rooms (ADR-0042): your remoras as contacts (open a 1-1 chat) and the rooms
  * they share. Shown once the session has a wallet; collapsed sidebars keep only the icons above.
  */
-import { Hash, Plus } from "lucide-react";
+import { Egg, Hash, Plus } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -84,6 +84,18 @@ export function SidebarTeam({ onNavigate }: { onNavigate: () => void }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith("/hatchery")}
+                tooltip="Hatchery"
+              >
+                <Link to="/hatchery" onClick={onNavigate}>
+                  <Egg />
+                  <span>Hatchery</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             {remoras.data && !live.length ? (
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>

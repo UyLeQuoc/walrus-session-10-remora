@@ -9,14 +9,20 @@ import {
   BudgetMeter,
   CreateRemoraResponse,
   FeedItem,
+  HatchConsent,
+  HatcheryListing,
   InspectorResponse,
+  LearningSeries,
   OwnerSettings,
+  ProofOfLearning,
   RemoraView,
   Room,
   RoomMessage,
   type RoomResponder,
+  SafetyReport,
   Schedule,
   SchedulePreview,
+  ShareReview,
   TeamPreview,
   Template,
   VerifyResult,
@@ -267,7 +273,100 @@ export const api = {
       digest,
       remoraIds,
     }),
+  // ── U7 (ADR-0046, ADR-0048): Hatchery, Proof of Learning, learning, memory controls ──
+  share: (id: string) =>
+    call("POST", `/api/remoras/${id}/share`, z.object({ review: ShareReview })),
+  publishTx: (markdown: string, parent?: string | null) =>
+    call(
+      "POST",
+      "/api/hatchery/publish",
+      z.object({ transaction: z.string(), blobId: z.string(), safety: SafetyReport }),
+      { markdown, ...(parent ? { parent } : {}) },
+    ),
+  publishConfirm: (digest: string) =>
+    call("POST", "/api/hatchery/publish/confirm", HatcheryWithLinks, { digest }),
+  hatchery: (o: { q?: string; kind?: string } = {}) => {
+    const q = new URLSearchParams(Object.entries(o).filter(([, v]) => v) as [string, string][]);
+    return call(
+      "GET",
+      `/api/hatchery${q.size ? `?${q}` : ""}`,
+      z.object({ templates: z.array(HatcheryListing) }),
+    );
+  },
+  template: (id: string) =>
+    call(
+      "GET",
+      `/api/hatchery/${id}`,
+      HatcheryWithLinks.extend({ markdown: z.string().nullable() }),
+    ),
+  consent: (id: string) =>
+    call("GET", `/api/hatchery/${id}/consent`, z.object({ consent: HatchConsent })),
+  hatchTx: (id: string) =>
+    call(
+      "POST",
+      `/api/hatchery/${id}/hatch`,
+      z.object({
+        transaction: z.string(),
+        remoras: z.array(z.string()),
+        roomId: z.string(),
+        skipped: z.array(z.string()),
+      }),
+    ),
+  hatchConfirm: (id: string, digest: string, remoraIds: string[]) =>
+    call(
+      "POST",
+      `/api/hatchery/${id}/hatch/confirm`,
+      z.object({ confirmed: z.array(z.string()), remoras: z.array(z.string()) }).loose(),
+      { digest, remoraIds },
+    ),
+  deprecateTx: (id: string) =>
+    call("POST", `/api/hatchery/${id}/deprecate`, z.object({ transaction: z.string() })),
+  deprecateConfirm: (id: string, digest: string) =>
+    call("POST", `/api/hatchery/${id}/deprecate/confirm`, z.object({ listing: HatcheryListing }), {
+      digest,
+    }),
+  proofs: (id: string) =>
+    call("GET", `/api/remoras/${id}/proofs`, z.object({ proofs: z.array(ProofOfLearning) })),
+  learning: (id: string) =>
+    call("GET", `/api/remoras/${id}/learning`, z.object({ series: z.array(LearningSeries) })),
+  hideMemory: (id: string, b: { blobId: string; namespace: string; hidden: boolean }) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/memory/hide`,
+      z.object({ blobId: z.string(), hidden: z.boolean() }),
+      b,
+    ),
+  correctMemory: (id: string, b: { blobId: string; namespace: string; text: string }) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/memory/correct`,
+      z.object({ corrects: z.string(), saved: z.boolean(), note: z.string() }),
+      b,
+    ),
+  forgetMemory: (id: string, namespace: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/memory/forget`,
+      z.object({ namespace: z.string(), note: z.string() }),
+      { namespace },
+    ),
 };
+
+const HatcheryWithLinks = z.object({
+  listing: HatcheryListing,
+  links: z.object({ url: z.string(), telegram: z.string().nullable() }),
+});
+
+/** A file download from the API (memory export, learning export). */
+export async function download(path: string, fallback: string): Promise<Result<Blob>> {
+  try {
+    const res = await apiFetch(path);
+    if (!res.ok) return { ok: false, error: await errorMessage(res, fallback) };
+    return { ok: true, data: await res.blob() };
+  } catch {
+    return { ok: false, error: "Can't reach the server." };
+  }
+}
 
 /** `GET /api/teams/export` is a Markdown file, not JSON. */
 export async function exportTeam(): Promise<Result<string>> {

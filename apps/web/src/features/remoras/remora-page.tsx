@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
+import { LearningSection } from "@/features/learning/learning";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { api } from "./api";
 import { budgetLine } from "./budget";
@@ -61,7 +62,7 @@ function useOwnerTx() {
   return { run, busy, go };
 }
 
-type Tab = "overview" | "activity" | "settings";
+type Tab = "overview" | "activity" | "learning" | "settings";
 
 /** Pause/resume needs the shared signer; kept separate from the menu so the JSX stays flat. */
 function PauseButton({ r, reload }: { r: RemoraView; reload: () => void }) {
@@ -115,6 +116,11 @@ function headerActions(r: RemoraView, reload: () => void, setTab: (t: Tab) => vo
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setTab("settings")}>Edit</DropdownMenuItem>
+          {r.status === "shadow" || r.status === "active" || r.status === "paused" ? (
+            <DropdownMenuItem asChild>
+              <Link to={`/remoras/${r.id}/share`}>Share in the Hatchery</Link>
+            </DropdownMenuItem>
+          ) : null}
           {r.discId ? (
             <DropdownMenuItem onSelect={() => setTab("settings")}>Rotate key</DropdownMenuItem>
           ) : null}
@@ -640,6 +646,7 @@ function Remora({ id }: { id: string }) {
         <TabsList variant="line" className="max-w-full overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="learning">Learning</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -669,6 +676,10 @@ function Remora({ id }: { id: string }) {
             </Button>
           </div>
           <FeedList items={events} />
+        </TabsContent>
+
+        <TabsContent value="learning" className="flex flex-col gap-8 pt-4">
+          <LearningSection remoraId={r.id} />
         </TabsContent>
 
         <TabsContent value="settings" className="pt-4">
