@@ -552,7 +552,7 @@ watch it.
 
 ### 12.11 Hatchery: share, duplicate, publish (M1–M12)
 
-**Template format.** `remora.yaml` (B10) is published as a Walrus blob:
+**Template format ([ADR-0046](adr/0046-hatchery-team-files-and-learning-shapes.md)).** What the Hatchery shares is a `remora.team/v1` file (ADR-0042), published as a Walrus blob; one remora is a team of one. The `remora.template/v1` shape below is the catalog of built-in kinds that a team file picks by slug, and it's never shared:
 
 ```yaml
 schema: remora.template/v1

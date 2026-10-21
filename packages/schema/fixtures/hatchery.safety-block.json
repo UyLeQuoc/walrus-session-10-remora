@@ -1,0 +1,19 @@
+{
+  "verdict": "block",
+  "findings": [
+    {
+      "severity": "block",
+      "code": "injection",
+      "where": "remoras[0].persona",
+      "detail": "Asks the model to ignore its instructions."
+    },
+    {
+      "severity": "block",
+      "code": "raw_address",
+      "where": "remoras[0].persona",
+      "detail": "Names a raw address (0x9964…) to pay; payees must be Reef services."
+    }
+  ],
+  "checks": ["scrubber", "patterns", "reef"],
+  "checkedAt": "2026-10-22T03:05:00Z"
+}

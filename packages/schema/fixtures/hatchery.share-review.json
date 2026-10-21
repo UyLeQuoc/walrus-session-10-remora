@@ -1,0 +1,56 @@
+{
+  "team": {
+    "schema": "remora.team/v1",
+    "name": "Package checker",
+    "description": "A Scout that checks Sui packages before you depend on them.",
+    "remoras": [
+      {
+        "template": "scout",
+        "name": "Scout",
+        "model": "anthropic/claude-haiku-5.5",
+        "persona": "You are Scout. You check Sui packages and answer briefly, citing what each source cost.",
+        "budget": {
+          "monthlyUsd": 0.5,
+          "perPaymentUsd": 0.015
+        },
+        "watch": [],
+        "rules": [],
+        "schedules": [
+          {
+            "when": "weekdays at 8am",
+            "question": "Is package 0x2 safe to depend on?"
+          }
+        ]
+      }
+    ]
+  },
+  "markdown": "---\nschema: remora.team/v1\nname: Package checker\n...\n---\n\n# Package checker\n",
+  "permissions": [
+    {
+      "remora": "Scout",
+      "template": "scout",
+      "tools": ["memory.recall", "memory.remember", "pay", "notify", "handoff"],
+      "triggers": ["message", "cron"],
+      "payees": ["reef:sui-risk", "reef:odds", "reef:brief"],
+      "budget": "0.50 USDC a month, at most 0.015 a payment",
+      "model": "anthropic/claude-haiku-5.5"
+    }
+  ],
+  "removed": [
+    {
+      "field": "memories",
+      "reason": "Templates never carry memories."
+    },
+    {
+      "field": "remoras[0].disc",
+      "reason": "Disc and allowance ids stay with the owner."
+    }
+  ],
+  "safety": {
+    "verdict": "pass",
+    "findings": [],
+    "checks": ["scrubber", "patterns", "reef", "model"],
+    "checkedAt": "2026-10-22T03:00:00Z"
+  },
+  "sizeBytes": 642
+}

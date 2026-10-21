@@ -7,7 +7,11 @@
       "createdAt": "2026-11-03T02:13:10Z",
       "expiresAt": "2027-06-01T00:00:00Z",
       "status": "active",
-      "size": 1830
+      "size": 1830,
+      "type": "wake",
+      "hiddenAt": null,
+      "supersededBy": null,
+      "expiresSoon": false
     }
   ],
   "counts": {
@@ -30,7 +34,7 @@
     {
       "blobId": "MKP2-KVpB_q1aZ0",
       "namespace": "sources",
-      "text": "SOURCE reef:sui-risk \u00b7 9 calls \u00b7 8 useful \u00b7 1 noise \u00b7 $0.011 per useful answer \u00b7 as_of 2026-11-03",
+      "text": "SOURCE reef:sui-risk · 9 calls · 8 useful · 1 noise · $0.011 per useful answer · as_of 2026-11-03",
       "distance": 0.21
     }
   ]

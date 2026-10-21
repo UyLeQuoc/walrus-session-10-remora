@@ -3,8 +3,10 @@ import { ReefRef } from "./common.ts";
 import { ToolName, Trigger } from "./remora.ts";
 
 /**
- * `remora.yaml` v0 (stub, finalised by Oct 27 for the Hatchery). Templates never
- * carry memories, keys or raw payee addresses (ADR-0012).
+ * A built-in remora kind (Scout, Sentinel…): its persona, tools, triggers and Reef payees. This is the
+ * catalog the wizard and team files pick from by slug. What people share in the Hatchery is a
+ * `remora.team/v1` file (ADR-0046), never this. Kinds carry no memories, keys or raw payee
+ * addresses (ADR-0012).
  */
 export const Template = z.object({
   schema: z.literal("remora.template/v1"),

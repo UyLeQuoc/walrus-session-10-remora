@@ -1,0 +1,53 @@
+{
+  "remoraId": "6c1d7e2a-3b4f-4a5e-8d9c-0e1f2a3b4c5d",
+  "remora": "Sentinel",
+  "before": {
+    "receiptId": "1a4a7c11-0f1d-4f9a-8d55-3b2a1c0d9e01",
+    "eventId": "1a5b7c11-0f1d-4f9a-8d55-3b2a1c0d9e01",
+    "at": "2026-10-22T03:10:00Z",
+    "trigger": {
+      "kind": "chain",
+      "ref": "Dg4xSentinel"
+    },
+    "action": "ping",
+    "reason": "incoming 0.001 SUI, no rule matched",
+    "summary": "Received 0.001 SUI",
+    "memories": [],
+    "intentHash": "2222222222222222222222222222222222222222222222222222222222222222",
+    "verify": "/verify/1a4a7c11-0f1d-4f9a-8d55-3b2a1c0d9e01"
+  },
+  "after": {
+    "receiptId": "1a4a7c11-0f1d-4f9a-8d55-3b2a1c0d9e02",
+    "eventId": "1a5b7c11-0f1d-4f9a-8d55-3b2a1c0d9e02",
+    "at": "2026-10-22T03:14:00Z",
+    "trigger": {
+      "kind": "chain",
+      "ref": "Dg4xSentinel"
+    },
+    "action": "silent",
+    "reason": "ignored by your rule: ignore incoming SUI under 0.01",
+    "summary": "Ignored: Received 0.001 SUI",
+    "memories": [
+      {
+        "blobId": "Zr8_x2LmQe4TtY1",
+        "namespace": "rules",
+        "distance": 0
+      }
+    ],
+    "intentHash": "3333333333333333333333333333333333333333333333333333333333333333",
+    "verify": "/verify/1a4a7c11-0f1d-4f9a-8d55-3b2a1c0d9e02"
+  },
+  "delta": [
+    {
+      "blobId": "Zr8_x2LmQe4TtY1",
+      "namespace": "rules",
+      "text": "Ignore incoming SUI under 0.01",
+      "learnedAt": "2026-10-22T03:12:00Z"
+    }
+  ],
+  "change": {
+    "from": "ping",
+    "to": "silent",
+    "summary": "It pinged you about 0.001 SUI; after you marked that noise, it learned a rule and stayed quiet."
+  }
+}

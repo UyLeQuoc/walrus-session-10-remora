@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import { Amount, IsoDateTime, Sha256Hex } from "./common.ts";
+import { MemoryType } from "./memory.ts";
 import { Network } from "./network.ts";
 import { RemoraConfig } from "./remora.ts";
 import { Wake } from "./wake.ts";
@@ -145,6 +146,12 @@ export const InspectorResponse = z.object({
       expiresAt: z.string().nullable(),
       status: z.enum(["active", "expired"]),
       size: z.number().int().nonnegative(),
+      /** F4: from the local index; recall and dedupe skip hidden or superseded memories. */
+      type: MemoryType.nullable().default(null),
+      hiddenAt: z.string().nullable().default(null),
+      supersededBy: z.string().nullable().default(null),
+      /** F5: expires within 30 days. */
+      expiresSoon: z.boolean().default(false),
     }),
   ),
   counts: z.record(z.string(), z.number().int().nonnegative()),
