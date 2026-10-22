@@ -15,6 +15,8 @@ export * from "./learning.ts";
 export * from "./memory.ts";
 export * from "./models.ts";
 export * from "./network.ts";
+export * from "./ops.ts";
+export * from "./playground.ts";
 export * from "./remora.ts";
 export * from "./rooms.ts";
 export * from "./team.ts";

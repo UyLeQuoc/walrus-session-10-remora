@@ -1,0 +1,47 @@
+{
+  "status": "degraded",
+  "items": [
+    {
+      "name": "database",
+      "status": "ok",
+      "detail": "select 1 in 3 ms",
+      "value": 3,
+      "threshold": 500,
+      "fix": null
+    },
+    {
+      "name": "checkpoint lag",
+      "status": "ok",
+      "detail": "the watcher is 2 checkpoints behind the tip",
+      "value": 2,
+      "threshold": 120,
+      "fix": null
+    },
+    {
+      "name": "relayer budget",
+      "status": "degraded",
+      "detail": "the relayer answered 429 (account_sustained)",
+      "value": "429",
+      "threshold": null,
+      "fix": "Wait for the hourly budget; reduce inspector polling."
+    },
+    {
+      "name": "sponsor gas",
+      "status": "ok",
+      "detail": "0.84 SUI",
+      "value": 0.84,
+      "threshold": 0.2,
+      "fix": null
+    }
+  ],
+  "errors": [
+    {
+      "route": "POST /api/remoras/:id/memory/correct",
+      "code": "relayer.slow",
+      "message": "Walrus Memory took too long to accept the write.",
+      "count": 2,
+      "lastAt": "2026-10-22T08:05:00Z"
+    }
+  ],
+  "checkedAt": "2026-10-22T08:06:00Z"
+}

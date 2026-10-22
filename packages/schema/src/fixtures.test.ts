@@ -9,12 +9,14 @@ import {
   Deployment,
   DetectFundsResponse,
   DetectFundsResult,
+  DiagnoseReport,
   ERROR_CODES,
   errorCopyKey,
   FeedItem,
   FundsTxResponse,
   HatchConsent,
   HatcheryListing,
+  HealthReport,
   InboundMessage,
   InspectorResponse,
   intentHash,
@@ -26,6 +28,7 @@ import {
   NetworksResponse,
   OutboundMessage,
   OwnerSettings,
+  PlaygroundSession,
   ProofOfLearning,
   RemoraConfig,
   RemoraEvent,
@@ -68,7 +71,10 @@ const FIXTURES: Record<string, z.ZodType> = {
   "events.feed.json": z.array(RemoraEvent),
   "funds.detect.json": DetectFundsResult,
   "funds.detect-response.json": DetectFundsResponse,
+  "diagnose.report.json": DiagnoseReport,
   "funds.move-tx.json": FundsTxResponse,
+  "health.report.json": HealthReport,
+  "playground.session.json": PlaygroundSession,
   "hatchery.consent.json": HatchConsent,
   "hatchery.listings.json": z.array(HatcheryListing),
   "hatchery.safety-block.json": SafetyReport,
@@ -192,5 +198,21 @@ describe("hatchery (ADR-0046)", () => {
       expiresSoon: false,
       type: null,
     });
+  });
+});
+
+describe("launch shapes (ADR-0051, ADR-0052)", () => {
+  it("a playground session spends inside its Disc and counts questions down", () => {
+    const s = PlaygroundSession.parse(read("playground.session.json"));
+    expect(Number(s.spentUsdc)).toBeLessThanOrEqual(Number(s.budgetUsdc));
+    expect(s.questionsLeft + s.answers.length).toBe(s.limits.questionsPerSession);
+    expect(PlaygroundSession.safeParse({ ...s, questionsLeft: -1 }).success).toBe(false);
+  });
+
+  it("a diagnose report with a down item doesn't let a deploy through", () => {
+    const d = DiagnoseReport.parse(read("diagnose.report.json"));
+    expect(d.ok).toBe(d.items.every((i) => i.status !== "down"));
+    expect(d.items.find((i) => i.status === "down")?.fix).toBeTruthy();
+    expect(HealthReport.parse(read("health.report.json")).errors[0]?.code).toBe("relayer.slow");
   });
 });

@@ -1,0 +1,25 @@
+{
+  "status": "down",
+  "network": "testnet",
+  "ok": false,
+  "items": [
+    {
+      "name": "hatchery package",
+      "status": "ok",
+      "detail": "0x68c7\u2026e9a9 is a package",
+      "value": null,
+      "threshold": null,
+      "fix": null
+    },
+    {
+      "name": "disc registry",
+      "status": "down",
+      "detail": "0x4794\u2026b371 isn't a remora::disc::Registry",
+      "value": null,
+      "threshold": null,
+      "fix": "Set DEPLOYMENTS.testnet.discRegistryId to the Registry created by the remora publish."
+    }
+  ],
+  "errors": [],
+  "checkedAt": "2026-10-22T08:06:00Z"
+}
