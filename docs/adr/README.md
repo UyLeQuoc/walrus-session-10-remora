@@ -67,3 +67,5 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0048](0048-u7-hatchery-learning-memory-runtime.md) | How the Hatchery, Proof of Learning, learning charts and memory controls run | Accepted |
 | [0049](0049-u7-exit-fixes.md) | What the U7 exit changed | Accepted |
 | [0050](0050-memory-write-timeout.md) | A correction waits 60 s for the relayer, and a timeout is "try again" | Accepted |
+| [0051](0051-playground.md) | The playground: a $1 Disc per visitor, no memory budget, and an onchain end | Accepted |
+| [0052](0052-health-diagnose-observability.md) | One health report, `diagnose` as the deploy gate, request ids and an error ring | Accepted |

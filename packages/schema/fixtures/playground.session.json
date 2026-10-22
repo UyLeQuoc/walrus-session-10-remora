@@ -1,0 +1,36 @@
+{
+  "remoraId": "0c2e9f4a-5b6d-4e7f-8a9b-1c2d3e4f5a6b",
+  "name": "Playground Scout 7f3a",
+  "network": "testnet",
+  "status": "live",
+  "discId": "0x5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+  "issueDigest": "9ytVKmwkkkuhqFXyqpqaaDiPyM1TYHj1mmXCB4rsLX3s",
+  "revokeDigest": null,
+  "budgetUsdc": "1.00",
+  "spentUsdc": "0.01",
+  "questionsLeft": 2,
+  "expiresAt": "2026-10-23T08:00:00Z",
+  "answers": [
+    {
+      "question": "Is package 0x2 safe to depend on?",
+      "answer": "0x2 is the Sui framework: immutable, no upgrade key.",
+      "eventId": "1a4a7c11-0f1d-4f9a-8d55-3b2a1c0d9e03",
+      "verify": "/verify/1a4a7c11-0f1d-4f9a-8d55-3b2a1c0d9e04",
+      "paid": [
+        {
+          "payee": "reef:sui-risk",
+          "amountUsdc": "0.01",
+          "digest": "5P8n299aMCj3LEoprHXpy6bc9yoA6oXiK2tgBkK1Y8DM"
+        }
+      ],
+      "at": "2026-10-22T08:02:00Z"
+    }
+  ],
+  "limits": {
+    "questionsPerSession": 3,
+    "sessionsPerIpPerDay": 3,
+    "pool": 10,
+    "ttlMinutes": 1440,
+    "discUsdc": "1.00"
+  }
+}
