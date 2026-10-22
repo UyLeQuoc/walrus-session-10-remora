@@ -67,3 +67,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0048](0048-u7-hatchery-learning-memory-runtime.md) | How the Hatchery, Proof of Learning, learning charts and memory controls run | Accepted |
 | [0049](0049-u7-exit-fixes.md) | What the U7 exit changed | Accepted |
 | [0050](0050-memory-write-timeout.md) | A correction waits 60 s for the relayer, and a timeout is "try again" | Accepted |
+| [0053](0053-patched-vitest.md) | Pin vitest 4.1.12 when the install scanner blocks @vitest/mocker | Accepted |

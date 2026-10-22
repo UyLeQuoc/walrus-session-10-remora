@@ -14,7 +14,7 @@
     "@mysten/sui": "^2.33.2",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.0"
+    "vitest": "^4.1.12"
   },
   "dependencies": {
     "@remora/disc-sdk": "workspace:*",
