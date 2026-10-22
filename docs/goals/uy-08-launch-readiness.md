@@ -118,7 +118,7 @@ Each shape comes with a fixture:
 ## Done when
 - [x] The contract PR is merged (PR #10).
 - [x] A + B are done with tests; the C docs are written and link-checked.
-- [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green. **All green except one e2e:** the full suite ran 42/43. U7 timed out on a rule's memory blob while the MemWal relayer's embedding was down ([U8 exit](../spikes/2026-10-22-u8-exit.md), [ADR-0055](../adr/0055-memory-failures-in-health.md)). Rerun `--project=u7` once `diagnose` shows `memory recall` ok.
+- [x] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green. The full suite went **43/43** once the MemWal relayer recovered. It was 42/43 during the relayer's outage ([U8 exit](../spikes/2026-10-22-u8-exit.md), [ADR-0055](../adr/0055-memory-failures-in-health.md)).
 - [x] The U8 exit passes on testnet, with timings and digests ([notes](../spikes/2026-10-22-u8-exit.md)).
 - [x] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
 - Telegram (H1, A5): **unverified**, because Uy skipped the live check.

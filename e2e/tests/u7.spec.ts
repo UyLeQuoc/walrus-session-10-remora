@@ -75,15 +75,21 @@ async function until<T>(
   what: string,
   fn: () => Promise<T | null | undefined | false>,
   ms = 180_000,
+  everyMs = 3_000,
 ) {
   const end = Date.now() + ms;
   for (;;) {
     const v = await fn().catch(() => null);
     if (v) return v;
     if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
-    await new Promise((ok) => setTimeout(ok, 3_000));
+    await new Promise((ok) => setTimeout(ok, everyMs));
   }
 }
+/**
+ * Memory reads count against the per-address limit (200 an hour), and the whole suite shares one
+ * address. The listing is cached for 30 s on the server, so polling it faster gains nothing.
+ */
+const MEMORY_POLL_MS = 15_000;
 
 async function sendSui(to: string, mist: bigint): Promise<string> {
   const client = testnet();
@@ -379,6 +385,7 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
         }>(page, `/api/remoras/${sentinel.id}/memory`)
       ).rows.find((r) => r.type === "rule"),
     420_000,
+    MEMORY_POLL_MS,
   );
   results.ruleMemoryMs = ms(t5);
   results.ruleBlob = ruleRow.blobId;
@@ -441,7 +448,12 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
         `/api/remoras/${sentinel.id}/memory?q=${encodeURIComponent("ignore incoming SUI")}&ns=rules`,
       )
     ).results.map((r) => r.blobId);
-  await until("the rule in recall", async () => (await search()).includes(ruleRow.blobId), 90_000);
+  await until(
+    "the rule in recall",
+    async () => (await search()).includes(ruleRow.blobId),
+    90_000,
+    10_000,
+  );
   await api(page, `/api/remoras/${sentinel.id}/memory/hide`, "POST", {
     blobId: ruleRow.blobId,
     namespace: "rules",
@@ -482,6 +494,7 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
         )
       ).rows.find((r) => r.blobId === ruleRow.blobId && r.expiresAt),
     420_000,
+    MEMORY_POLL_MS,
   );
   results.expiryLagMs = ms(t6);
   const days = (Date.parse(expiring.expiresAt ?? "") - Date.now()) / 86_400_000;
