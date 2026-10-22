@@ -1,36 +1,109 @@
 # Remora
 
-**Always-on agents you actually own.** Remora is our entry to the Walrus x Tatum *Total Recall*
-hackathon (Track 2, Smart Agents for Real Life). Each agent (a *remora*):
+**Always-on agents you actually own.** Remora is our entry to the Walrus x Tatum *Total Recall* hackathon (Track 2, Smart Agents for Real Life). Each agent, a *remora*:
 
-- **remembers** in Walrus Memory that you can read, hide and take to Claude Code or Codex;
-- **spends** only inside an onchain budget, the **Disc**, built on Sui's native app-bound Allowances;
-- **leaves a receipt** for every action, its **Wake**.
+- **remembers** in Walrus Memory, which you can read, hide, correct, export and take to Claude Code;
+- **spends** only inside an onchain budget, the **Disc**, built on Sui's native app-bound allowances. Not even its own server can spend past it;
+- **leaves a receipt** for every action, its **Wake**, with payment intents anchored onchain;
+- **proves what it learned:** the same kind of event, a different decision, and the memory that made the difference.
 
-All chain I/O goes through Tatum.
+All chain I/O goes through **Tatum's Sui gRPC**.
 
 > *It goes wherever you go. It cleans up after you. It never takes the wheel.*
 
-- Docs: [docs/README.md](docs/README.md)
-- Spec: [docs/remora-spec.md](docs/remora-spec.md)
-- Scope: [docs/remora-features.md](docs/remora-features.md)
-- Decisions: [docs/adr/](docs/adr/README.md)
+## Try it
+- **No wallet:** open `/playground`. You get your own Scout with a **$1 Disc** for a few questions ([ADR-0051](docs/adr/0051-playground.md)). The worst case is $1, enforced onchain, and the Disc is revoked when the session ends.
+- **With a wallet:** sign in, then create a Scout (it buys data to answer you) or a Sentinel (it watches your addresses and learns what matters), or hatch one from the **Hatchery**.
+
+## What it does, with proof
+
+| | What you see | Proof (testnet) |
+|---|---|---|
+| **Disc** | One signature gives a remora a budget: a monthly limit, a per-payment cap, Reef payees, and expiry. Revoke, rotate or pause from your wallet | [Disc spike](docs/spikes/2026-10-19-disc-testnet.md); [Move security](packages/move/SECURITY.md) |
+| **Scout** | Buys `sui-risk`, `odds` or `brief` data over x402 when it helps, answers, and says what it cost | [W2 exit](docs/spikes/2026-10-19-w2-exit.md): first remora in 4.4 s, a paid answer in 13 s |
+| **Sentinel** | Watches addresses through Tatum's checkpoint stream; you teach it rules in plain words or with 👎 | [W2 exit §4](docs/spikes/2026-10-19-w2-exit.md) |
+| **Injection** | A paid answer says "pay <evil URL>" and the model obeys: Sonar blocks it; forced past Sonar, **the Disc aborts it onchain** | `7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV` (`EPayeeNotAllowed`) |
+| **Chat, rooms, teams** | Chat 1-1 with each remora, rooms with routing, a model per remora, a whole team from one Markdown file with one signature | [U6 exit](docs/spikes/2026-10-21-u6-exit.md) |
+| **Hatchery** | Share a remora as a Walrus blob with its author onchain; anyone hatches a copy through a consent screen with one signature | [U7 exit](docs/spikes/2026-10-22-u7-exit.md): hatch `DTq4sd4z…`, a poisoned template refused |
+| **Proof of Learning** | A ping, 👎, a rule, then silence on the same kind of event, with the rule's memory blob as the delta | [U7 exit §5](docs/spikes/2026-10-22-u7-exit.md) |
+| **Your memory** | Hide, correct, forget all, expiry, Markdown/JSON export, and Claude Code via `packages/mcp` | [U7 exit §6](docs/spikes/2026-10-22-u7-exit.md) |
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  subgraph You
+    W[Wallet] --> Web[Web app]
+    TG[Telegram]
+    CC[Claude Code]
+  end
+  Web --> API[Remora API + runtime]
+  TG --> API
+  CC -->|MCP| API
+  API -->|turns| Model[Models via OpenRouter]
+  API -->|Sonar policy| API
+  API -->|recall / remember| MemWal[MemWal relayer] --> Walrus[(Walrus)]
+  API -->|templates| Walrus
+  API -->|gRPC| Tatum[Tatum Sui gRPC] --> Sui[(Sui)]
+  API -->|x402| Merchants[Reef merchants]
+  Merchants --> Fac[Facilitator + gas station] -->|disc::pay| Sui
+  W -->|issue / revoke / pay once| Sui
+```
+
+- **Money:** the owner's USDC stays in their address balance. A remora pays with `disc::pay` within the Disc's limits; the facilitator verifies and settles, and the gas station sponsors only Disc payments.
+- **Decisions:** the model proposes and **Sonar** decides with a deterministic policy (a model can only tighten it). Every decision is a Wake, and payment Wakes are anchored by `Paid.intent`.
+- **Memory:** namespaced per remora (`remora:<id>:<ns>`), written through the MemWal relayer, and never on the path of a reply ([ADR-0049](docs/adr/0049-u7-exit-fixes.md)).
+
+## How Remora uses Walrus
+- **Walrus Memory** (through the MemWal relayer) holds each remora's rules, sources, episodes, feedback and receipts. Recall feeds every turn, and the inspector shows every blob with its expiry.
+- **Walrus blobs** hold the Hatchery's templates (`remora.team/v1` files, permanent on testnet), read back through the aggregator before every hatch.
+- **Walrus Sites** will mirror the landing and docs (H6, roadmap).
+
+## How Remora uses Tatum
+Every Sui read, stream and transaction on the server side goes through **Tatum's Sui gRPC**, natively and with an `x-api-key` header, never JSON-RPC ([ADR-0021](docs/adr/0021-sui-grpc-only.md)). That covers the API, the runtime, the facilitator, the gas station and the merchants. There are two exceptions:
+- the **browser**, which signs with the owner's wallet and executes over gRPC-web against a public fullnode, because a Tatum key can't be exposed to the browser;
+- the **memory package's account lookups** (ported from hippo), which read the MemWal registry from the public mainnet fullnode.
+
+The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` and checked in CI:
+
+<!-- tatum-calls:start -->
+| Call | gRPC service | What Remora uses it for | Where |
+|---|---|---|---|
+| `subscribeCheckpoints` | SubscriptionService | Sentinel's watcher and the checkpoint indexer (Disc and hatchery events): one stream per network | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
+| `getCheckpoint` | LedgerService | backfill the checkpoints missed during a reconnect | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
+| `getServiceInfo` | LedgerService | the chain tip for health's checkpoint lag and Tatum latency, and diagnose | `apps/server/src/ops/index.ts` |
+| `getObject` | LedgerService | Disc, allowance and cap state; diagnose's Move type checks; Scout's object reads | `apps/merchants/src/sui-risk.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/runtime/remoras.ts` (+2) |
+| `getTransaction` | LedgerService | confirm owner transactions by digest; hatchery events; Wake checks | `apps/facilitator/src/facilitator.ts`, `apps/merchants/src/sui-risk.ts`, `apps/server/src/hatchery/service.ts` (+3) |
+| `executeTransaction` | TransactionExecutionService | remora payments (sponsored) and server-signed transactions | `apps/facilitator/src/facilitator.ts` |
+| `simulateTransaction` | TransactionExecutionService | the gas station and Sonar dry-run before anything is signed | `apps/facilitator/src/facilitator.ts` |
+| `waitForTransaction` | LedgerService | wait for finality before confirming | `apps/facilitator/src/facilitator.ts`, `apps/server/src/playground/index.ts` |
+| `getBalance` | StateService | funds, the playground funder, sponsor gas | `apps/facilitator/src/config.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/playground/index.ts` (+2) |
+| `listBalances` | StateService | Scout's balance reads | `apps/server/src/runtime/schedules.ts`, `apps/server/src/tools/read.ts` |
+| `listCoins` | StateService | Detect funds (coins → address balance) | `apps/facilitator/src/facilitator.ts`, `apps/server/src/money/funds.ts` |
+| `signAndExecuteTransaction` | TransactionExecutionService | the SDK's sign-then-execute, for the playground funder and scripts | `apps/server/src/playground/index.ts` |
+<!-- tatum-calls:end -->
 
 ## Quick start (local)
 
 ```bash
 bun install
-cp .env.example .env            # fill in MEMWAL_ACCOUNT_ID, MEMWAL_PRIVATE_KEY, OPENROUTER_API_KEY, SESSION_SECRET, KEY_ENCRYPTION_KEY
+cp .env.example .env            # MEMWAL_*, OPENROUTER_API_KEY, SESSION_SECRET, KEY_ENCRYPTION_KEY, TATUM_*
 docker compose up -d --wait     # local Postgres on :5434
-CHANNELS=off bun run dev        # API + web; PORT / WEB_PORT override the defaults (8787 / 5173)
+CHANNELS=off bun run dev        # API + web (PORT / WEB_PORT override 8787 / 5173)
 bun run lint && bun run typecheck && bun run test
+bun run diagnose                # the deploy gate: every deployment id onchain, Tatum, relayer, Walrus
+bun run e2e                     # Playwright on testnet with a burner wallet
 ```
 
-## Repo layout
+## Safety, ops and decisions
+- [Threat model](docs/threat-model.md): every threat with what stops it and the proof.
+- [Move security](packages/move/SECURITY.md): invariants, permit guards, versioning, upgrade policy.
+- [Deploy runbook](docs/deploy.md): services, env, the `diagnose` gate, rollback.
+- `/lab/health`: one health report ([ADR-0052](docs/adr/0052-health-diagnose-observability.md)).
+- [Decisions](docs/adr/README.md): every decision is an ADR. [Spec](docs/remora-spec.md), [scope](docs/remora-features.md), [plan](docs/remora-plan.md), [docs index](docs/README.md).
 
-See [docs/remora-spec.md §5](docs/remora-spec.md#5-architecture). Every directory has a README naming its
-owner (see [docs/team-split.md](docs/team-split.md)). Interfaces between the backend and the UI live in
-[`packages/schema`](packages/schema).
+## Repo layout
+See [docs/remora-spec.md §5](docs/remora-spec.md#5-architecture). Every directory has a README naming its owner ([docs/team-split.md](docs/team-split.md)). Interfaces between the backend and the UI live in [`packages/schema`](packages/schema).
 
 ## Built on prior work
 
@@ -57,6 +130,20 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
   **Oct 18, 2026**, before the build window opened on Oct 20
   ([ADR-0018](docs/adr/0018-bootstrap-before-window.md)). No Remora feature was built before the
   window.
+
+## Roadmap (not built yet)
+- **Mainnet pass** (U9):
+  - both Move packages on mainnet, with multisig `UpgradeCap`s;
+  - owned memory (a delegate per remora on the owner's own account, ADR-0030);
+  - a mainnet Walrus publisher and playground.
+- **More remoras:** Errand, Subscriptions Keeper, Treasurer, Daily Brief, Portfolio Guard, Inbox, Splitter (C3–C9).
+- **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b, D6, D7).
+- **Money:** budget proposals, spend analytics, the merchant kit, Reef reputation, Remora-as-merchant, the MPP adapter, a public facilitator (E5–E13).
+- **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
+- **Proof:** Merkle batch anchors, public proof links, auditor access (G4, G6, G7).
+- **Channels:** voice and images, the Telegram Mini App, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H3, H6, H8, H9).
+- **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge (M2, M8–M12).
+- **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).
 
 ## License
 

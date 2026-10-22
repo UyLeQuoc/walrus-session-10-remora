@@ -26,6 +26,11 @@ jobs:
       - name: Lint and format
         run: bun run lint
 
+      - name: Docs links resolve, and the README's Tatum call list is current
+        run: |
+          bun scripts/check-links.ts
+          bun scripts/tatum-calls.ts --check
+
       - name: Typecheck
         run: bun run typecheck
 

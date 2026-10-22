@@ -30,7 +30,9 @@
     "evidence:daily": "bash scripts/evidence-daily.sh",
     "measure:corrections": "bun run --filter @remora/core measure:corrections",
     "e2e": "bun run --filter @remora/e2e e2e",
-    "e2e:main": "bun run --filter @remora/e2e e2e:main"
+    "e2e:main": "bun run --filter @remora/e2e e2e:main",
+    "docs:links": "bun scripts/check-links.ts",
+    "docs:tatum": "bun scripts/tatum-calls.ts"
   },
   "devDependencies": {
     "@bun-security-scanner/osv": "^1.0.0",
