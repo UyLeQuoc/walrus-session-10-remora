@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HealthBoard } from "@/features/lab/health-board";
-import { PlaygroundPage } from "./playground-page";
+import { lasts, PlaygroundPage } from "./playground-page";
 
 const session = PlaygroundSession.parse(sessionJson);
 const health = HealthReport.parse(healthJson);
@@ -140,5 +140,12 @@ describe("lab health (K2)", () => {
     expect(budget?.textContent).toContain("Fix: Wait for the hourly budget");
     expect(screen.getByTestId("health-status").textContent).toBe("degraded");
     expect(screen.getByLabelText("Recent errors").textContent).toContain("relayer.slow");
+  });
+});
+
+describe("lasts", () => {
+  it("says minutes for a short session and hours for a long one", () => {
+    expect(lasts(3)).toBe("3 minutes");
+    expect(lasts(1440)).toBe("24 hours");
   });
 });

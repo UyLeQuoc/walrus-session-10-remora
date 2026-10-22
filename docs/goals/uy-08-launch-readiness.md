@@ -116,11 +116,12 @@ Each shape comes with a fixture:
 - Write a handoff to Huấn.
 
 ## Done when
-- [ ] The contract PR is merged.
-- [ ] A + B are done with tests; the C docs are written and link-checked.
-- [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green.
-- [ ] The U8 exit passes on testnet, with timings and digests.
-- [ ] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
+- [x] The contract PR is merged (PR #10).
+- [x] A + B are done with tests; the C docs are written and link-checked.
+- [ ] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green. **All green except one e2e:** the full suite ran 42/43. U7 timed out on a rule's memory blob while the MemWal relayer's embedding was down ([U8 exit](../spikes/2026-10-22-u8-exit.md), [ADR-0055](../adr/0055-memory-failures-in-health.md)). Rerun `--project=u7` once `diagnose` shows `memory recall` ok.
+- [x] The U8 exit passes on testnet, with timings and digests ([notes](../spikes/2026-10-22-u8-exit.md)).
+- [x] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
+- Telegram (H1, A5): **unverified**, because Uy skipped the live check.
 
 ## Never
 - Mainnet money or a mainnet publish (that's U9, Uy's call).

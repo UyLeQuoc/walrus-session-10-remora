@@ -51,6 +51,7 @@ export default defineConfig({
     { name: "w2", testMatch: /w2\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "u6", testMatch: /u6\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "u7", testMatch: /u7\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "u8", testMatch: /u8\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // The signed-in light/dark screenshot pass (plan §7.3). Opt in with AUDIT=1 so the default run
     // stays fast and only spends the burner when someone asks for the pictures.
     ...(process.env.AUDIT === "1"
@@ -86,6 +87,14 @@ export default defineConfig({
             MERCHANT_PAYTO_TESTNET: payTo,
             // The server boots only with an operator MemWal account; memory isn't under test here.
             MEMWAL_ACCOUNT_ID: process.env.MEMWAL_ACCOUNT_ID || `0x${"0".repeat(63)}1`,
+            // H7 (ADR-0051): the playground's funder is the burner (one test wallet, per Uy), with
+            // small limits and a 3-minute session so the exit sees the onchain revoke.
+            PLAYGROUND_FUNDER_KEY:
+              process.env.PLAYGROUND_FUNDER_KEY || process.env.E2E_BURNER_KEY || "",
+            PLAYGROUND_QUESTIONS: "2",
+            PLAYGROUND_SESSIONS_PER_IP: "2",
+            PLAYGROUND_POOL: "2",
+            PLAYGROUND_TTL_MINUTES: "3",
           },
         },
         {

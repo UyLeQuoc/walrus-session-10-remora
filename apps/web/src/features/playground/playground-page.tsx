@@ -58,6 +58,10 @@ async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {
   return schema.parse(await res.json());
 }
 
+/** A session's length in words: minutes under two hours, hours after. */
+export const lasts = (minutes: number) =>
+  minutes < 120 ? `${minutes} minutes` : `${Math.round(minutes / 60)} hours`;
+
 const SUGGESTIONS = ["Is package 0x2 safe to depend on?", "What are the odds for tonight's match?"];
 
 export function PlaygroundPage() {
@@ -153,8 +157,7 @@ export function PlaygroundPage() {
               </li>
               <li>
                 Ask up to <b>{open?.limits.questionsPerSession ?? 3}</b> questions. It ends after{" "}
-                {Math.round((open?.limits.ttlMinutes ?? 1440) / 60)} hours, and the Disc is revoked
-                onchain.
+                {lasts(open?.limits.ttlMinutes ?? 1440)}, and the Disc is revoked onchain.
               </li>
               <li>Nothing you ask is kept in memory. Sign in to have a Scout that learns.</li>
             </ul>

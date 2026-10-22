@@ -21,7 +21,7 @@ First remora, from sign-in, in **4.4 s** of machine time: one signature for the 
 - **Templates are Walrus blobs.** A shared remora is a `remora.team/v1` file stored as a permanent blob. Its author and fork lineage are recorded by our `remora_hatchery` Move package.
 - **[mainnet]** Walrus Sites for the landing page.
 
-What we learned the hard way: the relayer's **account budget**, about 1000 weighted requests an hour, is shared by every agent on an account. Our test suite spent it in an afternoon. Remora now shares listings, bounds every recall at 15 s, and never lets a reply wait on memory (ADR-0049, ADR-0050).
+What we learned the hard way: the relayer's **account budget**, about 1000 weighted requests an hour, is shared by every agent on an account. Our test suite spent it in an afternoon. Remora now shares listings, bounds every recall at 15 s, and never lets a reply wait on memory (ADR-0049, ADR-0050). And `/health` isn't the whole story: on Oct 22 the relayer answered it while every write failed behind it, so Remora's health now reads what its own memory calls saw (ADR-0055).
 
 ## 4. How it uses Tatum
 Every server-side Sui call goes through Tatum's gRPC: 12 kinds of call, listed in the README by a script that reads the code.
