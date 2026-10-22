@@ -1,10 +1,10 @@
 /**
  * K2 (ADR-0052): one health report. Every probe has a timeout and turns into an item with a status,
  * the value it measured, the threshold, and a fix when it isn't ok. Nothing here spends the relayer
- * budget: the budget item reads the last 429 our own calls saw.
+ * budget: the budget and memory items read the 429s and failures our own calls saw.
  */
 import type { HealthItem, HealthReport, HealthStatus } from "@remora/schema";
-import { lastRelayer429, recentErrors, watcherState } from "./signals.ts";
+import { lastRelayer429, recentErrors, relayerFailuresSince, watcherState } from "./signals.ts";
 
 export interface HealthDeps {
   networks: string[];
@@ -185,6 +185,26 @@ export async function healthReport(d: HealthDeps): Promise<HealthReport> {
           },
         )
       : item("relayer budget", "ok", "no 429 in the last 10 minutes"),
+  );
+  // `/health` can answer while every write fails behind it (the relayer's embedding was down on
+  // Oct 22, ADR-0055), so this reads what our own recalls and writes saw.
+  const failures = relayerFailuresSince(now() - 10 * 60_000);
+  items.push(
+    failures.count && failures.last
+      ? item(
+          "memory writes",
+          "degraded",
+          `${failures.count} recall or write failure(s) in the last 10 minutes, the last: ${failures.last.detail}`,
+          {
+            value: failures.count,
+            threshold: 0,
+            fix: "Memory is failing on the relayer's side; replies go on without it. Run bun run diagnose:memory, and send the relayer's traceId to the MemWal team.",
+          },
+        )
+      : item("memory writes", "ok", "no recall or write failure in the last 10 minutes", {
+          value: 0,
+          threshold: 0,
+        }),
   );
 
   const q = await timed(t, d.queue);

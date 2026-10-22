@@ -302,11 +302,12 @@ describe.skipIf(!local)("playground (H7, ADR-0051)", () => {
   });
 
   it("revokes the Disc and retires the Scout when the session ends", async () => {
+    // This test's first session, not the oldest in a database the e2e also writes to.
+    const first = await getSession(p(), token);
     const [row] = await db
       .select()
       .from(playgroundSessions)
-      .orderBy(playgroundSessions.createdAt)
-      .limit(1);
+      .where(eq(playgroundSessions.remoraId, first.remoraId));
     if (!row) throw new Error("no session");
     const revoke = await expire(p(), row.id);
     expect(revoke).toBe(signed.at(-1));

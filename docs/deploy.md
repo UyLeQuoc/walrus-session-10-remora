@@ -34,7 +34,7 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
 
 ## The gate: `bun run diagnose`
 Run it with the deploy's env **before** promoting a build, and don't ship while it fails.
-- It checks every `DEPLOYMENTS` id onchain with its Move type (Disc package and registry, hatchery package and registry), Tatum, the relayer's `/config` and delegates, the Walrus publisher and aggregator, and the facilitator.
+- It checks every `DEPLOYMENTS` id onchain with its Move type (Disc package and registry, hatchery package and registry), Tatum, the relayer's `/config` and delegates, one memory recall (the relayer can embed and search, [ADR-0055](adr/0055-memory-failures-in-health.md)), the Walrus publisher and aggregator, and the facilitator.
 - It then runs the memory doctor (account and delegate on chain against the relayer).
 - It exits non-zero and prints the fix for anything that's down.
 

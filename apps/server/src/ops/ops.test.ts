@@ -40,6 +40,7 @@ describe("health report (K2, ADR-0052)", () => {
       "sponsor gas (testnet)",
       "relayer",
       "relayer budget",
+      "memory writes",
       "job queue",
       "playground funder",
     ]);
@@ -69,6 +70,25 @@ describe("health report (K2, ADR-0052)", () => {
     );
     expect(dead.status).toBe("down");
     expect(dead.items[0]).toMatchObject({ name: "database", status: "down" });
+  });
+
+  it("reports memory failing behind a healthy /health, but not a 429 or an old failure", async () => {
+    const now = Date.now();
+    noteRelayerError(new Error("relayer POST /api/recall → 429"), now);
+    let r = await healthReport(healthy({ now: () => now }));
+    expect(r.items.find((i) => i.name === "memory writes")?.status).toBe("ok");
+
+    noteRelayerError(
+      new Error("write job failed: Embedding API error (401 Unauthorized)"),
+      now - 11 * 60_000,
+    );
+    noteRelayerError(new Error('Walrus Memory server error (500): {"error":"traceId: t1"}'), now);
+    r = await healthReport(healthy({ now: () => now }));
+    expect(r.items.find((i) => i.name === "relayer")?.status).toBe("ok");
+    const writes = r.items.find((i) => i.name === "memory writes");
+    expect(writes).toMatchObject({ status: "degraded", value: 1 });
+    expect(writes?.detail).toContain("traceId: t1");
+    expect(writes?.fix).toContain("diagnose:memory");
   });
 
   it("times a slow probe out instead of hanging", async () => {
@@ -154,6 +174,25 @@ describe("diagnose, the deploy gate (K2)", () => {
       objectType: async () => Promise.reject(new Error("Object not found")),
     });
     expect(gone.items[0]?.detail).toMatch(/doesn't exist on testnet/);
+  });
+
+  it("probes memory recall: the relayer's own failure warns, our key's failure gates", async () => {
+    const run = (recall: () => Promise<boolean>) =>
+      diagnose({ ...base, objectType: async (id) => types[id] ?? "?", recall });
+    const fine = await run(async () => true);
+    expect(fine.items.find((i) => i.name === "memory recall")?.status).toBe("ok");
+    const relayer = await run(async () => {
+      throw new Error('Walrus Memory server error (500): {"error":"Internal server error"}');
+    });
+    expect(relayer.items.find((i) => i.name === "memory recall")?.status).toBe("degraded");
+    expect(relayer.ok).toBe(true);
+    const ours = await run(async () => {
+      throw new Error("Walrus Memory server error (401): bad signature");
+    });
+    expect(ours.items.find((i) => i.name === "memory recall")?.status).toBe("down");
+    expect(ours.ok).toBe(false);
+    const off = await run(async () => false);
+    expect(off.items.some((i) => i.name === "memory recall")).toBe(false);
   });
 
   it("treats a flaky delegates route as a warning, not a gate", async () => {

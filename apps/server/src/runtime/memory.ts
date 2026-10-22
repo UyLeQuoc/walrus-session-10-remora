@@ -109,15 +109,20 @@ export function createRemoraMemory(
         by: r.name,
         channel: "remora",
         hidden: skipSet(r),
-        ...(index
-          ? {
-              onWrite: (e: WriteEvent) =>
-                index.onWrite(r, ns, e).catch((err) => {
-                  log.warn("memory.index_failed", { remora: r.id, ns, error: err });
-                  return undefined;
-                }),
-            }
-          : {}),
+        onWrite: (e: WriteEvent) => {
+          // The relayer accepts a write, then its background job can fail (embedding, Seal,
+          // Walrus): health has to hear about it, since `/health` keeps answering (ADR-0055).
+          if (e.outcome === "failed") {
+            noteRelayerError(new Error(`write job failed: ${e.error ?? "no blob id"}`));
+            log.warn("memory.write_failed", { remora: r.id, ns, error: e.error ?? null });
+          }
+          return index
+            ? index.onWrite(r, ns, e).catch((err) => {
+                log.warn("memory.index_failed", { remora: r.id, ns, error: err });
+                return undefined;
+              })
+            : undefined;
+        },
       });
       ports.set(namespace, p);
     }
@@ -160,7 +165,10 @@ export function createRemoraMemory(
           ...(opts?.replaces ? { replaces: opts.replaces } : {}),
         }),
         "accept the write",
-      );
+      ).catch((err) => {
+        noteRelayerError(err);
+        throw err;
+      });
       return {
         saved: res.saved,
         note: res.note,

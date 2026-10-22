@@ -71,3 +71,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0052](0052-health-diagnose-observability.md) | One health report, `diagnose` as the deploy gate, request ids and an error ring | Accepted |
 | [0053](0053-patched-vitest.md) | Pin vitest 4.1.12 when the install scanner blocks @vitest/mocker | Accepted |
 | [0054](0054-docs-checked-in-ci.md) | Docs are checked in CI: relative links resolve, and the README's Tatum calls are generated | Accepted |
+| [0055](0055-memory-failures-in-health.md) | Health and `diagnose` report memory failing behind a healthy relayer | Accepted |

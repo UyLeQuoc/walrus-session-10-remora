@@ -1,7 +1,8 @@
 /**
  * K1/K2 (ADR-0052): what the running server has observed about itself, for the health report:
  * errors per route (a small ring, no vendor), the last time the relayer said 429 to *our own*
- * calls (so health never spends budget to check it), and the chain watcher's progress.
+ * calls and the memory failures they saw (so health never spends budget to check either), and the
+ * chain watcher's progress.
  */
 import type { RecentError } from "@remora/schema";
 
@@ -38,15 +39,31 @@ export function recentErrors(): RecentError[] {
 }
 
 let relayer429: { at: number; detail: string } | null = null;
+const MAX_FAILURES = 50;
+const relayerFailures: { at: number; detail: string }[] = [];
 
-/** Called wherever a relayer call fails; remembers a 429 (the account's budget). */
+/**
+ * Called wherever a relayer call fails: a 429 is the account's budget; anything else (a 500, a
+ * timeout, a write job that failed) means memory itself is failing, even while `/health` answers.
+ */
 export function noteRelayerError(err: unknown, at = Date.now()) {
   const text = err instanceof Error ? err.message : String(err);
-  if (/\b429\b|Rate limit exceeded|Too Many Requests/i.test(text))
+  if (/\b429\b|Rate limit exceeded|Too Many Requests/i.test(text)) {
     relayer429 = { at, detail: text.slice(0, 160) };
+    return;
+  }
+  relayerFailures.push({ at, detail: text.slice(0, 160) });
+  if (relayerFailures.length > MAX_FAILURES)
+    relayerFailures.splice(0, relayerFailures.length - MAX_FAILURES);
 }
 
 export const lastRelayer429 = () => relayer429;
+
+/** Memory failures our own calls saw since `since`, and the newest one. */
+export function relayerFailuresSince(since: number) {
+  const recent = relayerFailures.filter((f) => f.at >= since);
+  return { count: recent.length, last: recent.at(-1) ?? null };
+}
 
 const watchers = new Map<string, { checkpoint: number; at: number; subscriptions: number }>();
 
@@ -69,5 +86,6 @@ export const watcherState = (network: string) => watchers.get(network) ?? null;
 export function resetSignals() {
   errors.length = 0;
   relayer429 = null;
+  relayerFailures.length = 0;
   watchers.clear();
 }

@@ -22,6 +22,11 @@ export interface DiagnoseDeps {
   relayerConfig: () => Promise<{ packageId?: string }>;
   /** Delegates the relayer lists for the operator account (null when not configured). */
   delegates?: () => Promise<number | null>;
+  /**
+   * One recall in a probe namespace: proves the relayer can embed and search, which `/health` and
+   * `/config` don't (ADR-0055). Resolves false when no operator account is configured.
+   */
+  recall?: () => Promise<boolean>;
   walrus: { publisher: string | null; aggregator: string };
   fetchStatus: (url: string) => Promise<number>;
   facilitator?: string | null;
@@ -155,6 +160,29 @@ export async function diagnose(d: DiagnoseDeps): Promise<DiagnoseReport> {
         detail: (err as Error).message.slice(0, 120),
         fix: "Run bun run diagnose:memory for the full check.",
       });
+    }
+  }
+
+  if (d.recall) {
+    try {
+      if (await d.recall()) items.push(ok("memory recall", "the relayer embeds and searches"));
+    } catch (err) {
+      const detail = (err as Error).message.slice(0, 160);
+      // A 401/403 from the relayer is our key; anything else is the relayer's own pipeline.
+      items.push(
+        /server error \((401|403)\)/.test(detail)
+          ? down(
+              "memory recall",
+              detail,
+              "Check MEMWAL_PRIVATE_KEY and MEMWAL_ACCOUNT_ID (bun run diagnose:memory).",
+            )
+          : {
+              ...ok("memory recall", ""),
+              status: "degraded",
+              detail,
+              fix: "Memory is failing on the relayer's side; replies go on without it. Send the traceId to the MemWal team.",
+            },
+      );
     }
   }
 
