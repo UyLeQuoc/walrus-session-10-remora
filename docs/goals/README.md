@@ -14,12 +14,13 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 6 | [U5: W2 core product end to end (both lanes)](uy-05-w2-core-product.md) ([prompt](uy-05-w2-core-product.prompt.txt)) | Uy's agent (+ Huấn's W2 UI, ADR-0027) | ✅ Done (W2 exit on testnet; model path and Telegram unverified) | U3 ✅, U4 ✅ |
 | 7 | [U6: the Grok-bots shape (chat, rooms, model each, teams from Markdown)](uy-06-grok-bots-shape.md) ([prompt](uy-06-grok-bots-shape.prompt.txt)) | Uy's agent (+ claimed UI, ADR-0027) | ✅ **Done Oct 21: U6 exit on testnet, model path verified** ([notes](../spikes/2026-10-21-u6-exit.md), [handoff](../handoffs/2026-10-21-uy-to-huan-u6-landed.md); Telegram unverified) | U5 ✅ |
 | 8 | [U7: Hatchery on Walrus, Proof of Learning, memory controls](uy-07-hatchery-proof-of-learning.md) ([prompt](uy-07-hatchery-proof-of-learning.prompt.txt)) | Uy's agent (+ UI items Huấn hasn't started, ADR-0027) | ✅ **Done Oct 22: U7 exit on testnet** ([notes](../spikes/2026-10-22-u7-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u7-landed.md); Telegram unverified) | U6 ✅ |
+| 9 | [U8: launch readiness (playground, health + diagnose, threat model, README)](uy-08-launch-readiness.md) ([prompt](uy-08-launch-readiness.prompt.txt)) | Uy's agent (+ /playground if Huấn hasn't started it, ADR-0027) | Next | U7 ✅ |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-07-hatchery-proof-of-learning.prompt.txt   # paste as the agent's goal (<4000 chars)
+pbcopy < docs/goals/uy-08-launch-readiness.prompt.txt   # paste as the agent's goal (<4000 chars)
 ```
 
 Each goal has two files:
