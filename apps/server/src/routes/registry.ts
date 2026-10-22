@@ -1,5 +1,6 @@
 import type { Hono } from "hono";
 import { moneyRoutes } from "../money/index.ts";
+import { playgroundRoutes } from "../playground/index.ts";
 import { remoraRoutes } from "../runtime/index.ts";
 import { authRoutes } from "./auth.ts";
 import { chatRoutes } from "./chat.ts";
@@ -22,6 +23,7 @@ export const ROUTE_GROUPS = [
   authRoutes,
   moneyRoutes,
   remoraRoutes,
+  playgroundRoutes,
 ] as const;
 
 export function registerRoutes(app: Hono): void {

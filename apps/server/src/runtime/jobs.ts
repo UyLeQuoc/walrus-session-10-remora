@@ -3,7 +3,9 @@
  * `FOR UPDATE SKIP LOCKED` so several workers never take the same job, failures back off
  * exponentially, and a job that runs out of attempts is dead (the dead-letter state).
  */
+
 import type { Logger } from "@remora/chain";
+import { withLogContext } from "@remora/chain";
 import { type Db, eq, jobs, sql } from "@remora/db";
 
 export type Job = typeof jobs.$inferSelect;
@@ -119,7 +121,8 @@ export async function runOnce(
   const handler = handlers[job.kind];
   try {
     if (!handler) throw new Error(`no handler for ${job.kind}`);
-    await handler(job.payload, job);
+    // K1 (ADR-0052): every log line the job writes carries its id.
+    await withLogContext({ jobId: job.id, job: job.kind }, () => handler(job.payload, job));
     await complete(db, job.id);
     log?.info("job.done", { kind: job.kind, job: job.id, attempts: job.attempts });
     return "done";

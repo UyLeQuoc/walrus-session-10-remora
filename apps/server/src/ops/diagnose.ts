@@ -1,0 +1,211 @@
+/**
+ * K2 (ADR-0052): `diagnose`, the deploy gate. It checks that every `DEPLOYMENTS` id exists onchain
+ * with the Move type the code expects, that Tatum, the relayer, Walrus and the facilitator answer,
+ * and says how to fix whatever doesn't. `ok` is false when any item is down.
+ */
+import { normalizeSuiAddress } from "@mysten/sui/utils";
+import type { DiagnoseReport, HealthItem } from "@remora/schema";
+
+export interface DiagnoseDeps {
+  network: "testnet" | "mainnet";
+  deployment: {
+    remoraPackageId: string | null;
+    discRegistryId: string | null;
+    hatcheryPackageId: string | null;
+    hatcheryRegistryId: string | null;
+    memwalRelayer: string;
+  };
+  /** The object's Move type (`package` for a package); throws when it doesn't exist. */
+  objectType: (id: string) => Promise<string>;
+  tip: () => Promise<number>;
+  /** `GET <relayer>/config`. */
+  relayerConfig: () => Promise<{ packageId?: string }>;
+  /** Delegates the relayer lists for the operator account (null when not configured). */
+  delegates?: () => Promise<number | null>;
+  walrus: { publisher: string | null; aggregator: string };
+  fetchStatus: (url: string) => Promise<number>;
+  facilitator?: string | null;
+  now?: () => Date;
+}
+
+const ok = (name: string, detail: string): HealthItem => ({
+  name,
+  status: "ok",
+  detail,
+  value: null,
+  threshold: null,
+  fix: null,
+});
+const down = (name: string, detail: string, fix: string): HealthItem => ({
+  name,
+  status: "down",
+  detail,
+  value: null,
+  threshold: null,
+  fix,
+});
+const short = (id: string) => `${id.slice(0, 6)}…${id.slice(-4)}`;
+const sameType = (a: string, b: string) =>
+  a.replace(/0x[0-9a-fA-F]+/g, (x) => normalizeSuiAddress(x)) ===
+  b.replace(/0x[0-9a-fA-F]+/g, (x) => normalizeSuiAddress(x));
+
+export async function diagnose(d: DiagnoseDeps): Promise<DiagnoseReport> {
+  const items: HealthItem[] = [];
+  const where = `DEPLOYMENTS.${d.network}`;
+
+  const expect = async (name: string, id: string | null, field: string, want: string | null) => {
+    if (!id) {
+      items.push(down(name, "not set", `Publish it on ${d.network} and set ${where}.${field}.`));
+      return;
+    }
+    try {
+      const type = await d.objectType(id);
+      if (want === null ? type !== "package" : !sameType(type, want))
+        items.push(
+          down(
+            name,
+            `${short(id)} is ${type}, not ${want ?? "a package"}`,
+            `Set ${where}.${field} to the ${want ?? "package"} from the publish.`,
+          ),
+        );
+      else
+        items.push(
+          ok(
+            name,
+            `${short(id)} is ${want === null ? "a package" : want.split("::").slice(1).join("::")}`,
+          ),
+        );
+    } catch (err) {
+      items.push(
+        down(
+          name,
+          `${short(id)} doesn't exist on ${d.network} (${(err as Error).message.slice(0, 80)})`,
+          `Set ${where}.${field} to an id from the ${d.network} publish.`,
+        ),
+      );
+    }
+  };
+  const dep = d.deployment;
+  await expect("remora package", dep.remoraPackageId, "remoraPackageId", null);
+  await expect(
+    "disc registry",
+    dep.discRegistryId,
+    "discRegistryId",
+    dep.remoraPackageId ? `${dep.remoraPackageId}::disc::Registry` : "::disc::Registry",
+  );
+  await expect("hatchery package", dep.hatcheryPackageId, "hatcheryPackageId", null);
+  await expect(
+    "hatchery registry",
+    dep.hatcheryRegistryId,
+    "hatcheryRegistryId",
+    dep.hatcheryPackageId ? `${dep.hatcheryPackageId}::hatchery::Registry` : "::hatchery::Registry",
+  );
+
+  try {
+    const tip = await d.tip();
+    items.push(ok("tatum", `latest checkpoint ${tip}`));
+  } catch (err) {
+    items.push(
+      down(
+        "tatum",
+        (err as Error).message.slice(0, 120),
+        `Check the Tatum key and gRPC URL for ${d.network}.`,
+      ),
+    );
+  }
+
+  try {
+    const config = await d.relayerConfig();
+    items.push(
+      config.packageId
+        ? ok("relayer /config", `package ${short(config.packageId)}`)
+        : down(
+            "relayer /config",
+            "no packageId",
+            "Check MEMWAL_SERVER_URL; the relayer's /config should name its package.",
+          ),
+    );
+  } catch (err) {
+    items.push(
+      down(
+        "relayer /config",
+        (err as Error).message.slice(0, 120),
+        "Check MEMWAL_SERVER_URL and the relayer's status.",
+      ),
+    );
+  }
+  if (d.delegates) {
+    try {
+      const n = await d.delegates();
+      if (n !== null)
+        items.push(
+          n > 0
+            ? ok("memory delegates", `the relayer lists ${n} delegate(s) for the operator account`)
+            : down(
+                "memory delegates",
+                "no delegates",
+                "Register the server's delegate key on the operator account (bun run diagnose:memory).",
+              ),
+        );
+    } catch (err) {
+      // The relayer's /agents route is flaky (docs/issues/07): a warning, not a gate.
+      items.push({
+        ...ok("memory delegates", ""),
+        status: "degraded",
+        detail: (err as Error).message.slice(0, 120),
+        fix: "Run bun run diagnose:memory for the full check.",
+      });
+    }
+  }
+
+  for (const [name, base] of [
+    ["walrus aggregator", d.walrus.aggregator],
+    ["walrus publisher", d.walrus.publisher],
+  ] as const) {
+    if (!base) {
+      items.push({
+        ...ok(name, "not configured on this network"),
+        status: "degraded",
+        fix: "Set a publisher that pays WAL (mainnet pass).",
+      });
+      continue;
+    }
+    const status = await d.fetchStatus(`${base}/v1/api`).catch(() => 0);
+    items.push(
+      status === 200
+        ? ok(name, `${base} answers`)
+        : down(
+            name,
+            `${base} answered ${status || "nothing"}`,
+            `Check ${name} or its env override.`,
+          ),
+    );
+  }
+
+  if (d.facilitator) {
+    const status = await d.fetchStatus(`${d.facilitator}/supported`).catch(() => 0);
+    items.push(
+      status === 200
+        ? ok("facilitator", `${d.facilitator} answers /supported`)
+        : down(
+            "facilitator",
+            `${d.facilitator} answered ${status || "nothing"}`,
+            "Start the facilitator or fix FACILITATOR_URL.",
+          ),
+    );
+  }
+
+  const worst = items.some((i) => i.status === "down")
+    ? "down"
+    : items.some((i) => i.status === "degraded")
+      ? "degraded"
+      : "ok";
+  return {
+    status: worst,
+    network: d.network,
+    ok: worst !== "down",
+    items,
+    errors: [],
+    checkedAt: (d.now?.() ?? new Date()).toISOString(),
+  };
+}

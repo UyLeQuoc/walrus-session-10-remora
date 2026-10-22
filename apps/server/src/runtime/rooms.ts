@@ -41,6 +41,7 @@ const liveRemoras = (db: RuntimeDeps["db"], owner: string, network: SuiNetwork) 
       and(
         eq(remoras.ownerAddress, owner),
         eq(remoras.network, network),
+        eq(remoras.playground, false),
         inArray(remoras.status, [...LIVE]),
       ),
     );

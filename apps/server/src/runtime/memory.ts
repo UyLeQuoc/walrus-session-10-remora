@@ -15,6 +15,7 @@ import {
   type MemoryType,
   type WriteEvent,
 } from "@remora/memory";
+import { noteRelayerError } from "../ops/signals.ts";
 
 export interface RemoraRef {
   id: string;
@@ -142,6 +143,7 @@ export function createRemoraMemory(
             })),
           );
         } catch (err) {
+          noteRelayerError(err);
           log.warn("memory.recall_failed", { remora: r.id, ns, error: err });
         }
       }

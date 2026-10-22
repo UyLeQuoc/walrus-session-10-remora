@@ -48,4 +48,13 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   WATCHER: z.enum(["on", "off"]).default("on"),
   /** A5: the bot's @username, for the t.me deep link. */
   TELEGRAM_BOT_USERNAME: z.string().optional(),
+  /** H7 (ADR-0051): the playground's funder (testnet only); unset = no playground. */
+  PLAYGROUND_FUNDER_KEY: z.string().optional(),
+  /** A separate Walrus Memory account for playground Scouts; unset = memory off for them. */
+  PLAYGROUND_MEMWAL_ACCOUNT_ID: z.string().optional(),
+  PLAYGROUND_MEMWAL_PRIVATE_KEY: z.string().optional(),
+  PLAYGROUND_QUESTIONS: z.coerce.number().int().positive().default(3),
+  PLAYGROUND_SESSIONS_PER_IP: z.coerce.number().int().positive().default(3),
+  PLAYGROUND_POOL: z.coerce.number().int().positive().default(10),
+  PLAYGROUND_TTL_MINUTES: z.coerce.number().int().positive().default(1440),
 });

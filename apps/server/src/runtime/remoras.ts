@@ -73,6 +73,7 @@ export function issueArgs(
   budget: Budget,
   reef: ResolvedReef[],
   now: Date,
+  opts: { lifetimeCap?: bigint } = {},
 ): IssueArgs {
   const payees = [
     ...new Set(
@@ -88,7 +89,7 @@ export function issueArgs(
   return {
     name,
     spender,
-    lifetimeCap: window * 12n,
+    lifetimeCap: opts.lifetimeCap ?? window * 12n,
     expiryMs: budget.expiresAt ? Date.parse(budget.expiresAt) : now.getTime() + 12 * MONTH_MS,
     rateLimit: { months: 1, limit: window },
     payees,
@@ -114,6 +115,10 @@ export interface CreateInput {
   name?: string;
   budget?: Budget | null;
   watch?: string[];
+  /** H7 (ADR-0051): a playground Scout, kept out of the owner's views. */
+  playground?: boolean;
+  /** The Disc's lifetime cap in smallest units; default 12 × the monthly limit. */
+  lifetimeCap?: bigint;
 }
 
 export function createRemoraService(deps: RemoraDeps) {
@@ -267,7 +272,11 @@ export function createRemoraService(deps: RemoraDeps) {
         .select()
         .from(remoras)
         .where(
-          and(eq(remoras.ownerAddress, normalizeSuiAddress(owner)), eq(remoras.network, network)),
+          and(
+            eq(remoras.ownerAddress, normalizeSuiAddress(owner)),
+            eq(remoras.network, network),
+            eq(remoras.playground, false),
+          ),
         )
         .orderBy(desc(remoras.createdAt));
     },
@@ -362,6 +371,7 @@ export function createRemoraService(deps: RemoraDeps) {
           name,
           config: { ...stored, keyId } as Record<string, unknown>,
           status: needsDisc ? "creating" : "shadow",
+          playground: input.playground ?? false,
           address,
           discName: needsDisc ? discName : null,
           shadowUntil: needsDisc
@@ -381,7 +391,9 @@ export function createRemoraService(deps: RemoraDeps) {
       }
       return {
         remora,
-        issue: issueArgs(discName, address, budget, deps.reef(input.network), now()),
+        issue: issueArgs(discName, address, budget, deps.reef(input.network), now(), {
+          ...(input.lifetimeCap ? { lifetimeCap: input.lifetimeCap } : {}),
+        }),
       };
     },
 

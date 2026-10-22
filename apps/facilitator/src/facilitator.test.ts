@@ -250,7 +250,8 @@ describe("HTTP", () => {
           x402Version: 1,
           scheme: "exact",
           network: "sui:testnet",
-          extra: { sponsored: true, discAware: true },
+          // The sponsor's address is public; health reads its gas from here (ADR-0052).
+          extra: { sponsored: true, discAware: true, sponsor: sponsorKp.toSuiAddress() },
         },
       ],
     });

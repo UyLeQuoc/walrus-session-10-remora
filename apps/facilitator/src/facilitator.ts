@@ -118,7 +118,12 @@ export function createFacilitator(deps: FacilitatorDeps) {
             x402Version: 1,
             scheme: "exact",
             network: toX402Network(n.network),
-            extra: { sponsored: !!n.sponsor, discAware: !!n.packageId },
+            // The sponsor's address is public onchain anyway; health reads its gas (ADR-0052).
+            extra: {
+              sponsored: !!n.sponsor,
+              discAware: !!n.packageId,
+              sponsor: n.sponsor?.address ?? null,
+            },
           })),
       };
     },

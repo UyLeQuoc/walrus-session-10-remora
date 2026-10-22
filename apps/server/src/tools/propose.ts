@@ -48,7 +48,13 @@ export async function handoff(deps: RuntimeDeps, from: Remora, to: string, quest
   const mine = await deps.db
     .select()
     .from(remoras)
-    .where(and(eq(remoras.ownerAddress, from.ownerAddress), eq(remoras.network, from.network)));
+    .where(
+      and(
+        eq(remoras.ownerAddress, from.ownerAddress),
+        eq(remoras.network, from.network),
+        eq(remoras.playground, false),
+      ),
+    );
   const target = mine.find(
     (r) => r.name.toLowerCase() === to.trim().toLowerCase() && r.id !== from.id,
   );

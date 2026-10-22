@@ -252,7 +252,13 @@ export async function exportTeam(
     await deps.db
       .select()
       .from(remoras)
-      .where(and(eq(remoras.ownerAddress, owner), eq(remoras.network, network)))
+      .where(
+        and(
+          eq(remoras.ownerAddress, owner),
+          eq(remoras.network, network),
+          eq(remoras.playground, false),
+        ),
+      )
   ).filter(
     (r) =>
       r.status !== "retired" && r.status !== "creating" && (!opts.ids || opts.ids.includes(r.id)),

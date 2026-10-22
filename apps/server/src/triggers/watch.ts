@@ -9,6 +9,7 @@ import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { Logger, SuiNetwork } from "@remora/chain";
 import { and, type Db, eq, inArray, remoras } from "@remora/db";
+import { noteWatcher } from "../ops/signals.ts";
 import type { ChainEvent } from "../runtime/rules.ts";
 
 export interface WatchCheckpoint {
@@ -155,6 +156,7 @@ export function startWatcher(o: {
         for (const a of w.addresses) byAddress.set(a, [...(byAddress.get(a) ?? []), w.remoraId]);
       key = [...byAddress.keys()].sort().join(",");
       if (!byAddress.size) {
+        noteWatcher(o.network, { subscriptions: 0 });
         await new Promise((r) => setTimeout(r, o.refreshMs ?? 30_000));
         continue;
       }
@@ -174,6 +176,7 @@ export function startWatcher(o: {
           },
           { abort: abort.signal },
         );
+        noteWatcher(o.network, { subscriptions: byAddress.size });
         log.info("watcher.subscribed", {
           addresses: byAddress.size,
           filtered: byAddress.size <= MAX_FILTER_LITERALS,
@@ -193,6 +196,7 @@ export function startWatcher(o: {
             );
           }
           if (last === null || cursor > last) last = cursor;
+          noteWatcher(o.network, { checkpoint: Number(cursor) });
           delay = o.reconnectMs ?? 1_000;
         }
       } catch (err) {

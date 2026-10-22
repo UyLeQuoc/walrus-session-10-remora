@@ -16,7 +16,8 @@
     "probe:header": "tsx scripts/archive/probe-header-identity.ts",
     "capacity": "tsx scripts/capacity.ts",
     "ops": "tsx scripts/ops.ts",
-    "verify": "tsx scripts/verify.ts"
+    "verify": "tsx scripts/verify.ts",
+    "diagnose": "tsx scripts/diagnose.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",

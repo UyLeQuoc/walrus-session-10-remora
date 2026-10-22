@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { serve } from "@hono/node-server";
+import { withLogContext } from "@remora/chain";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -10,11 +12,18 @@ import { env } from "./env/load.ts";
 import { IDENTITY_HEADERS } from "./identity/names.ts";
 import { checkAddress, clientAddress, isUnmetered, refusal } from "./iplimit.ts";
 import { startMoneyRuntime } from "./money/index.ts";
+import { playgroundJobs } from "./playground/index.ts";
 import { registerRoutes } from "./routes/registry.ts";
 import { onHatcheryEvents, remoraJobs, startRemoraRuntime } from "./runtime/index.ts";
 
 const app = new Hono();
 app.use(logger());
+// K1 (ADR-0052): one id per request, taken from the caller or made, echoed back, and on every log line.
+app.use("*", async (c, next) => {
+  const id = c.req.header("x-request-id")?.slice(0, 64) || randomUUID();
+  c.header("x-request-id", id);
+  await withLogContext({ requestId: id }, next);
+});
 app.use(
   "/api/*",
   cors({
@@ -22,10 +31,16 @@ app.use(
     credentials: true,
     // A cross-origin client (Walrus Sites, say) carries its id in a header
     // because a SameSite=Lax cookie would not be sent. See routes/chat.ts.
-    allowHeaders: ["content-type", ...IDENTITY_HEADERS, "x-remora-network"],
+    allowHeaders: [
+      "content-type",
+      ...IDENTITY_HEADERS,
+      "x-remora-network",
+      "x-remora-playground",
+      "x-request-id",
+    ],
     // Without this a cross-origin page cannot read the export's file name, and
     // every download is saved as the fallback "remora-memory.json".
-    exposeHeaders: ["content-disposition"],
+    exposeHeaders: ["content-disposition", "x-request-id"],
   }),
 );
 /**
@@ -71,7 +86,10 @@ if (!adapters.length)
       : "no channel tokens set; only the web API is running",
   );
 
-const stopMoney = startMoneyRuntime(remoraJobs, { onHatchery: onHatcheryEvents });
+const stopMoney = startMoneyRuntime(
+  { ...remoraJobs, ...playgroundJobs },
+  { onHatchery: onHatcheryEvents },
+);
 const stopRemoras = startRemoraRuntime();
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) =>

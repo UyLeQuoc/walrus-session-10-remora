@@ -43,7 +43,13 @@ export async function listApprovals(deps: RuntimeDeps, owner: string, network: s
     .select({ a: approvals, remora: remoras.name })
     .from(approvals)
     .innerJoin(remoras, eq(remoras.id, approvals.remoraId))
-    .where(and(eq(remoras.ownerAddress, owner), eq(approvals.network, network as "testnet")))
+    .where(
+      and(
+        eq(remoras.ownerAddress, owner),
+        eq(remoras.playground, false),
+        eq(approvals.network, network as "testnet"),
+      ),
+    )
     .orderBy(desc(approvals.createdAt));
 }
 

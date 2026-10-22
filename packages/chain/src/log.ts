@@ -3,6 +3,8 @@
  * facilitator and the merchants. Secrets never reach the output: keys whose name looks secret are
  * dropped, and values that look like Sui private keys or 64-hex secrets are masked wherever they are.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export type LogFields = Record<string, unknown>;
 
@@ -41,6 +43,18 @@ export function redact(value: unknown, depth = 0): unknown {
   return value;
 }
 
+/**
+ * K1 (ADR-0052): fields every log line inherits while a request or a job runs (`requestId`,
+ * `jobId`). Set with `withLogContext`; read by every logger, whatever its `base`.
+ */
+const logContext = new AsyncLocalStorage<LogFields>();
+
+export function withLogContext<T>(fields: LogFields, fn: () => T): T {
+  return logContext.run({ ...logContext.getStore(), ...fields }, fn);
+}
+
+export const currentLogContext = (): LogFields => logContext.getStore() ?? {};
+
 export function createLogger(
   base: LogFields = {},
   write: (line: string) => void = (l) => process.stdout.write(`${l}\n`),
@@ -49,7 +63,14 @@ export function createLogger(
   const order: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
   const emit = (level: LogLevel, msg: string, fields?: LogFields) => {
     if (order[level] < order[minLevel]) return;
-    const entry = redact({ ts: new Date().toISOString(), level, msg, ...base, ...fields });
+    const entry = redact({
+      ts: new Date().toISOString(),
+      level,
+      msg,
+      ...logContext.getStore(),
+      ...base,
+      ...fields,
+    });
     write(JSON.stringify(entry));
   };
   return {

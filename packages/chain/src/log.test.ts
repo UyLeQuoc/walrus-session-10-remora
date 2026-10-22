@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLogger, redact } from "./log.ts";
+import { createLogger, redact, withLogContext } from "./log.ts";
 
 describe("logger (K1)", () => {
   it("writes JSON lines with base and per-call fields", () => {
@@ -47,5 +47,19 @@ describe("logger (K1)", () => {
 
   it("keeps errors readable without stack traces", () => {
     expect(redact(new Error("boom"))).toEqual({ name: "Error", message: "boom" });
+  });
+
+  it("adds the request or job context to every line written inside it (ADR-0052)", async () => {
+    const lines: string[] = [];
+    const log = createLogger({ service: "t" }, (l) => lines.push(l));
+    await withLogContext({ requestId: "r-1" }, async () => {
+      await Promise.resolve();
+      log.info("inside");
+      withLogContext({ jobId: "j-1" }, () => log.child({ x: 1 }).warn("nested"));
+    });
+    log.info("outside");
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({ msg: "inside", requestId: "r-1" });
+    expect(JSON.parse(lines[1] ?? "{}")).toMatchObject({ requestId: "r-1", jobId: "j-1", x: 1 });
+    expect(JSON.parse(lines[2] ?? "{}").requestId).toBeUndefined();
   });
 });

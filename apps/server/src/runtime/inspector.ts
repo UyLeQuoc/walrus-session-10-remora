@@ -7,6 +7,7 @@
  * looks like "nothing stored" (ADR-0049).
  */
 import { type MemoryMeta, RelayerExtras } from "@remora/memory";
+import { noteRelayerError } from "../ops/signals.ts";
 import { namespaceFor, type RemoraRef } from "./memory.ts";
 import { RemoraError } from "./remoras.ts";
 
@@ -39,6 +40,7 @@ export function listAccount(
   const rows = list()
     .catch(() => list())
     .catch((err) => {
+      noteRelayerError(err);
       listings.delete(operator.accountId);
       throw new RemoraError(
         "relayer.slow",

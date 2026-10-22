@@ -11,30 +11,9 @@
  * Railway does not restart a container that is working. `status` carries the
  * real answer: `ok`, or `degraded` with which dependency is at fault.
  */
-import { sql } from "@remora/db";
 import { Hono } from "hono";
-import { db } from "../context.ts";
 import { env } from "../env/load.ts";
-
-interface Probe {
-  ok: boolean;
-  ms: number;
-  detail?: string;
-}
-
-async function timed(fn: () => Promise<unknown>): Promise<Probe> {
-  const started = Date.now();
-  try {
-    await fn();
-    return { ok: true, ms: Date.now() - started };
-  } catch (e) {
-    return {
-      ok: false,
-      ms: Date.now() - started,
-      detail: e instanceof Error ? e.message.slice(0, 120) : String(e).slice(0, 120),
-    };
-  }
-}
+import { liveHealth } from "../ops/index.ts";
 
 export const healthRoutes = new Hono()
   /** Cheap, for the platform's health check. */
@@ -42,36 +21,16 @@ export const healthRoutes = new Hono()
     c.json({ ok: true, model: env.LLM_MODEL, relayer: env.MEMWAL_SERVER_URL }),
   )
 
-  /** Fuller, for a human deciding where a problem is. */
+  /**
+   * K2 (ADR-0052): the full report, for a human deciding where a problem is and for `/lab/health`.
+   * It names no address, key or id, and never spends the relayer budget.
+   */
   .get("/api/health/deep", async (c) => {
-    const [database, relayer] = await Promise.all([
-      timed(() => db.execute(sql`select 1`)),
-      timed(async () => {
-        const res = await fetch(`${env.MEMWAL_SERVER_URL}/health`, {
-          signal: AbortSignal.timeout(8_000),
-        });
-        if (!res.ok) throw new Error(`relayer /health returned ${res.status}`);
-      }),
-    ]);
-
-    const failing = [database.ok ? null : "database", relayer.ok ? null : "relayer"].filter(
-      (x): x is string => x !== null,
+    const { playgroundDeps } = await import("../playground/index.ts");
+    const report = await liveHealth(
+      playgroundDeps.funder ? () => playgroundDeps.balances() : undefined,
     );
-
-    return c.json({
-      status: failing.length === 0 ? "ok" : "degraded",
-      failing,
-      checks: { database, relayer },
-      model: env.LLM_MODEL,
-      channels: {
-        telegram: Boolean(env.TELEGRAM_BOT_TOKEN),
-        discord: Boolean(env.DISCORD_TOKEN),
-        slack: Boolean(env.SLACK_BOT_TOKEN),
-      },
-      network: env.SUI_NETWORK,
-      // Handy when a deploy looks like it did not take.
-      startedAt: STARTED_AT,
-    });
+    return c.json({ ...report, startedAt: STARTED_AT, model: env.LLM_MODEL });
   });
 
 const STARTED_AT = new Date().toISOString();

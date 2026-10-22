@@ -39,6 +39,7 @@ import {
   shareReview,
 } from "../hatchery/service.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
+import { isOpsError, recordError } from "../ops/signals.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -122,6 +123,15 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   const { service, runtime: rt } = d;
 
   app.onError((err, c) => {
+    const route = `${c.req.method} ${c.req.routePath}`;
+    if (err instanceof RemoraError && isOpsError(err.code, err.status))
+      recordError(route, err.code, err.message);
+    else if (!(err instanceof RemoraError) && !(err instanceof NetworkUnavailableError))
+      recordError(
+        route,
+        err instanceof MemoryTimeout ? "relayer.slow" : "unknown",
+        (err as Error).message,
+      );
     if (err instanceof RemoraError) {
       return c.json(
         { error: { code: err.code, message: humanError(err.code, err.message) } },

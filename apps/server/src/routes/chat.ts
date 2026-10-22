@@ -51,6 +51,7 @@ import {
 import { meIdentity } from "../identity/predicates.ts";
 import { asDownload, exportFor } from "../memory/export-person.ts";
 import { searchResult } from "../memory/search-result.ts";
+import { noteRelayerError } from "../ops/signals.ts";
 import { listAccount } from "../runtime/inspector.ts";
 import { plainReply, textReply } from "./reply.ts";
 
@@ -423,6 +424,7 @@ export const chatRoutes = new Hono()
         if (m.expires_at) expiry.set(m.blob_id, m.expires_at);
       }
     } catch (e) {
+      noteRelayerError(e);
       console.warn("[web] expiry lookup failed", e instanceof Error ? e.message : e);
     }
 

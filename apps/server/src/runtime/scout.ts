@@ -71,6 +71,8 @@ export async function scoutAsk(
   r: Remora,
   question: string,
   trigger: { kind: "message" | "cron" | "handoff"; ref: string } = { kind: "message", ref: "web" },
+  /** H7 (ADR-0051): a playground turn reads the chain only: no web fetch, schedules or handoffs. */
+  opts: { playground?: boolean } = {},
 ): Promise<ScoutResult> {
   if (r.status !== "active" && r.status !== "shadow") {
     throw new RemoraError("remora.not_active", `${r.name} is ${r.status}.`, 409);
@@ -81,7 +83,16 @@ export async function scoutAsk(
   if ((await tokensToday(deps.db, r.id)) >= deps.dailyTokens) {
     throw new RemoraError("model.cap_reached", `${r.name} used today's model budget.`, 409);
   }
+  // K1 (ADR-0052): each stage's time, logged once per turn.
+  const timings: Record<string, number> = {};
+  let mark = Date.now();
+  const lap = (stage: string) => {
+    const now = Date.now();
+    timings[stage] = now - mark;
+    mark = now;
+  };
   const memories = await deps.memory.recall(r, question, ["me", "sources", "feedback"]);
+  lap("recallMs");
   const outcomes: PayOutcome[] = [];
   const data: UntrustedData[] = [];
   const paidPayees: string[] = [];
@@ -99,6 +110,7 @@ export async function scoutAsk(
     return o;
   };
   for (const b of planBuys(question, deps.reef(r.network))) await buy(b.entry.ref, b.url, b.reason);
+  lap("payMs");
 
   const persona = String((r.config as { persona?: string }).persona ?? "You are Scout.");
   let answer: string;
@@ -118,16 +130,20 @@ export async function scoutAsk(
           ? { source: payee, content: await o.response.clone().text(), cost: usdcLabel(o.amount) }
           : outcomeLine(o);
       },
-      tools: {
-        ...readTools({
-          client: deps.networks.client(r.network),
-          memory: deps.memory,
-          remora: r,
-          ...(deps.fetch ? { fetch: deps.fetch } : {}),
-        }),
-        schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
-        handoff: ({ to, question: q }) => handoff(deps, r, to, q),
-      },
+      tools: opts.playground
+        ? chainOnly(
+            readTools({ client: deps.networks.client(r.network), memory: deps.memory, remora: r }),
+          )
+        : {
+            ...readTools({
+              client: deps.networks.client(r.network),
+              memory: deps.memory,
+              remora: r,
+              ...(deps.fetch ? { fetch: deps.fetch } : {}),
+            }),
+            schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
+            handoff: ({ to, question: q }) => handoff(deps, r, to, q),
+          },
     });
     answer = res.text;
     tokens = res.tokens;
@@ -139,6 +155,7 @@ export async function scoutAsk(
       ? `Here's what I found:\n${data.map((d) => `• ${d.source}: ${d.content.slice(0, 400)}`).join("\n")}`
       : "I couldn't reach my model right now, and nothing needed buying.";
   }
+  lap("modelMs");
   await addUsage(deps.db, r.id, tokens);
   const spend = outcomes.map((o) => `${outcomeLine(o)}`).join("; ");
   const wake = await recordWake(
@@ -175,5 +192,13 @@ export async function scoutAsk(
       receiptId: wake?.id ?? null,
     })
     .returning({ id: remoraEvents.id });
+  lap("writeMs");
+  deps.log.info("turn.timings", { remora: r.id, ...timings, paid: paidPayees.length });
   return { answer, eventId: e?.id ?? "", receiptId: wake?.id ?? null, outcomes };
 }
+
+/** A playground turn's tools: Tatum reads only. */
+const chainOnly = ({ balances, object }: ReturnType<typeof readTools>) => ({
+  ...(balances ? { balances } : {}),
+  ...(object ? { object } : {}),
+});

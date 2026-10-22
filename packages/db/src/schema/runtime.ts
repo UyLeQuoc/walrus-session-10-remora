@@ -170,10 +170,41 @@ export const remoras = pgTable(
     allowanceId: text("allowance_id"),
     capId: text("cap_id"),
     shadowUntil: timestamp("shadow_until", { withTimezone: true }),
+    /** H7 (ADR-0051): a playground Scout, owned by the funder and kept out of owner views. */
+    playground: boolean("playground").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("remoras_owner_idx").on(t.ownerAddress, t.network)],
+);
+
+/**
+ * H7 (ADR-0051): a visitor's playground session. The token is never stored, only its SHA-256; the
+ * IP only as an HMAC, for the per-day limit.
+ */
+export const playgroundSessions = pgTable(
+  "playground_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tokenHash: text("token_hash").notNull(),
+    remoraId: uuid("remora_id")
+      .notNull()
+      .references(() => remoras.id, { onDelete: "cascade" }),
+    network: net(),
+    ipHash: text("ip_hash").notNull(),
+    questionsUsed: integer("questions_used").notNull().default(0),
+    status: text("status", { enum: ["live", "expired", "retired"] })
+      .notNull()
+      .default("live"),
+    issueDigest: text("issue_digest"),
+    revokeDigest: text("revoke_digest"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("playground_sessions_token_idx").on(t.tokenHash),
+    index("playground_sessions_ip_idx").on(t.ipHash, t.createdAt),
+  ],
 );
 
 /** N1: the activity feed, one row per thing a remora did or noticed; N19 feedback lands here. */
