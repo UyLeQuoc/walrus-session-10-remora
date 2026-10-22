@@ -2,7 +2,7 @@
  * The sidebar's Remoras and Rooms (ADR-0042): your remoras as contacts (open a 1-1 chat) and the rooms
  * they share. Shown once the session has a wallet; collapsed sidebars keep only the icons above.
  */
-import { Egg, Hash, Plus } from "lucide-react";
+import { Egg, Fish, Hash, Plus } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -37,7 +37,24 @@ export function SidebarTeam({ onNavigate }: { onNavigate: () => void }) {
     [owner],
     60_000,
   );
-  if (!owner) return null;
+  // Signed out: the one thing to try without a wallet (H7, ADR-0051).
+  if (!owner)
+    return (
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu aria-label="Try Remora">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === "/playground"} tooltip="Try Scout">
+                <Link to="/playground" onClick={onNavigate}>
+                  <Fish />
+                  <span>Try Scout, no wallet</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
   const live = (remoras.data?.remoras ?? []).filter((r) => r.status !== "retired");
   const newRoom = async () => {
     const out = await api.createRoom({

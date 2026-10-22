@@ -20,6 +20,9 @@ const PAGES: [string, RegExp][] = [
   ["/chat/room/4f3e2d1c-0b9a-4876-8543-210fedcba987", /Sign in with your wallet to see this room/],
   // The Hatchery is public to browse (U7, ADR-0046); sharing needs a wallet.
   ["/hatchery", /Remoras people shared/],
+  // U8 (ADR-0051, ADR-0052): try Scout without a wallet; the ops status board.
+  ["/playground", /Try Scout/],
+  ["/lab/health", /Every dependency Remora needs|Check again/],
   [
     "/remoras/0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10/share",
     /Sign in with your wallet to see sharing this remora/,
