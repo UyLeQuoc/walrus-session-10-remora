@@ -130,10 +130,10 @@ export function PlaygroundPage() {
   const ended = session && session.status !== "live";
 
   return (
-    <Page title="Try Scout" description="Try a remora with a $1 budget, no wallet needed.">
+    <Page title="Try Scout" description="Try Scout with a $1 budget. No wallet needed.">
       <PageHeader
         title="Try Scout"
-        description="Your own Scout with a $1 budget it can't exceed: the limit is enforced onchain by its Disc. It buys data when that helps, and every answer has a receipt anyone can check."
+        description="A Scout of your own with a $1 budget it can't go over. Its Disc enforces the limit onchain. A receipt is the onchain record of what each answer paid, and anyone can check it."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link to="/remoras/new">Get your own</Link>
@@ -152,22 +152,31 @@ export function PlaygroundPage() {
           <div className="flex max-w-3xl flex-col gap-3 text-sm" data-testid="playground-intro">
             <ul className="list-disc pl-5 text-muted-foreground">
               <li>
-                You get a Scout of your own, live at once, with a{" "}
-                <b>{open?.limits.discUsdc ?? "1.00"} USDC</b> Disc on {open?.network ?? "testnet"}.
+                Your Scout is live at once, with a <b>{open?.limits.discUsdc ?? "1.00"} USDC</b>{" "}
+                Disc on {open?.network ?? "testnet"}.
               </li>
               <li>
-                Ask up to <b>{open?.limits.questionsPerSession ?? 3}</b> questions. It ends after{" "}
-                {lasts(open?.limits.ttlMinutes ?? 1440)}, and the Disc is revoked onchain.
+                Ask up to <b>{open?.limits.questionsPerSession ?? 3}</b> questions. The session ends
+                after {lasts(open?.limits.ttlMinutes ?? 1440)}, and the Disc is revoked onchain.
               </li>
-              <li>Nothing you ask is kept in memory. Sign in to have a Scout that learns.</li>
+              <li>Questions here are not kept in memory. Sign in for a Scout that learns.</li>
             </ul>
             {open && !open.open ? (
               <Alert variant="warning">
                 <AlertTitle>Not right now</AlertTitle>
-                <AlertDescription>{open.reason}</AlertDescription>
+                <AlertDescription>
+                  {open.reason}{" "}
+                  <span className="text-muted-foreground">
+                    Try again later, or{" "}
+                    <Link className="link" to="/remoras/new">
+                      get your own Scout
+                    </Link>
+                    .
+                  </span>
+                </AlertDescription>
               </Alert>
             ) : null}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Button type="button" disabled={!!busy || !open?.open} onClick={() => void start()}>
                 <Fish /> Start my Scout
               </Button>
@@ -191,8 +200,11 @@ export function PlaygroundPage() {
                 : `Ends ${new Date(session.expiresAt).toLocaleString()}.`
             }
           >
-            <div className="grid max-w-3xl gap-3 sm:grid-cols-2" data-testid="playground-status">
-              <div className="flex flex-col gap-2 rounded-xl border p-3 text-sm">
+            <div
+              className="grid max-w-3xl gap-3 rounded-xl border p-4 text-sm sm:grid-cols-2"
+              data-testid="playground-status"
+            >
+              <div className="flex flex-col gap-3">
                 <span className="flex items-baseline justify-between">
                   <span className="text-muted-foreground">Budget</span>
                   <span className="tabular-nums" data-testid="playground-spent">
@@ -212,7 +224,7 @@ export function PlaygroundPage() {
                   />
                 ) : null}
               </div>
-              <div className="flex flex-col gap-2 rounded-xl border p-3 text-sm">
+              <div className="flex flex-col gap-3">
                 <span className="flex items-baseline justify-between">
                   <span className="text-muted-foreground">Questions left</span>
                   <span className="tabular-nums" data-testid="playground-questions">
@@ -234,17 +246,17 @@ export function PlaygroundPage() {
           </Section>
 
           <Section title="Ask">
-            <div className="flex max-w-3xl flex-col gap-4">
+            <div className="flex max-w-3xl flex-col gap-3">
               <ul className="flex flex-col gap-3" aria-label="Answers">
                 {session.answers.map((a) => (
                   <li
                     key={a.eventId}
-                    className="flex flex-col gap-2 rounded-xl border p-3 text-sm"
+                    className="flex flex-col gap-3 rounded-xl border p-4 text-sm"
                     data-testid="playground-answer"
                   >
                     <p className="font-medium">{a.question}</p>
                     <Markdown>{a.answer}</Markdown>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       {a.paid.map((p) => (
                         <Badge key={`${p.payee}${p.digest}`} variant="outline">
                           Paid {p.amountUsdc} USDC to {p.payee}
@@ -260,14 +272,14 @@ export function PlaygroundPage() {
                 ))}
               </ul>
               {!ended && session.questionsLeft > 0 ? (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <Textarea
                     aria-label="Your question"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
                     rows={2}
                   />
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Button
                       type="button"
                       disabled={!!busy || !question.trim()}
@@ -287,7 +299,7 @@ export function PlaygroundPage() {
                       </Button>
                     ))}
                     {busy ? (
-                      <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-3 text-sm text-muted-foreground">
                         <Spinner /> {busy}
                       </span>
                     ) : null}
@@ -297,8 +309,8 @@ export function PlaygroundPage() {
                 <Alert>
                   <AlertTitle>{ended ? "Session over" : "That was your last question"}</AlertTitle>
                   <AlertDescription>
-                    Sign in with a wallet to have a Scout of your own: it remembers, learns from
-                    your feedback, and spends only inside the budget you set.{" "}
+                    Sign in with a wallet for a Scout of your own. It remembers, learns from your
+                    feedback, and spends only within the budget you set.{" "}
                     <Link className="link" to="/remoras/new">
                       Get your own
                     </Link>
