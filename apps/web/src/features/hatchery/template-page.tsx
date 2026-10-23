@@ -21,6 +21,7 @@ import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useNetwork } from "@/lib/network";
 import { explorerTx } from "@/lib/usdc";
+import { HatchBadge } from "./hatch-badge";
 import { PermissionsList, SafetyPanel, shortAddress } from "./parts";
 
 const aggregator = (network: string, blobId: string) =>
@@ -308,6 +309,14 @@ export function TemplatePage() {
           ) : null}
         </div>
       </Section>
+      {l ? (
+        <Section
+          title="Share"
+          description="Put this badge in a README, blog or post. Anyone who clicks it lands on this template."
+        >
+          <HatchBadge templateId={id} name={l.name} />
+        </Section>
+      ) : null}
     </Page>
   );
 }
