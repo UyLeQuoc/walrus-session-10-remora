@@ -50,6 +50,24 @@ const down = (name: string, detail: string, fix: string): HealthItem => ({
   fix,
 });
 const short = (id: string) => `${id.slice(0, 6)}…${id.slice(-4)}`;
+
+/**
+ * What a failed Tatum call means, when it's Tatum and not the object: a 402 is a key out of
+ * credits (both keys answered 402 on Oct 23), a 401/403 a refused key, a 429 the rate limit.
+ * Null for anything else, such as an object that doesn't exist.
+ */
+export function tatumTrouble(message: string, network: string): string | null {
+  const key = network === "mainnet" ? "TATUM_API_KEY" : "TATUM_API_KEY_TESTNET";
+  if (/\b402\b/.test(message))
+    return `Tatum answered 402: the key is out of credits. Top up its plan, or set a new ${key}.`;
+  if (/\b(401|403)\b|UNAUTHENTICATED|PERMISSION_DENIED/.test(message))
+    return `Tatum refused the key: check ${key}.`;
+  if (/\b429\b|RESOURCE_EXHAUSTED/.test(message))
+    return "Tatum is rate-limiting this key: slow the callers or raise the plan.";
+  if (/HTTP status code \d+|UNAVAILABLE|DEADLINE_EXCEEDED/.test(message))
+    return `Tatum didn't answer: check the gRPC URL for ${network} and Tatum's status.`;
+  return null;
+}
 const sameType = (a: string, b: string) =>
   a.replace(/0x[0-9a-fA-F]+/g, (x) => normalizeSuiAddress(x)) ===
   b.replace(/0x[0-9a-fA-F]+/g, (x) => normalizeSuiAddress(x));
@@ -81,12 +99,16 @@ export async function diagnose(d: DiagnoseDeps): Promise<DiagnoseReport> {
           ),
         );
     } catch (err) {
+      const message = (err as Error).message;
+      const trouble = tatumTrouble(message, d.network);
       items.push(
-        down(
-          name,
-          `${short(id)} doesn't exist on ${d.network} (${(err as Error).message.slice(0, 80)})`,
-          `Set ${where}.${field} to an id from the ${d.network} publish.`,
-        ),
+        trouble
+          ? down(name, `couldn't check ${short(id)}: ${message.slice(0, 80)}`, trouble)
+          : down(
+              name,
+              `${short(id)} doesn't exist on ${d.network} (${message.slice(0, 80)})`,
+              `Set ${where}.${field} to an id from the ${d.network} publish.`,
+            ),
       );
     }
   };
@@ -114,7 +136,8 @@ export async function diagnose(d: DiagnoseDeps): Promise<DiagnoseReport> {
       down(
         "tatum",
         (err as Error).message.slice(0, 120),
-        `Check the Tatum key and gRPC URL for ${d.network}.`,
+        tatumTrouble((err as Error).message, d.network) ??
+          `Check the Tatum key and gRPC URL for ${d.network}.`,
       ),
     );
   }
