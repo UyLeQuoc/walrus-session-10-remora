@@ -7,6 +7,7 @@ import { toDiscError } from "@remora/disc-sdk";
 import { ChevronDown, Coins } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Term } from "@/components/app/glossary";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { StatTile } from "@/components/app/stat-tile";
 import { Hash } from "@/components/hash";
@@ -153,7 +154,8 @@ function Funds({ owner }: { owner: string }) {
         </CollapsibleTrigger>
         <CollapsibleContent className="flex flex-col gap-2 pt-2">
           <p className="text-sm text-muted-foreground">
-            For apps that need a Coin object. Remoras can only spend your address balance.
+            For apps that need a Coin object. Remoras can only spend your{" "}
+            <Term name="address balance">address balance</Term>.
           </p>
           <div className="flex flex-wrap gap-2">
             <Input
