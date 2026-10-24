@@ -32,6 +32,30 @@
         "vitest": "^4.1.12",
       },
     },
+    "apps/kitty": {
+      "name": "@kitty/app",
+      "version": "0.0.1",
+      "dependencies": {
+        "@hono/node-server": "^1.19.0",
+        "@mysten/sui": "^2.33.2",
+        "@noble/hashes": "^2.0.0",
+        "@remora/chain": "workspace:*",
+        "@remora/memory": "workspace:*",
+        "dotenv": "^17.0.0",
+        "drizzle-orm": "^0.45.3",
+        "grammy": "^1.46.0",
+        "hono": "^4.13.13",
+        "postgres": "^3.4.9",
+        "zod": "^4.0.0",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "drizzle-kit": "^0.31.11",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.12",
+      },
+    },
     "apps/merchants": {
       "name": "@remora/merchants",
       "version": "0.0.1",
@@ -602,6 +626,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "3.1.2", "@jridgewell/sourcemap-codec": "1.6.0" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
+
+    "@kitty/app": ["@kitty/app@workspace:apps/kitty"],
 
     "@mysten-incubation/memwal": ["@mysten-incubation/memwal@0.1.8", "", { "dependencies": { "@noble/ed25519": "^2.3.0", "@noble/hashes": "^2.0.0" }, "peerDependencies": { "@mysten/seal": ">=1.1.0", "@mysten/sui": ">=2.5.0", "@mysten/walrus": ">=1.0.3", "ai": ">=4.0.0", "zod": "^3.23.0 || ^4.0.0" }, "optionalPeers": ["@mysten/walrus", "ai", "zod"] }, "sha512-bABizNL15EbQY4FGHvolCkKRtBfnHJQhI41e7PTZCdYE8KE6rcOummTu12wcNXeYHCR4Umpjqi73oZ2OQXfYDA=="],
 
