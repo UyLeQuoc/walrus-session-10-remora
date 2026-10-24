@@ -1,11 +1,11 @@
-Goal U9: the mainnet pass and the first deploy. Remora live at a public URL, with mainnet money and memory. Testnet stays the e2e and playground network.
+Goal U9: the mainnet pass and the first deploy. Remora live at a public URL with mainnet money and memory; testnet stays the e2e and playground network.
 
-Source of truth: docs/goals/uy-09-mainnet-deploy.md. Read it fully, then do in order: Phase 0, A, B, C. Also read ADR-0024/0025/0026/0030, ADR-0051/0052/0055/0058, docs/deploy.md, packages/move/SECURITY.md, and the submission checklist in docs/remora-plan.md.
+Source of truth: docs/goals/uy-09-mainnet-deploy.md. Read it fully, then do in order: Phase 0, A, B, C. Also read ADR-0024/25/26/30, 0051/52/55/58, docs/deploy.md, packages/move/SECURITY.md and the submission checklist in docs/remora-plan.md.
 
 Work in the main checkout on main. Uy signs every mainnet transaction and runs or approves every deploy step. Ask him for each need at the step that needs it:
 - the mainnet publisher key and its SUI;
 - the multisig members;
-- the mainnet sponsor, payTo and Walrus publisher;
+- the mainnet sponsor, payTo, Walrus publisher;
 - a demo owner wallet;
 - Railway and Vercel access;
 - the playground's mainnet decision;
@@ -13,9 +13,9 @@ Work in the main checkout on main. Uy signs every mainnet transaction and runs o
 - testnet SUI for the burner and the gas station.
 
 Phase 0 (clear the queue):
-1. Review Huấn's PR #11: web tests, u8 test ids, and smoke + mobile on testnet. Uy merges it if green; otherwise comment on the PR.
+1. Review Huấn's PR #11 (web tests, u8 test ids, smoke + mobile on testnet). Uy merges if green; else comment.
 2. /status contract PR: one route line, plus a public GET /api/status that returns names and statuses only. No detail, fix, value or errors.
-3. Answer Huấn's 13 backend requests in docs/handoffs once Uy confirms the triage (recommended: yes to N15, E7, G6; maybe A8; the rest to the roadmap). Build the accepted ones, with tests.
+3. Answer Huấn's 13 backend requests in docs/handoffs once Uy confirms the triage (yes: N15, E7, G6; maybe A8; rest to the roadmap). Build the accepted ones, with tests.
 4. Tatum follow-ups (ADR-0058):
    - the e2e retires or pauses the Sentinels it creates;
    - a re-subscribe on a watched-set change doesn't backfill;
@@ -25,12 +25,12 @@ Phase A (the mainnet pass, Uy signs):
 1. The allowance check on mainnet (≤0.05 USDC).
 2. Publish remora and remora_hatchery from reviewed commits; move both UpgradeCaps to the multisig.
 3. Contract PR: DEPLOYMENTS.mainnet.
-4. Owned memory (ADR-0030): a delegate per remora on the owner's account, checked onchain before activation; operator memories stay readable.
+4. Owned memory (ADR-0030): a delegate per remora on the owner's account, checked onchain before activation.
 5. Mainnet facilitator and gas station, merchants, and the Walrus publisher.
 6. diagnose mainnet passes.
 
 Phase B (deploy, per docs/deploy.md):
-- Uy pushes the schema and runs the deploys. The agent prepares and verifies.
+- Uy pushes the schema and runs the deploys; the agent prepares and verifies.
 - WORKER, WATCHER and INDEXER are on for exactly one instance.
 - Vercel runs Node 24.
 - H6: Huấn builds the landing and Uy publishes it to Walrus Sites.
@@ -45,19 +45,19 @@ Phase C, the U9 exit (mainnet, on the deployed URL):
   5. the injection is blocked;
   6. a hatch.
 - ≥10 memories on mainnet Walrus Memory in the owner's account.
-- /status and the Walrus Sites landing are public, and the README has the live URL and the mainnet ids.
+- /status and the Walrus Sites landing are public; the README has the live URL and mainnet ids.
 
-Record timings and digests in docs/spikes, and write a handoff to Huấn.
+Record timings and digests in docs/spikes; write a handoff to Huấn.
 
 Hard rules:
 - No mainnet transaction without Uy's yes for that transaction, and never with a real owner's key.
 - No deploy without Uy.
 - Never commit .env, keys or tokens, or print key values.
-- No force-push. Avoid ports 8787/5173. Never edit reference/ or Huấn's branch.
+- No force-push; avoid ports 8787/5173; never edit reference/ or Huấn's branch.
 - Never rewrite an accepted ADR.
 - Never stream checkpoints unfiltered.
 - Every decision gets an ADR in the same commit.
-- packages/schema changes go through ONE contract PR per need, which Uy may merge.
+- packages/schema changes go through a contract PR, which Uy may merge.
 
 Done when:
 - PR #11 is merged or sent back, and the /status PR is merged.
@@ -67,6 +67,6 @@ Done when:
 - The deploy is live: diagnose, health, e2e:main, /status and Walrus Sites all pass.
 - The demo path ran twice on mainnet.
 - Testnet bun run e2e, typecheck, lint, test, sui move test and CI are green.
-- ADRs, docs, README and the handoff are written, and everything is pushed to main.
+- ADRs, docs, README and handoff written; everything pushed to main.
 
 Finish with a short Vietnamese summary: the live URL, mainnet digests, and what's left for launch (video, blog, form, public repo).
