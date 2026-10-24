@@ -80,3 +80,4 @@ jobs:
           sui --version
           (cd packages/move/remora && sui move test)
           (cd packages/move/hatchery && sui move test)
+          (cd packages/move/receipts && sui move test)
