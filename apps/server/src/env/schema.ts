@@ -33,9 +33,12 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   /** The x402 facilitator + gas station per network (E3, D8). */
   FACILITATOR_URL: z.string().url().optional(),
   FACILITATOR_URL_TESTNET: z.string().url().optional(),
-  /** D2 worker and D1 checkpoint indexer; turn off for local runs that shouldn't spend Tatum calls. */
+  /**
+   * D2 worker, and the D1 checkpoint indexer. The indexer streams from Tatum the whole time it's on,
+   * so it's off unless the one instance that indexes sets it (ADR-0058).
+   */
   WORKER: z.enum(["on", "off"]).default("on"),
-  INDEXER: z.enum(["on", "off"]).default("on"),
+  INDEXER: z.enum(["on", "off"]).default("off"),
   /** The demo merchants behind the Reef (E7, E9). Without them Scout has nothing to buy. */
   MERCHANTS_URL: z.string().url().optional(),
   MERCHANTS_URL_TESTNET: z.string().url().optional(),
@@ -44,8 +47,11 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   /** D9: the cheaper model for Sonar checks and rule parsing. */
   LLM_SMALL_MODEL: z.string().optional(),
   REMORA_DAILY_TOKENS: z.coerce.number().int().positive().default(200_000),
-  /** D1 chain trigger for Sentinels. */
-  WATCHER: z.enum(["on", "off"]).default("on"),
+  /**
+   * D1 chain trigger for Sentinels. It streams from Tatum the whole time it's on, so it's off unless
+   * the one instance that watches sets it; a forgotten local server spent a month's credits (ADR-0058).
+   */
+  WATCHER: z.enum(["on", "off"]).default("off"),
   /** A5: the bot's @username, for the t.me deep link. */
   TELEGRAM_BOT_USERNAME: z.string().optional(),
   /** H7 (ADR-0051): the playground's funder (testnet only); unset = no playground. */

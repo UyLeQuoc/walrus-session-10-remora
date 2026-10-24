@@ -23,7 +23,7 @@ const SCAN = [
 const METHODS: Record<string, { service: string; use: string }> = {
   subscribeCheckpoints: {
     service: "SubscriptionService",
-    use: "Sentinel's watcher and the checkpoint indexer (Disc and hatchery events): one stream per network",
+    use: "Sentinel's watcher (filtered streams, 10 addresses each) and the checkpoint indexer (Disc and hatchery events), always filtered (ADR-0058)",
   },
   getCheckpoint: {
     service: "LedgerService",

@@ -74,3 +74,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0055](0055-memory-failures-in-health.md) | Health and `diagnose` report memory failing behind a healthy relayer | Accepted |
 | [0056](0056-node-24.md) | Node 24 everywhere, matching CI | Accepted |
 | [0057](0057-patched-undici-zod-body-parser.md) | Patch undici, zod and body-parser in the lockfile when the install scanner blocks them | Accepted |
+| [0058](0058-tatum-credit-budget.md) | Spend Tatum credits deliberately: filtered streams only, background streams off by default, one health report per 30 s | Accepted |

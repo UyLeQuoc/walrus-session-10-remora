@@ -69,7 +69,7 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 <!-- tatum-calls:start -->
 | Call | gRPC service | What Remora uses it for | Where |
 |---|---|---|---|
-| `subscribeCheckpoints` | SubscriptionService | Sentinel's watcher and the checkpoint indexer (Disc and hatchery events): one stream per network | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
+| `subscribeCheckpoints` | SubscriptionService | Sentinel's watcher (filtered streams, 10 addresses each) and the checkpoint indexer (Disc and hatchery events), always filtered (ADR-0058) | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
 | `getCheckpoint` | LedgerService | backfill the checkpoints missed during a reconnect | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
 | `getServiceInfo` | LedgerService | the chain tip for health's checkpoint lag and Tatum latency, and diagnose | `apps/server/src/ops/index.ts` |
 | `getObject` | LedgerService | Disc, allowance and cap state; diagnose's Move type checks; Scout's object reads | `apps/merchants/src/sui-risk.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/runtime/remoras.ts` (+2) |

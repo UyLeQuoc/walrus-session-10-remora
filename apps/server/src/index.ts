@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { serve } from "@hono/node-server";
-import { withLogContext } from "@remora/chain";
+import { tatumUsage, withLogContext } from "@remora/chain";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -11,7 +11,7 @@ import type { ChannelAdapter } from "./channels/types.ts";
 import { env } from "./env/load.ts";
 import { IDENTITY_HEADERS } from "./identity/names.ts";
 import { checkAddress, clientAddress, isUnmetered, refusal } from "./iplimit.ts";
-import { startMoneyRuntime } from "./money/index.ts";
+import { log, startMoneyRuntime } from "./money/index.ts";
 import { playgroundJobs } from "./playground/index.ts";
 import { registerRoutes } from "./routes/registry.ts";
 import { onHatcheryEvents, remoraJobs, startRemoraRuntime } from "./runtime/index.ts";
@@ -91,6 +91,13 @@ const stopMoney = startMoneyRuntime(
   { onHatchery: onHatcheryEvents },
 );
 const stopRemoras = startRemoraRuntime();
+
+// ADR-0058: what this process has asked Tatum for, so a stream that spends credits shows in the logs.
+const usageLog = setInterval(() => {
+  const usage = tatumUsage();
+  if (Object.keys(usage).length) log.info("tatum.usage", usage);
+}, 10 * 60_000);
+usageLog.unref();
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) =>
   console.log(`remora server on http://localhost:${info.port}`),
