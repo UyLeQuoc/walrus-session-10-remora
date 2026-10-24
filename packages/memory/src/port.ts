@@ -82,6 +82,8 @@ export interface CreatePortOptions {
    * would be answered "already known" and stored nowhere hippo can see.
    */
   hidden?: ReadonlySet<string>;
+  /** `false` writes without the semantic duplicate check (structured records, ADR-0063). */
+  dedupe?: boolean;
 }
 
 export function createMemoryPort({
@@ -91,6 +93,7 @@ export function createMemoryPort({
   onWrite,
   alsoRead = [],
   hidden = new Set(),
+  dedupe = true,
 }: CreatePortOptions): MemoryPort {
   const client = createClient(scope);
   const limiter = limiterFor(scope.key);
@@ -132,6 +135,7 @@ export function createMemoryPort({
         namespace: scope.namespace,
         limiter,
         ignore: hidden,
+        dedupe,
       });
 
       if (outcome.status === "duplicate") {

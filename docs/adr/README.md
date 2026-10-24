@@ -79,3 +79,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0060](0060-build-receipts-and-kitty.md) | Build Receipts (Track 1) and Kitty (Track 3) in this monorepo on Remora's rails; entering them is decided later | Accepted |
 | [0061](0061-receipts-sources-and-design.md) | Receipts: keyless sources (ESPN, Polymarket, Kalshi), binary markets, batch anchors on Sui, a server-rendered web | Accepted |
 | [0062](0062-kitty-pot-design.md) | Kitty: a Move pot on app-bound allowances, a keeper that checks balances first, payday learning in memory | Accepted |
+| [0063](0063-structured-records-skip-dedupe.md) | Receipts and Kitty write structured records without the semantic duplicate check | Accepted |

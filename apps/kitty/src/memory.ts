@@ -58,6 +58,8 @@ export function createKittyMemory(db: Db, operator: Operator): KittyMemory {
         by: "kitty",
         channel: "kitty",
         onWrite: (e) => onWrite(db, namespace, e),
+        // Each record is a distinct event (a pick, a payday, an approval), not a fact to dedupe (ADR-0063).
+        dedupe: false,
       });
       ports.set(namespace, port);
     }

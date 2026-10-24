@@ -135,6 +135,12 @@ export interface RememberOptions {
   ignore?: ReadonlySet<string>;
   /** How long the background settle may take before giving up. */
   timeoutMs?: number;
+  /**
+   * `false` skips the semantic duplicate check. Structured records (a pick, a payday, an approval)
+   * are distinct events even when their text differs only by an id, and the check, which costs a
+   * recall per write, discarded them as "already known" (ADR-0063). Default `true`.
+   */
+  dedupe?: boolean;
 }
 
 /**
@@ -147,7 +153,7 @@ export interface RememberOptions {
  */
 export async function rememberWithDedupe(
   client: MemWal,
-  { text, namespace, limiter, timeoutMs = 120_000, ignore }: RememberOptions,
+  { text, namespace, limiter, timeoutMs = 120_000, ignore, dedupe = true }: RememberOptions,
 ): Promise<RememberOutcome> {
   /**
    * Dedupe is an optimisation, not a precondition. In production the relayer
@@ -172,23 +178,24 @@ export async function rememberWithDedupe(
    */
   const incoming = parseMemoryText(text)?.type;
   let dup: RecalledMemory | undefined;
-  try {
-    const near = await recallRelevant(client, {
-      query: text,
-      namespace,
-      limit: 3,
-      maxDistance: DISTANCE.duplicate,
-      limiter,
-    });
-    dup = near.find(
-      (m) =>
-        !ignore?.has(m.blob_id) && (incoming !== "correction" || m.parsed?.type === "correction"),
-    );
-  } catch (err) {
-    console.warn(
-      `[memory] dedupe check failed in ${namespace}, writing anyway: ${err instanceof Error ? err.message : err}`,
-    );
-  }
+  if (dedupe)
+    try {
+      const near = await recallRelevant(client, {
+        query: text,
+        namespace,
+        limit: 3,
+        maxDistance: DISTANCE.duplicate,
+        limiter,
+      });
+      dup = near.find(
+        (m) =>
+          !ignore?.has(m.blob_id) && (incoming !== "correction" || m.parsed?.type === "correction"),
+      );
+    } catch (err) {
+      console.warn(
+        `[memory] dedupe check failed in ${namespace}, writing anyway: ${err instanceof Error ? err.message : err}`,
+      );
+    }
   if (dup) {
     return { status: "duplicate", blobId: dup.blob_id, distance: dup.distance, existing: dup.text };
   }
