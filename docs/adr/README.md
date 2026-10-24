@@ -73,3 +73,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0054](0054-docs-checked-in-ci.md) | Docs are checked in CI: relative links resolve, and the README's Tatum calls are generated | Accepted |
 | [0055](0055-memory-failures-in-health.md) | Health and `diagnose` report memory failing behind a healthy relayer | Accepted |
 | [0056](0056-node-24.md) | Node 24 everywhere, matching CI | Accepted |
+| [0057](0057-patched-undici-zod-body-parser.md) | Patch undici, zod and body-parser in the lockfile when the install scanner blocks them | Accepted |
