@@ -121,7 +121,7 @@ Each shape comes with a fixture:
 - [x] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green. The full suite went **43/43** once the MemWal relayer recovered. It was 42/43 during the relayer's outage ([U8 exit](../spikes/2026-10-22-u8-exit.md), [ADR-0055](../adr/0055-memory-failures-in-health.md)).
 - [x] The U8 exit passes on testnet, with timings and digests ([notes](../spikes/2026-10-22-u8-exit.md)).
 - [x] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
-- Telegram (H1, A5): **unverified**, because Uy skipped the live check.
+- Telegram (H1, A5): **partly verified live** (Oct 24). Linking and `/remoras` work. `/scout` waits for a Tatum key with credit, since both keys answered 402 ([U8 exit](../spikes/2026-10-22-u8-exit.md#telegram-h1-a5)).
 
 ## Never
 - Mainnet money or a mainnet publish (that's U9, Uy's call).
