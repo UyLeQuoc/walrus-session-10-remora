@@ -26,3 +26,6 @@ NOTES.md
 packages/move/**/build/
 spikes/*/.state.*.json
 spikes/*/.results.*.json
+
+# U11 apps: exit results
+apps/*/test-results/
