@@ -15,12 +15,13 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 7 | [U6: the Grok-bots shape (chat, rooms, model each, teams from Markdown)](uy-06-grok-bots-shape.md) ([prompt](uy-06-grok-bots-shape.prompt.txt)) | Uy's agent (+ claimed UI, ADR-0027) | ✅ **Done Oct 21: U6 exit on testnet, model path verified** ([notes](../spikes/2026-10-21-u6-exit.md), [handoff](../handoffs/2026-10-21-uy-to-huan-u6-landed.md); Telegram unverified) | U5 ✅ |
 | 8 | [U7: Hatchery on Walrus, Proof of Learning, memory controls](uy-07-hatchery-proof-of-learning.md) ([prompt](uy-07-hatchery-proof-of-learning.prompt.txt)) | Uy's agent (+ UI items Huấn hasn't started, ADR-0027) | ✅ **Done Oct 22: U7 exit on testnet** ([notes](../spikes/2026-10-22-u7-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u7-landed.md); Telegram unverified) | U6 ✅ |
 | 9 | [U8: launch readiness (playground, health + diagnose, threat model, README)](uy-08-launch-readiness.md) ([prompt](uy-08-launch-readiness.prompt.txt)) | Uy's agent (+ /playground if Huấn hasn't started it, ADR-0027) | ✅ **Done Oct 22: U8 exit on testnet** ([notes](../spikes/2026-10-22-u8-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u8-landed.md)). The full suite is 43/43; it was 42/43 during the MemWal relayer's outage ([ADR-0055](../adr/0055-memory-failures-in-health.md)). Telegram unverified | U7 ✅ |
+| 10 | [U9: the mainnet pass and the first deploy (live URL, owned memory, /status, Walrus Sites)](uy-09-mainnet-deploy.md) ([prompt](uy-09-mainnet-deploy.prompt.txt)) | Uy's agent + Uy at every mainnet transaction and deploy | Next | U8 ✅ |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-08-launch-readiness.prompt.txt   # paste as the agent's goal (<4000 chars)
+pbcopy < docs/goals/uy-09-mainnet-deploy.prompt.txt   # paste as the agent's goal (<4000 chars)
 ```
 
 Each goal has two files:
