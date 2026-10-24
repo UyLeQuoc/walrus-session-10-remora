@@ -6,10 +6,13 @@
 node_modules
 **/node_modules
 memwal
+reference
 docs
 scripts
 apps/web/*
 !apps/web/package.json
+e2e/*
+!e2e/package.json
 .env
 .env.*
 !.env.example

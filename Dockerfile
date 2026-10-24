@@ -1,4 +1,4 @@
-# hippo server: the Hono API plus the Telegram, Discord and Slack adapters in
+# Remora's API and runtime: the Hono API plus the Telegram, Discord and Slack adapters in
 # one long-running process. The web app is a separate static build.
 #
 # Deliberately not a multi-stage build with a compile step: the server runs
@@ -7,18 +7,22 @@
 # here only makes a deploy fail for reasons a deploy cannot fix.
 FROM oven/bun:1.3.14 AS bun
 
-FROM node:20-slim
+# Every workspace's package.json and nothing else. A hand-kept list went stale as workspaces were
+# added, and `--frozen-lockfile` then refused to install (ADR-0056). The output is identical when
+# only sources change, so the install layer below stays cached.
+FROM node:24-slim AS manifests
+WORKDIR /src
+COPY . .
+RUN mkdir /out && find . -name package.json -not -path "*/node_modules/*" -exec cp --parents {} /out \;
+
+FROM node:24-slim
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 
 # Manifests first, so a change to source does not re-resolve the dependency graph.
 COPY bun.lock package.json turbo.json tsconfig.base.json ./
-COPY packages/db/package.json packages/db/
-COPY packages/memory/package.json packages/memory/
-COPY packages/core/package.json packages/core/
-COPY apps/server/package.json apps/server/
-COPY apps/web/package.json apps/web/
+COPY --from=manifests /out ./
 RUN bun install --frozen-lockfile
 
 COPY packages packages

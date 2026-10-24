@@ -85,7 +85,7 @@ do not accumulate. The web pages have jsdom render tests (`apps/web/src/app/page
 that mount each page with the network stubbed and assert what a reader sees, because
 typecheck and build both pass happily on a component that throws on first paint. `.github/workflows/ci.yml` runs lint, typecheck, test, the web
 build and `bun pm scan` on every push, plus a guard that `.env`, `memwal/` and
-`.turbo/` are never tracked. CI uses Bun for package management and Node 20 for
+`.turbo/` are never tracked. CI uses Bun for package management and Node 24 for
 the application checks. `jsdom` is pinned to 26 because 30 needs Node 22. There are two
 `overrides` entries: esbuild,
 because `drizzle-kit` still pulls a version with a dev-server advisory it never
@@ -95,7 +95,7 @@ credentials are absent, so a fork gets a green run without secrets.
 
 ### Conventions
 
-- TypeScript strict, Bun workspaces, Turbo, Node 20 runtime.
+- TypeScript strict, Bun workspaces, Turbo, Node 24 runtime.
 - Channel adapters contain no memory or LLM logic; they only translate messages to and from `packages/core`.
 - Memory text format: `[type] [by:@user] [#channel]? [YYYY-MM-DD] fact` (see `docs/ARCHITECTURE.md` §5).
 - Secrets only in `.env` files, which are gitignored. Keep `.env.example` current.
