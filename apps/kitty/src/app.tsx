@@ -4,7 +4,7 @@
  * and "What Kitty learned".
  */
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { desc, eq, inArray, like } from "drizzle-orm";
+import { and, desc, eq, inArray, like } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -20,7 +20,7 @@ import {
   spendAuto,
 } from "./actions.ts";
 import { ChainAbort, explorerTx, micro, usd } from "./chain.ts";
-import { memories, pots, pulls } from "./db/index.ts";
+import { memories, pots, proposals, pulls } from "./db/index.ts";
 import { Layout } from "./web/layout.tsx";
 
 export interface AppDeps extends ActionDeps {
@@ -219,6 +219,8 @@ export function createApp(deps: AppDeps) {
       .limit(12);
     const suggestion = pot.closed ? null : await maybeSuggest(deps, potId);
     const free = [...deps.keys.keys()].filter((a) => !v.members.some((m) => m.address === a));
+    /** Active members whose (test) key Kitty holds: they can sign from this page. */
+    const signers = v.members.filter((m) => m.active && deps.keys.has(m.address));
     return c.html(
       <Layout title={`${pot.name} · Kitty`} potId={potId}>
         <h1>{pot.name}</h1>
@@ -244,6 +246,17 @@ export function createApp(deps: AppDeps) {
             🧠 Kitty suggests: make {suggestion.category} spends automatic up to{" "}
             {usd(suggestion.cap)}. The group approved {suggestion.n} of them, each within 10
             minutes. Voting it in is a proposal like any other; the contract enforces the result.
+            {signers.length ? (
+              <form class="inline" method="post" action={`/pots/${potId}/suggest`}>
+                <input type="hidden" name="cap" value={String(suggestion.cap)} />
+                <select name="member">
+                  {signers.map((m) => (
+                    <option value={m.address}>{m.name} (test)</option>
+                  ))}
+                </select>
+                <button type="submit">Propose it</button>
+              </form>
+            ) : null}
           </div>
         ) : null}
         <h2>Members</h2>
@@ -297,6 +310,27 @@ export function createApp(deps: AppDeps) {
         ) : null}
         <h2>Proposals</h2>
         {v.proposals.length ? null : <p class="muted">None yet.</p>}
+        {signers.length && !pot.closed ? (
+          <form class="inline" method="post" action={`/pots/${potId}/proposals`}>
+            <select name="member">
+              {signers.map((m) => (
+                <option value={m.address}>{m.name} (test)</option>
+              ))}
+            </select>
+            <input name="memo" placeholder="What for (e.g. food tacos)" required maxlength={80} />
+            <input
+              name="amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder="$"
+              style="width:80px"
+              required
+            />
+            <input name="payee" placeholder="Pay to 0x…" required pattern="0x[0-9a-fA-F]{1,64}" />
+            <button type="submit">Propose a spend</button>
+          </form>
+        ) : null}
         {v.proposals.map((p) => (
           <div class="card">
             #{p.seq}{" "}
@@ -308,6 +342,22 @@ export function createApp(deps: AppDeps) {
             <span class="tag">
               {p.approvals.length} of {pot.quorum}
             </span>
+            {!p.executed && !pot.closed ? (
+              <form
+                class="inline"
+                method="post"
+                action={`/pots/${potId}/proposals/${p.seq}/approve`}
+              >
+                <select name="member">
+                  {signers
+                    .filter((m) => !p.approvals.some((a) => a.member === m.address))
+                    .map((m) => (
+                      <option value={m.address}>{m.name} (test)</option>
+                    ))}
+                </select>
+                <button type="submit">Approve</button>
+              </form>
+            ) : null}
             {p.executed ? <span class="tag ok">done</span> : null}
             {p.digest ? (
               <a class="tag" href={explorerTx(p.digest)}>
@@ -348,6 +398,68 @@ export function createApp(deps: AppDeps) {
       test: true,
     });
     return c.redirect(`/pots/${potId}`);
+  });
+
+  const back = (potId: string) => `/pots/${potId}`;
+  const refused = (potId: string, err: unknown) => (
+    <Layout title="Not done" potId={potId}>
+      <h1>Not done</h1>
+      <p class="no">
+        {err instanceof ChainAbort
+          ? `The chain refused it: ${err.detail.slice(0, 300)}`
+          : String((err as Error).message ?? err)}
+      </p>
+      <a href={back(potId)}>Back to the pot</a>
+    </Layout>
+  );
+
+  app.post("/pots/:id/proposals", async (c) => {
+    const potId = c.req.param("id");
+    const form = await c.req.parseBody();
+    try {
+      await propose(deps, potId, String(form.member), {
+        kind: "spend",
+        payee: normalizeSuiAddress(String(form.payee)),
+        amount: micro(Number(form.amount)),
+        memo: String(form.memo).slice(0, 80),
+      });
+      return c.redirect(back(potId));
+    } catch (err) {
+      return c.html(refused(potId, err), 409);
+    }
+  });
+
+  app.post("/pots/:id/proposals/:seq/approve", async (c) => {
+    const potId = c.req.param("id");
+    const seq = Number(c.req.param("seq"));
+    const form = await c.req.parseBody();
+    const [pot] = await db.select().from(pots).where(eq(pots.id, potId));
+    const [p] = await db
+      .select()
+      .from(proposals)
+      .where(and(eq(proposals.potId, potId), eq(proposals.seq, seq)));
+    if (!pot || !p) return c.notFound();
+    try {
+      // The approval that reaches quorum executes in the same transaction.
+      await approve(deps, potId, seq, String(form.member), p.approvals.length + 1 >= pot.quorum);
+      return c.redirect(back(potId));
+    } catch (err) {
+      return c.html(refused(potId, err), 409);
+    }
+  });
+
+  app.post("/pots/:id/suggest", async (c) => {
+    const potId = c.req.param("id");
+    const form = await c.req.parseBody();
+    try {
+      await propose(deps, potId, String(form.member), {
+        kind: "auto_cap",
+        cap: BigInt(String(form.cap)),
+      });
+      return c.redirect(back(potId));
+    } catch (err) {
+      return c.html(refused(potId, err), 409);
+    }
   });
 
   app.get("/pots/:id/learned", async (c) => {

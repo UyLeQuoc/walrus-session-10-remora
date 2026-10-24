@@ -256,6 +256,170 @@ if (process.argv[2] === "aborts") {
   );
   process.exit();
 }
+if (process.argv[2] === "suggest") {
+  // Re-runs step 5's memory trail after ADR-0063: both joins, each approval and the suggestion are
+  // memories with blobs, and the suggestion cites one.
+  const q = await createPot(w, {
+    creator: A,
+    name: "Suggestion check (test)",
+    goal: micro(1),
+    deadline: new Date(Date.now() + 3600_000),
+    quorum: 2,
+    autoOkCap: 0n,
+    windowMs: 3600_000,
+    keeper: w.keeper.toSuiAddress(),
+  });
+  await joinPot(w, {
+    potId: q.potId,
+    member: A,
+    name: "Ava",
+    capPerWindow: micro(0.4),
+    test: true,
+  });
+  await joinPot(w, {
+    potId: q.potId,
+    member: B,
+    name: "Bao",
+    capPerWindow: micro(0.4),
+    test: true,
+  });
+  const qRow = (
+    await w.db.select().from(pots).where(eq(pots.id, q.potId))
+  )[0] as typeof pots.$inferSelect;
+  const aRow = (
+    await w.db
+      .select()
+      .from(members)
+      .where(and(eq(members.potId, q.potId), eq(members.address, A)))
+  )[0] as typeof members.$inferSelect;
+  await pullMember(keeperDeps, qRow, aRow, { force: true, amount: micro(0.2) });
+  for (const memo of ["food tacos", "food pho", "food coffee"]) {
+    const f = await propose(w, q.potId, A, {
+      kind: "spend",
+      payee: ownerAddr,
+      amount: micro(0.03),
+      memo,
+    });
+    await approve(w, q.potId, f.seq, B, true);
+  }
+  const s5 = await maybeSuggest(w, q.potId);
+  check("the suggestion is a memory", !!s5?.memoryId, s5);
+  const stored5 = await until(
+    "the suggestion's blob and both joins",
+    async () => {
+      const rows = await w.db
+        .select()
+        .from(memories)
+        .where(
+          and(like(memories.namespace, `kitty:pot:${q.potId}:%`), eq(memories.status, "stored")),
+        );
+      const has = (re: RegExp) => rows.filter((r) => re.test(r.text)).length;
+      return has(/^SUGGEST /) >= 1 && has(/^JOINED /) >= 2 && has(/^APPROVED /) >= 3 ? rows : null;
+    },
+    300_000,
+    10_000,
+  );
+  check(
+    "both joins, three approvals and the suggestion are stored, none lost to dedupe",
+    true,
+    stored5.map((r) => `${r.text.slice(0, 60)} → ${r.blobId}`),
+  );
+  const c = await propose(w, q.potId, A, { kind: "close" });
+  await approve(w, q.potId, c.seq, B, true);
+  await leavePot(w, q.potId, A);
+  await leavePot(w, q.potId, B);
+  out.suggest = { pot: q.potId, memories: stored5.length };
+  await w.memory?.flush();
+  mkdirSync("test-results", { recursive: true });
+  writeFileSync(
+    "test-results/kitty-exit-suggest.json",
+    JSON.stringify(out, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2),
+  );
+  console.log(
+    process.exitCode ? "EXIT FAILED" : "EXIT PASSED",
+    "test-results/kitty-exit-suggest.json",
+  );
+  process.exit();
+}
+if (process.argv[2] === "web") {
+  // The pot page's own forms: propose a spend, approve it to quorum (executes), and close.
+  const q = await createPot(w, {
+    creator: A,
+    name: "Web check (test)",
+    goal: micro(1),
+    deadline: new Date(Date.now() + 3600_000),
+    quorum: 2,
+    autoOkCap: 0n,
+    windowMs: 3600_000,
+    keeper: w.keeper.toSuiAddress(),
+  });
+  await joinPot(w, {
+    potId: q.potId,
+    member: A,
+    name: "Ava",
+    capPerWindow: micro(0.4),
+    test: true,
+  });
+  await joinPot(w, {
+    potId: q.potId,
+    member: B,
+    name: "Bao",
+    capPerWindow: micro(0.4),
+    test: true,
+  });
+  const qRow = (
+    await w.db.select().from(pots).where(eq(pots.id, q.potId))
+  )[0] as typeof pots.$inferSelect;
+  await pullMember(
+    keeperDeps,
+    qRow,
+    (
+      await w.db
+        .select()
+        .from(members)
+        .where(and(eq(members.potId, q.potId), eq(members.address, A)))
+    )[0] as typeof members.$inferSelect,
+    { force: true, amount: micro(0.1) },
+  );
+  const post = (path: string, body: Record<string, string>) =>
+    app.request(path, {
+      method: "POST",
+      body: new URLSearchParams(body),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+    });
+  const page = await (await app.request(`/pots/${q.potId}`)).text();
+  check(
+    "the pot page offers propose and approve to its test members",
+    page.includes("Propose a spend"),
+    "",
+  );
+  const proposed = await post(`/pots/${q.potId}/proposals`, {
+    member: A,
+    memo: "food bread",
+    amount: "0.04",
+    payee: ownerAddr,
+  });
+  const before = await bal(ownerAddr);
+  const approved = await post(`/pots/${q.potId}/proposals/0/approve`, { member: B });
+  const after = await bal(ownerAddr);
+  check(
+    "a spend proposed and approved from the page executes at quorum",
+    proposed.status === 302 && approved.status === 302 && after - before === micro(0.04),
+    { paid: after - before },
+  );
+  const c = await propose(w, q.potId, A, { kind: "close" });
+  await approve(w, q.potId, c.seq, B, true);
+  await leavePot(w, q.potId, A);
+  await leavePot(w, q.potId, B);
+  out.web = { pot: q.potId };
+  mkdirSync("test-results", { recursive: true });
+  writeFileSync(
+    "test-results/kitty-exit-web.json",
+    JSON.stringify(out, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2),
+  );
+  console.log(process.exitCode ? "EXIT FAILED" : "EXIT PASSED", "test-results/kitty-exit-web.json");
+  process.exit();
+}
 let pot: { potId: string; digest?: string };
 const potRow = async () =>
   (await w.db.select().from(pots).where(eq(pots.id, pot.potId)))[0] as typeof pots.$inferSelect;
