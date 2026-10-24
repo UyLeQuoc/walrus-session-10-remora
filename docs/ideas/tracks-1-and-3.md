@@ -1,8 +1,9 @@
 # Ideas for Tracks 1 and 3, built on Remora's rails
 
-> **Status: draft, Oct 24, 2026. Nothing here is decided.** We compete in Track 2 with Remora
-> ([ADR-0001](../adr/0001-track-2-only-remora.md)). Entering another track would supersede that ADR.
-> The ideas parked on Oct 18 are in [archive/](../archive/): Called It and Oath (Track 1), Tab and Mandate
+> **Status (Oct 24, 2026):** both are being built in this repo by goal U11
+> ([ADR-0060](../adr/0060-build-receipts-and-kitty.md)). **Entering them is not decided.** We compete in
+> Track 2 with Remora ([ADR-0001](../adr/0001-track-2-only-remora.md)), and entering another track would
+> supersede that ADR. The ideas parked on Oct 18 are in [archive/](../archive/): Called It and Oath (Track 1), Tab and Mandate
 > (Track 3). This doc revisits them now that Remora's rails exist.
 
 ## Read this first: what an extra entry costs

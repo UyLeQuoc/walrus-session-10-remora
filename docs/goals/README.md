@@ -17,12 +17,13 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 9 | [U8: launch readiness (playground, health + diagnose, threat model, README)](uy-08-launch-readiness.md) ([prompt](uy-08-launch-readiness.prompt.txt)) | Uy's agent (+ /playground if Huấn hasn't started it, ADR-0027) | ✅ **Done Oct 22: U8 exit on testnet** ([notes](../spikes/2026-10-22-u8-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u8-landed.md)). The full suite is 43/43; it was 42/43 during the MemWal relayer's outage ([ADR-0055](../adr/0055-memory-failures-in-health.md)). Telegram unverified | U7 ✅ |
 | 10 | [U9: the testnet launch (public URL, /status, Huấn's W3 queue, D5 handoff, red-team evals, license)](uy-09-testnet-launch.md) ([prompt](uy-09-testnet-launch.prompt.txt)) | Uy's agent + Uy at every deploy step | Next | U8 ✅ ([ADR-0059](../adr/0059-launch-on-testnet.md)) |
 | 11 | [U10: the mainnet pass (mainnet money, owned memory, Walrus Sites)](uy-10-mainnet-pass.md) ([prompt](uy-10-mainnet-pass.prompt.txt)) | Uy's agent + Uy at every mainnet transaction | When Uy calls it | U9 |
+| 12 | [U11: Receipts (Track 1) and Kitty (Track 3) on Remora's rails](uy-11-receipts-and-kitty.md) ([prompt](uy-11-receipts-and-kitty.prompt.txt)) | Uy's agent, unattended overnight | **Tonight (Oct 24–25)**, independent of U9 ([ADR-0060](../adr/0060-build-receipts-and-kitty.md)) | U8 ✅ |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-09-testnet-launch.prompt.txt   # paste as the agent's goal (<4000 chars)
+pbcopy < docs/goals/uy-11-receipts-and-kitty.prompt.txt   # tonight; then uy-09-testnet-launch (<4000 chars each)
 ```
 
 Each goal has two files:

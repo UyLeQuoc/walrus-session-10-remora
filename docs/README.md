@@ -18,7 +18,7 @@ track only: Smart Agents for Real Life**.
 |---|---|
 | [remora-spec.md](remora-spec.md) | **Product & technical design:** the gap, positioning against Grok Bot/Dots/Muse, what a remora is, architecture, the Disc Move module, x402 facilitator, memory design, Wake receipts, safety model, Tatum usage |
 | [goals/](goals/README.md) | **Paste-ready agent goals:** U0 bootstrap (Mon Oct 20, from 07:00 VN), U1 allowance spike (Oct 21), H0 web shell + E2E harness (Huấn) |
-| [adr/](adr/README.md) | **Architecture Decision Records:** every decision and change of direction (59 so far). New decisions must add one here, agents included |
+| [adr/](adr/README.md) | **Architecture Decision Records:** every decision and change of direction (60 so far). New decisions must add one here, agents included |
 | [remora-features.md](remora-features.md) | **Scope:** the **MVP ship set (69)** + backlog (133 total), review of gaps, the **address-balance funds model**, 133 features in 14 epics (including **Hatchery**: share, duplicate, publish, and **UX**) with waves, workstreams, scope rules |
 | [remora-plan.md](remora-plan.md) | **Build plan:** week 0 prep, waves W1–W4 by workstream with exit criteria, demo script, blog outline, scoring map, risks, submission checklist |
 | [team-split.md](team-split.md) | **Two-person split.** Uy Le: Sui, Walrus Memory, Move, backend, deploy, video, submission. Huấn: UI/UX, E2E. Infra and UI are a flex pool. Covers lanes, CODEOWNERS, `·be`/`·ui` split by wave, frozen contracts, dependency dates, git workflow, **rules for long-running agent goals**, dev env isolation, hotspots, setup checklist |
@@ -29,7 +29,7 @@ track only: Smart Agents for Real Life**.
 | [launch/blog-draft.md](launch/blog-draft.md) | **Blog draft (L3):** "Rails Before Robots, Part 2", with real testnet numbers |
 | [spikes/](spikes/) | **Exit records:** timings, digests and findings for each goal's testnet exit |
 | [event-rules.md](event-rules.md) | The full event rules in English: dates, eligibility, submission form, requirements, judging, prizes |
-| [ideas/tracks-1-and-3.md](ideas/tracks-1-and-3.md) | **Draft (Oct 24), not decided:** Receipts (Track 1) and Kitty (Track 3) on Remora's rails, what an extra entry costs, and a recommendation |
+| [ideas/tracks-1-and-3.md](ideas/tracks-1-and-3.md) | Receipts (Track 1) and Kitty (Track 3) on Remora's rails, what an extra entry costs. Being built in this repo (U11, [ADR-0060](adr/0060-build-receipts-and-kitty.md)); entering them is not decided |
 | [archive/](archive/) | Parked ideas for the other tracks (Called It, Tuesday, Tab, Oath, Mandate). Reference only |
 
 ## Key facts
