@@ -1,0 +1,50 @@
+Goal U10: the mainnet pass. Mainnet money, owned memory, Walrus Sites. Uy calls this pass (ADR-0059); testnet stays the e2e and playground network.
+
+Source of truth: docs/goals/uy-10-mainnet-pass.md. Read it fully, then do its steps in order. Also read ADR-0020/0024/0025/0026/0030/0058/0059, docs/deploy.md and packages/move/SECURITY.md.
+
+Work in the main checkout on main. Uy signs every mainnet transaction and runs or approves every deploy. Ask him for each need at the step that needs it:
+- the mainnet publisher key and SUI;
+- the multisig members;
+- the mainnet sponsor, payTo, and Walrus publisher with WAL;
+- a demo owner wallet;
+- a SuiNS name if wanted;
+- the playground's mainnet decision.
+
+Steps:
+1. The allowance check on mainnet (≤0.05 USDC): issue, pay, revoke.
+2. Publish remora and remora_hatchery from reviewed commits; move both UpgradeCaps to the multisig.
+3. Contract PR: DEPLOYMENTS.mainnet.
+4. Owned memory (ADR-0030): a delegate per remora on the owner's account, checked onchain before activation.
+5. Mainnet facilitator and gas station, merchants, and the Walrus publisher.
+6. Deploy the mainnet env (Uy). Then run diagnose mainnet, health and e2e:main.
+7. H6 Walrus Sites: Huấn builds the landing and the agent wires site-builder. Uy publishes it.
+8. The U10 exit, twice on mainnet:
+   - sign in, Detect funds;
+   - a Scout with one signature and an owned delegate;
+   - a paid sui-risk answer with a verified Wake;
+   - a Sentinel ping on a real transfer;
+   - the injection is blocked;
+   - a hatch.
+   Then: ≥10 memories in the owner's account, and the README and blog [mainnet] markers replaced with real numbers.
+
+Record timings and digests in docs/spikes, and write a handoff to Huấn.
+
+Hard rules:
+- No mainnet transaction without Uy's yes for that transaction, and never with a real owner's key.
+- No deploy without Uy.
+- Never commit .env, keys or tokens, or print key values.
+- No force-push. Avoid ports 8787/5173. Never edit reference/ or Huấn's branch.
+- Never rewrite an accepted ADR.
+- Never stream checkpoints unfiltered.
+- Every decision gets an ADR in the same commit.
+
+Done when:
+- Both packages are on mainnet with multisig caps, and DEPLOYMENTS.mainnet is merged.
+- Owned memory works with ≥10 mainnet memories.
+- The deployed app runs on mainnet and is green.
+- The demo path ran twice on mainnet.
+- Walrus Sites is live.
+- Testnet e2e and CI are green.
+- ADRs, docs and the handoff are written, and everything is pushed.
+
+Finish with a short Vietnamese summary.

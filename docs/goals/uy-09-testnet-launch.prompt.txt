@@ -1,0 +1,75 @@
+Goal U9: the testnet launch. A public URL, Huấn's W3 queue, red-team evals, the license. Money on testnet, memory on the mainnet relayer; the mainnet pass is U10 (ADR-0059).
+
+Source of truth: docs/goals/uy-09-testnet-launch.md. Read it fully, then do in order: Phase 0, A, B, C, D, E, F. Also read ADR-0051/52/55/56/58/59, docs/deploy.md, docs/threat-model.md, docs/spikes/2026-10-22-u8-exit.md and Huấn's handoffs of Oct 23.
+
+Work in the main checkout on main. Uy runs or approves every deploy step. Ask him for each need at the step that needs it:
+- rotated Tatum keys and bot token;
+- testnet SUI;
+- a dedicated playground funder key, or his OK to use the burner;
+- Railway and Vercel access;
+- the triage of Huấn's requests;
+- the license choice;
+- optionally an Enoki key.
+
+Phase 0 (the queue):
+1. Review Huấn's PR #11 (web tests, u8 ids, smoke + mobile). Uy merges if green; else comment.
+2. One contract PR for /status: the routes.tsx line, plus a public GET /api/status with names and statuses only.
+3. Answer Huấn in docs/handoffs once Uy confirms (yes: N15, E7, G6; maybe A8; rest to the roadmap; H6 to U10). Give him MERCHANT_PAYTO_TESTNET.
+
+Phase A: one contract PR, then N15 cost, E7 /api/reef/services, G6 shared public Wakes, and A8 if time allows. Each with tests.
+
+Phase B:
+1. D5: a Sentinel ping its rules mark "check" hands off to the owner's Scout, which answers with a paid check citing the ping's Wake. Once per event.
+2. Tatum follow-ups:
+   - the e2e retires or pauses its Sentinels;
+   - no backfill on a watched-set re-subscribe;
+   - tatum.usage in health.
+
+Phase C: bun run evals with ≥20 injection attacks from fixtures. Record the layer that stopped each one (Sonar, simulation, or the Disc onchain) and 0 money moved. The deterministic part runs in CI; publish the results in the README and the threat model.
+
+Phase D: deploy on testnet per docs/deploy.md (Uy runs it).
+- One API instance runs WORKER, WATCHER, INDEXER and CHANNELS. It's the bot's only poller.
+- Vercel runs Node 24.
+- The playground is public with its own funder.
+- Then diagnose, health and e2e:main.
+
+Phase E: LICENSE plus its ADR. Update the README (live URL, "money on testnet, memory on mainnet", evals, /status), the blog numbers and the demo script. Start Uy's dogfooding.
+
+Phase F, the U9 exit on the deployed URL:
+- diagnose, health and e2e:main are green, and /status is public.
+- The demo path runs twice in a row:
+  1. sign in, Detect funds;
+  2. a team with one signature;
+  3. a paid sui-risk answer that verifies;
+  4. a Sentinel ping auto-handed to Scout;
+  5. the injection is blocked;
+  6. a key rotation in the web;
+  7. Proof of Learning;
+  8. a hatch;
+  9. /scout on Telegram.
+- The playground is public.
+- Evals report N≥20 and 0 overspends.
+
+Record it in docs/spikes and write a handoff to Huấn.
+
+Hard rules:
+- No mainnet money or publish (U10).
+- No deploy without Uy.
+- Never commit .env or keys, or print key values.
+- No force-push. Avoid ports 8787/5173. Never edit reference/ or Huấn's branch.
+- Never rewrite an accepted ADR.
+- Never stream checkpoints unfiltered.
+- Never run two pollers on one bot token.
+- Every decision gets an ADR in the same commit.
+- packages/schema changes go through a contract PR, which Uy may merge.
+
+Done when:
+- PR #11 and the /status PR are merged, and Huấn's accepted items are done with tests.
+- D5 and the Tatum follow-ups are done.
+- Evals are published and run in CI.
+- The testnet deploy is green.
+- The demo path ran twice on the URL.
+- e2e, typecheck, lint, test, sui move test and CI are green.
+- LICENSE, docs and the handoff are written, and everything is pushed.
+
+Finish with a short Vietnamese summary: the live URL, what judges can do, the digests, and what's left (U10, video, blog, form, public repo).
