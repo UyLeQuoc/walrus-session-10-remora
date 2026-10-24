@@ -29,6 +29,7 @@ track only: Smart Agents for Real Life**.
 | [launch/blog-draft.md](launch/blog-draft.md) | **Blog draft (L3):** "Rails Before Robots, Part 2", with real testnet numbers |
 | [spikes/](spikes/) | **Exit records:** timings, digests and findings for each goal's testnet exit |
 | [event-rules.md](event-rules.md) | The full event rules in English: dates, eligibility, submission form, requirements, judging, prizes |
+| [ideas/tracks-1-and-3.md](ideas/tracks-1-and-3.md) | **Draft (Oct 24), not decided:** Receipts (Track 1) and Kitty (Track 3) on Remora's rails, what an extra entry costs, and a recommendation |
 | [archive/](archive/) | Parked ideas for the other tracks (Called It, Tuesday, Tab, Oath, Mandate). Reference only |
 
 ## Key facts
