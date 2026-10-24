@@ -476,8 +476,13 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
   });
 
   it("verifies a paid Wake against the chain (G3)", async () => {
+    // The payment's own Wake. Other Wakes of this Scout carry digests too, and an anchor update
+    // reorders an unsorted select, so "the first with a digest" was a flaky pick.
     const row = (await db.select().from(receipts).where(eq(receipts.remoraId, scout.id))).find(
-      (x) => x.txDigest,
+      (x) =>
+        x.txDigest &&
+        (x.wake as { intent?: { decision?: { action?: string } } }).intent?.decision?.action ===
+          "pay",
     );
     if (!row?.txDigest) throw new Error("no paid Wake");
     const wake = row.wake as {
