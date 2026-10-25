@@ -147,6 +147,10 @@ export function harness(opts: {
   template?: "scout" | "sentinel";
   /** What the service's 402 says (approval_request reads it). */
   payTo?: string;
+  /** What a memory write answers when it isn't saved (e.g. a duplicate). */
+  notSaved?: string;
+  /** What memory recall returns. */
+  recalled?: { blobId: string; namespace: string; text: string; distance: number }[];
 }): Harness {
   const calls: CallRecord[] = [];
   const inserts: Harness["inserts"] = [];
@@ -173,7 +177,7 @@ export function harness(opts: {
     reef: () => REEF,
     networks: { config: () => ({ usdcCoinType: USDC }) },
     memory: {
-      recall: async () => [],
+      recall: async () => opts.recalled ?? [],
       remember: async (
         _r: unknown,
         ns: string,
@@ -182,6 +186,7 @@ export function harness(opts: {
         o?: { by?: string },
       ) => {
         remembered.push({ ns, type, text, ...(o?.by ? { by: o.by } : {}) });
+        if (opts.notSaved) return { saved: false, note: opts.notSaved };
         return { saved: true, note: "", indexId: "7e8f9a0b-1c2d-4e3f-8a4b-5c6d7e8f9a0b" };
       },
     },

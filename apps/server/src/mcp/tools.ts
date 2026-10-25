@@ -163,13 +163,19 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
 
   const outcomeResult = async (o: PayOutcome, r: Remora): Promise<ToolResult> => {
     if (o.kind === "paid") {
-      const body = await o.response.clone().text();
+      const body = untrusted("the paid service", await o.response.clone().text());
       return {
         text: [
           `Paid ${usdc(o.amount)} through ${r.name}'s Disc${o.digest ? ` (transaction ${o.digest})` : ""}. Wake ${o.receiptId ?? "pending"}.`,
-          untrusted("the paid service", body),
+          body,
         ].join("\n"),
-        structured: { paid: true, amount: o.amount, digest: o.digest, wakeId: o.receiptId },
+        structured: {
+          paid: true,
+          amount: o.amount,
+          digest: o.digest,
+          wakeId: o.receiptId,
+          response: body,
+        },
         wakeId: o.receiptId,
         spend: BigInt(o.amount),
       };
@@ -264,26 +270,30 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
         if (ns && !namespaces.includes(ns)) refuse(`${r.name} has no ${ns} memories.`);
         const found = await rt.memory.recall(r, query, ns ? [ns] : recallNamespaces(namespaces), 8);
         if (!found.length) return { text: "Nothing in this remora's memory matches." };
+        const framed = untrusted(
+          "Walrus Memory",
+          found
+            .map((m) =>
+              JSON.stringify({
+                namespace: m.namespace,
+                blob: m.blobId,
+                relevance: Number((1 - m.distance).toFixed(2)),
+                text: m.text,
+              }),
+            )
+            .join("\n"),
+        );
+        // A client that reads structuredContent instead of the text (Claude Code does) must get the
+        // memory text too, still inside its untrusted boundary.
         return {
-          text: untrusted(
-            "Walrus Memory",
-            found
-              .map((m) =>
-                JSON.stringify({
-                  namespace: m.namespace,
-                  blob: m.blobId,
-                  relevance: Number((1 - m.distance).toFixed(2)),
-                  text: m.text,
-                }),
-              )
-              .join("\n"),
-          ),
+          text: framed,
           structured: {
             results: found.map((m) => ({
               namespace: m.namespace,
               blobId: m.blobId,
               distance: m.distance,
             })),
+            memories: framed,
           },
         };
       },
@@ -344,13 +354,22 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
         const res = await rt.memory.remember(r, ns as string, type as "episode", text, {
           by: via,
         });
+        // The memory layer skips a fact it already holds: that's success, not an error.
+        const known = !res.saved && /already in memory/i.test(res.note);
         return {
           text: res.saved
             ? `Accepted into ${ns} (memory ${res.indexId ?? "pending"}); the blob lands on Walrus in about half a minute. ${res.note}`.trim()
-            : `Not written: ${res.note}`,
-          structured: { saved: res.saved, namespace: ns, memoryId: res.indexId ?? null },
-          isError: !res.saved,
-          error: res.saved ? null : res.note,
+            : known
+              ? `Already in ${r.name}'s memory; nothing new was written.`
+              : `Not written: ${res.note}`,
+          structured: {
+            saved: res.saved,
+            alreadyKnown: known,
+            namespace: ns,
+            memoryId: res.indexId ?? null,
+          },
+          isError: !res.saved && !known,
+          error: res.saved || known ? null : res.note,
           memoryId: res.indexId ?? null,
         };
       },
@@ -540,12 +559,13 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
           (s, o) => (o.kind === "paid" ? s + BigInt(o.amount) : s),
           0n,
         );
+        const answer = untrusted(`${r.name}'s answer (it may quote paid data)`, res.answer);
         return {
           text: [
-            untrusted(`${r.name}'s answer (it may quote paid data)`, res.answer),
+            answer,
             `Wake ${res.receiptId ?? "pending"}${spend ? `; spent ${usdc(spend)}` : ""}.`,
           ].join("\n"),
-          structured: { wakeId: res.receiptId, spend: spend.toString() },
+          structured: { wakeId: res.receiptId, spend: spend.toString(), answer },
           wakeId: res.receiptId,
           spend: spend || null,
         };

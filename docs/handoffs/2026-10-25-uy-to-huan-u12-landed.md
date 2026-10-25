@@ -38,6 +38,7 @@ with a 0.015 USDC per-payment cap. Three tokens were made on the Connections pag
 |---|---|
 | A stdio client (`packages/mcp` proxying to `/mcp`) and an HTTP client, each with its own token | ✅ `initialize`. The stdio client's `tools/list` shows `pay` etc. for its scopes |
 | **Real Claude Code** (`claude -p` with `--mcp-config`) uses the stdio server | ✅ it called `remoras_list` on the "Claude Code" token (03:27:16, in the call log) |
+| **Real Claude Code over Streamable HTTP** (`"type": "http"`, bearer token): a fresh token for Sentinel `mvluqhl3` with `memory:read` and `memory:write`; a fact written with it first (by script) | ✅ `claude -p` called `remoras_list` (04:00:46.882Z) and `remora_recall` (04:00:54.789Z), both in that token's call log, and quoted the fact with its tag: blob `X0Xwt4WyjXGo4CNfMgvNRO9J7_5tGYhbGnZE1NoiHHg`, `[by:@mcp:claude-code-http]`. Once revoked, the token got HTTP 401. Screenshots `e2e/screenshots/u12-claude-http-{desktop,375}-{light,dark}.png` |
 | `remora_remember` writes an episode, the blob lands, then `remora_recall` finds it | ✅ blob `Yb9ZNt1rzqM0Av_NbwZ6Cno-5YUCwhSOPNNrN7ymWZw` in `me`, settled 18 s after the write, recalled at 22 s; tagged `[by:@mcp:claude-code]` |
 | `pay` buys `sui-risk` inside the Disc; the Wake says `via` and verifies | ✅ `2UGiVjrJJbgVq8aCmN6boapon8swQyYvheaG13mpGT67`, 0.01 USDC, Wake `38f27053…`, `via mcp:http-script`, anchored. All 6 verify checks pass (screenshot `u12-verify-via.png`) |
 | `pay` for `odds` (0.02) over the 0.015 cap | ✅ refused before signing: Sonar against the live Disc's cap says "ask", and `over_limit` comes back with Wake `361a94f3…`. Nothing moved |
@@ -58,6 +59,15 @@ with a 0.015 USDC per-payment cap. Three tokens were made on the Connections pag
 4. **Resume 3** retired the Scout.
 5. **Resume 4** retook the screenshots after a UI fix: the expiry showed "just now", because `Time` only
    reads the past. The Connections page now shows the expiry date.
+6. **The HTTP Claude Code step** (`U12_HTTP_CLAUDE=<remora>`; the token is only in a temp MCP config
+   outside the repo, deleted afterwards):
+   - **Its first run** passed, with the calls at 03:57:40Z and 03:57:50Z. But Claude Code reads
+     `structuredContent`, which for recall held only blob ids, so it saw no memory text. **Fixed:**
+     recall, pay and ask now put the framed text in `structuredContent` too, as the MCP spec asks.
+   - **A retry** stopped on its own setup: Remora's dedupe answered "already in memory".
+   - **The re-run after that** quoted the memory. An already-known fact is now a success, not a
+     failed call.
+   - All three of these tokens are revoked.
 
 **Evals.** `evals/mcp-attacks.json` holds 10 attacks: no scope, revoked, expired, a non-Reef payee, an
 injected URL, over the Disc, another remora's memory, a rule written directly, a redirected `payTo`, and a

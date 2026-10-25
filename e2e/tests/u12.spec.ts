@@ -14,7 +14,7 @@
  * Results go to `test-results/u12-exit.json`.
  */
 import { type ChildProcess, execFile, spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { burner } from "../support/env";
@@ -157,8 +157,11 @@ async function makeToken(page: Page, name: string, scopes: string[]) {
 /** A re-run of only the steps after a fixed failure (the exit runs once): `U12_RESUME_SCOUT=<id>`. */
 const RESUME = process.env.U12_RESUME_SCOUT;
 
+/** The real-client-over-HTTP step: `U12_HTTP_CLAUDE=<remora id>` and `U12_MCP_CONFIG=<temp path>`. */
+const HTTP_CLAUDE = process.env.U12_HTTP_CLAUDE;
+
 test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", async ({ page }) => {
-  test.skip(!!RESUME, "resuming after a fixed step");
+  test.skip(!!RESUME || !!HTTP_CLAUDE, "resuming after a fixed step");
   test.setTimeout(25 * 60_000);
   const kp = burner();
   await installTestWallet(page, kp);
@@ -437,7 +440,7 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
  * token gets 401 over stdio and HTTP, the Connections screenshots, the Wake's "Via", and the retire.
  */
 test("U12 exit (Remora), resumed: revoke → 401, the Connections page, retire", async ({ page }) => {
-  test.skip(!RESUME, "only when resuming");
+  test.skip(!RESUME || !!HTTP_CLAUDE, "only when resuming");
   test.setTimeout(15 * 60_000);
   const scoutId = RESUME as string;
   const digest = process.env.U12_RESUME_DIGEST ?? "";
@@ -532,3 +535,191 @@ test("U12 exit (Remora), resumed: revoke → 401, the Connections page, retire",
   mkdirSync("test-results", { recursive: true });
   writeFileSync("test-results/u12-exit-resume.json", JSON.stringify(results, null, 2));
 });
+
+/**
+ * Real Claude Code over Streamable HTTP (`"type": "http"`), not a script: a fresh token for an active
+ * remora of the burner, `claude -p` lists the remoras and recalls a memory written with the same token,
+ * the calls show in the token's call log, then the token is revoked. The token lives only in a temp
+ * MCP config file outside the repo, deleted afterwards, and never in results or logs.
+ */
+test("U12 exit (Remora): real Claude Code over Streamable HTTP", async ({ page }) => {
+  test.skip(!HTTP_CLAUDE, "only for the HTTP Claude Code step");
+  test.setTimeout(15 * 60_000);
+  const remoraId = HTTP_CLAUDE as string;
+  const configPath = process.env.U12_MCP_CONFIG ?? "";
+  expect(configPath, "U12_MCP_CONFIG: a temp path outside the repo").toMatch(/^\//);
+  const kp = burner();
+  await installTestWallet(page, kp);
+  await page.goto("/connections");
+  await connectAndSignIn(page);
+  const out: Record<string, unknown> = { startedAt: new Date().toISOString(), remoraId };
+
+  // A fresh token for this remora: read and write memory, nothing that pays.
+  await goto(page, "/connections");
+  await page.locator("#mcp-remora").selectOption(remoraId);
+  const tok = await makeTokenHere(page, "Claude Code HTTP", ["memory:read", "memory:write"]);
+  const tokens = await api<{ tokens: { id: string; name: string; remoraName: string }[] }>(
+    page,
+    "/api/mcp/tokens",
+  );
+  const row = tokens.tokens.find((t) => t.name === "Claude Code HTTP");
+  expect(row, "the new token is listed").toBeTruthy();
+  out.tokenId = row?.id;
+  out.remoraName = row?.remoraName;
+
+  // The memory Claude will recall, written with the same token (setup, by script).
+  const stamp = Date.now().toString(36);
+  const fact = `U12 HTTP check ${stamp}: the owner wants a ping for any transfer over 5 SUI.`;
+  const setup = httpClient(tok);
+  await setup("initialize", { protocolVersion: "2025-06-18", capabilities: {} });
+  const remembered = await setup("tools/call", {
+    name: "remora_remember",
+    arguments: { type: "episode", text: fact },
+  });
+  // Remora dedupes facts (ADR-0063 exempts only structured records): a near-identical fact from an
+  // earlier run is "already in memory", which is as good for the recall.
+  const already = /Already in memory/.test(text(remembered.body));
+  expect(remembered.body?.result?.isError && !already, text(remembered.body)).toBeFalsy();
+  out.remember = { ...remembered.body?.result?.structuredContent, alreadyInMemory: already };
+  if (!already) await page.waitForTimeout(45_000); // the blob lands on Walrus in about 20 s
+
+  // Real Claude Code, Streamable HTTP, two read-only tools.
+  writeFileSync(
+    configPath,
+    JSON.stringify({
+      mcpServers: {
+        remora: {
+          type: "http",
+          url: `${API}/mcp`,
+          headers: { Authorization: `Bearer ${tok}` },
+        },
+      },
+    }),
+  );
+  chmodSync(configPath, 0o600);
+  const t0 = new Date();
+  const claude = await new Promise<{ ok: boolean; out: string }>((done) => {
+    const env = { ...process.env } as Record<string, string | undefined>;
+    delete env.CLAUDECODE;
+    delete env.CLAUDE_CODE_ENTRYPOINT;
+    execFile(
+      "claude",
+      [
+        "-p",
+        'List my remoras with remoras_list, then use remora_recall to find what this remora remembers about "a ping for any transfer over 5 SUI". Reply in two short lines and quote the memory text you found.',
+        "--mcp-config",
+        configPath,
+        "--strict-mcp-config",
+        "--allowedTools",
+        "mcp__remora__remoras_list,mcp__remora__remora_recall",
+        "--max-turns",
+        "6",
+        "--output-format",
+        "json",
+      ],
+      { env: env as NodeJS.ProcessEnv, timeout: 240_000, cwd: root },
+      (err, stdout, stderr) =>
+        done({ ok: !err, out: (stdout || stderr || String(err)).slice(0, 4_000) }),
+    );
+  });
+  rmSync(configPath, { force: true });
+  const reply = (() => {
+    try {
+      return String((JSON.parse(claude.out) as { result?: string }).result ?? "");
+    } catch {
+      return claude.out;
+    }
+  })();
+  out.claude = {
+    ran: claude.ok,
+    reply: reply.replaceAll(tok, "rmcp_…").slice(0, 600),
+    startedAt: t0.toISOString(),
+  };
+
+  // The calls in the token's call log, with their times.
+  const log = await api<{ calls: { tool: string; at: string; ok: boolean }[] }>(
+    page,
+    `/api/mcp/tokens/${row?.id}/calls`,
+  );
+  const byClaude = log.calls
+    .filter((c) => Date.parse(c.at) >= t0.getTime())
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  out.claudeCalls = byClaude;
+  expect(byClaude.map((c) => c.tool)).toContain("remoras_list");
+  expect(byClaude.map((c) => c.tool)).toContain("remora_recall");
+  // The fact's own words, not the query's: "the owner wants a ping".
+  out.recalledTheFact = /owner wants a ping/i.test(reply);
+
+  // Revoke it, then the screenshots show its calls.
+  await goto(page, "/connections");
+  const card = page.getByTestId("token").filter({ hasText: "Claude Code HTTP" }).first();
+  await card.getByRole("button", { name: "Revoke" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Revoke" }).click();
+  await expect(card.locator('[data-slot="badge"]', { hasText: "revoked" })).toBeVisible({
+    timeout: 30_000,
+  });
+  const after = await httpClient(tok)("tools/list");
+  expect(after.status).toBe(401);
+  out.revokedThen = after.status;
+  const shot = async (name: string, theme: "light" | "dark", width: number) => {
+    await page.setViewportSize({ width, height: width < 500 ? 812 : 900 });
+    await page.evaluate((t) => localStorage.setItem("remora.theme", t), theme);
+    await goto(page, "/connections");
+    const c = page.getByTestId("token").filter({ hasText: "Claude Code HTTP" }).first();
+    await c.getByRole("button", { name: /Recent calls/ }).click();
+    await expect(c.getByTestId("token-calls")).toContainText("remora_recall");
+    await c.scrollIntoViewIfNeeded();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `no horizontal scroll at ${width}px`).toBeLessThanOrEqual(1);
+    await c.screenshot({ path: `screenshots/u12-claude-http-${name}-${theme}.png` });
+  };
+  await shot("desktop", "light", 1280);
+  await shot("desktop", "dark", 1280);
+  await shot("375", "light", 375);
+  await shot("375", "dark", 375);
+  await page.evaluate(() => localStorage.setItem("remora.theme", "light"));
+
+  // No "Claude Code HTTP" token stays live, including one an earlier failed attempt made.
+  const left = await api<{ tokens: { id: string; name: string; revokedAt: string | null }[] }>(
+    page,
+    "/api/mcp/tokens",
+  );
+  for (const t of left.tokens.filter((x) => x.name === "Claude Code HTTP" && !x.revokedAt))
+    await page.evaluate(async (id) => {
+      const session = localStorage.getItem("remora.session");
+      await fetch(`/api/mcp/tokens/${id}/revoke`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "x-remora-network": "testnet",
+          ...(session ? { "x-remora-session": session } : {}),
+        },
+      });
+    }, t.id);
+  out.finishedAt = new Date().toISOString();
+  mkdirSync("test-results", { recursive: true });
+  writeFileSync("test-results/u12-claude-http.json", JSON.stringify(out, null, 2));
+});
+
+/** `makeToken` on the page as it is (the remora already chosen); returns the secret only. */
+async function makeTokenHere(page: Page, name: string, scopes: string[]) {
+  await page.getByLabel("Name").fill(name);
+  const labels: Record<string, string> = {
+    "memory:read": "Read its memory",
+    "memory:write": "Write to its memory",
+    pay: "Pay through its Disc",
+    "approve:request": "Ask you to approve",
+  };
+  for (const [scope, label] of Object.entries(labels)) {
+    const box = page.getByRole("checkbox", { name: label });
+    if (((await box.getAttribute("aria-checked")) === "true") !== scopes.includes(scope))
+      await box.click();
+  }
+  await page.getByRole("button", { name: "Create token" }).click();
+  const secret = (await page.getByTestId("token-secret").textContent())?.trim() ?? "";
+  await page.getByRole("button", { name: "I've copied it" }).click();
+  expect(secret).toMatch(/^rmcp_[A-Za-z0-9_-]{40}$/);
+  return secret;
+}
