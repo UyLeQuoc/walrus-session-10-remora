@@ -42,6 +42,14 @@ export const Wake = z.object({
   agent: SuiAddress,
   ts: IsoDateTime,
   intent: WakeIntent,
+  /**
+   * F14 (ADR-0066): the MCP client that asked for this action, as `mcp:<client>`. The same value is
+   * the intent's `trigger.ref`, so it's covered by the intent hash; this copy is for display.
+   */
+  via: z
+    .string()
+    .regex(/^mcp:[a-z0-9][a-z0-9-]{0,39}$/, "not an mcp:<client> reference")
+    .optional(),
   result: z.object({
     tx: z.string().optional(),
     responseSha256: Sha256Hex.optional(),
