@@ -41,7 +41,7 @@
 ## What we can reuse
 
 Each entry is its own repo. It copies these pieces from a tagged Remora commit, with attribution in its
-README. The license Uy picks in U9 decides how.
+README. All three repos are MIT ([ADR-0068](../adr/0068-mit-license.md)), so a copy keeps the notice.
 
 | Piece | Where in Remora | Used by |
 |---|---|---|

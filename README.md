@@ -148,4 +148,5 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 
 ## License
 
-To be added before the repo goes public ([ADR-0017](docs/adr/0017-github-repo-private-until-submission.md)).
+[MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)). The vendored ASCII ocean keeps its upstream MIT notice in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

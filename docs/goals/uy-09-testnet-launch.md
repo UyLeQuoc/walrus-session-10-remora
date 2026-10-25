@@ -1,4 +1,4 @@
-# Goal U9: the testnet launch: a public URL, Huấn's W3 queue, red-team evals, the license
+# Goal U9: the testnet launch: a public URL, Huấn's W3 queue, red-team evals (the license is done: MIT, ADR-0068)
 
 - **Owner:** Uy's agent, with Uy at every deploy step
 - **Runs in:** the main checkout, on `main` (ADR-0022)
@@ -10,7 +10,7 @@
   - Huấn's W3 web batch (PR #11) and the backend items accepted for him;
   - D5 Sentinel → Scout handoff (demo beat 4);
   - I3 red-team evals;
-  - the license and launch docs;
+  - the launch docs (the license is done: MIT, [ADR-0068](../adr/0068-mit-license.md));
   - the Tatum follow-ups from ADR-0058.
 
 **Goal:** judges open a public URL and everything they touch works on testnet:
@@ -51,7 +51,7 @@
   - a **dedicated testnet key for the deployed playground** (recommended), so the public app and the e2e don't share the burner. Or his OK to use the burner.
   - **Railway** (API, facilitator, merchants, Postgres) and **Vercel** (web), logged in on his machine.
   - confirmation of the **triage of Huấn's 13 requests** (below).
-  - the **license**: Apache-2.0 is recommended; MIT is fine.
+  - ~~the **license**~~: done Oct 25, MIT ([ADR-0068](../adr/0068-mit-license.md)).
   - optionally an **Enoki key** for zkLogin. Without it, sign-in on the deployed app is wallet-only.
 
 ## Phase 0: clear the queue
@@ -110,7 +110,7 @@
 - **Any deploy decision** (hosts, regions, env) gets an ADR, and the runbook is updated in the same commit.
 
 ## Phase E: launch docs
-- **`LICENSE`** (Uy's choice) and its ADR. Then the README's License section.
+- **`LICENSE`:** done Oct 25, MIT, with the README's License section ([ADR-0068](../adr/0068-mit-license.md)).
 - **README:**
   - the live URL;
   - "money on testnet, memory on mainnet" stated plainly;
@@ -132,7 +132,8 @@
 - [ ] `bun run evals` reports N ≥ 20 attacks, 0 overspends, with each layer named. It's published, and its deterministic part runs in CI.
 - [ ] Deployed on testnet: `diagnose`, health, `e2e:main` and `/status` are green, and the playground is public.
 - [ ] The demo path ran twice in a row on the deployed URL. `bun run e2e`, typecheck, lint, test, `sui move test` and CI are green.
-- [ ] `LICENSE`, README, blog, demo script, the ADRs and the handoff are written; everything is pushed to `main`.
+- [x] `LICENSE` (MIT, ADR-0068).
+- [ ] README, blog, demo script, the ADRs and the handoff are written; everything is pushed to `main`.
 
 ## Never
 - Mainnet money or a mainnet publish (that's U10, Uy's call).
