@@ -66,7 +66,7 @@ import {
 } from "./rooms.ts";
 import {
   addSchedule,
-  approveSchedule,
+  approveYes,
   queueFirstRun,
   removeSchedule,
   setSchedulePaused,
@@ -658,7 +658,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   });
 
   app.post("/api/approvals/:id/approve", async (c) =>
-    c.json(await approveSchedule(rt, c.get("owner"), c.req.param("id"))),
+    c.json(await approveYes(rt, c.get("owner"), c.req.param("id"))),
   );
 
   app.post("/api/approvals/:id/reject", async (c) => {

@@ -27,9 +27,27 @@ export type PayOutcome =
       receiptId: string | null;
       eventId: string;
     }
-  | { kind: "shadow"; amount: string; reasons: string[]; eventId: string }
-  | { kind: "approval"; approvalId: string; reasons: string[]; eventId: string }
-  | { kind: "blocked"; code: string; reasons: string[]; eventId: string };
+  | {
+      kind: "shadow";
+      amount: string;
+      reasons: string[];
+      eventId: string;
+      receiptId?: string | null;
+    }
+  | {
+      kind: "approval";
+      approvalId: string;
+      reasons: string[];
+      eventId: string;
+      receiptId?: string | null;
+    }
+  | {
+      kind: "blocked";
+      code: string;
+      reasons: string[];
+      eventId: string;
+      receiptId?: string | null;
+    };
 
 export interface PayInput {
   payee: string;
@@ -38,6 +56,12 @@ export interface PayInput {
   trigger: { kind: "message" | "cron" | "chain" | "handoff"; ref: string };
   question: string;
   memories: Recalled[];
+  /**
+   * What an over-limit payment (Sonar "ask") becomes. `approval` (the default) queues the E4
+   * approval at once; `refuse` (an MCP agent, F14) records the Wake and returns `over_limit`, so the
+   * agent asks its owner explicitly with `approval_request`. Nothing is signed either way.
+   */
+  onAsk?: "approval" | "refuse";
 }
 
 const reefLabel = (s: string) => (/^reef:[a-z0-9-]+$/.test(s) ? s : "reef:unknown");
@@ -216,7 +240,28 @@ export async function requestPayment(
           { payee: p.payee, amount, url: p.url },
           wake?.id,
         );
-        return { kind: "shadow", amount, reasons: err.reasons, eventId };
+        return {
+          kind: "shadow",
+          amount,
+          reasons: err.reasons,
+          eventId,
+          receiptId: wake?.id ?? null,
+        };
+      }
+      if (err.verdict === "ask" && p.onAsk === "refuse") {
+        const eventId = await event(
+          "blocked",
+          `Didn't pay ${amount} to ${p.payee}: over the limit, the agent can ask you`,
+          { code: "over_limit", reasons: err.reasons, url: p.url, amount },
+          wake?.id,
+        );
+        return {
+          kind: "blocked",
+          code: "over_limit",
+          reasons: err.reasons,
+          eventId,
+          receiptId: wake?.id ?? null,
+        };
       }
       if (err.verdict === "ask") {
         const [a] = await deps.db
@@ -247,7 +292,13 @@ export async function requestPayment(
           urgent: true,
           buttons: [{ label: "Review", url: `${deps.webBase}/approvals` }],
         });
-        return { kind: "approval", approvalId: a?.id ?? "", reasons: err.reasons, eventId };
+        return {
+          kind: "approval",
+          approvalId: a?.id ?? "",
+          reasons: err.reasons,
+          eventId,
+          receiptId: wake?.id ?? null,
+        };
       }
       const eventId = await event(
         "blocked",
@@ -255,7 +306,13 @@ export async function requestPayment(
         { code: "sonar.blocked", reasons: err.reasons, url: p.url, payTo: err.requirements.payTo },
         wake?.id,
       );
-      return { kind: "blocked", code: "sonar.blocked", reasons: err.reasons, eventId };
+      return {
+        kind: "blocked",
+        code: "sonar.blocked",
+        reasons: err.reasons,
+        eventId,
+        receiptId: wake?.id ?? null,
+      };
     }
     const e = err as { code?: string; message?: string };
     const code = e.code ?? toDiscError(err).code;

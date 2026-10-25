@@ -63,4 +63,9 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   PLAYGROUND_SESSIONS_PER_IP: z.coerce.number().int().positive().default(3),
   PLAYGROUND_POOL: z.coerce.number().int().positive().default(10),
   PLAYGROUND_TTL_MINUTES: z.coerce.number().int().positive().default(1440),
+  /**
+   * F14 (ADR-0066): where agents reach this server (`<API_BASE_URL>/mcp`). Unset = the origin of the
+   * request that made the token, which is wrong behind a proxy that forwards only `/api`.
+   */
+  API_BASE_URL: z.string().url().optional(),
 });

@@ -1,2 +1,6 @@
-/** @remora/mcp: Remora as an MCP server (F9): remoras_list, remora_recall (remora:<id>:<ns>), wake_get. */
+/**
+ * @remora/mcp: Remora as an MCP server. v2 (F14, ADR-0066) proxies stdio to the server's /mcp with a
+ * token; v1 (F9) is the read-only session server: remoras_list, remora_recall, wake_get.
+ */
+export { createProxy, type ProxyOptions, runProxyStdio } from "./proxy.ts";
 export { createMcpServer, type McpOptions, PROTOCOL_VERSIONS, runStdio, TOOLS } from "./server.ts";

@@ -83,3 +83,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0064](0064-receipts-kitty-web-with-wallets.md) | Receipts and Kitty: a React web with wallets is the main surface (Kitty's sponsored, wallet-signed transactions; Receipts' signed picks); Telegram is optional | Accepted |
 | [0065](0065-split-receipts-and-kitty-repos.md) | Split Receipts and Kitty into their own public repos (`total-recall-*`), fresh history; remove them from Remora after the U11 exit | Accepted |
 | [0066](0066-agents-use-the-apps-through-mcp.md) | Agents use Remora, Receipts and Kitty through MCP: scoped tokens, tools that act, money only inside onchain limits (Remora MCP v2, Receipts delegations, Kitty delegates) | Accepted |
+| [0067](0067-mcp-v2-details.md) | MCP v2 details: tools on the server behind `/mcp` (stdio proxies to it), tool lists by scope, over-limit refusals then `approval_request`, `via` in the hashed trigger | Accepted |

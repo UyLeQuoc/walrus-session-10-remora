@@ -12,6 +12,7 @@ export default defineConfig({
     "./src/schema/runtime.ts",
     "./src/schema/money.ts",
     "./src/schema/hatchery.ts",
+    "./src/schema/mcp.ts",
   ],
   dialect: "postgresql",
   dbCredentials: {
