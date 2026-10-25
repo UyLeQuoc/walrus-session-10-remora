@@ -1,10 +1,19 @@
 # Ideas for Tracks 1 and 3, built on Remora's rails
 
-> **Status (Oct 24, 2026):** both are being built in this repo by goal U11
-> ([ADR-0060](../adr/0060-build-receipts-and-kitty.md)). **Entering them is not decided.** We compete in
-> Track 2 with Remora ([ADR-0001](../adr/0001-track-2-only-remora.md)), and entering another track would
-> supersede that ADR. The ideas parked on Oct 18 are in [archive/](../archive/): Called It and Oath (Track 1), Tab and Mandate
-> (Track 3). This doc revisits them now that Remora's rails exist.
+> **Status (Oct 25, 2026):** both are built (goal U11, [ADR-0060](../adr/0060-build-receipts-and-kitty.md)).
+> - **Exits:** Kitty passed its testnet exit, and so did Receipts' first stage. Receipts' last stage runs
+>   once tonight's NBA games are final ([the exit record](../spikes/2026-10-25-u11-exit.md)).
+> - **Web:** both now have a web with wallets ([ADR-0064](../adr/0064-receipts-kitty-web-with-wallets.md)).
+> - **Repos:** both live in their own public repos ([ADR-0065](../adr/0065-split-receipts-and-kitty-repos.md)):
+>   [total-recall-receipts](https://github.com/UyLeQuoc/total-recall-receipts) and
+>   [total-recall-kitty](https://github.com/UyLeQuoc/total-recall-kitty).
+> - **Next:** goal U12 turns them toward agents
+>   ([ADR-0066](../adr/0066-agents-use-the-apps-through-mcp.md)).
+>
+> **Entering them is not decided.** We compete in Track 2 with Remora
+> ([ADR-0001](../adr/0001-track-2-only-remora.md)), and entering another track would supersede that ADR. The
+> ideas parked on Oct 18 are in [archive/](../archive/): Called It and Oath (Track 1), Tab and Mandate (Track 3).
+> This doc revisits them now that Remora's rails exist.
 
 ## Read this first: what an extra entry costs
 

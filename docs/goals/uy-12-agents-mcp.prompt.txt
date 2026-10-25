@@ -1,0 +1,72 @@
+Goal U12: agents use Remora, Receipts and Kitty through MCP, with a UI and an MCP server in each (ADR-0066). Decide, write the ADR, continue; anything for Uy goes on the final list.
+
+Source of truth: docs/goals/uy-12-agents-mcp.md. Read it fully, plus the files it lists.
+
+Setup:
+- Three checkouts on main: Remora (here), ../total-recall-receipts, ../total-recall-kitty. Reuse each .env.
+- Money and Move on testnet. Memory on the mainnet relayer.
+- Run diagnose's memory recall first. Check Huấn's state before claiming.
+- Keep the burner and the sponsor >=0.05 SUI.
+
+Remora (F14):
+- One additive contract PR first: McpToken, McpCall, Wake.via, with fixtures. Merge when green.
+- Tokens: shown once, stored hashed, scoped (memory:read, memory:write, pay, approve:request), expiring, revocable, rate-limited.
+- Tools: v1's, remora_remember (episode/source only, scrubbed, tagged by:mcp; a rule needs the owner), reef_search, pay (through the Disc, Wake via), approval_request (E4), wake_verify, remora_ask.
+- stdio and Streamable HTTP at /mcp.
+- The Connections page (claimed per ADR-0027, or handed over): tokens, calls, spend, revoke, a claude mcp add line.
+- MCP attacks in evals/.
+
+Receipts (RC7):
+- The owner's wallet signs a delegation.
+- The agent signs its own picks; verify checks the pick signature, the delegation and the anchor.
+- Agents are scored voices in trust memories.
+- MCP: list_markets, get_call, submit_pick, get_receipt, leaderboard. stdio holds the agent key; remote is read-only unless custodial (labelled).
+- Agents page.
+- Reference forecaster agent on OpenRouter.
+
+Kitty (KT4):
+- Move PR, then a testnet upgrade with the spike owner's UpgradeCap: set_delegate and revoke_delegate (dynamic fields), propose_as_delegate, approve_as_delegate aborting above the cap (EOverDelegateCap); tests for each abort.
+- The agent signs through the sponsored prepare/execute flow.
+- MCP: pot_status, why, norms, propose_spend, approve.
+- "Your agent" on the pot page.
+- Reference treasurer agent whose reasons cite memory.
+
+Exit (testnet; steps in the goal file):
+- Remora:
+  - stdio and HTTP clients with their own tokens;
+  - remember, then recall;
+  - pay within the Disc, verified;
+  - over-limit pay aborts, then the owner approves in the web;
+  - no scope gives 403, revoked gives 401.
+- Receipts:
+  - a delegated agent picks 2 real games via MCP, anchored and verified;
+  - after a revoke, a pick is refused.
+- Kitty:
+  - a delegate approves $0.05, which executes;
+  - $0.20 aborts onchain, then the member approves in the web;
+  - after a revoke, its approval aborts.
+- The UI shows agent actions in all three apps (desktop and 375 px, light and dark).
+
+Run each exit once; re-run only a fixed step.
+
+Finish:
+- docs/spikes/<date>-u12-exit.md, ending with the list for Uy.
+- Exit docs and READMEs in each repo; remora-features (F14), threat model, goals README; a handoff to Huấn.
+- Stop every service, stream and poller.
+
+Hard rules:
+- No mainnet money or publish. No deploy.
+- Never put a key in an MCP response, a log or a commit. Never store a token in plain text. Never commit .env or print key values. No force-push.
+- Every agent action above an onchain limit goes back to its owner.
+- Never edit reference/, Huấn's paths (except a claim) or packages/schema (except the contract PR).
+- Never rewrite an accepted ADR. Every decision gets an ADR in the same commit.
+- No unfiltered stream or two pollers on one token. No invented data; agent actions are labelled.
+- Before each push: git pull --rebase origin main && bun run typecheck && bun run lint && bun run test, then git push origin HEAD:main.
+
+Done when:
+- The contract and Move PRs are merged; the upgrade is on testnet.
+- The exit passes, or each failing step names its blocker.
+- typecheck, lint, test, sui move test, evals and CI are green in all three repos.
+- Docs are written and everything is pushed.
+
+Finish with a short Vietnamese summary for Uy.

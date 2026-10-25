@@ -18,6 +18,7 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 10 | [U9: the testnet launch (public URL, /status, Huấn's W3 queue, D5 handoff, red-team evals, license)](uy-09-testnet-launch.md) ([prompt](uy-09-testnet-launch.prompt.txt)) | Uy's agent + Uy at every deploy step | Next | U8 ✅ ([ADR-0059](../adr/0059-launch-on-testnet.md)) |
 | 11 | [U10: the mainnet pass (mainnet money, owned memory, Walrus Sites)](uy-10-mainnet-pass.md) ([prompt](uy-10-mainnet-pass.prompt.txt)) | Uy's agent + Uy at every mainnet transaction | When Uy calls it | U9 |
 | 12 | [U11: Receipts (Track 1) and Kitty (Track 3) on Remora's rails](uy-11-receipts-and-kitty.md) ([prompt](uy-11-receipts-and-kitty.prompt.txt)) | Uy's agent, unattended overnight | **Tonight (Oct 24–25)**, independent of U9 ([ADR-0060](../adr/0060-build-receipts-and-kitty.md)) | U8 ✅ |
+| 13 | [U12: agents use Remora, Receipts and Kitty through MCP (a UI and an MCP server in each)](uy-12-agents-mcp.md) ([prompt](uy-12-agents-mcp.prompt.txt)) | Uy's agent (+ the Connections page if Huấn hasn't started it, ADR-0027) | Next, after U11's wrap-up and before U9, so the launch ships it ([ADR-0066](../adr/0066-agents-use-the-apps-through-mcp.md)) | U11 |
 
 ## How to run one
 ```bash

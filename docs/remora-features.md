@@ -194,6 +194,7 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | F11 | Memory hygiene | Secret scrubber before every write (W2); rule-conflict detection, dedupe, recency weighting (W3) | W2/W3 |
 | F12 | Private namespaces | `MemWalManual` client-side Seal encryption (needs an Enoki Seal key) | W4 |
 | F13 | Memory capsules | Share a subset of memories through a Seal grant (expiring, revocable) | W4 |
+| F14 | **MCP v2: agents act** | Scoped, revocable MCP tokens made in the web (Connections page); tools that write memory, pay through the Disc and request over-limit approvals; Streamable HTTP at `/mcp` as well as stdio; every action a Wake with `via` (ADR-0066) | W3 |
 
 ### G. Wake (receipts & verification)
 | ID | Feature | Details | Wave |

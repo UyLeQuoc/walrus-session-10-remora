@@ -81,3 +81,5 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0062](0062-kitty-pot-design.md) | Kitty: a Move pot on app-bound allowances, a keeper that checks balances first, payday learning in memory | Accepted; the web superseded by ADR-0064 |
 | [0063](0063-structured-records-skip-dedupe.md) | Receipts and Kitty write structured records without the semantic duplicate check | Accepted |
 | [0064](0064-receipts-kitty-web-with-wallets.md) | Receipts and Kitty: a React web with wallets is the main surface (Kitty's sponsored, wallet-signed transactions; Receipts' signed picks); Telegram is optional | Accepted |
+| [0065](0065-split-receipts-and-kitty-repos.md) | Split Receipts and Kitty into their own public repos (`total-recall-*`), fresh history; remove them from Remora after the U11 exit | Accepted |
+| [0066](0066-agents-use-the-apps-through-mcp.md) | Agents use Remora, Receipts and Kitty through MCP: scoped tokens, tools that act, money only inside onchain limits (Remora MCP v2, Receipts delegations, Kitty delegates) | Accepted |
