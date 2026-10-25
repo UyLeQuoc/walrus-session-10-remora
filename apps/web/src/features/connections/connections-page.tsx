@@ -48,6 +48,16 @@ const SCOPES: { scope: McpScope; label: string; hint: string }[] = [
   },
 ];
 
+/** A future date ("Nov 24"): `Time` reads only the past ("2h ago"). */
+function OnDate({ value }: { value: string }) {
+  const date = new Date(value);
+  return (
+    <time dateTime={date.toISOString()} title={date.toLocaleString()}>
+      {date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+    </time>
+  );
+}
+
 const statusOf = (t: McpToken): "active" | "retired" | "failed" =>
   t.revokedAt ? "retired" : Date.parse(t.expiresAt) <= Date.now() ? "failed" : "active";
 const statusLabel = (t: McpToken) =>
@@ -81,7 +91,8 @@ function Created({ c, onDone }: { c: McpTokenCreated; onDone: () => void }) {
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
           {c.token.name} can act for {c.token.remoraName} as <code>mcp:{c.token.client}</code> until{" "}
-          <Time value={c.token.expiresAt} />. Remora keeps only a hash, so it can't show this again.
+          <OnDate value={c.token.expiresAt} />. Remora keeps only a hash, so it can't show this
+          again.
         </p>
         <CopyRow label="Token" value={c.secret} testId="token-secret" />
         <CopyRow
@@ -272,7 +283,10 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
           </div>
           <div>
             <dt className="text-muted-foreground">Spent</dt>
-            <dd className="text-lg font-semibold tabular-nums" data-testid="token-spend">
+            <dd
+              className="whitespace-nowrap text-lg font-semibold tabular-nums"
+              data-testid="token-spend"
+            >
               {usdc(t.spend)} USDC
             </dd>
           </div>
@@ -294,7 +308,7 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
             </>
           ) : (
             <>
-              , expires <Time value={t.expiresAt} />
+              , expires <OnDate value={t.expiresAt} />
             </>
           )}
           .
@@ -305,7 +319,7 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
         >
-          <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`size-4 ${open ? "rotate-180" : ""}`} />
           Recent calls
         </button>
         {open ? <Calls id={t.id} /> : null}

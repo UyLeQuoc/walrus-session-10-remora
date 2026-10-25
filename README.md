@@ -27,6 +27,7 @@ All chain I/O goes through **Tatum's Sui gRPC**.
 | **Hatchery** | Share a remora as a Walrus blob with its author onchain; anyone hatches a copy through a consent screen with one signature | [U7 exit](docs/spikes/2026-10-22-u7-exit.md): hatch `DTq4sd4z…`, a poisoned template refused |
 | **Proof of Learning** | A ping, 👎, a rule, then silence on the same kind of event, with the rule's memory blob as the delta | [U7 exit §5](docs/spikes/2026-10-22-u7-exit.md) |
 | **Your memory** | Hide, correct, forget all, expiry, Markdown/JSON export, and Claude Code via `packages/mcp` | [U7 exit §6](docs/spikes/2026-10-22-u7-exit.md) |
+| **Agents (MCP)** | Make a scoped, revocable token on the Connections page and Claude Code (or any MCP client) uses one remora: it remembers, pays Reef services through the Disc, and over the cap asks you; every call is logged and its Wakes say `via mcp:…` | [U12 handoff](docs/handoffs/2026-10-25-uy-to-huan-u12-landed.md): a paid `sui-risk` through MCP verifies (`2UGiVjrJ…`), 10 MCP attacks in CI, 0 paid |
 
 ## How it fits together
 
@@ -35,11 +36,11 @@ flowchart LR
   subgraph You
     W[Wallet] --> Web[Web app]
     TG[Telegram]
-    CC[Claude Code]
+    CC[Claude Code, any MCP agent]
   end
   Web --> API[Remora API + runtime]
   TG --> API
-  CC -->|MCP| API
+  CC -->|MCP: token, /mcp| API
   API -->|turns| Model[Models via OpenRouter]
   API -->|Sonar policy| API
   API -->|recall / remember| MemWal[MemWal relayer] --> Walrus[(Walrus)]

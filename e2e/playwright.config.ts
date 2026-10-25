@@ -52,6 +52,8 @@ export default defineConfig({
     { name: "u6", testMatch: /u6\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "u7", testMatch: /u7\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     { name: "u8", testMatch: /u8\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    // U12 (F14): agents through MCP. Claimed for U12 (docs/handoffs/2026-10-25-uy-to-huan-u12-claim.md).
+    { name: "u12", testMatch: /u12\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // The signed-in light/dark screenshot pass (plan §7.3). Opt in with AUDIT=1 so the default run
     // stays fast and only spends the burner when someone asks for the pictures.
     ...(process.env.AUDIT === "1"
@@ -82,6 +84,8 @@ export default defineConfig({
             WATCHER: "on",
             INDEXER: "off",
             WEB_BASE_URL: "http://localhost:5183",
+            // F14: where MCP clients reach /mcp (the web's proxy forwards only /api).
+            API_BASE_URL: "http://localhost:8797",
             FACILITATOR_URL_TESTNET: FAC,
             MERCHANTS_URL_TESTNET: MERCHANTS,
             MERCHANT_PAYTO_TESTNET: payTo,

@@ -20,6 +20,7 @@ import {
   getAllowance,
   getDisc,
   type IssueArgs,
+  toDiscError,
 } from "@remora/disc-sdk";
 import { type Budget, isCatalogModel, RemoraConfig } from "@remora/schema";
 import type { RemoraSigner } from "@remora/signer";
@@ -468,6 +469,15 @@ export function createRemoraService(deps: RemoraDeps) {
     async retireTx(id: string, owner: string): Promise<string | null> {
       const r = await mine(id, owner);
       if (!r.discId || !r.allowanceId || !r.capId) return null;
+      // A Disc already revoked elsewhere (the owner's wallet, a cleanup) has nothing left to sign:
+      // forget it, and the confirm retires the remora without a transaction.
+      try {
+        await getDisc(deps.networks.client(r.network).core, r.discId);
+      } catch (err) {
+        if (toDiscError(err).code !== "allowance.revoked") throw err;
+        await setRow(id, { discId: null, allowanceId: null, capId: null });
+        return null;
+      }
       const tx = buildRevoke(discCfg(r.network), {
         discId: r.discId,
         capId: r.capId,

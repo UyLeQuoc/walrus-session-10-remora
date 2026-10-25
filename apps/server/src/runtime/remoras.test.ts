@@ -56,6 +56,8 @@ describe.skipIf(!local)("remora service (B1, B3, B8, N5)", () => {
   });
 
   let discName = "";
+  /** The Disc was revoked outside Remora: reading it says "not found". */
+  let discGone = false;
   const DISC = normalizeSuiAddress("0xd1");
   const fake = {
     core: {
@@ -82,43 +84,46 @@ describe.skipIf(!local)("remora service (B1, B3, B8, N5)", () => {
           transaction: { sender: OWNER },
         },
       }),
-      getObject: async ({ objectId }: { objectId: string }) => ({
-        object: {
-          objectId,
-          type: "",
-          // Confirm matches each created object by the Disc name (team imports issue several).
-          content:
-            objectId === normalizeSuiAddress("0xa11")
-              ? AllowanceBcs.serialize({
-                  id: objectId,
-                  settings: {
-                    funder: OWNER,
-                    spender: null,
-                    app: null,
-                    lifetime_cap: null,
-                    start_timestamp_ms: null,
-                    expiration_timestamp_ms: null,
-                    rate_limit: null,
-                    name: discName,
-                  },
-                  current_spend: 0n,
-                }).toBytes()
-              : objectId === normalizeSuiAddress("0xca")
-                ? AllowanceCapBcs.serialize({
+      getObject: async ({ objectId }: { objectId: string }) => {
+        if (discGone && objectId === DISC) throw new Error(`Object ${DISC} not found`);
+        return {
+          object: {
+            objectId,
+            type: "",
+            // Confirm matches each created object by the Disc name (team imports issue several).
+            content:
+              objectId === normalizeSuiAddress("0xa11")
+                ? AllowanceBcs.serialize({
                     id: objectId,
-                    allowance: normalizeSuiAddress("0xa11"),
+                    settings: {
+                      funder: OWNER,
+                      spender: null,
+                      app: null,
+                      lifetime_cap: null,
+                      start_timestamp_ms: null,
+                      expiration_timestamp_ms: null,
+                      rate_limit: null,
+                      name: discName,
+                    },
+                    current_spend: 0n,
                   }).toBytes()
-                : DiscBcs.serialize({
-                    id: DISC,
-                    owner: OWNER,
-                    name: discName,
-                    payees: { contents: [PAYTO] },
-                    per_payment_cap: 50_000n,
-                    paused: false,
-                    version: 1n,
-                  }).toBytes(),
-        },
-      }),
+                : objectId === normalizeSuiAddress("0xca")
+                  ? AllowanceCapBcs.serialize({
+                      id: objectId,
+                      allowance: normalizeSuiAddress("0xa11"),
+                    }).toBytes()
+                  : DiscBcs.serialize({
+                      id: DISC,
+                      owner: OWNER,
+                      name: discName,
+                      payees: { contents: [PAYTO] },
+                      per_payment_cap: 50_000n,
+                      paused: false,
+                      version: 1n,
+                    }).toBytes(),
+          },
+        };
+      },
     },
   } as unknown as SuiGrpcClient;
   const networks = createNetworks(
@@ -183,6 +188,19 @@ describe.skipIf(!local)("remora service (B1, B3, B8, N5)", () => {
     expect(feed.map((e) => e.summary)).toEqual(
       expect.arrayContaining([expect.stringMatching(/is live/)]),
     );
+  });
+
+  it("retires a remora whose Disc was already revoked elsewhere, with nothing to sign (B8)", async () => {
+    const [scout] = (await service.list(OWNER, "testnet")).filter((r) => r.discId === DISC);
+    if (!scout) throw new Error("no confirmed Scout");
+    discGone = true;
+    try {
+      expect(await service.retireTx(scout.id, OWNER)).toBeNull();
+      const retired = await service.confirmRetire(scout.id, OWNER);
+      expect(retired).toMatchObject({ status: "retired", discId: null });
+    } finally {
+      discGone = false;
+    }
   });
 
   it("creates read-only Sentinel without a Disc, watching the owner by default", async () => {

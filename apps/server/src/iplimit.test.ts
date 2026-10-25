@@ -68,8 +68,13 @@ describe("isUnmetered", () => {
       `/api/remoras/${id}`,
       `/api/remoras/${id}/budget`,
       `/api/events/${id}/why`,
+      // F14: the Connections page's token list and a token's call log.
+      "/api/mcp/tokens",
+      `/api/mcp/tokens/${id}/calls`,
     ])
       expect(isUnmetered("GET", path), path).toBe(true);
+    expect(isUnmetered("POST", "/api/mcp/tokens")).toBe(false);
+    expect(isUnmetered("POST", `/api/mcp/tokens/${id}/revoke`)).toBe(false);
     expect(isUnmetered("GET", `/api/remoras/${id}/memory`)).toBe(false);
     expect(isUnmetered("GET", "/api/verify/abc")).toBe(false);
     expect(isUnmetered("POST", `/api/remoras/${id}/ask`)).toBe(false);
