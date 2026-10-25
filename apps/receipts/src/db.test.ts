@@ -3,14 +3,17 @@
  * the way Remora's memory tests skip without credentials.
  */
 import { randomUUID } from "node:crypto";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createApp } from "./app.ts";
 import { createBot } from "./bot.ts";
 import type { Anchorer } from "./chain.ts";
 import { anchors, createDb, events, groups, members, picks } from "./db/index.ts";
 import { rootFromProof } from "./merkle.ts";
+import { joinMessage, pickMessage } from "./messages.ts";
 import { anchorPending, logPick, PickError, receiptFor } from "./picks.ts";
-import { verifyReceipt } from "./verify.ts";
+import { SIGNATURE_CHECK, verifyReceipt } from "./verify.ts";
 
 const url = process.env.DATABASE_URL ?? "postgres://remora:remora@localhost:5434/remora";
 const db = createDb(url);
@@ -163,5 +166,80 @@ describe("the Telegram bot", () => {
     expect(sent.at(-1)).toMatch(/Locked in: Zebras win at 70%/);
     await bot.handleUpdate(message("/pick Yaks 70") as never);
     expect(sent.at(-1)).toMatch(/No open market|Locked at/);
+  });
+});
+
+describe("wallet members (ADR-0064)", () => {
+  it("joins with a signature, must sign picks, and the receipt shows the signature", async (ctx) => {
+    if (!up) return ctx.skip();
+    const app = createApp({ db, memory: null, anchorer: null, webDist: "/nonexistent" });
+    const kp = Ed25519Keypair.generate();
+    const address = kp.toSuiAddress();
+    const sign = async (text: string) =>
+      (await kp.signPersonalMessage(new TextEncoder().encode(text))).signature;
+    const post = (path: string, body: unknown) =>
+      app.request(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const at = new Date().toISOString();
+    const join = {
+      groupId,
+      groupName: "unit test",
+      name: "Wally",
+      address,
+      test: true,
+      at,
+    };
+    // A signature over other text is refused.
+    const refused = await post(`/api/groups/${groupId}/join`, {
+      name: "Wally",
+      address,
+      test: true,
+      at,
+      signature: await sign(joinMessage({ ...join, name: "Someone else" })),
+    });
+    expect(refused.status).toBe(401);
+    const joined = await post(`/api/groups/${groupId}/join`, {
+      name: "Wally",
+      address,
+      test: true,
+      at,
+      signature: await sign(joinMessage(join)),
+    });
+    expect(joined.status).toBe(201);
+    const member = (await joined.json()) as { id: string; address: string; label: string };
+    expect(member.address).toBe(address);
+    expect(member.label).toBe("Wally (test)");
+
+    const pick = { groupId, memberId: member.id, eventId: open, side: "no", confidence: 72 };
+    const unsigned = await post("/api/picks", pick);
+    expect(unsigned.status).toBe(401);
+    const text = pickMessage({
+      groupId,
+      eventId: open,
+      eventTitle: "Wombats at Zebras",
+      side: "no",
+      sideLabel: "Wombats win",
+      confidencePct: 72,
+      at: new Date().toISOString(),
+    });
+    const signedAt = text.split("\n").at(-1)?.slice(4) as string;
+    const ok = await post("/api/picks", { ...pick, signature: await sign(text), signedAt });
+    expect(ok.status).toBe(201);
+    const { pick: saved } = (await ok.json()) as { pick: { id: string } };
+
+    const shown = (await (await app.request(`/api/picks/${saved.id}`)).json()) as {
+      receipt: { pick: { signer: string }; signedMessage: string };
+      member: { label: string };
+    };
+    expect(shown.receipt.pick.signer).toBe(address);
+    expect(shown.receipt.signedMessage).toBe(text);
+    const v = (await (await app.request(`/api/picks/${saved.id}/verify`)).json()) as {
+      checks: { name: string; ok: boolean }[];
+    };
+    expect(v.checks.find((c) => c.name === SIGNATURE_CHECK)?.ok).toBe(true);
+    expect(v.checks.find((c) => c.name === "pick matches its leaf")?.ok).toBe(true);
   });
 });

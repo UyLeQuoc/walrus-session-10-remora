@@ -1,4 +1,4 @@
-// The Kitty exit (U11, ADR-0062), on testnet, in one process: the keeper, the payday stream and the web
+// The Kitty exit (U11, ADR-0062), on testnet, in one process: the keeper, the payday stream and the API
 // run here, so no second poller or server is needed. Test members are generated keys, labelled "test".
 //   bun --env-file=../../.env scripts/exit.ts
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -16,7 +16,7 @@ import {
   propose,
   spendAuto,
 } from "../src/actions.ts";
-import { createApp } from "../src/app.tsx";
+import { createApp } from "../src/app.ts";
 import { addSendUsdc, ChainAbort, micro, readPot, usd } from "../src/chain.ts";
 import { inflows, members, memories, pots } from "../src/db/index.ts";
 import { wire } from "../src/deps.ts";
@@ -341,8 +341,10 @@ if (process.argv[2] === "suggest") {
   );
   process.exit();
 }
-if (process.argv[2] === "web") {
-  // The pot page's own forms: propose a spend, approve it to quorum (executes), and close.
+if (process.argv[2] === "api" || process.argv[2] === "web") {
+  // The JSON API's test-member endpoints: propose a spend, approve it to quorum (executes), and close.
+  // (On Oct 24 this mode drove the server-rendered pot page's forms; the wallet web replaced them,
+  // ADR-0064, and its own run is e2e/kitty.e2e.ts.)
   const q = await createPot(w, {
     creator: A,
     name: "Web check (test)",
@@ -381,30 +383,27 @@ if (process.argv[2] === "web") {
     )[0] as typeof members.$inferSelect,
     { force: true, amount: micro(0.1) },
   );
-  const post = (path: string, body: Record<string, string>) =>
+  const post = (path: string, body: Record<string, unknown>) =>
     app.request(path, {
       method: "POST",
-      body: new URLSearchParams(body),
-      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
     });
-  const page = await (await app.request(`/pots/${q.potId}`)).text();
-  check(
-    "the pot page offers propose and approve to its test members",
-    page.includes("Propose a spend"),
-    "",
-  );
-  const proposed = await post(`/pots/${q.potId}/proposals`, {
-    member: A,
+  const detail = await app.request(`/api/pots/${q.potId}`);
+  check("the pot's detail lists its members", detail.status === 200, detail.status);
+  const proposed = await post(`/api/pots/${q.potId}/proposals`, {
+    kind: "spend",
+    proposer: A,
     memo: "food bread",
-    amount: "0.04",
+    amountUsd: 0.04,
     payee: ownerAddr,
   });
   const before = await bal(ownerAddr);
-  const approved = await post(`/pots/${q.potId}/proposals/0/approve`, { member: B });
+  const approved = await post(`/api/pots/${q.potId}/proposals/0/approve`, { member: B });
   const after = await bal(ownerAddr);
   check(
-    "a spend proposed and approved from the page executes at quorum",
-    proposed.status === 302 && approved.status === 302 && after - before === micro(0.04),
+    "a spend proposed and approved through the API executes at quorum",
+    proposed.status === 201 && approved.status === 200 && after - before === micro(0.04),
     { paid: after - before },
   );
   const c = await propose(w, q.potId, A, { kind: "close" });
@@ -520,16 +519,15 @@ if (resume) {
     capPerWindow: micro(0.4),
     test: true,
   });
-  const form = new URLSearchParams({ member: C, name: "Chi", cap: "0.40" });
-  const jc = await app.request(`/pots/${pot.potId}/join`, {
+  const jc = await app.request(`/api/pots/${pot.potId}/join`, {
     method: "POST",
-    body: form,
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: JSON.stringify({ member: C, name: "Chi", capUsd: 0.4 }),
+    headers: { "content-type": "application/json" },
   });
   const ms = await w.db.select().from(members).where(eq(members.potId, pot.potId));
   check(
-    "three members joined with one signature each (C through the web form)",
-    ms.length === 3 && jc.status === 302,
+    "three members joined with one signature each (C through the API)",
+    ms.length === 3 && jc.status === 201,
     { A: ja.digest, B: jb.digest, C: ms.find((m) => m.address === C)?.joinDigest },
   );
   out.joins = ms.map((m) => ({ name: m.name, allowance: m.allowanceId, digest: m.joinDigest }));
@@ -782,15 +780,15 @@ check(
   Object.values(counts).reduce((s, x) => s + x, 0) >= 10,
   { indexedStored: stored.length, relayer: counts },
 );
-const learned = await app.request(`/pots/${pot.potId}/learned`);
-const learnedHtml = await learned.text();
+const learned = await app.request(`/api/pots/${pot.potId}/memories`);
+const learnedRows = (await learned.json()) as { blobId: string | null }[];
 check(
-  "the learned page shows them",
-  learned.status === 200 && (learnedHtml.match(/blob /g)?.length ?? 0) >= 10,
+  "the learned memories are served, each with its blob",
+  learned.status === 200 && learnedRows.filter((r) => r.blobId).length >= 10,
   { status: learned.status },
 );
-const page = await app.request(`/pots/${pot.potId}`);
-check("the pot page renders", page.status === 200, page.status);
+const page = await app.request(`/api/pots/${pot.potId}`);
+check("the pot's detail is served", page.status === 200, page.status);
 
 await w.memory?.flush();
 out.tatumUsage = tatumUsage();

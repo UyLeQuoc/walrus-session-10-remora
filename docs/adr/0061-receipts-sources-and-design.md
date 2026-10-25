@@ -1,6 +1,6 @@
 # ADR-0061: Receipts: keyless sources, binary markets, batch anchors, and a server-rendered web
 
-- **Status:** Accepted
+- **Status:** Accepted; the **Web** part is superseded by [ADR-0064](0064-receipts-kitty-web-with-wallets.md)
 - **Date:** 2026-10-24
 - **Deciders:** Uy's agent (U11, unattended; Uy reviews in the morning)
 

@@ -2,11 +2,16 @@
  * Pick receipts (ADR-0061). A leaf is `sha256("receipts/v1" ‖ canonical pick JSON)`, an inner node is
  * `sha256(left ‖ right)`, and an odd node is promoted unchanged. The root goes onchain with
  * `receipts::anchor`; the proof lets anyone recompute it from one pick.
+ *
+ * A pick signed by the member's wallet (ADR-0064) hashes as `receipts/v2`, with the signer and the
+ * signature in the leaf, so the anchor proves the signature existed before lock. Unsigned picks keep
+ * v1, and every leaf already anchored still verifies.
  */
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from "@noble/hashes/utils.js";
 
-const DOMAIN = "receipts/v1";
+const DOMAIN_V1 = "receipts/v1";
+const DOMAIN_V2 = "receipts/v2";
 
 export interface PickLeaf {
   id: string;
@@ -17,12 +22,18 @@ export interface PickLeaf {
   confidence: number;
   /** ISO 8601, UTC. */
   createdAt: string;
+  /** The wallet that signed the pick (v2 only). */
+  signer?: string;
+  /** Its personal-message signature over the pick's message (v2 only). */
+  signature?: string;
 }
+
+const signed = (p: PickLeaf) => !!(p.signer && p.signature);
 
 /** Fixed key order and fixed precision, so the same pick always hashes the same. */
 export function canonicalPick(p: PickLeaf): string {
-  return JSON.stringify({
-    v: 1,
+  const base = {
+    v: signed(p) ? 2 : 1,
     id: p.id,
     groupId: p.groupId,
     memberId: p.memberId,
@@ -30,11 +41,13 @@ export function canonicalPick(p: PickLeaf): string {
     side: p.side,
     confidence: p.confidence.toFixed(2),
     createdAt: new Date(p.createdAt).toISOString(),
-  });
+  };
+  return JSON.stringify(signed(p) ? { ...base, signer: p.signer, signature: p.signature } : base);
 }
 
 export function leafHash(p: PickLeaf): string {
-  return bytesToHex(sha256(concatBytes(utf8ToBytes(DOMAIN), utf8ToBytes(canonicalPick(p)))));
+  const domain = signed(p) ? DOMAIN_V2 : DOMAIN_V1;
+  return bytesToHex(sha256(concatBytes(utf8ToBytes(domain), utf8ToBytes(canonicalPick(p)))));
 }
 
 export interface ProofStep {

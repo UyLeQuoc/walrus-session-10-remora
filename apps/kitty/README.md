@@ -7,7 +7,8 @@
 
 Track 3 (Consumer Finance Apps). Built in the Remora monorepo on Remora's rails
 ([ADR-0060](../../docs/adr/0060-build-receipts-and-kitty.md)); the design is
-[ADR-0062](../../docs/adr/0062-kitty-pot-design.md) and the idea is in
+[ADR-0062](../../docs/adr/0062-kitty-pot-design.md), the wallet web is
+[ADR-0064](../../docs/adr/0064-receipts-kitty-web-with-wallets.md), and the idea is in
 [docs/ideas](../../docs/ideas/tracks-1-and-3.md).
 
 - **Status:** U11. Runs locally; money and Move on testnet, memory on the mainnet relayer.
@@ -39,6 +40,33 @@ Track 3 (Consumer Finance Apps). Built in the Remora monorepo on Remora's rails
    - Leaving revokes the allowance, so no more pulls; what you put in stays.
    - Closing (by vote, or by anyone after the deadline) refunds pro rata.
 
+## The web (ADR-0064)
+The web is the main surface; Telegram is optional. Members sign with **their own wallet** (dapp-kit on
+testnet), and Kitty pays the gas.
+- **Home:** the pots, "Start a pot" (the wallet creates it), and a "Get ready" card. Kitty pulls from the
+  wallet's USDC **address balance**, so the card offers to move USDC coins there (one sponsored
+  signature), or points to [Circle's testnet faucet](https://faucet.circle.com).
+- **Pot page** (`/pots/:id`): progress, your status (join with one signature, or leave), members with
+  their next pull and 🧠 reason (linking the Walrus blob), proposals with approve, Kitty's suggested
+  auto-ok rule with "Propose it", and the keeper's pulls.
+- **What Kitty learned** (`/pots/:id/learned`): every memory behind the reasons.
+
+### How a wallet signs a sponsored transaction
+1. The web posts what the member wants to `/api/tx/prepare` (`create`, `join`, `propose`, `approve`,
+   `leave` or `deposit`), with the wallet's address.
+2. The server runs the same action as for a test member (`src/actions.ts`), with a signer that stops at
+   the signature (`src/wallet.ts`):
+   - it builds the **whole** transaction: the member is the sender, the sponsor the gas owner and payer;
+   - a build that would abort answers 409 with the contract's reason (`EUnderQuorum`, …), before any
+     signature is asked for;
+   - otherwise it answers with the bytes and their digest.
+3. The wallet signs the bytes (`useSignTransaction`). The web posts the signature to `/api/tx/execute`.
+4. The server checks that the signature signs those bytes as the sender, adds the sponsor's signature,
+   executes, waits, and records the result (the mirror and memory) exactly as before.
+
+**The sponsor only ever signs bytes its own server built.** An unsigned build expires after 2 minutes,
+and nothing is sent. The approval that reaches quorum executes in the same transaction.
+
 ## Tatum (gRPC only, ADR-0021)
 | Call | Where | Why |
 |---|---|---|
@@ -47,7 +75,9 @@ Track 3 (Consumer Finance Apps). Built in the Remora monorepo on Remora's rails
 | `GetCheckpoint` | `src/watcher.ts` | Backfill a short gap after a dropped stream (not after a re-subscribe) |
 | `SimulateTransaction` · `ExecuteTransaction` · `GetTransaction` | `src/chain.ts` | Build (the SDK's resolve), send sponsored, wait |
 | `GetObject` | `src/chain.ts` (`readPot`) | The pot's balance, totals and auto-ok cap |
-| `ListCoins` · `GetReferenceGasPrice` | `src/chain.ts` | Gas data for a transaction sent without the dry run |
+| `ListCoins` · `GetReferenceGasPrice` | `src/chain.ts` | Gas data for a transaction sent without the dry run; the wallet's USDC coins to move into its balance |
+
+The browser itself only talks gRPC-web to the public testnet fullnode, through dapp-kit.
 
 ## Memory (operator account, mainnet relayer)
 | Namespace | Example |
@@ -60,21 +90,48 @@ Track 3 (Consumer Finance Apps). Built in the Remora monorepo on Remora's rails
 cd apps/kitty
 bun scripts/setup-testnet.ts                     # once: keeper + 3 test members into ../../.env
 npx drizzle-kit push                             # its own `kitty` schema, local DB only
-KITTY_WORKER=on bun --env-file=../../.env src/main.ts   # http://localhost:8821
+KITTY_WORKER=on bun --env-file=../../.env src/main.ts   # the API on http://localhost:8821
+bun run dev:web                                  # the web on http://localhost:5182 (/api → 8821)
 # the bot: KITTY_BOT=on, only while no other poller uses TELEGRAM_BOT_TOKEN
 ```
+- **One URL:** `bun run build` writes `web/dist`, and the server then serves the web itself on 8821, under
+  the same paths (`/`, `/pots/:id`, `/pots/:id/learned`), so the bot's links work.
+- **E2E:** `bun run e2e` (Playwright, testnet). It starts the API (no keeper stream, no bot) and the web,
+  injects a wallet-standard test wallet signing with the generated test members' keys (never a real
+  wallet), and runs: start a pot, two joins, a keeper pull, a proposal, the approval that pays it, a
+  coin moved into a balance from the "Get ready" card, and a leave. The digests go to
+  `test-results/kitty-e2e.json`, with screenshots. It's not part of `bun run test`.
 - **Publish** (testnet, already done): `bun --env-file=../../.env scripts/publish.ts`.
-- **Exit:** `bun --env-file=../../.env scripts/exit.ts`. It runs the keeper, the stream and the web in
-  one process.
+- **Exit:** `bun --env-file=../../.env scripts/exit.ts`. It runs the keeper, the stream and the API in
+  one process, with the test members' keys.
   - `exit.ts resume <pot> <step>` re-runs only a failed step.
   - `exit.ts overcap` and `exit.ts aborts` send the refusals as committed transactions.
+  - `exit.ts api` checks the test-member endpoints (it was `web` while the pages were server-rendered).
 
 ## API
+Amounts are USDC micro-dollars, as strings.
+
+**The member's wallet signs** (the web):
+
+| Method | Path | |
+|---|---|---|
+| `POST` | `/api/tx/prepare` | `{ action, sender, … }`: `create` · `join` · `propose` · `approve` · `leave` · `deposit` → `{ bytes, digest }` |
+| `POST` | `/api/tx/execute` | `{ digest, signature, bytes }` → the action's result (`digest`, `potId`, `seq`, …) |
+
+**Reads:**
+
+| Method | Path | |
+|---|---|---|
+| `GET` | `/api/config` | Network, package, USDC type, keeper, sponsor |
+| `GET` | `/api/pots` · `/api/pots/:id` · `/api/pots/:id/memories` | Pots; one pot with members, 🧠 reasons, proposals, pulls and the suggestion; what Kitty learned |
+| `GET` | `/api/wallet/:address` | The wallet's USDC (address balance and coins) and its pots |
+
+**Labelled test members**, signed with the keys Kitty holds (the exit script and the bot):
+
 | Method | Path | |
 |---|---|---|
 | `POST` | `/api/pots` | `{ creator, name, goalUsd, deadline, quorum, autoOkUsd, windowMinutes }` |
-| `POST` | `/api/pots/:id/join` | `{ member, name, capUsd }`: a test member's one signature |
+| `POST` | `/api/pots/:id/join` | `{ member, name, capUsd }` |
 | `POST` | `/api/pots/:id/proposals` | `spend` / `auto_cap` / `close` |
-| `POST` | `/api/pots/:id/proposals/:seq/approve` | `{ member, execute }`: the approval that reaches quorum can execute too |
+| `POST` | `/api/pots/:id/proposals/:seq/approve` | `{ member, execute? }`: the approval that reaches quorum executes too |
 | `POST` | `/api/pots/:id/spend-auto` · `/leave` | Inside the auto-ok cap; leave (revoke) |
-| `GET` | `/api/pots/:id` · `/memories` | The pot (mirror + onchain) and what Kitty learned |

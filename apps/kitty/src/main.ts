@@ -1,11 +1,13 @@
 /**
- * Kitty's process (ADR-0062): the API and web always; the keeper and the payday stream with
- * `KITTY_WORKER=on`; the bot with `KITTY_BOT=on` (one poller per token, ADR-0060).
+ * Kitty's process (ADR-0062, ADR-0064): the API, and the built web when `web/dist` exists, always; the
+ * keeper and the payday stream with `KITTY_WORKER=on`; the bot with `KITTY_BOT=on` (one poller per
+ * token, ADR-0060).
  */
+import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { tatumUsage } from "@remora/chain";
 import { eq } from "drizzle-orm";
-import { createApp } from "./app.tsx";
+import { createApp } from "./app.ts";
 import { createBot } from "./bot.ts";
 import { members, pots } from "./db/index.ts";
 import { wire } from "./deps.ts";
@@ -21,7 +23,11 @@ const log = (msg: string, data: Record<string, unknown> = {}) =>
     ),
   );
 const w = wire(env, log);
-const app = createApp({ ...w, keeper: w.keeper.toSuiAddress() });
+const app = createApp({
+  ...w,
+  keeper: w.keeper.toSuiAddress(),
+  webDist: fileURLToPath(new URL("../web/dist", import.meta.url)),
+});
 const server = serve({ fetch: app.fetch, port: env.KITTY_PORT });
 log("kitty.listening", { port: env.KITTY_PORT, memory: !!w.memory, members: w.keys.size });
 

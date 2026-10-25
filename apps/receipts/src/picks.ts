@@ -1,6 +1,9 @@
 /**
  * Picks (RC2, ADR-0061): refused at or after lock, hashed into a leaf, written to memory, and anchored
  * on Sui in the next batch, or straight away when the event is about to lock.
+ *
+ * A member who joined with a wallet must sign each pick (ADR-0064). The server rebuilds the message
+ * from its own records, checks the signature, and puts the signer and signature in the leaf.
  */
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, isNull } from "drizzle-orm";
@@ -10,10 +13,19 @@ import { type Chip, nudgeFor } from "./learn.ts";
 import { parseConfidence, pct, type Side } from "./markets.ts";
 import { ns, type ReceiptsMemory } from "./memory.ts";
 import { buildTree, leafHash, type PickLeaf, type ProofStep } from "./merkle.ts";
+import { freshAt, pickMessage } from "./messages.ts";
+import { signedBy } from "./signatures.ts";
 
 export class PickError extends Error {
   constructor(
-    readonly code: "locked" | "not_found" | "bad_confidence" | "duplicate" | "not_member",
+    readonly code:
+      | "locked"
+      | "not_found"
+      | "bad_confidence"
+      | "duplicate"
+      | "not_member"
+      | "signature_required"
+      | "bad_signature",
     message: string,
   ) {
     super(message);
@@ -37,6 +49,10 @@ export interface PickInput {
   side: Side;
   confidence: number | string;
   note?: string;
+  /** The wallet's signature over `pickMessage(...)`, required when the member has an address. */
+  signature?: string;
+  /** The `at` inside the signed message (the signer's clock). */
+  signedAt?: string;
   now?: Date;
 }
 
@@ -59,6 +75,33 @@ export async function logPick(deps: PickDeps, input: PickInput) {
   if (!member) throw new PickError("not_member", "That member isn't in this group.");
   const confidence = parseConfidence(input.confidence);
   if (confidence === null) throw new PickError("bad_confidence", "Confidence is 50–99%.");
+  const sideLabel = input.side === "yes" ? event.yesLabel : event.noLabel;
+
+  let signed: { signer: string; signature: string; message: string } | null = null;
+  if (member.address) {
+    if (!input.signature || !input.signedAt) {
+      throw new PickError("signature_required", "Sign the pick with your wallet.");
+    }
+    if (!freshAt(input.signedAt, now)) {
+      throw new PickError(
+        "bad_signature",
+        "The signed time is more than 5 minutes off. Sign again.",
+      );
+    }
+    const message = pickMessage({
+      groupId: input.groupId,
+      eventId: event.id,
+      eventTitle: event.title,
+      side: input.side,
+      sideLabel,
+      confidencePct: Math.round(confidence * 100),
+      at: input.signedAt,
+    });
+    if (!(await signedBy(message, input.signature, member.address))) {
+      throw new PickError("bad_signature", "The signature doesn't match this pick and wallet.");
+    }
+    signed = { signer: member.address, signature: input.signature, message };
+  }
 
   const id = randomUUID();
   const leaf: PickLeaf = {
@@ -69,12 +112,16 @@ export async function logPick(deps: PickDeps, input: PickInput) {
     side: input.side,
     confidence,
     createdAt: now.toISOString(),
+    ...(signed ? { signer: signed.signer, signature: signed.signature } : {}),
   };
   const row = {
     ...leaf,
     createdAt: now,
     leaf: leafHash(leaf),
     note: input.note?.slice(0, 200) ?? null,
+    signer: signed?.signer ?? null,
+    signature: signed?.signature ?? null,
+    signedMessage: signed?.message ?? null,
   };
   try {
     await db.insert(picks).values(row);
@@ -85,9 +132,8 @@ export async function logPick(deps: PickDeps, input: PickInput) {
     throw err;
   }
 
-  const sideLabel = input.side === "yes" ? event.yesLabel : event.noLabel;
   if (deps.memory) {
-    const text = `PICK member=${member.id}${member.test ? " (test)" : ""} event=${event.id} "${event.title}" side=${input.side} (${sideLabel}) confidence=${confidence.toFixed(2)} at=${now.toISOString()} leaf=${row.leaf}`;
+    const text = `PICK member=${member.id}${member.test ? " (test)" : ""} event=${event.id} "${event.title}" side=${input.side} (${sideLabel}) confidence=${confidence.toFixed(2)} at=${now.toISOString()} leaf=${row.leaf}${signed ? ` signed=${signed.signer}` : ""}`;
     deps.memory
       .remember(ns.picks(input.groupId), "episode", text)
       .catch((err) => deps.log?.("pick.memory_failed", { id, error: String(err) }));
@@ -164,6 +210,8 @@ export interface Receipt {
   proof: ProofStep[];
   anchor: { digest: string; root: string; network: string } | null;
   event: { id: string; title: string; locksAt: string };
+  /** The exact text the wallet signed, for a signed (v2) pick. */
+  signedMessage?: string;
 }
 
 /** The portable receipt: everything a stranger needs to check the pick against the chain. */
@@ -180,11 +228,13 @@ export async function receiptFor(db: Db, pickId: string): Promise<Receipt | null
     side: p.side,
     confidence: p.confidence,
     createdAt: p.createdAt.toISOString(),
+    ...(p.signer && p.signature ? { signer: p.signer, signature: p.signature } : {}),
   };
   const base = {
     pick,
     leaf: p.leaf,
     event: { id: event.id, title: event.title, locksAt: event.startsAt.toISOString() },
+    ...(p.signedMessage ? { signedMessage: p.signedMessage } : {}),
   };
   if (!p.anchorId) return { ...base, proof: [], anchor: null };
   const [a] = await db.select().from(anchors).where(eq(anchors.id, p.anchorId));

@@ -1,6 +1,9 @@
 /**
  * What members do (KT2, ADR-0062): create a pot, join with one signature, propose and approve, spend
  * inside the auto-ok cap, leave, close. Each writes the chain first, then the mirror, then memory.
+ *
+ * The member signs with their own wallet through the web (`deps.signer`, ADR-0064), or, for a labelled
+ * test member, with the key Kitty holds.
  */
 import { randomUUID } from "node:crypto";
 import type { Keypair } from "@mysten/sui/cryptography";
@@ -9,13 +12,17 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import {
   addApprove,
   addCreate,
+  addDepositCoins,
   addExecute,
   addJoin,
   addLeave,
   addPropose,
   addSpendAuto,
+  coinIds,
   type KittyChain,
   readPot,
+  type Signer,
+  same,
 } from "./chain.ts";
 import { type Db, members, memories, pots, proposals, spends } from "./db/index.ts";
 import { categoryOf, type SpendNorm, suggestAutoOk, text } from "./learn.ts";
@@ -27,6 +34,8 @@ export interface ActionDeps {
   memory: KittyMemory | null;
   /** Server-held keys of labelled test members (no Enoki key for zkLogin, ADR-0062). */
   keys: Map<string, Keypair>;
+  /** The member's own wallet, when the action comes from the web (ADR-0064). */
+  signer?: Signer;
   log?: (msg: string, data?: Record<string, unknown>) => void;
   now?: () => Date;
   ours?: Set<string>;
@@ -41,7 +50,12 @@ export class ActionError extends Error {
   }
 }
 
-const keyOf = (deps: ActionDeps, address: string) => {
+const keyOf = (deps: ActionDeps, address: string): Signer => {
+  if (deps.signer) {
+    if (!same(deps.signer.toSuiAddress(), address))
+      throw new ActionError("not_signer", "Only that member's own wallet can sign this.");
+    return deps.signer;
+  }
   const k = deps.keys.get(normalizeSuiAddress(address));
   if (!k)
     throw new ActionError(
@@ -132,7 +146,8 @@ export async function joinPot(
     potId: pot.id,
     address,
     name: a.name,
-    test: a.test,
+    // A wallet that is one of the generated test keys stays labelled test.
+    test: a.test || deps.keys.has(address),
     capPerWindow: a.capPerWindow,
     allowanceId,
     allowanceCapId: capId,
@@ -369,6 +384,18 @@ export async function leavePot(deps: ActionDeps, potId: string, member: string) 
     text.left({ member: address, name: m.name, contributed: m.contributed }),
   );
   return { digest: done.digest };
+}
+
+/** Moves the member's USDC coins into their address balance, where the keeper's pulls come from. */
+export async function depositCoins(deps: ActionDeps, owner: string) {
+  const address = normalizeSuiAddress(owner);
+  const ids = await coinIds(deps.chain.client, address, deps.chain.coinType);
+  if (!ids.length) throw new ActionError("no_coins", "This wallet holds no USDC coins to move.");
+  const done = await deps.chain.run(keyOf(deps, address), (tx) =>
+    addDepositCoins(tx, deps.chain.coinType, address, ids),
+  );
+  deps.ours?.add(done.digest);
+  return { digest: done.digest, coins: ids.length };
 }
 
 export async function potView(deps: Pick<ActionDeps, "db" | "chain">, potId: string) {

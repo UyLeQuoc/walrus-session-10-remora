@@ -1,6 +1,6 @@
 # ADR-0062: Kitty: a Move pot on app-bound allowances, a keeper that checks balances first, and payday learning in memory
 
-- **Status:** Accepted
+- **Status:** Accepted; the **Web** part is superseded by [ADR-0064](0064-receipts-kitty-web-with-wallets.md)
 - **Date:** 2026-10-24
 - **Deciders:** Uy's agent (U11, unattended; Uy reviews in the morning)
 

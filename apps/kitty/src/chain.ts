@@ -8,6 +8,7 @@ import type { Keypair } from "@mysten/sui/cryptography";
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { Transaction, type TransactionArgument } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
+import { isValidTransactionSignature } from "@mysten/sui/verify";
 import { createTatumSuiClient, readFunds } from "@remora/chain";
 
 export const CLOCK = "0x6";
@@ -42,6 +43,22 @@ export class ChainAbort extends Error {
   ) {
     super(detail);
   }
+  /** The abort's constant, e.g. `EUnderQuorum`, when the chain named one. */
+  get code(): string | null {
+    return /\b(E[A-Z][a-z][A-Za-z0-9]*)\b/.exec(this.detail)?.[1] ?? null;
+  }
+}
+
+/** The wallet's signature doesn't sign the bytes Kitty built, or isn't the sender's. */
+export class BadSignature extends Error {}
+
+/**
+ * Who signs as the sender. A local `Keypair` (the keeper, the labelled test members) is one; so is a
+ * member's wallet, through the web (ADR-0064, `wallet.ts`).
+ */
+export interface Signer {
+  toSuiAddress(): string;
+  signTransaction(bytes: Uint8Array): Promise<{ signature: string }>;
 }
 
 export interface KittyChain {
@@ -49,14 +66,16 @@ export interface KittyChain {
   readonly packageId: string;
   readonly coinType: string;
   readonly sponsor: string;
-  /** Builds, simulates nothing, signs as `signer` + the sponsor, executes and waits. */
   /**
    * Builds, signs as `signer` + the sponsor, executes and waits. Normally the build's dry run refuses
    * a transaction that would abort (`ChainAbort`, no digest, no gas). `send: true` sends it anyway, so
    * the chain records the abort as a failed transaction with a digest (the sponsor pays its gas).
+   *
+   * The sponsor signs only the bytes built here, after the sender's signature checks out against them:
+   * a wallet can sign, but never choose what the sponsor pays for.
    */
   run(
-    signer: Keypair,
+    signer: Signer,
     build: (tx: Transaction) => void,
     opts?: { send?: boolean },
   ): Promise<Executed>;
@@ -114,14 +133,20 @@ export function createChain(o: {
         }
         throw err;
       }
-      const [a, b] = await Promise.all([
-        signer.signTransaction(bytes),
-        o.sponsor.signTransaction(bytes),
-      ]);
+      const { signature } = await signer.signTransaction(bytes);
+      if (
+        !(await isValidTransactionSignature(bytes, signature, {
+          client: o.client,
+          address: signer.toSuiAddress(),
+        }))
+      ) {
+        throw new BadSignature("The signature doesn't sign this transaction as its sender.");
+      }
+      const sponsored = await o.sponsor.signTransaction(bytes);
       // Not retried blindly: an UNAVAILABLE after submission can still land (packages/chain retry.ts).
       const res = await o.client.core.executeTransaction({
         transaction: bytes,
-        signatures: [a.signature, b.signature],
+        signatures: [signature, sponsored.signature],
         include: { effects: true, events: true, objectTypes: true },
       });
       const done = res.Transaction ?? res.FailedTransaction;
@@ -342,6 +367,38 @@ export function addSendUsdc(tx: Transaction, coinType: string, to: string, amoun
     typeArguments: [coinType],
     arguments: [coin, tx.pure.address(to)],
   });
+}
+
+/**
+ * "Move to my Kitty balance" (ADR-0004): merge the owner's USDC coins and `send_funds` them to the
+ * owner's own address balance, where the keeper's allowance pulls from.
+ */
+export function addDepositCoins(
+  tx: Transaction,
+  coinType: string,
+  owner: string,
+  coinIds: string[],
+) {
+  const [first, ...rest] = coinIds.map((id) => tx.object(id));
+  if (!first) throw new Error("no coins to move");
+  if (rest.length) tx.mergeCoins(first, rest);
+  tx.moveCall({
+    target: "0x2::coin::send_funds",
+    typeArguments: [coinType],
+    arguments: [first, tx.pure.address(owner)],
+  });
+}
+
+/** Every coin object of `coinType` the owner holds (Tatum gRPC `ListOwnedObjects`). */
+export async function coinIds(client: SuiGrpcClient, owner: string, coinType: string) {
+  const ids: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const page = await client.core.listCoins({ owner, coinType, ...(cursor ? { cursor } : {}) });
+    ids.push(...page.objects.map((o) => o.objectId));
+    cursor = page.hasNextPage ? page.cursor : null;
+  } while (cursor && ids.length < 200);
+  return ids;
 }
 
 // ---------- reading the pot ----------

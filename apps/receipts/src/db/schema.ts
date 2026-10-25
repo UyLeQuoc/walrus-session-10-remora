@@ -35,9 +35,14 @@ export const members = receipts.table(
     telegramUserId: text("telegram_user_id"),
     /** Test members are labelled everywhere they show (no invented picks shown as real). */
     test: boolean("test").notNull().default(false),
+    /** The member's Sui wallet, when they joined from the web (ADR-0064). Their picks must be signed. */
+    address: text("address"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("members_group_tg").on(t.groupId, t.telegramUserId)],
+  (t) => [
+    uniqueIndex("members_group_tg").on(t.groupId, t.telegramUserId),
+    uniqueIndex("members_group_address").on(t.groupId, t.address),
+  ],
 );
 
 /** A binary market: "Will <yes> happen?" Games ask whether the home side wins (ADR-0061). */
@@ -109,6 +114,10 @@ export const picks = receipts.table(
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     leaf: text("leaf").notNull(),
+    /** A wallet-signed pick (ADR-0064): the signer, its signature and the exact message signed. */
+    signer: text("signer"),
+    signature: text("signature"),
+    signedMessage: text("signed_message"),
     anchorId: text("anchor_id").references(() => anchors.id),
     leafIndex: integer("leaf_index"),
   },

@@ -5,7 +5,7 @@
 import { serve } from "@hono/node-server";
 import { tatumUsage } from "@remora/chain";
 
-import { createApp } from "./app.tsx";
+import { createApp } from "./app.ts";
 import { createBot } from "./bot.ts";
 import { createAnchorer, testnetClient } from "./chain.ts";
 import { createDb, groups } from "./db/index.ts";
