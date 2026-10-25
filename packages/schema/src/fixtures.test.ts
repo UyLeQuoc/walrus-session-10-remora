@@ -22,6 +22,9 @@ import {
   intentHash,
   isCatalogModel,
   LearningSeries,
+  McpCall,
+  McpToken,
+  McpTokenCreated,
   MemoryRow,
   MODEL_CATALOG,
   ModelInfo,
@@ -89,6 +92,10 @@ const FIXTURES: Record<string, z.ZodType> = {
   "template.scout.json": Template,
   "wake-view.payment.json": WakeView,
   "wake.payment.json": Wake,
+  "wake.mcp-payment.json": Wake,
+  "mcp.token.json": McpToken,
+  "mcp.token-created.json": McpTokenCreated,
+  "mcp.calls.json": z.array(McpCall),
 };
 
 describe("contract fixtures", () => {
@@ -123,6 +130,18 @@ describe("contract helpers", () => {
 
   it("keeps the deployment table valid", () => {
     for (const d of Object.values(DEPLOYMENTS)) expect(Deployment.safeParse(d).success).toBe(true);
+  });
+
+  it("puts an MCP Wake's client in the hashed trigger as well as in via", () => {
+    const wake = Wake.parse(read("wake.mcp-payment.json"));
+    expect(wake.via).toBe("mcp:claude-code");
+    expect(wake.intent.trigger.ref).toBe(wake.via);
+    expect(Wake.safeParse({ ...wake, via: "claude-code" }).success).toBe(false);
+  });
+
+  it("never lets a token view carry its secret", () => {
+    const parsed = McpToken.parse({ ...(read("mcp.token.json") as object), secret: "x" });
+    expect("secret" in parsed).toBe(false);
   });
 
   it("rejects a raw payee address in a template", () => {
