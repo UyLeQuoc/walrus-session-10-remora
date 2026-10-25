@@ -2,7 +2,7 @@
  * B4: five navigation items, Recents, a compact setup card while setup is unfinished, and the
  * account menu. Get started, Verify, Settings, the guide and the channel card moved into the menu.
  */
-import { Brain, Fish, Inbox, Search, SquarePen, Trash2, Wallet } from "lucide-react";
+import { Brain, Cable, Fish, Inbox, Search, SquarePen, Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { navActive } from "@/app/nav-active";
@@ -38,6 +38,7 @@ const NAV = [
   { to: "/approvals", label: "Approvals", icon: Inbox },
   { to: "/funds", label: "Funds", icon: Wallet },
   { to: "/memory", label: "Memory", icon: Brain },
+  { to: "/connections", label: "Connections", icon: Cable },
 ] as const;
 
 export function AppSidebar({

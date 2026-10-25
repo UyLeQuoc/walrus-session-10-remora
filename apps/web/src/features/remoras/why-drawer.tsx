@@ -40,6 +40,7 @@ export function WakeDetails({ view }: { view: WakeView }) {
       <Row label="Trigger">
         {intent.trigger.kind} · {intent.trigger.ref}
       </Row>
+      {view.wake.via ? <Row label="Via">MCP: {view.wake.via.replace(/^mcp:/, "")}</Row> : null}
       <Row label="Read">
         {intent.inputs.objects.length} object(s) via Tatum
         {intent.inputs.checkpoint ? ` at checkpoint ${intent.inputs.checkpoint}` : ""}
