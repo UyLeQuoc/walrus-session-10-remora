@@ -18,13 +18,13 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 10 | [U9: the testnet launch (public URL, /status, Huấn's W3 queue, D5 handoff, red-team evals, license)](uy-09-testnet-launch.md) ([prompt](uy-09-testnet-launch.prompt.txt)) | Uy's agent + Uy at every deploy step | Next | U8 ✅ ([ADR-0059](../adr/0059-launch-on-testnet.md)) |
 | 11 | [U10: the mainnet pass (mainnet money, owned memory, Walrus Sites)](uy-10-mainnet-pass.md) ([prompt](uy-10-mainnet-pass.prompt.txt)) | Uy's agent + Uy at every mainnet transaction | When Uy calls it | U9 |
 | 12 | [U11: Receipts (Track 1) and Kitty (Track 3) on Remora's rails](uy-11-receipts-and-kitty.md) ([prompt](uy-11-receipts-and-kitty.prompt.txt)) | Uy's agent, unattended overnight | ✅ **Done Oct 25: both exits passed on testnet** ([notes](../spikes/2026-10-25-u11-exit.md)); then the web with wallets ([ADR-0064](../adr/0064-receipts-kitty-web-with-wallets.md)) and the split into `total-recall-receipts` and `total-recall-kitty` ([ADR-0065](../adr/0065-split-receipts-and-kitty-repos.md)) | U8 ✅ |
-| 13 | [U12: agents use Remora, Receipts and Kitty through MCP (a UI and an MCP server in each)](uy-12-agents-mcp.md) ([prompt](uy-12-agents-mcp.prompt.txt)) | Uy's agent (+ the Connections page if Huấn hasn't started it, ADR-0027) | Next, after U11's wrap-up and before U9, so the launch ships it ([ADR-0066](../adr/0066-agents-use-the-apps-through-mcp.md)) | U11 |
+| 13 | [U12: agents use Remora, Receipts and Kitty through MCP (a UI and an MCP server in each)](uy-12-agents-mcp.md) ([prompt](uy-12-agents-mcp.prompt.txt)) | Uy's agent (+ the Connections page if Huấn hasn't started it, ADR-0027) | ✅ **Done Oct 25: U12 exit on testnet in all three repos** ([notes](../spikes/2026-10-25-u12-exit.md), [handoff](../handoffs/2026-10-25-uy-to-huan-u12-landed.md)); real wallets and remote Receipts/Kitty MCP clients unverified | U11 |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-12-agents-mcp.prompt.txt   # next; then uy-09-testnet-launch (<4000 chars each)
+pbcopy < docs/goals/uy-09-testnet-launch.prompt.txt   # next (<4000 chars each)
 ```
 
 Each goal has two files:
