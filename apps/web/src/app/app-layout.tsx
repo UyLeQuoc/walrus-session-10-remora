@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { AppSidebar } from "@/app/app-sidebar";
 import { ShellContext, useShellState } from "@/app/shell";
+import { CommandPalette } from "@/components/app/command-palette";
 import { NetworkSelect } from "@/components/app/network-select";
 import { ThemeSync } from "@/components/app/theme-choice";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -87,6 +88,7 @@ export function AppLayout() {
       </SidebarProvider>
       <Toaster />
       <ThemeSync />
+      <CommandPalette />
     </ShellContext.Provider>
   );
 }

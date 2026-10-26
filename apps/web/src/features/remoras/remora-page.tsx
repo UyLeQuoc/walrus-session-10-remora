@@ -11,6 +11,7 @@ import { Link, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { BudgetMeter } from "@/components/app/budget-meter";
 import { ConfirmAction } from "@/components/app/confirm-action";
+import { Term } from "@/components/app/glossary";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Hash } from "@/components/hash";
@@ -494,7 +495,9 @@ function KeysSection({ r }: { r: RemoraView }) {
           <dd className="min-w-0 max-w-full">{r.address ? <Hash value={r.address} /> : "—"}</dd>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <dt className="text-muted-foreground">Disc</dt>
+          <dt className="text-muted-foreground">
+            <Term name="Disc">Disc</Term>
+          </dt>
           <dd className="min-w-0 max-w-full">{r.discId ? <Hash value={r.discId} /> : "—"}</dd>
         </div>
       </dl>

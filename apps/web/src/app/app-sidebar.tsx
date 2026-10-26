@@ -72,7 +72,12 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
-        <Link to="/" className="flex items-center rounded-md px-2 py-1.5" onClick={closeOnPhone}>
+        <Link
+          to="/"
+          className="flex items-center rounded-md px-2 py-1.5"
+          onClick={closeOnPhone}
+          aria-label={collapsed ? "Home" : undefined}
+        >
           <Logo size={collapsed ? 24 : 28} tone="primary" background withText={!collapsed} />
         </Link>
       </SidebarHeader>

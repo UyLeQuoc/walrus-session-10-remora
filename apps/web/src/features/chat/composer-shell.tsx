@@ -66,6 +66,7 @@ export function ComposerShell({
         <textarea
           value={text}
           placeholder="Message your remora…"
+          aria-label="Ask your remora"
           disabled={disabled}
           rows={1}
           onChange={(event) => onText(event.target.value)}

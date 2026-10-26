@@ -2,6 +2,7 @@
 import type { ProofOfLearning, WakeView } from "@remora/schema";
 import { useState } from "react";
 import { Link } from "react-router";
+import { Term } from "@/components/app/glossary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +52,7 @@ export function WakeDetails({ view }: { view: WakeView }) {
           : "none"}
       </Row>
       <Row label="Check">
-        Sonar said {intent.sonar.verdict}
+        <Term name="Sonar">Sonar</Term> said {intent.sonar.verdict}
         {intent.sonar.reasons.length ? `: ${intent.sonar.reasons.join("; ")}` : ""}
       </Row>
       <Row label="Model">{intent.model.id}</Row>
@@ -98,7 +99,8 @@ export function WhyDrawer({ view, label = "Why?" }: { view: WakeView; label?: st
         <SheetHeader>
           <SheetTitle>Why {view.wake.remora} did this</SheetTitle>
           <SheetDescription>
-            The receipt (Wake) for this action. {anchoredBadge(view.anchored)}
+            The receipt (<Term name="Wake">Wake</Term>) for this action.{" "}
+            {anchoredBadge(view.anchored)}
           </SheetDescription>
         </SheetHeader>
         <WakeDetails view={view} />
