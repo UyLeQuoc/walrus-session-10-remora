@@ -37,7 +37,8 @@ export interface RemoraMemory {
     ns: string,
     type: MemoryType,
     text: string,
-    opts?: { replaces?: string },
+    /** `by` replaces the remora's name in the `[by:…]` tag, e.g. `mcp:claude-code` (F14). */
+    opts?: { replaces?: string; by?: string },
   ): Promise<{ saved: boolean; note: string; indexId?: string }>;
 }
 
@@ -100,13 +101,14 @@ export function createRemoraMemory(
     s.clear();
     for (const id of ids) s.add(id);
   };
-  const port = (r: RemoraRef, ns: string) => {
+  const port = (r: RemoraRef, ns: string, by = r.name) => {
     const namespace = namespaceFor(r, ns);
-    let p = ports.get(namespace);
+    const key = by === r.name ? namespace : `${namespace}|${by}`;
+    let p = ports.get(key);
     if (!p) {
       p = createMemoryPort({
         scope: { mode: "guest", ...operator, namespace },
-        by: r.name,
+        by,
         channel: "remora",
         hidden: skipSet(r),
         onWrite: (e: WriteEvent) => {
@@ -124,7 +126,7 @@ export function createRemoraMemory(
             : undefined;
         },
       });
-      ports.set(namespace, p);
+      ports.set(key, p);
     }
     return p;
   };
@@ -158,7 +160,7 @@ export function createRemoraMemory(
       await refresh(r);
       const res = await within(
         timeouts.rememberMs ?? REMEMBER_TIMEOUT_MS,
-        port(r, ns).remember({
+        port(r, ns, opts?.by).remember({
           type,
           text,
           channel: "remora",

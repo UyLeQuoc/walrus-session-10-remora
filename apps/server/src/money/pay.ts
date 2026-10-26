@@ -11,6 +11,7 @@ import { discFetch, type PaymentRequirements, paidEvents } from "@remora/disc-sd
 import { intentHash, Wake, WakeIntent } from "@remora/schema";
 import type { RemoraSigner } from "@remora/signer";
 import { enqueue, type JobHandler } from "../runtime/jobs.ts";
+import { viaOf } from "../runtime/wake.ts";
 import { type Networks, NetworkUnavailableError } from "./networks.ts";
 
 export interface PayDeps {
@@ -122,6 +123,7 @@ export async function payWithDisc(deps: PayDeps, r: PayRequest) {
     agent,
     ts: new Date().toISOString(),
     intent,
+    via: viaOf((intent as WakeIntent).trigger.ref),
     result: response.ok
       ? {
           ...(digest ? { tx: digest } : {}),

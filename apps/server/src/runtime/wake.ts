@@ -11,6 +11,13 @@ import type { Recalled, RemoraMemory } from "./memory.ts";
 
 export const sha256Hex = (s: string | Uint8Array) => createHash("sha256").update(s).digest("hex");
 
+/**
+ * F14 (ADR-0066): an action an MCP client asked for carries `mcp:<client>` as its trigger ref, which
+ * the intent hash covers; the Wake repeats it as `via` for display.
+ */
+export const viaOf = (ref: string): string | undefined =>
+  /^mcp:[a-z0-9][a-z0-9-]{0,39}$/.test(ref) ? ref : undefined;
+
 export interface WakeRemora {
   id: string;
   name: string;
@@ -58,6 +65,7 @@ export async function recordWake(
     agent: r.address,
     ts: new Date().toISOString(),
     intent: full,
+    via: viaOf(full.trigger.ref),
     result,
   });
   const [row] = await deps.db

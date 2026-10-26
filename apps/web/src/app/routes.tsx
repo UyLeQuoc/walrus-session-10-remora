@@ -7,6 +7,7 @@ import { PlaygroundPage } from "@/features/playground/playground-page";
 import { ApprovalsPage } from "../features/approvals/approvals-page";
 import { ChatPage } from "../features/chat/chat-page";
 import { ConnectPage } from "../features/connect/connect-page";
+import { ConnectionsPage } from "../features/connections/connections-page";
 import { FundsPage } from "../features/funds/funds-page";
 import { GuidePage } from "../features/guide/guide-page";
 import { HomePage } from "../features/home/home-page";
@@ -58,4 +59,5 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "playground", element: <PlaygroundPage /> },
   { path: "hatchery", element: <HatcheryPage /> },
   { path: "hatchery/:id", element: <TemplatePage /> },
+  { path: "connections", element: <ConnectionsPage /> },
 ];

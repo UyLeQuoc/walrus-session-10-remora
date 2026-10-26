@@ -1,0 +1,80 @@
+Goal U11: build Receipts (Track 1) and Kitty (Track 3) overnight in this monorepo, on Remora's rails (ADR-0060). Uy is asleep: never stop to ask. Decide, write the ADR, continue. Anything that needs Uy goes on the morning list.
+
+Source of truth: docs/goals/uy-11-receipts-and-kitty.md. Read it fully, plus docs/ideas/tracks-1-and-3.md, ADR-0003/20/21/24/26/55/58/60, tech-reference §1.11, disc.move and packages/disc-sdk. Any order; Receipts first is recommended.
+
+Setup:
+- Main checkout, on main. Reuse .env as is.
+- Money and Move on testnet. Memory on the mainnet relayer, operator account, namespaces receipts:* and kitty:*.
+- Run diagnose's memory recall before memory steps.
+- Testnet SUI is short (~0.32) and the faucet refuses. Keep the burner and the sponsor ≥0.05 each. If SUI runs out, finish the rest and put it on the morning list.
+- Layout, ports, DB, gas, keys and install: follow the goal file. Import workspace packages only.
+
+Receipts:
+- RC0: a ≤1 h spike on keyless sources. Record the result in an ADR.
+- RC1: a Move PR for receipts::anchor. Merge when green, publish on testnet.
+- RC2:
+  - picks are refused after lock and written to memory;
+  - Merkle roots are anchored every 10 minutes;
+  - /verify checks them through Tatum gRPC.
+- RC3:
+  - Brier and calibration with shrinkage;
+  - trust and radar memories;
+  - Receipts' own call is weighted by the recalled snapshots and cites them;
+  - nudges.
+- RC4: the bot. RC5: the web, including Learning.
+- RC6: backfill real NBA and EPL lines, labelled backfill; load the midterms; start live ingest. No invented member picks.
+
+Kitty:
+- KT1: a Move PR for kitty::pot (app type KITTY, Disc patterns):
+  - create;
+  - join in the same PTB as propose_for_app;
+  - contribute by the keeper;
+  - propose/approve/execute for spends and rule changes, at quorum;
+  - spend_auto up to the cap;
+  - leave and close with a pro-rata refund.
+  Merge when green, publish on testnet.
+- KT2:
+  - check GetBalance before each pull; a short member gets a memory, not a transaction;
+  - a filtered stream learns paydays;
+  - amounts adapt;
+  - suggested auto-ok rules are voted onchain;
+  - the bot.
+- KT3: the web: pot page, a one-signature join, "What Kitty learned".
+
+Exits (testnet; steps in the goal file):
+- Receipts:
+  - a late pick is refused;
+  - verify passes for a pick and fails for a tampered one;
+  - a real game resolves into a trust memory, and Receipts' call cites it;
+  - a nudge fires;
+  - the Learning curve shows.
+- Kitty, with 3 members:
+  - a short member is skipped, then pulled after the payday is detected, citing memory;
+  - a pull over the cap aborts;
+  - quorum spend passes, and aborts below quorum;
+  - auto-ok passes inside its cap and aborts above it;
+  - leave, then close with a balanced refund;
+  - ≥10 kitty memories.
+
+Run each exit once; re-run only a fixed step.
+
+Record docs/spikes/2026-10-25-u11-exit.md, ending with the morning list. Write the app READMEs. Update the ideas doc, the goals README and CI. Stop every service, stream and poller.
+
+Hard rules:
+- No mainnet money or publish. No deploy.
+- Never commit .env or keys, or print key values. No force-push.
+- Avoid ports 8787/5173.
+- Never edit reference/, Huấn's paths, packages/schema, or Remora's apps.
+- Never rewrite an accepted ADR.
+- Never stream unfiltered. Never run two pollers on one bot token.
+- No invented data shown as real.
+- Every decision gets an ADR in the same commit.
+- Before each push: git pull --rebase origin main && bun run typecheck && bun run lint && bun run test, then git push origin HEAD:main.
+
+Done when:
+- Both Move PRs are merged and published on testnet.
+- Both exits pass, or each failing step names its blocker.
+- typecheck, lint, test, sui move test and CI are green, Remora's suite included.
+- Docs are written and everything is pushed.
+
+Finish with a short Vietnamese summary for Uy's morning.

@@ -1,6 +1,6 @@
 import { DiagnoseReport, HealthReport } from "@remora/schema";
 import { beforeEach, describe, expect, it } from "vitest";
-import { diagnose } from "./diagnose.ts";
+import { diagnose, tatumTrouble } from "./diagnose.ts";
 import { type HealthDeps, healthReport } from "./health.ts";
 import {
   isOpsError,
@@ -174,6 +174,25 @@ describe("diagnose, the deploy gate (K2)", () => {
       objectType: async () => Promise.reject(new Error("Object not found")),
     });
     expect(gone.items[0]?.detail).toMatch(/doesn't exist on testnet/);
+  });
+
+  it("tells a Tatum out of credits apart from an id that doesn't exist", async () => {
+    const r = await diagnose({
+      ...base,
+      objectType: async () => {
+        throw new Error("Received HTTP status code 402");
+      },
+      tip: async () => {
+        throw new Error("Received HTTP status code 402");
+      },
+    });
+    expect(r.ok).toBe(false);
+    const disc = r.items.find((i) => i.name === "disc registry");
+    expect(disc?.detail).toMatch(/^couldn't check/);
+    expect(disc?.fix).toMatch(/out of credits.*TATUM_API_KEY_TESTNET/);
+    expect(r.items.find((i) => i.name === "tatum")?.fix).toMatch(/out of credits/);
+    expect(tatumTrouble("Object 0x1 not found", "testnet")).toBeNull();
+    expect(tatumTrouble("UNAUTHENTICATED: bad key", "mainnet")).toMatch(/TATUM_API_KEY\b/);
   });
 
   it("probes memory recall: the relayer's own failure warns, our key's failure gates", async () => {

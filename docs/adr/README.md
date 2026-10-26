@@ -72,3 +72,16 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0053](0053-patched-vitest.md) | Pin vitest 4.1.12 when the install scanner blocks @vitest/mocker | Accepted |
 | [0054](0054-docs-checked-in-ci.md) | Docs are checked in CI: relative links resolve, and the README's Tatum calls are generated | Accepted |
 | [0055](0055-memory-failures-in-health.md) | Health and `diagnose` report memory failing behind a healthy relayer | Accepted |
+| [0056](0056-node-24.md) | Node 24 everywhere, matching CI | Accepted |
+| [0057](0057-patched-undici-zod-body-parser.md) | Patch undici, zod and body-parser in the lockfile when the install scanner blocks them | Accepted |
+| [0058](0058-tatum-credit-budget.md) | Spend Tatum credits deliberately: filtered streams only, background streams off by default, one health report per 30 s | Accepted |
+| [0059](0059-launch-on-testnet.md) | Launch on testnet first; the mainnet pass becomes U10 | Accepted |
+| [0060](0060-build-receipts-and-kitty.md) | Build Receipts (Track 1) and Kitty (Track 3) in this monorepo on Remora's rails; entering them is decided later | Accepted |
+| [0061](0061-receipts-sources-and-design.md) | Receipts: keyless sources (ESPN, Polymarket, Kalshi), binary markets, batch anchors on Sui, a server-rendered web | Accepted; the web superseded by ADR-0064 |
+| [0062](0062-kitty-pot-design.md) | Kitty: a Move pot on app-bound allowances, a keeper that checks balances first, payday learning in memory | Accepted; the web superseded by ADR-0064 |
+| [0063](0063-structured-records-skip-dedupe.md) | Receipts and Kitty write structured records without the semantic duplicate check | Accepted |
+| [0064](0064-receipts-kitty-web-with-wallets.md) | Receipts and Kitty: a React web with wallets is the main surface (Kitty's sponsored, wallet-signed transactions; Receipts' signed picks); Telegram is optional | Accepted |
+| [0065](0065-split-receipts-and-kitty-repos.md) | Split Receipts and Kitty into their own public repos (`total-recall-*`), fresh history; remove them from Remora after the U11 exit | Accepted |
+| [0066](0066-agents-use-the-apps-through-mcp.md) | Agents use Remora, Receipts and Kitty through MCP: scoped tokens, tools that act, money only inside onchain limits (Remora MCP v2, Receipts delegations, Kitty delegates) | Accepted |
+| [0067](0067-mcp-v2-details.md) | MCP v2 details: tools on the server behind `/mcp` (stdio proxies to it), tool lists by scope, over-limit refusals then `approval_request`, `via` in the hashed trigger | Accepted |
+| [0068](0068-mit-license.md) | MIT license for Remora, Receipts and Kitty; third-party code (the vendored ASCII ocean) keeps its notice in `THIRD_PARTY_NOTICES.md` | Accepted |

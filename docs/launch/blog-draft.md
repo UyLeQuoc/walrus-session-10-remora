@@ -25,8 +25,12 @@ What we learned the hard way: the relayer's **account budget**, about 1000 weigh
 
 ## 4. How it uses Tatum
 Every server-side Sui call goes through Tatum's gRPC: 12 kinds of call, listed in the README by a script that reads the code.
-- **`SubscribeCheckpoints`** drives Sentinel and our checkpoint indexer, with one stream per network, filtered by `affectedAddress` or `emitModule`.
-- Past 10 watched addresses the node rejects the filter, so the watcher streams unfiltered and filters locally: about 3 checkpoints a second on testnet (ADR-0045).
+- **`SubscribeCheckpoints`** drives Sentinel and our checkpoint indexer, always filtered by `affectedAddress` or `emitModule`.
+- A filter takes at most 10 addresses. For a while, past 10 the watcher streamed unfiltered and filtered locally. That spent a free plan's month of credits in a few days of local runs:
+  - an unfiltered stream is about 15,000 full checkpoints an hour;
+  - a filtered one is about 720 cursor frames.
+
+  Now each group of 10 addresses gets its own filtered stream, and background streams are off unless an instance opts in (ADR-0058).
 - Dry-run before execute: the gas station simulates every sponsored payment, so a doomed spend fails before anything is signed.
 - **No JSON-RPC anywhere** (ADR-0021).
 

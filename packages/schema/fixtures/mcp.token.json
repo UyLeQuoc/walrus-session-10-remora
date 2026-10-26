@@ -1,0 +1,16 @@
+{
+  "id": "6f1d2c3b-4a5e-4f60-8a71-92b3c4d5e6f7",
+  "remora": "0d2b8a7e-3f4c-4d5e-9a6b-7c8d9e0f1a2b",
+  "remoraName": "Scout",
+  "name": "Claude Code on my laptop",
+  "client": "claude-code",
+  "scopes": ["memory:read", "memory:write", "pay", "approve:request"],
+  "prefix": "rmcp_7Kq2",
+  "createdAt": "2026-10-25T04:10:00Z",
+  "expiresAt": "2026-11-24T04:10:00Z",
+  "lastUsedAt": "2026-10-25T04:21:37Z",
+  "revokedAt": null,
+  "calls": 6,
+  "spend": "50000",
+  "memories": 1
+}

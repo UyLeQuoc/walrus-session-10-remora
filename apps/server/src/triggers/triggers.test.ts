@@ -3,7 +3,15 @@ import { createLogger } from "@remora/chain";
 import { describe, expect, it, vi } from "vitest";
 import { human, nextRun } from "./cron.ts";
 import { parseSchedule, previewSchedule } from "./schedule.ts";
-import { decimalsOf, eventsFrom, filterFor, MAX_FILTER_LITERALS, startWatcher } from "./watch.ts";
+import {
+  decimalsOf,
+  eventsFrom,
+  filterFor,
+  groupsOf,
+  MAX_FILTER_LITERALS,
+  MAX_STREAMS,
+  startWatcher,
+} from "./watch.ts";
 
 describe("cron (D1, N12)", () => {
   const from = new Date("2026-10-19T08:30:15Z"); // a Monday
@@ -100,11 +108,86 @@ describe("human schedules (N12)", () => {
 });
 
 describe("chain watcher filter", () => {
-  it("filters by address up to the node's 10 literals, and streams everything past that", () => {
-    const addrs = (n: number) =>
-      Array.from({ length: n }, (_, i) => normalizeSuiAddress(`0x${i + 1}`));
-    expect(filterFor(addrs(MAX_FILTER_LITERALS))?.terms).toHaveLength(10);
-    expect(filterFor(addrs(MAX_FILTER_LITERALS + 1))).toBeUndefined();
+  const addrs = (n: number) =>
+    Array.from({ length: n }, (_, i) => normalizeSuiAddress(`0x${i + 1}`));
+
+  it("filters by address up to the node's 10 literals, and never builds an unfiltered stream", () => {
+    expect(filterFor(addrs(MAX_FILTER_LITERALS)).terms).toHaveLength(10);
+    expect(() => filterFor(addrs(MAX_FILTER_LITERALS + 1))).toThrow(/at most 10/);
+    expect(groupsOf(addrs(25)).groups.map((g) => g.length)).toEqual([10, 10, 5]);
+    const many = groupsOf(addrs(MAX_FILTER_LITERALS * MAX_STREAMS + 3));
+    expect(many.groups).toHaveLength(MAX_STREAMS);
+    expect(many.dropped).toBe(3);
+  });
+
+  it("opens one filtered stream per 10 addresses, and restarts them all when one fails (ADR-0058)", async () => {
+    const watched = addrs(13);
+    const filters: number[][] = [];
+    let opened = 0;
+    const client = {
+      subscriptionService: {
+        subscribeCheckpoints: (
+          req: {
+            filter?: {
+              terms: { literals: { predicate: { affectedAddress: { address: string } } }[] }[];
+            };
+          },
+          opts: { abort: AbortSignal },
+        ) => {
+          opened += 1;
+          const mine = (req.filter?.terms ?? []).map((t) =>
+            watched.indexOf(t.literals[0]?.predicate.affectedAddress.address ?? ""),
+          );
+          filters.push(mine);
+          const round = Math.ceil(opened / 2);
+          const breaks = round === 1 && mine.includes(12);
+          return {
+            responses: (async function* () {
+              const target = watched[mine[0] ?? 0] ?? "";
+              yield {
+                cursor: BigInt(10 * round),
+                checkpoint: {
+                  transactions: [
+                    {
+                      digest: `Dg${round}-${mine[0]}`,
+                      balanceChanges: [{ address: target, coinType: "0x2::sui::SUI", amount: "5" }],
+                    },
+                  ],
+                },
+              };
+              if (breaks) throw new Error("stream reset");
+              await new Promise((_, reject) =>
+                opts.abort.addEventListener("abort", () => reject(new Error("aborted"))),
+              );
+            })(),
+          };
+        },
+      },
+      ledgerService: {
+        getCheckpoint: async () => ({ response: { checkpoint: { transactions: [] } } }),
+      },
+    };
+    const seen: string[] = [];
+    const stop = startWatcher({
+      network: "testnet",
+      client: client as never,
+      db: {} as never,
+      log: createLogger({}, () => {}),
+      watched: async () => [{ remoraId: "r1", addresses: watched }],
+      onEvent: async (_id, e) => void seen.push(e.digest),
+      reconnectMs: 1,
+    });
+    await vi.waitFor(() => expect(opened).toBeGreaterThanOrEqual(4));
+    stop();
+    // Every stream carried a filter: 10 addresses, then 3. Never an unfiltered one.
+    expect(
+      filters
+        .slice(0, 2)
+        .map((f) => f.length)
+        .sort(),
+    ).toEqual([10, 3]);
+    expect(filters.every((f) => f.length > 0)).toBe(true);
+    expect(seen).toEqual(expect.arrayContaining(["Dg1-0", "Dg1-10", "Dg2-0", "Dg2-10"]));
   });
 });
 

@@ -1,4 +1,5 @@
 import type { Hono } from "hono";
+import { mcpRoutes } from "../mcp/index.ts";
 import { moneyRoutes } from "../money/index.ts";
 import { playgroundRoutes } from "../playground/index.ts";
 import { remoraRoutes } from "../runtime/index.ts";
@@ -24,6 +25,7 @@ export const ROUTE_GROUPS = [
   moneyRoutes,
   remoraRoutes,
   playgroundRoutes,
+  mcpRoutes,
 ] as const;
 
 export function registerRoutes(app: Hono): void {

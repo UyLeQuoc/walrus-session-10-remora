@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isRateLimited, PacedTransport } from "./paced.ts";
+import { isRateLimited, PacedTransport, resetTatumUsage, tatumUsage } from "./paced.ts";
 import { withRetry } from "./retry.ts";
 import { tatumGrpcUrl, tatumSuiOptionsFromEnv } from "./tatum.ts";
 
@@ -95,12 +95,40 @@ describe("PacedTransport", () => {
       mergeOptions: (o: object) => o,
       serverStreaming: (_m: unknown, _i: unknown, o: { timeout?: unknown }) => {
         seen = o;
-        return {} as never;
+        return { responses: { onMessage: () => () => {} } } as never;
       },
     } as never;
     const paced = new PacedTransport(inner, { maxRps: 1000, sleep: async () => {} });
     paced.serverStreaming(method, {} as never, { timeout: 30_000 } as never);
     expect(seen.timeout).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("counts what it asks Tatum for: requests with retries, and stream frames (ADR-0058)", async () => {
+    resetTatumUsage();
+    let calls = 0;
+    let deliver: (() => void) | null = null;
+    const inner = {
+      mergeOptions: (o: object) => o,
+      unary: () => (++calls < 2 ? rejected(tooMany()) : ok({})),
+      serverStreaming: () => ({
+        responses: {
+          onMessage: (fn: () => void) => {
+            deliver = fn;
+            return () => {};
+          },
+        },
+      }),
+    } as never;
+    const paced = new PacedTransport(inner, { maxRps: 1000, sleep: async () => {} });
+    await paced.unary(method, {} as never, {} as never).response;
+    const stream = { name: "SubscribeCheckpoints" } as never;
+    paced.serverStreaming(stream, {} as never, {} as never);
+    for (let i = 0; i < 3; i++) (deliver as (() => void) | null)?.();
+    expect(tatumUsage()).toEqual({
+      GetBalance: 2,
+      "SubscribeCheckpoints (frames)": 3,
+      "SubscribeCheckpoints (opened)": 1,
+    });
   });
 
   it("knows a 429 from other UNAVAILABLEs", () => {

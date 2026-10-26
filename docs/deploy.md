@@ -20,7 +20,7 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
   - **chain:** `TATUM_API_KEY` / `TATUM_API_KEY_TESTNET` (gRPC only, ADR-0021);
   - **money:** `FACILITATOR_URL(_TESTNET)`, `MERCHANTS_URL(_TESTNET)`, `MERCHANT_PAYTO(_TESTNET)`;
   - **memory:** `MEMWAL_ACCOUNT_ID`, `MEMWAL_PRIVATE_KEY` (the operator delegate), `MEMWAL_SERVER_URL`;
-  - **background work:** `WORKER=on`, `WATCHER=on`, `INDEXER=on` on exactly one instance; others run `WORKER=off INDEXER=off WATCHER=off CHANNELS=off`;
+  - **background work:** `WORKER=on`, `WATCHER=on`, `INDEXER=on` on exactly one instance; others run `WORKER=off INDEXER=off WATCHER=off CHANNELS=off`. `WATCHER` and `INDEXER` default to off, because they stream from Tatum the whole time they're on ([ADR-0058](adr/0058-tatum-credit-budget.md));
   - **channels:** `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME` only on the instance that polls (Telegram allows one poller per token);
   - **Hatchery:** `WALRUS_*`; mainnet needs `WALRUS_PUBLISHER_MAINNET` (ADR-0048);
   - **playground:** `PLAYGROUND_*`; testnet only, and off without `PLAYGROUND_FUNDER_KEY` (ADR-0051).

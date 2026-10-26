@@ -115,6 +115,30 @@ describe("rememberWithDedupe", () => {
     expect(written).toEqual([vscode]);
   });
 
+  it("writes a near-identical structured record when dedupe is off, without a recall", async () => {
+    const joined = "[episode] [by:@kitty] [2026-10-24] JOINED member=0xb (Bao) cap=$0.40";
+    const { client, written } = relayerHolding(
+      "[episode] [by:@kitty] [2026-10-24] JOINED member=0xa (Ava) cap=$0.40",
+      0.03,
+    );
+    let recalls = 0;
+    const counting = {
+      ...client,
+      recall: async (...a: unknown[]) => {
+        recalls++;
+        return (client.recall as (...x: unknown[]) => unknown)(...a);
+      },
+    } as unknown as MemWal;
+    const out = await rememberWithDedupe(counting, {
+      text: joined,
+      namespace: "ns",
+      dedupe: false,
+    });
+    expect(out.status).toBe("accepted");
+    expect(written).toEqual([joined]);
+    expect(recalls).toBe(0);
+  });
+
   it("leaves ordinary dedupe alone", async () => {
     const again = "[profile] [by:@u] [2026-09-24] I use VS Code, with vim keys.";
     const { client, written } = relayerHolding(vscode, 0.12);

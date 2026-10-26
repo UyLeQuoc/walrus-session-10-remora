@@ -4,6 +4,7 @@
  */
 export * from "./hatchery.ts";
 export * from "./identity.ts";
+export * from "./mcp.ts";
 export * from "./memory.ts";
 export * from "./money.ts";
 export * from "./runtime.ts";

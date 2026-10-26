@@ -4,6 +4,7 @@
  * budget: the budget and memory items read the 429s and failures our own calls saw.
  */
 import type { HealthItem, HealthReport, HealthStatus } from "@remora/schema";
+import { tatumTrouble } from "./diagnose.ts";
 import { lastRelayer429, recentErrors, relayerFailuresSince, watcherState } from "./signals.ts";
 
 export interface HealthDeps {
@@ -96,7 +97,9 @@ export async function healthReport(d: HealthDeps): Promise<HealthReport> {
             },
           )
         : item(`tatum (${network})`, "down", tip.error, {
-            fix: `Check TATUM_API_KEY for ${network} and the gRPC URL.`,
+            fix:
+              tatumTrouble(tip.error, network) ??
+              `Check TATUM_API_KEY for ${network} and the gRPC URL.`,
           }),
     );
     if (d.watcherOn) {

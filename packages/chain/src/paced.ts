@@ -17,6 +17,21 @@ export function isRateLimited(err: unknown): boolean {
   return e?.code === "UNAVAILABLE" && typeof e.message === "string" && e.message.includes("429");
 }
 
+const usage = new Map<string, number>();
+const count = (key: string) => usage.set(key, (usage.get(key) ?? 0) + 1);
+
+/**
+ * What this process has asked Tatum for since it started: unary requests (retries included) and
+ * stream frames, per method. A stream's frames are what spent a month's credits (ADR-0058).
+ */
+export function tatumUsage(): Record<string, number> {
+  return Object.fromEntries([...usage].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+export function resetTatumUsage() {
+  usage.clear();
+}
+
 export interface PacingOptions {
   /** Unary calls started per second, across the whole client. */
   maxRps: number;
@@ -64,6 +79,7 @@ export class PacedTransport implements RpcTransport {
     const done = (async () => {
       for (let attempt = 0; ; attempt++) {
         await this.slot();
+        count(method.name);
         const call = this.inner.unary(method, input, options);
         try {
           const [headers, response, status, trailers] = await Promise.all([
@@ -103,10 +119,13 @@ export class PacedTransport implements RpcTransport {
   ): ServerStreamingCall<I, O> {
     // A stream (checkpoints) lives until its caller aborts it; the per-call deadline is for unary
     // calls. With it, Tatum's stream was cut every 30 s and events between reconnects were lost.
-    return this.inner.serverStreaming(method, input, {
+    count(`${method.name} (opened)`);
+    const call = this.inner.serverStreaming(method, input, {
       ...options,
       timeout: Number.POSITIVE_INFINITY,
     });
+    call.responses.onMessage(() => count(`${method.name} (frames)`));
+    return call;
   }
 
   clientStreaming<I extends object, O extends object>(

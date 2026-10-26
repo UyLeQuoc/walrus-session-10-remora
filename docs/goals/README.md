@@ -15,12 +15,16 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 7 | [U6: the Grok-bots shape (chat, rooms, model each, teams from Markdown)](uy-06-grok-bots-shape.md) ([prompt](uy-06-grok-bots-shape.prompt.txt)) | Uy's agent (+ claimed UI, ADR-0027) | ✅ **Done Oct 21: U6 exit on testnet, model path verified** ([notes](../spikes/2026-10-21-u6-exit.md), [handoff](../handoffs/2026-10-21-uy-to-huan-u6-landed.md); Telegram unverified) | U5 ✅ |
 | 8 | [U7: Hatchery on Walrus, Proof of Learning, memory controls](uy-07-hatchery-proof-of-learning.md) ([prompt](uy-07-hatchery-proof-of-learning.prompt.txt)) | Uy's agent (+ UI items Huấn hasn't started, ADR-0027) | ✅ **Done Oct 22: U7 exit on testnet** ([notes](../spikes/2026-10-22-u7-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u7-landed.md); Telegram unverified) | U6 ✅ |
 | 9 | [U8: launch readiness (playground, health + diagnose, threat model, README)](uy-08-launch-readiness.md) ([prompt](uy-08-launch-readiness.prompt.txt)) | Uy's agent (+ /playground if Huấn hasn't started it, ADR-0027) | ✅ **Done Oct 22: U8 exit on testnet** ([notes](../spikes/2026-10-22-u8-exit.md), [handoff](../handoffs/2026-10-22-uy-to-huan-u8-landed.md)). The full suite is 43/43; it was 42/43 during the MemWal relayer's outage ([ADR-0055](../adr/0055-memory-failures-in-health.md)). Telegram unverified | U7 ✅ |
+| 10 | [U9: the testnet launch (public URL, /status, Huấn's W3 queue, D5 handoff, red-team evals; license done: MIT, ADR-0068)](uy-09-testnet-launch.md) ([prompt](uy-09-testnet-launch.prompt.txt)) | Uy's agent + Uy at every deploy step | Next | U8 ✅ ([ADR-0059](../adr/0059-launch-on-testnet.md)) |
+| 11 | [U10: the mainnet pass (mainnet money, owned memory, Walrus Sites)](uy-10-mainnet-pass.md) ([prompt](uy-10-mainnet-pass.prompt.txt)) | Uy's agent + Uy at every mainnet transaction | When Uy calls it | U9 |
+| 12 | [U11: Receipts (Track 1) and Kitty (Track 3) on Remora's rails](uy-11-receipts-and-kitty.md) ([prompt](uy-11-receipts-and-kitty.prompt.txt)) | Uy's agent, unattended overnight | ✅ **Done Oct 25: both exits passed on testnet** ([notes](../spikes/2026-10-25-u11-exit.md)); then the web with wallets ([ADR-0064](../adr/0064-receipts-kitty-web-with-wallets.md)) and the split into `total-recall-receipts` and `total-recall-kitty` ([ADR-0065](../adr/0065-split-receipts-and-kitty-repos.md)) | U8 ✅ |
+| 13 | [U12: agents use Remora, Receipts and Kitty through MCP (a UI and an MCP server in each)](uy-12-agents-mcp.md) ([prompt](uy-12-agents-mcp.prompt.txt)) | Uy's agent (+ the Connections page if Huấn hasn't started it, ADR-0027) | ✅ **Done Oct 25: U12 exit on testnet in all three repos** ([notes](../spikes/2026-10-25-u12-exit.md), [handoff](../handoffs/2026-10-25-uy-to-huan-u12-landed.md)); real wallets and remote Receipts/Kitty MCP clients unverified | U11 |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-08-launch-readiness.prompt.txt   # paste as the agent's goal (<4000 chars)
+pbcopy < docs/goals/uy-09-testnet-launch.prompt.txt   # next (<4000 chars each)
 ```
 
 Each goal has two files:

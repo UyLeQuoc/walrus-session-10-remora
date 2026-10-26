@@ -72,10 +72,11 @@ export function isUnmetered(method: string, path: string): boolean {
 /**
  * The W2 pages' reads, which they poll (feed, inbox, budget). They answer only for the signed-in
  * wallet and spend nothing; counting them locked an owner out within a minute on the remora page.
+ * The Connections page's token list and call log (F14) are the same kind of read.
  * Memory search, verify, funds and every write still count.
  */
 const W2_READS =
-  /^\/api\/(networks|templates|feed|approvals|settings|rooms(\/[0-9a-f-]{36}\/messages)?|remoras(\/[0-9a-f-]{36}(\/(budget|rules|sources|schedules|learning|proofs))?)?|events\/[0-9a-f-]{36}\/why)$/i;
+  /^\/api\/(networks|templates|feed|approvals|settings|rooms(\/[0-9a-f-]{36}\/messages)?|remoras(\/[0-9a-f-]{36}(\/(budget|rules|sources|schedules|learning|proofs))?)?|events\/[0-9a-f-]{36}\/why|mcp\/tokens(\/[0-9a-f-]{36}\/calls)?)$/i;
 
 export function clientAddress(headers: { get(name: string): string | null | undefined }): string {
   const forwarded = headers.get("x-forwarded-for");

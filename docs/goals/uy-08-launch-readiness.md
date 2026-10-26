@@ -118,10 +118,10 @@ Each shape comes with a fixture:
 ## Done when
 - [x] The contract PR is merged (PR #10).
 - [x] A + B are done with tests; the C docs are written and link-checked.
-- [x] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green. The full suite went **43/43** once the MemWal relayer recovered. It was 42/43 during the relayer's outage ([U8 exit](../spikes/2026-10-22-u8-exit.md), [ADR-0055](../adr/0055-memory-failures-in-health.md)).
+- [x] `typecheck`, `lint`, `test`, `sui move test` and `bun run e2e` are green; CI is green. The full suite went **43/43** once the MemWal relayer recovered, and **43/43 again on Oct 24** after ADR-0058 with the new Tatum keys. It was 42/43 during the relayer's outage ([U8 exit](../spikes/2026-10-22-u8-exit.md), [ADR-0055](../adr/0055-memory-failures-in-health.md)).
 - [x] The U8 exit passes on testnet, with timings and digests ([notes](../spikes/2026-10-22-u8-exit.md)).
 - [x] The ADRs, docs and a handoff to Huấn are written; everything is pushed to `main`.
-- Telegram (H1, A5): **unverified**, because Uy skipped the live check.
+- [x] Telegram (H1, A5), **verified live** (Oct 24): link, `/remoras`, `/scout` with its answer, Why?, and 👎 recorded as `noise` ([U8 exit](../spikes/2026-10-22-u8-exit.md#telegram-h1-a5)).
 
 ## Never
 - Mainnet money or a mainnet publish (that's U9, Uy's call).

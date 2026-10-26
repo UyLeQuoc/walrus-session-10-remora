@@ -14,6 +14,7 @@ import { enqueue, type JobHandler } from "./jobs.ts";
 import type { Button } from "./notify.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { scoutAsk } from "./scout.ts";
+import { teach } from "./sentinel.ts";
 
 export { handoff, JOB, proposeSchedule } from "../tools/propose.ts";
 
@@ -115,6 +116,41 @@ export async function removeSchedule(deps: RuntimeDeps, r: Remora, scheduleId: s
 }
 
 /** N2: approves a non-payment approval (a proposed schedule). */
+/**
+ * F14 (ADR-0066): a rule an agent proposed through MCP becomes Sentinel's rule only on the owner's
+ * yes. The approval inbox shows it as an ordinary "Approve" card.
+ */
+export async function approveRule(deps: RuntimeDeps, owner: string, approvalId: string) {
+  const [row] = await deps.db
+    .select({ a: approvals, r: remoras })
+    .from(approvals)
+    .innerJoin(remoras, eq(remoras.id, approvals.remoraId))
+    .where(eq(approvals.id, approvalId));
+  if (!row) throw new RemoraError("approval.not_found", "No such approval.", 404);
+  if (row.r.ownerAddress !== normalizeSuiAddress(owner))
+    throw new RemoraError("remora.not_owner", "That isn't yours.", 403);
+  if (row.a.status !== "pending")
+    throw new RemoraError("approval.decided", `Already ${row.a.status}.`, 409);
+  const { text } = row.a.payload as { text: string };
+  const rule = await teach(deps, row.r, text);
+  await deps.db
+    .update(approvals)
+    .set({ status: "approved", decidedAt: new Date() })
+    .where(eq(approvals.id, approvalId));
+  return { rule };
+}
+
+/** The inbox's "Approve" for anything that isn't a payment: a proposed schedule or rule. */
+export async function approveYes(deps: RuntimeDeps, owner: string, approvalId: string) {
+  const [row] = await deps.db
+    .select({ kind: approvals.kind })
+    .from(approvals)
+    .where(eq(approvals.id, approvalId));
+  return row?.kind === "rule"
+    ? approveRule(deps, owner, approvalId)
+    : approveSchedule(deps, owner, approvalId);
+}
+
 export async function approveSchedule(deps: RuntimeDeps, owner: string, approvalId: string) {
   const [row] = await deps.db
     .select({ a: approvals, r: remoras })

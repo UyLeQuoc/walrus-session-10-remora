@@ -27,6 +27,7 @@ All chain I/O goes through **Tatum's Sui gRPC**.
 | **Hatchery** | Share a remora as a Walrus blob with its author onchain; anyone hatches a copy through a consent screen with one signature | [U7 exit](docs/spikes/2026-10-22-u7-exit.md): hatch `DTq4sd4z…`, a poisoned template refused |
 | **Proof of Learning** | A ping, 👎, a rule, then silence on the same kind of event, with the rule's memory blob as the delta | [U7 exit §5](docs/spikes/2026-10-22-u7-exit.md) |
 | **Your memory** | Hide, correct, forget all, expiry, Markdown/JSON export, and Claude Code via `packages/mcp` | [U7 exit §6](docs/spikes/2026-10-22-u7-exit.md) |
+| **Agents (MCP)** | Make a scoped, revocable token on the Connections page and Claude Code (or any MCP client) uses one remora: it remembers, pays Reef services through the Disc, and over the cap asks you; every call is logged and its Wakes say `via mcp:…` | [U12 handoff](docs/handoffs/2026-10-25-uy-to-huan-u12-landed.md): Claude Code over stdio and over HTTP; a paid `sui-risk` through MCP verifies (`2UGiVjrJ…`); 10 MCP attacks in CI, 0 paid |
 
 ## How it fits together
 
@@ -35,11 +36,11 @@ flowchart LR
   subgraph You
     W[Wallet] --> Web[Web app]
     TG[Telegram]
-    CC[Claude Code]
+    CC[Claude Code, any MCP agent]
   end
   Web --> API[Remora API + runtime]
   TG --> API
-  CC -->|MCP| API
+  CC -->|MCP: token, /mcp| API
   API -->|turns| Model[Models via OpenRouter]
   API -->|Sonar policy| API
   API -->|recall / remember| MemWal[MemWal relayer] --> Walrus[(Walrus)]
@@ -69,7 +70,7 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 <!-- tatum-calls:start -->
 | Call | gRPC service | What Remora uses it for | Where |
 |---|---|---|---|
-| `subscribeCheckpoints` | SubscriptionService | Sentinel's watcher and the checkpoint indexer (Disc and hatchery events): one stream per network | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
+| `subscribeCheckpoints` | SubscriptionService | Sentinel's watcher (filtered streams, 10 addresses each) and the checkpoint indexer (Disc and hatchery events), always filtered (ADR-0058) | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
 | `getCheckpoint` | LedgerService | backfill the checkpoints missed during a reconnect | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
 | `getServiceInfo` | LedgerService | the chain tip for health's checkpoint lag and Tatum latency, and diagnose | `apps/server/src/ops/index.ts` |
 | `getObject` | LedgerService | Disc, allowance and cap state; diagnose's Move type checks; Scout's object reads | `apps/merchants/src/sui-risk.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/runtime/remoras.ts` (+2) |
@@ -147,4 +148,5 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 
 ## License
 
-To be added before the repo goes public ([ADR-0017](docs/adr/0017-github-repo-private-until-submission.md)).
+[MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)). The vendored ASCII ocean keeps its upstream MIT notice in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

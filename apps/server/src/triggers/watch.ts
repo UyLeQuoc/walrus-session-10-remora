@@ -1,9 +1,11 @@
 /**
- * D1 chain trigger: one checkpoint stream per network, filtered to the addresses Sentinels watch
- * (`affectedAddress` terms, OR-ed, up to the filter's 10 literals; unfiltered past that). Balance changes of a watched address become `ChainEvent`s and go
- * to every Sentinel watching it. The watched set is re-read periodically; a change re-subscribes.
- * The stream starts at the tip, so after a reconnect the checkpoints in between are fetched with
- * `GetCheckpoint` (up to `maxBackfill`), as the indexer does: a ping is never lost to a reconnect.
+ * D1 chain trigger: checkpoint streams per network, filtered to the addresses Sentinels watch
+ * (`affectedAddress` terms, OR-ed, at most the filter's 10 literals per stream, so more addresses
+ * open more streams; never an unfiltered one, ADR-0058). Balance changes of a watched address
+ * become `ChainEvent`s and go to every Sentinel watching it. The watched set is re-read
+ * periodically; a change re-subscribes. A stream starts at the tip, so after a reconnect the
+ * checkpoints in between are fetched with `GetCheckpoint` (up to `maxBackfill`), as the indexer
+ * does: a ping is never lost to a reconnect.
  */
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
@@ -74,13 +76,17 @@ export async function watchedOn(db: Db, network: SuiNetwork): Promise<Watched[]>
 
 /** A checkpoint filter takes at most 10 literals (the fullnode rejects more). */
 export const MAX_FILTER_LITERALS = 10;
-
 /**
- * `affectedAddress` terms, OR-ed. Past the literal limit there's no filter: the stream carries every
- * checkpoint and `eventsFrom` keeps the watched addresses' changes.
+ * Streams per network. An unfiltered stream carried every checkpoint with every transaction's balance
+ * changes, about 15,000 frames an hour, and spent the Tatum key's monthly credits; a filtered one
+ * sends a cursor every few seconds and a checkpoint only when it matches (ADR-0058).
  */
+export const MAX_STREAMS = 5;
+
+/** `affectedAddress` terms, OR-ed: one stream's filter, for at most `MAX_FILTER_LITERALS` addresses. */
 export function filterFor(addresses: string[]) {
-  if (addresses.length > MAX_FILTER_LITERALS) return undefined;
+  if (addresses.length > MAX_FILTER_LITERALS)
+    throw new Error(`a filter takes at most ${MAX_FILTER_LITERALS} addresses`);
   return {
     terms: addresses.map((address) => ({
       literals: [
@@ -91,6 +97,15 @@ export function filterFor(addresses: string[]) {
       ],
     })),
   };
+}
+
+/** The watched addresses in groups a filter can take, at most `MAX_STREAMS` of them. */
+export function groupsOf(addresses: string[]): { groups: string[][]; dropped: number } {
+  const groups: string[][] = [];
+  for (let i = 0; i < addresses.length; i += MAX_FILTER_LITERALS)
+    groups.push(addresses.slice(i, i + MAX_FILTER_LITERALS));
+  const kept = groups.slice(0, MAX_STREAMS);
+  return { groups: kept, dropped: addresses.length - kept.flat().length };
 }
 
 export function startWatcher(o: {
@@ -160,33 +175,32 @@ export function startWatcher(o: {
         await new Promise((r) => setTimeout(r, o.refreshMs ?? 30_000));
         continue;
       }
-      abort = new AbortController();
+      const session = new AbortController();
+      abort = session;
       const refresh = setInterval(async () => {
         const next = await load().catch(() => null);
         const nextKey = next
           ? [...new Set(next.flatMap((w) => w.addresses))].sort().join(",")
           : key;
-        if (nextKey !== key) abort?.abort();
+        if (nextKey !== key) session.abort();
       }, o.refreshMs ?? 30_000);
-      try {
+      const { groups, dropped } = groupsOf([...byAddress.keys()]);
+      // One stream per group; they share `last`, so the first frame after a gap backfills it once.
+      const stream = async (addresses: string[]) => {
         const call = o.client.subscriptionService.subscribeCheckpoints(
-          {
-            readMask: READ_MASK,
-            filter: filterFor([...byAddress.keys()]),
-          },
-          { abort: abort.signal },
+          { readMask: READ_MASK, filter: filterFor(addresses) },
+          { abort: session.signal },
         );
-        noteWatcher(o.network, { subscriptions: byAddress.size });
-        log.info("watcher.subscribed", {
-          addresses: byAddress.size,
-          filtered: byAddress.size <= MAX_FILTER_LITERALS,
-        });
         let first = true;
         for await (const frame of call.responses) {
           if (stopped) continue;
           const cursor = frame.cursor ?? 0n;
-          if (first && last !== null && cursor > last + 1n)
-            await backfill(last + 1n, cursor - 1n, byAddress);
+          if (first && last !== null && cursor > last + 1n) {
+            // Claim the gap before awaiting, so a sibling stream doesn't backfill it too.
+            const from = last + 1n;
+            last = cursor - 1n;
+            await backfill(from, cursor - 1n, byAddress);
+          }
           first = false;
           if (frame.checkpoint) {
             await deliver(
@@ -199,15 +213,32 @@ export function startWatcher(o: {
           noteWatcher(o.network, { checkpoint: Number(cursor) });
           delay = o.reconnectMs ?? 1_000;
         }
-      } catch (err) {
-        if (stopped) break;
-        if (!abort.signal.aborted) {
-          log.warn("watcher.reconnect", { error: err, inMs: delay });
-          await new Promise((r) => setTimeout(r, delay));
-          delay = Math.min(delay * 2, 60_000);
-        }
+        if (!session.signal.aborted) throw new Error("the checkpoint stream ended");
+      };
+      let failure: unknown = null;
+      try {
+        noteWatcher(o.network, { subscriptions: byAddress.size });
+        log.info("watcher.subscribed", { addresses: byAddress.size, streams: groups.length });
+        if (dropped) log.warn("watcher.capped", { dropped, streams: MAX_STREAMS });
+        await Promise.all(
+          groups.map((g) =>
+            stream(g).catch((err) => {
+              // One stream failing restarts them all, after the backoff.
+              if (!session.signal.aborted) {
+                failure = err;
+                session.abort();
+              }
+            }),
+          ),
+        );
       } finally {
         clearInterval(refresh);
+      }
+      if (stopped) break;
+      if (failure) {
+        log.warn("watcher.reconnect", { error: failure, inMs: delay });
+        await new Promise((r) => setTimeout(r, delay));
+        delay = Math.min(delay * 2, 60_000);
       }
     }
   };

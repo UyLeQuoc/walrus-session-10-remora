@@ -26,11 +26,28 @@ export const healthRoutes = new Hono()
    * It names no address, key or id, and never spends the relayer budget.
    */
   .get("/api/health/deep", async (c) => {
-    const { playgroundDeps } = await import("../playground/index.ts");
-    const report = await liveHealth(
-      playgroundDeps.funder ? () => playgroundDeps.balances() : undefined,
-    );
-    return c.json({ ...report, startedAt: STARTED_AT, model: env.LLM_MODEL });
+    return c.json({ ...(await deepReport()), startedAt: STARTED_AT, model: env.LLM_MODEL });
   });
 
 const STARTED_AT = new Date().toISOString();
+
+/**
+ * One report per 30 s, shared by every caller. Each report costs several Tatum calls per network,
+ * and the public status page polls it for every open tab (ADR-0058).
+ */
+const REPORT_TTL_MS = 30_000;
+let cached: { at: number; report: Promise<Awaited<ReturnType<typeof liveHealth>>> } | null = null;
+
+function deepReport() {
+  if (cached && Date.now() - cached.at < REPORT_TTL_MS) return cached.report;
+  const report = (async () => {
+    const { playgroundDeps } = await import("../playground/index.ts");
+    return liveHealth(playgroundDeps.funder ? () => playgroundDeps.balances() : undefined);
+  })();
+  cached = { at: Date.now(), report };
+  // A failed report isn't kept.
+  report.catch(() => {
+    if (cached?.report === report) cached = null;
+  });
+  return report;
+}
