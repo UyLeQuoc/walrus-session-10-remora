@@ -115,7 +115,7 @@ function Importer() {
           <Textarea
             aria-label="Team file"
             rows={14}
-            className="font-mono text-xs"
+            className="rounded-ob-lg bg-ob-grouped font-mono text-xs leading-5"
             placeholder={EXAMPLE}
             value={markdown}
             onChange={(e) => setMarkdown(e.target.value)}
@@ -173,21 +173,19 @@ function Importer() {
       </Section>
       {preview ? (
         <Section title={preview.team.name} description={preview.team.description}>
-          <ul className="flex max-w-3xl flex-col gap-3" aria-label="Team preview">
+          <ul className="ob-group max-w-3xl" aria-label="Team preview">
             {preview.remoras.map((r) => (
               <li
                 key={r.name}
-                className="flex flex-col gap-1 rounded-lg border p-3 text-sm"
+                className="flex min-w-0 flex-col gap-1 px-4 py-3 text-md text-ob-secondary"
                 data-testid="team-remora"
               >
-                <p className="flex flex-wrap items-center gap-2 font-medium">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
                   {r.name} <Badge variant="outline">{r.template}</Badge>
                   {r.model ? <Badge variant="secondary">{modelById(r.model).label}</Badge> : null}
-                  <Badge variant="outline">starts in shadow mode</Badge>
+                  <Badge variant="warning">starts in shadow mode</Badge>
                 </p>
-                <p className="text-muted-foreground">
-                  {r.budget ?? "Read-only: no budget, never pays."}
-                </p>
+                <p className="text-ob-muted">{r.budget ?? "Read-only: no budget, never pays."}</p>
                 {r.rules.map((rule) => (
                   <p key={rule.text}>
                     Rule: “{rule.text}” {rule.understood ? "✓" : "(read by its model at import)"}
@@ -196,14 +194,14 @@ function Importer() {
                 {r.schedules.map((s) => (
                   <p key={s.when + s.question}>
                     {s.human ?? s.when}: {s.question}{" "}
-                    <span className="text-muted-foreground">(paused)</span>
+                    <span className="text-ob-muted">(paused)</span>
                   </p>
                 ))}
               </li>
             ))}
           </ul>
           {preview.warnings.length ? (
-            <ul className="flex max-w-3xl flex-col gap-1 text-sm text-ob-warning-text">
+            <ul className="flex max-w-3xl flex-col gap-1 rounded-ob-lg bg-ob-warning-soft px-4 py-3 text-md text-ob-warning-text">
               {preview.warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}
@@ -214,11 +212,7 @@ function Importer() {
               {step ? <Spinner /> : null}
               Create the team{preview.signatures ? " (one signature)" : ""}
             </Button>
-            <span
-              className="text-sm text-muted-foreground"
-              aria-live="polite"
-              data-testid="import-step"
-            >
+            <span className="text-md text-ob-muted" aria-live="polite" data-testid="import-step">
               {step}
             </span>
           </div>

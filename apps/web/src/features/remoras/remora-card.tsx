@@ -1,10 +1,10 @@
 /** A remora as an object: name, status, template and how much of its budget is left (D1). */
 import type { RemoraView } from "@remora/schema";
-import { ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import { BudgetMeter } from "@/components/app/budget-meter";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GalleryCard } from "@/openbot/pages";
 import { useBudget } from "./use-budget";
 
 export function RemoraCard({ remora }: { remora: RemoraView }) {
@@ -15,32 +15,29 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
   return (
     <Link
       to={`/remoras/${remora.id}`}
-      className="block rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="block min-w-0 rounded-ob-card focus-visible:shadow-[0_0_0_1px_var(--openbot-border-focus)] focus-visible:outline-none"
       data-testid="remora-card"
     >
-      <Card className="h-full transition-colors hover:bg-muted/40">
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2">
-            {remora.name}
-            <StatusBadge status={remora.status} />
-            <ChevronRight aria-hidden className="ml-auto size-4 text-muted-foreground" />
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {remora.template.charAt(0).toUpperCase() + remora.template.slice(1)}
+      <GalleryCard
+        as="div"
+        interactive
+        media={<RemoraAvatar id={remora.id} name={remora.name} size={36} />}
+        bareMedia
+        title={<span className="min-w-0 truncate">{remora.name}</span>}
+        byline={remora.template.charAt(0).toUpperCase() + remora.template.slice(1)}
+        action={<StatusBadge status={remora.status} />}
+        clamp={false}
+      >
+        {!budget ? (
+          <p className="text-md text-ob-muted">Read-only: no budget to spend.</p>
+        ) : readable ? (
+          <BudgetMeter meter={meter.meter} window={budget.window} />
+        ) : (
+          <p className="text-md text-ob-muted">
+            {meter.loading ? "Reading the Disc…" : meter.error || "Budget not readable just now."}
           </p>
-        </CardHeader>
-        <CardContent>
-          {!budget ? (
-            <p className="text-sm text-muted-foreground">Read-only: no budget to spend.</p>
-          ) : readable ? (
-            <BudgetMeter meter={meter.meter} window={budget.window} />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {meter.loading ? "Reading the Disc…" : meter.error || "Budget not readable just now."}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </GalleryCard>
     </Link>
   );
 }

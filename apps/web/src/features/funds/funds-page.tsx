@@ -91,7 +91,7 @@ function Funds({ owner }: { owner: string }) {
         }
       />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-md text-ob-danger-text">{error}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <StatTile
@@ -108,7 +108,7 @@ function Funds({ owner }: { owner: string }) {
             coins > 0n ? (
               "Needs moving to your address balance."
             ) : (
-              <span className="text-success">✓ Nothing to move</span>
+              <span className="text-ob-success-text">✓ Nothing to move</span>
             )
           }
           data-testid="coins"
@@ -128,14 +128,14 @@ function Funds({ owner }: { owner: string }) {
       </div>
 
       {settling || lastTx ? (
-        <div className="flex min-h-6 flex-wrap items-center gap-2 text-sm">
+        <div className="flex min-h-6 flex-wrap items-center gap-2 text-md">
           {settling ? (
             <Badge variant="warning">
               <Spinner /> Settling…
             </Badge>
           ) : null}
           {lastTx ? (
-            <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+            <span className="flex min-w-0 items-center gap-2 text-ob-muted">
               Last transaction
               <Hash value={lastTx} href={explorerTx(network, lastTx)} label="transaction" />
             </span>
@@ -147,13 +147,13 @@ function Funds({ owner }: { owner: string }) {
 
       <Collapsible>
         <CollapsibleTrigger asChild>
-          <Button type="button" variant="ghost" size="sm">
+          <Button type="button" variant="ghost" size="sm" className="group -ml-3">
             <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" />
             Advanced: withdraw to a coin
           </Button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="flex flex-col gap-2 pt-2">
-          <p className="text-sm text-muted-foreground">
+        <CollapsibleContent className="ob-card mt-2">
+          <p className="text-md text-ob-muted">
             For apps that need a Coin object. Remoras can only spend your{" "}
             <Term name="address balance">address balance</Term>.
           </p>
@@ -182,9 +182,9 @@ function Funds({ owner }: { owner: string }) {
       </Collapsible>
 
       <Section title="Where it goes" description="A short version of the money path.">
-        <div className="flex items-start gap-3 rounded-xl border bg-card p-4 text-sm">
-          <Coins className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p className="text-muted-foreground">
+        <div className="flex items-start gap-3 rounded-ob-card bg-ob-control-hover p-4 text-md">
+          <Coins className="mt-0.5 size-4 shrink-0 text-ob-accent-text" />
+          <p className="text-ob-secondary">
             USDC in coins → your address balance → each remora's Disc → a merchant. A Disc can only
             spend what is already in your address balance, and only up to its cap.
           </p>

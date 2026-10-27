@@ -78,7 +78,7 @@ function Share({ id }: { id: string }) {
           </AlertDescription>
         </Alert>
       ) : null}
-      {!review && !error ? <Skeleton className="h-64 w-full max-w-3xl" /> : null}
+      {!review && !error ? <Skeleton className="h-64 w-full max-w-3xl rounded-ob-card" /> : null}
       {review ? (
         <>
           <Section
@@ -90,11 +90,11 @@ function Share({ id }: { id: string }) {
             </div>
           </Section>
           <Section title="What stays with you">
-            <ul className="flex max-w-3xl flex-col gap-1 text-sm" aria-label="Removed">
+            <ul className="ob-group max-w-3xl" aria-label="Removed">
               {review.removed.map((x) => (
-                <li key={x.field}>
-                  <span className="font-medium">{x.field}</span>:{" "}
-                  <span className="text-muted-foreground">{x.reason}</span>
+                <li key={x.field} className="px-4 py-2.5 text-md">
+                  <span className="font-medium text-ob-text">{x.field}</span>:{" "}
+                  <span className="text-ob-muted">{x.reason}</span>
                 </li>
               ))}
             </ul>
@@ -104,7 +104,7 @@ function Share({ id }: { id: string }) {
             description={`Exactly what goes to Walrus (${review.sizeBytes} bytes, public, permanent for about 50 testnet epochs).`}
           >
             <pre
-              className="max-h-80 max-w-3xl overflow-auto rounded-lg bg-muted p-3 text-xs"
+              className="max-h-80 max-w-3xl overflow-auto rounded-ob-lg border border-ob-border-grouped bg-ob-grouped p-4 font-mono text-xs leading-5 text-ob-secondary"
               data-testid="share-file"
             >
               {review.markdown}
@@ -122,7 +122,7 @@ function Share({ id }: { id: string }) {
                   Publish to the Hatchery (one signature)
                 </Button>
                 {step ? (
-                  <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-2 text-md text-ob-muted">
                     <Spinner /> {step}
                   </span>
                 ) : null}

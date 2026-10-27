@@ -15,6 +15,7 @@ import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { useNetwork } from "@/lib/network";
 import { readStored, writeStored } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { SettingsGroup, SettingsRow, SettingsSection } from "@/openbot/pages";
 
 const DISMISSED = "remora.setup-dismissed";
 
@@ -72,17 +73,14 @@ function useSteps() {
   return { steps, done, total: required.length, next, ownerLoading, reload };
 }
 
-function Circle({ done, current }: { done: boolean; current: boolean }) {
+function Circle({ done, current, index }: { done: boolean; current: boolean; index: number }) {
   return (
     <span
       aria-hidden
-      className={cn(
-        "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs",
-        done && "border-success/40 bg-success/15 text-success",
-        current && "border-primary bg-primary/10 text-primary",
-      )}
+      className="ob-step"
+      data-state={done ? "done" : current ? "current" : undefined}
     >
-      {done ? <Check className="size-3.5" /> : null}
+      {done ? <Check /> : index}
     </span>
   );
 }
@@ -94,10 +92,10 @@ export function SetupChecklist({ variant = "full" }: { variant?: "full" | "compa
   if (variant === "compact") {
     if (done === total || dismissed) return null;
     return (
-      <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 group-data-[collapsible=icon]:hidden">
+      <div className="flex flex-col gap-2 rounded-ob-lg border border-ob-border-grouped bg-ob-grouped p-3 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 text-sm font-medium">Set up</p>
-          <span className="text-xs text-muted-foreground tabular-nums">
+          <p className="min-w-0 flex-1 text-md font-medium">Set up</p>
+          <span className="text-xs text-ob-muted tabular-nums">
             {done}/{total}
           </span>
           <Button
@@ -127,62 +125,59 @@ export function SetupChecklist({ variant = "full" }: { variant?: "full" | "compa
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border bg-card p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold">Set up Remora</h2>
-        <p className="text-sm text-muted-foreground">
+    <SettingsSection
+      title="Set up Remora"
+      actions={
+        <span className="text-md text-ob-muted tabular-nums">
           {done} of {total} done
-        </p>
-      </div>
+        </span>
+      }
+    >
       <Progress value={(done / total) * 100} aria-label={`${done} of ${total} setup steps`} />
-      <ol className="flex flex-col gap-2">
-        {steps.map((step) => {
+      <SettingsGroup as="ol">
+        {steps.map((step, i) => {
           const current = !step.done && !step.optional && step.id === next?.id;
           return (
-            <li
+            <SettingsRow
+              as="li"
               key={step.id}
-              className={cn(
-                "flex flex-wrap items-center gap-3 rounded-lg border border-transparent p-2",
-                current && "border-primary/40 bg-primary/5",
-                !step.done && !current && !step.optional && "opacity-60",
-              )}
-            >
-              <Circle done={step.done} current={current} />
-              <span
-                className={cn(
-                  "min-w-0 flex-1 text-sm",
-                  step.done && "text-muted-foreground",
-                  current && "font-medium",
-                )}
-              >
-                {step.title}
-                {step.optional ? (
-                  <span className="ml-1 text-xs text-muted-foreground">(optional)</span>
-                ) : null}
-              </span>
-              {step.done ? null : step.connect ? (
-                <WalletPicker
-                  label={ownerLoading ? "Loading…" : "Connect wallet"}
-                  size="sm"
-                  signIn
-                  onSignedIn={reload}
-                />
-              ) : current ? (
-                <Button asChild size="sm">
-                  <Link to={step.cta?.to ?? "/onboarding"}>
-                    {step.id === "remora" ? <Plus /> : <Wallet />}
-                    {step.cta?.label}
-                  </Link>
-                </Button>
-              ) : (
-                <Button asChild variant="outline" size="sm">
-                  <Link to={step.cta?.to ?? "/onboarding"}>{step.cta?.label}</Link>
-                </Button>
-              )}
-            </li>
+              size="compact"
+              stack
+              className={cn(!step.done && !current && !step.optional && "opacity-60")}
+              media={<Circle done={step.done} current={current} index={i + 1} />}
+              title={
+                <span className={cn(step.done && "text-ob-muted")}>
+                  {step.title}
+                  {step.optional ? (
+                    <span className="ml-1 text-xs font-normal text-ob-muted">(optional)</span>
+                  ) : null}
+                </span>
+              }
+              actions={
+                step.done ? null : step.connect ? (
+                  <WalletPicker
+                    label={ownerLoading ? "Loading…" : "Connect wallet"}
+                    size="sm"
+                    signIn
+                    onSignedIn={reload}
+                  />
+                ) : current ? (
+                  <Button asChild size="sm">
+                    <Link to={step.cta?.to ?? "/onboarding"}>
+                      {step.id === "remora" ? <Plus /> : <Wallet />}
+                      {step.cta?.label}
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={step.cta?.to ?? "/onboarding"}>{step.cta?.label}</Link>
+                  </Button>
+                )
+              }
+            />
           );
         })}
-      </ol>
-    </section>
+      </SettingsGroup>
+    </SettingsSection>
   );
 }

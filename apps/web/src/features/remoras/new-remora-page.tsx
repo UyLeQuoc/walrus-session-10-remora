@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSignAndRun } from "@/features/funds/sign";
 import { useNetworks } from "@/features/network/use-networks";
 import { parseUsdc, usdc } from "@/lib/usdc";
-import { cn } from "@/lib/utils";
+import { Property, PropertyList } from "@/openbot/pages";
 import { api } from "./api";
 import { RequireOwner, useLoad } from "./hooks";
 
@@ -117,7 +117,7 @@ function Wizard({ owner }: { owner: string }) {
           aria-label="Template"
           value={slug}
           onValueChange={setSlug}
-          className="grid gap-3 sm:grid-cols-2"
+          className="ob-card-grid"
         >
           {list.map(([s, t]) => {
             const spends = Boolean(t.budgetSuggestion.perPaymentUsd);
@@ -125,25 +125,22 @@ function Wizard({ owner }: { owner: string }) {
               <FieldLabel
                 key={s}
                 htmlFor={`template-${s}`}
-                className={cn(
-                  "cursor-pointer items-stretch gap-3 rounded-xl border p-5",
-                  slug === s && "border-primary bg-primary/5",
-                )}
+                className="ob-gallery-card w-full cursor-pointer items-start gap-3 font-normal has-data-[state=checked]:border-ob-focus has-data-[state=checked]:bg-ob-control-hover dark:has-data-[state=checked]:bg-ob-control-hover"
               >
-                <RadioGroupItem id={`template-${s}`} value={s} className="mt-1" />
-                <div className="flex flex-col gap-2">
+                <RadioGroupItem id={`template-${s}`} value={s} className="mt-0.5" />
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-ob-text">{t.name}</span>
                     {spends ? (
-                      <Package className="size-4 text-primary" />
+                      <Package aria-hidden className="size-4 text-ob-muted" />
                     ) : (
-                      <Shield className="size-4 text-primary" />
+                      <Shield aria-hidden className="size-4 text-ob-muted" />
                     )}
-                    <span className="font-semibold">{t.name}</span>
-                    <Badge variant={spends ? "accent" : "outline"}>
+                    <Badge variant={spends ? "accent" : "secondary"}>
                       {spends ? "Spends USDC" : "Read-only"}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{t.summary}</p>
+                  <p className="text-md text-ob-secondary">{t.summary}</p>
                 </div>
               </FieldLabel>
             );
@@ -191,7 +188,7 @@ function Wizard({ owner }: { owner: string }) {
                   </Field>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">It can pay</p>
+                  <p className="text-md font-medium">It can pay</p>
                   <div className="flex flex-wrap gap-2">
                     {(chosen?.payees ?? []).map((payee) => (
                       <Badge key={payee} variant="outline" title={payee}>
@@ -199,7 +196,7 @@ function Wizard({ owner }: { owner: string }) {
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-md text-ob-muted">
                     Sui enforces the budget through a Disc, not us. It pays only these sources;
                     anything over{" "}
                     {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"} USDC
@@ -223,37 +220,26 @@ function Wizard({ owner }: { owner: string }) {
             )}
           </div>
 
-          <aside
-            aria-label="Summary"
-            className="flex flex-col gap-4 rounded-xl border bg-card p-5 lg:sticky lg:top-6"
-          >
-            <h2 className="text-base font-semibold">Summary</h2>
-            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
-              <dt className="text-muted-foreground">Template</dt>
-              <dd className="truncate text-right font-medium">{chosen?.name ?? "—"}</dd>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="truncate text-right font-medium">
-                {name.trim() || chosen?.name || "—"}
-              </dd>
+          <aside aria-label="Summary" className="flex flex-col gap-3 lg:sticky lg:top-6">
+            <h2 className="ob-section-title">Summary</h2>
+            <PropertyList>
+              <Property term="Template">
+                <span className="block truncate">{chosen?.name ?? "—"}</span>
+              </Property>
+              <Property term="Name">
+                <span className="block truncate">{name.trim() || chosen?.name || "—"}</span>
+              </Property>
               {slug === "scout" ? (
                 <>
-                  <dt className="text-muted-foreground">Monthly limit</dt>
-                  <dd className="text-right font-medium tabular-nums">{monthly || "—"} USDC</dd>
-                  <dt className="text-muted-foreground">Most at once</dt>
-                  <dd className="text-right font-medium tabular-nums">{perPayment || "—"} USDC</dd>
-                  <dt className="text-muted-foreground">Can pay</dt>
-                  <dd className="text-right font-medium">
-                    {(chosen?.payees ?? []).length} sources
-                  </dd>
+                  <Property term="Monthly limit">{monthly || "—"} USDC</Property>
+                  <Property term="Most at once">{perPayment || "—"} USDC</Property>
+                  <Property term="Can pay">{(chosen?.payees ?? []).length} sources</Property>
                 </>
               ) : (
-                <>
-                  <dt className="text-muted-foreground">Budget</dt>
-                  <dd className="text-right font-medium">None, read-only</dd>
-                </>
+                <Property term="Budget">None, read-only</Property>
               )}
-            </dl>
-            <p className="rounded-lg bg-muted/60 p-3 text-sm">
+            </PropertyList>
+            <p className="rounded-ob-lg bg-ob-control-hover px-3 py-2.5 text-md text-ob-secondary">
               {slug === "scout" ? (
                 <>
                   You'll sign <strong>1 transaction</strong> to create its Disc.

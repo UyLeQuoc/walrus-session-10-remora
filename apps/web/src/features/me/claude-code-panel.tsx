@@ -11,7 +11,7 @@ const ASK = 'What does Remora know about me? Use memwal_recall with namespace "r
 function Command({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+      <code className="min-w-0 flex-1 break-all rounded-ob-md bg-ob-control-hover px-3 py-2 text-md">
         {value}
       </code>
       <CopyButton value={value} label={label} />
@@ -25,7 +25,7 @@ export function ClaudeCodePanel({ owned }: { owned: boolean }) {
       title="Use the same memory in Claude Code"
       description="Any agent you add as a delegate reads the same memory through the official Walrus Memory MCP."
     >
-      <ol className="flex list-decimal flex-col gap-3 pl-5 text-sm">
+      <ol className="flex list-decimal flex-col gap-3 pl-5 text-md">
         {owned ? null : <li>Own your memory first: connect a wallet such as Slush above.</li>}
         <li className="flex flex-col gap-2">
           <span>In Claude Code, add the MemWal plugin.</span>
@@ -45,7 +45,7 @@ export function ClaudeCodePanel({ owned }: { owned: boolean }) {
           .
         </li>
       </ol>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-md text-ob-muted">
         A Google sign-in here gives an address only Remora uses, so this needs a wallet.
       </p>
     </Section>

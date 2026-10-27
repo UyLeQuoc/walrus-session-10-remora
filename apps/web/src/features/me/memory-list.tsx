@@ -52,7 +52,7 @@ export function MemoryList({
       <CardHeader>
         <CardTitle>Memories</CardTitle>
         {soonest !== null ? (
-          <p className="text-sm text-muted-foreground">Storage runs out in about {soonest} days.</p>
+          <p className="text-md text-ob-muted">Storage runs out in about {soonest} days.</p>
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -86,13 +86,13 @@ export function MemoryList({
         {hits !== null && !searching && (
           <div className="flex flex-col gap-2">
             {hits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing close to that.</p>
+              <p className="text-md text-ob-muted">Nothing close to that.</p>
             ) : (
-              <ul className="divide-y rounded-lg border text-sm">
+              <ul className="ob-group text-md">
                 {hits.map((hit) => (
                   <li key={hit.blobId} className="flex flex-col gap-2 px-3 py-2">
                     <p>{hit.text}</p>
-                    <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                    <p className="flex flex-wrap items-center gap-2 text-ob-muted">
                       {hit.type && <Badge>{hit.type}</Badge>}
                       {hit.mine === false && <Badge variant="outline">shared</Badge>}
                       <span>relevance {hit.relevance.toFixed(2)}</span>

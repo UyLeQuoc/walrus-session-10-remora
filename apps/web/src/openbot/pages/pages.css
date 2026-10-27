@@ -1,0 +1,856 @@
+/*
+ * Ported from nightly-labs/openbot packages/ui/src/styles/primitives.css (.ui-card, .ui-item-group,
+ * .ui-item, .ui-settings-section, .ui-heading), packages/ui/src/styles/settings-panel.css,
+ * packages/ui/src/features/settings/settings-modal.css, packages/ui/src/features/usage/agent-usage-report.css,
+ * packages/ui/src/features/conversation/styles/message-content.css (.message-data-table),
+ * packages/ui/src/features/marketplace/marketplace.css (.marketplace-card),
+ * packages/ui/src/features/conversation/styles/agent-chat-empty.css and
+ * packages/ui/src/features/account/auth.css (.account-login) @ aa3c498. PolyForm Noncommercial 1.0.0, see ../LICENSE.
+ *
+ * openbot's page, settings and data-table look for the pages that are not a conversation: a quiet
+ * page heading, titled sections, grouped surfaces whose rows put the label on the left and the
+ * control on the right, data tables with muted 12px headers, marketplace-style cards, stat totals,
+ * a centred empty state and the centred sign-in card. Class names carry an `ob-` prefix so they
+ * never meet Tailwind's or shadcn's. Everything is in `@layer components`, so a utility class on
+ * the same element still wins.
+ */
+
+@layer components {
+  /* ------------------------------------------------------------ page heading (.settings-modal-header) */
+
+  .ob-page-header {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--openbot-space-3) var(--openbot-space-4);
+  }
+
+  .ob-page-header-copy {
+    display: grid;
+    min-width: 0;
+    gap: var(--openbot-space-1);
+  }
+
+  .ob-page-title-row {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--openbot-space-2);
+  }
+
+  .ob-page-title {
+    min-width: 0;
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: 20px;
+    font-weight: var(--openbot-weight-semibold);
+    letter-spacing: -0.01em;
+    line-height: 26px;
+    overflow-wrap: anywhere;
+  }
+
+  .ob-page-description {
+    max-width: 72ch;
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-lg);
+    line-height: var(--openbot-leading-lg);
+    text-wrap: pretty;
+  }
+
+  .ob-page-actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--openbot-space-2);
+  }
+
+  @media (min-width: 768px) {
+    .ob-page-title {
+      font-size: var(--openbot-text-3xl);
+      letter-spacing: -0.02em;
+      line-height: var(--openbot-leading-3xl);
+    }
+  }
+
+  /* ------------------------------------------------------------ section (.ui-settings-section) */
+
+  .ob-section {
+    display: grid;
+    min-width: 0;
+    align-content: start;
+    gap: var(--openbot-space-3);
+  }
+
+  .ob-section-header {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--openbot-space-2) var(--openbot-space-3);
+  }
+
+  .ob-section-copy {
+    display: grid;
+    min-width: 0;
+    gap: var(--openbot-space-0-5);
+  }
+
+  .ob-section-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--openbot-space-2);
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-lg);
+    font-weight: var(--openbot-weight-semibold);
+    letter-spacing: var(--openbot-tracking-tight);
+    line-height: var(--openbot-leading-lg);
+  }
+
+  .ob-section-description {
+    max-width: 72ch;
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-md);
+    line-height: var(--openbot-leading-md);
+    text-wrap: pretty;
+  }
+
+  .ob-section-actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--openbot-space-2);
+  }
+
+  .ob-section-body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--openbot-space-3);
+  }
+
+  /* A settings page: the heading in a left column, the group on the right. */
+  @media (min-width: 1024px) {
+    .ob-section[data-layout="split"] {
+      grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+      column-gap: var(--openbot-space-8);
+    }
+
+    .ob-section[data-layout="split"] > .ob-section-header {
+      align-items: flex-start;
+      align-self: start;
+      padding-top: var(--openbot-space-2);
+    }
+  }
+
+  /* The danger zone: the same section, with a red hairline around its body. */
+  .ob-section[data-tone="danger"] .ob-section-title {
+    color: var(--openbot-danger-text);
+  }
+
+  .ob-section[data-tone="danger"] > .ob-section-body {
+    border: 1px solid var(--openbot-danger-soft-hover);
+    border-radius: var(--openbot-radius-card);
+    background: var(--openbot-bg-grouped);
+    padding: var(--openbot-space-4);
+  }
+
+  /* ------------------------------------------------------------ grouped surface (.ui-item-group, .settings-modal-card) */
+
+  .ob-group {
+    display: grid;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--openbot-border-grouped);
+    border-radius: var(--openbot-radius-card);
+    background: var(--openbot-bg-grouped);
+    list-style: none;
+  }
+
+  .ob-group[data-surface="subtle"] {
+    background: var(--openbot-bg-control);
+  }
+
+  /* Rows are split by an inset hairline, not a full-width rule. */
+  .ob-group > * + * {
+    position: relative;
+  }
+
+  .ob-group > * + *::before {
+    position: absolute;
+    top: 0;
+    right: var(--openbot-space-4);
+    left: var(--openbot-space-4);
+    height: 1px;
+    background: var(--openbot-border-grouped);
+    pointer-events: none;
+    content: "";
+  }
+
+  /* The group does not clip, so a row's hover rounds its own corners. */
+  .ob-group > :first-child {
+    border-top-left-radius: calc(var(--openbot-radius-card) - 1px);
+    border-top-right-radius: calc(var(--openbot-radius-card) - 1px);
+  }
+
+  .ob-group > :last-child {
+    border-bottom-left-radius: calc(var(--openbot-radius-card) - 1px);
+    border-bottom-right-radius: calc(var(--openbot-radius-card) - 1px);
+  }
+
+  /* A plain card: the group's surface with padding, for content that is not rows. */
+  .ob-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--openbot-space-3);
+    border: 1px solid var(--openbot-border-grouped);
+    border-radius: var(--openbot-radius-card);
+    background: var(--openbot-bg-grouped);
+    padding: var(--openbot-space-4);
+  }
+
+  .ob-card[data-tone="muted"] {
+    border-color: transparent;
+    background: var(--openbot-bg-control-hover);
+  }
+
+  /* ------------------------------------------------------------ row (.ui-item, .settings-modal-row) */
+
+  .ob-row {
+    display: flex;
+    min-width: 0;
+    min-height: 56px;
+    align-items: center;
+    gap: var(--openbot-space-3);
+    padding: var(--openbot-space-3) var(--openbot-space-4);
+  }
+
+  .ob-row[data-size="compact"] {
+    min-height: 44px;
+    padding-block: var(--openbot-space-2);
+  }
+
+  .ob-row[data-size="spacious"] {
+    min-height: 64px;
+  }
+
+  .ob-row[data-align="start"] {
+    align-items: flex-start;
+  }
+
+  .ob-row-media {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--openbot-text-muted);
+  }
+
+  .ob-row-media > svg {
+    width: var(--openbot-icon-md);
+    height: var(--openbot-icon-md);
+  }
+
+  .ob-row-content {
+    display: grid;
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: var(--openbot-space-0-5);
+  }
+
+  .ob-row-title {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--openbot-space-2);
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-lg);
+    font-weight: var(--openbot-weight-medium);
+    line-height: var(--openbot-leading-lg);
+    overflow-wrap: anywhere;
+  }
+
+  .ob-row-description {
+    min-width: 0;
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-md);
+    line-height: var(--openbot-leading-md);
+    overflow-wrap: anywhere;
+  }
+
+  .ob-row-actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--openbot-space-2);
+  }
+
+  /* A row the whole of which is a link or a button. */
+  .ob-row[data-interactive] {
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--openbot-duration-hover) ease;
+  }
+
+  .ob-row[data-interactive]:focus-visible {
+    outline: 0;
+    box-shadow: inset var(--openbot-focus-ring);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ob-row[data-interactive]:hover {
+      background: var(--openbot-hover);
+    }
+  }
+
+  /* Narrow: a settings row puts its control under its label (.app-settings-modal-shell, 520px). */
+  @media (max-width: 520px) {
+    .ob-row[data-stack] {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .ob-row[data-stack] > .ob-row-actions {
+      justify-content: flex-start;
+    }
+  }
+
+  /* ------------------------------------------------------------ properties (.settings-modal-readonly-value) */
+
+  .ob-props {
+    display: grid;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .ob-prop {
+    display: flex;
+    min-width: 0;
+    min-height: 40px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--openbot-space-1) var(--openbot-space-4);
+    padding: var(--openbot-space-2) var(--openbot-space-4);
+    font-size: var(--openbot-text-md);
+    line-height: var(--openbot-leading-md);
+  }
+
+  .ob-prop > dt {
+    color: var(--openbot-text-muted);
+  }
+
+  .ob-prop > dd {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-weight: var(--openbot-weight-medium);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+
+  /* ------------------------------------------------------------ stats (.agent-usage-totals, .agent-usage-hero) */
+
+  .ob-stat {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--openbot-space-1);
+    border: 1px solid var(--openbot-border-grouped);
+    border-radius: var(--openbot-radius-card);
+    background: var(--openbot-bg-grouped);
+    padding: var(--openbot-space-4);
+  }
+
+  .ob-stat-label {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--openbot-space-1-5);
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-md);
+    line-height: var(--openbot-leading-md);
+  }
+
+  .ob-stat[data-tone] .ob-stat-label::before {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 auto;
+    border-radius: var(--openbot-radius-pill);
+    content: "";
+  }
+
+  .ob-stat[data-tone="warning"] .ob-stat-label::before {
+    background: var(--openbot-warning);
+  }
+
+  .ob-stat[data-tone="success"] .ob-stat-label::before {
+    background: var(--openbot-success);
+  }
+
+  .ob-stat-value {
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-3xl);
+    font-weight: var(--openbot-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: var(--openbot-leading-3xl);
+    overflow-wrap: anywhere;
+  }
+
+  .ob-stat-hint {
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-sm);
+    line-height: var(--openbot-leading-sm);
+  }
+
+  .ob-stat-action {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--openbot-space-2);
+    padding-top: var(--openbot-space-2);
+  }
+
+  /* ------------------------------------------------------------ data table (.message-data-table, .agent-usage-table) */
+
+  .ob-data-table-frame {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--openbot-data-table-border);
+    border-radius: var(--openbot-radius-lg);
+    background: var(--openbot-bg-grouped);
+    overscroll-behavior-inline: contain;
+  }
+
+  .ob-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--openbot-data-table-text);
+    font-size: var(--openbot-text-md);
+    line-height: var(--openbot-leading-md);
+  }
+
+  .ob-data-table thead {
+    background: var(--openbot-bg-surface-raised);
+  }
+
+  .ob-data-table th,
+  .ob-data-table td {
+    padding: 9px 12px;
+    color: var(--openbot-data-table-text);
+    font-weight: inherit;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .ob-data-table thead th {
+    border-bottom: 1px solid var(--openbot-data-table-border);
+    padding-top: 7px;
+    padding-bottom: 7px;
+    color: var(--openbot-data-table-header-text);
+    font-size: var(--openbot-text-sm);
+    font-weight: var(--openbot-weight-medium);
+    line-height: var(--openbot-leading-sm);
+    white-space: nowrap;
+  }
+
+  .ob-data-table tbody tr:not(:last-child) td {
+    border-bottom: 1px solid var(--openbot-data-table-border);
+  }
+
+  .ob-data-table [data-align="right"] {
+    text-align: right;
+  }
+
+  .ob-data-table [data-tone="muted"] {
+    color: var(--openbot-text-muted);
+  }
+
+  .ob-data-table [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ob-data-table tbody tr:hover td {
+      background: var(--openbot-hover);
+    }
+  }
+
+  /* ------------------------------------------------------------ cards (.marketplace-grid, .marketplace-card) */
+
+  .ob-card-grid {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: var(--openbot-space-3);
+  }
+
+  .ob-gallery-card {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    height: 100%;
+    align-content: start;
+    gap: var(--openbot-space-3);
+    border: 1px solid var(--openbot-border-grouped);
+    border-radius: var(--openbot-radius-card);
+    background: var(--openbot-bg-grouped);
+    padding: var(--openbot-space-4);
+    color: inherit;
+    text-decoration: none;
+    transition: background var(--openbot-duration-fast) var(--openbot-ease-out);
+  }
+
+  a.ob-gallery-card:focus-visible,
+  .ob-gallery-card:has(> .ob-gallery-card-hit:focus-visible) {
+    outline: 0;
+    box-shadow: var(--openbot-focus-ring);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a.ob-gallery-card:hover,
+    .ob-gallery-card:has(> .ob-gallery-card-hit):hover,
+    .ob-gallery-card[data-interactive]:hover {
+      background: var(--openbot-bg-control-hover);
+    }
+  }
+
+  .ob-gallery-card[data-selected] {
+    border-color: var(--openbot-border-focus);
+    background: var(--openbot-bg-control-hover);
+  }
+
+  /* The link that covers the card; a control in the card sits above it. */
+  .ob-gallery-card-hit {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .ob-gallery-card-hit:focus-visible {
+    outline: 0;
+  }
+
+  .ob-gallery-card-head {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--openbot-space-3);
+  }
+
+  .ob-gallery-card-media {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: var(--openbot-radius-lg);
+    background: var(--openbot-bg-control-hover);
+    color: var(--openbot-text-secondary);
+    font-size: var(--openbot-text-xl);
+  }
+
+  .ob-gallery-card-media > svg {
+    width: var(--openbot-icon-md);
+    height: var(--openbot-icon-md);
+  }
+
+  .ob-gallery-card-media[data-bare] {
+    width: auto;
+    height: auto;
+    background: transparent;
+  }
+
+  .ob-gallery-card-heading {
+    display: grid;
+    min-width: 0;
+    flex: 1;
+    gap: var(--openbot-space-0-5);
+  }
+
+  .ob-gallery-card-name {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--openbot-space-1-5);
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-lg);
+    font-weight: var(--openbot-weight-semibold);
+    letter-spacing: var(--openbot-tracking-tight);
+    line-height: var(--openbot-leading-lg);
+    overflow-wrap: anywhere;
+  }
+
+  .ob-gallery-card-byline {
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-sm);
+    line-height: var(--openbot-leading-sm);
+  }
+
+  .ob-gallery-card-action {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--openbot-space-2);
+    min-width: 0;
+  }
+
+  .ob-gallery-card-body {
+    display: -webkit-box;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--openbot-text-secondary);
+    font-size: var(--openbot-text-md);
+    line-height: var(--openbot-leading-md);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .ob-gallery-card-body[data-clamp="none"] {
+    display: block;
+    overflow: visible;
+  }
+
+  .ob-gallery-card-foot {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    margin-top: auto;
+    min-width: 0;
+    min-height: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--openbot-space-2);
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-sm);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--openbot-leading-sm);
+  }
+
+  /* ------------------------------------------------------------ empty state (.agent-chat-empty-pitch) */
+
+  .ob-empty {
+    display: grid;
+    min-width: 0;
+    justify-items: center;
+    gap: var(--openbot-space-2);
+    border: 1px solid var(--openbot-border-grouped);
+    border-radius: var(--openbot-radius-card);
+    background: var(--openbot-bg-grouped);
+    padding: var(--openbot-space-8) var(--openbot-space-6);
+    text-align: center;
+  }
+
+  .ob-empty-media {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    margin-bottom: var(--openbot-space-2);
+    place-items: center;
+    border-radius: var(--openbot-radius-lg);
+    background: var(--openbot-bg-control-hover);
+    color: var(--openbot-text-secondary);
+  }
+
+  .ob-empty-media > svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ob-empty-title {
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-xl);
+    font-weight: var(--openbot-weight-semibold);
+    letter-spacing: -0.01em;
+    line-height: var(--openbot-leading-xl);
+  }
+
+  .ob-empty-description {
+    max-width: 30rem;
+    margin: 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-lg);
+    line-height: var(--openbot-leading-lg);
+    text-wrap: balance;
+  }
+
+  .ob-empty-actions {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--openbot-space-3);
+    margin-top: var(--openbot-space-3);
+  }
+
+  /* ------------------------------------------------------------ sign in (.account-login) */
+
+  .ob-auth {
+    display: grid;
+    min-width: 0;
+    place-items: center;
+    padding: var(--openbot-space-6) 0;
+  }
+
+  @media (min-width: 768px) {
+    .ob-auth {
+      min-height: min(60vh, 520px);
+    }
+  }
+
+  .ob-auth-card {
+    display: flex;
+    width: min(100%, 380px);
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--openbot-border-grouped);
+    border-radius: var(--openbot-radius-xl);
+    background: var(--openbot-bg-grouped);
+    padding: var(--openbot-space-8) var(--openbot-space-6) var(--openbot-space-6);
+    text-align: center;
+  }
+
+  .ob-auth-mark {
+    display: grid;
+    margin-bottom: var(--openbot-space-6);
+    place-items: center;
+  }
+
+  .ob-auth-title {
+    margin: 0;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-3xl);
+    font-weight: 580;
+    letter-spacing: -0.035em;
+    line-height: var(--openbot-leading-3xl);
+  }
+
+  .ob-auth-description {
+    margin: var(--openbot-space-2) 0 0;
+    color: var(--openbot-text-secondary);
+    font-size: var(--openbot-text-lg);
+    line-height: 21px;
+    text-wrap: balance;
+  }
+
+  .ob-auth-actions {
+    display: grid;
+    width: 100%;
+    gap: var(--openbot-space-3);
+    margin-top: var(--openbot-space-6);
+  }
+
+  /* The primary button fills the card at 44px, like .account-login-primary. */
+  .ob-auth-actions > [data-slot="button"] {
+    width: 100%;
+    height: 44px;
+    font-size: var(--openbot-text-md);
+    font-weight: 650;
+  }
+
+  .ob-auth-foot {
+    margin: var(--openbot-space-4) 0 0;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-sm);
+    line-height: var(--openbot-leading-sm);
+  }
+
+  /* ------------------------------------------------------------ steps (setup list) */
+
+  .ob-step {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--openbot-border-strong);
+    border-radius: var(--openbot-radius-pill);
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ob-step[data-state="done"] {
+    border-color: transparent;
+    background: var(--openbot-success-soft);
+    color: var(--openbot-success-text);
+  }
+
+  .ob-step[data-state="current"] {
+    border-color: transparent;
+    background: var(--openbot-accent-soft);
+    color: var(--openbot-accent-text);
+  }
+
+  .ob-step > svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ------------------------------------------------------------ chips (.marketplace-filter pills) */
+
+  .ob-chip-row {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: var(--openbot-space-1-5);
+  }
+
+  /* ------------------------------------------------------------ prose (guide, verify explanations) */
+
+  .ob-prose {
+    max-width: 72ch;
+    color: var(--openbot-text-secondary);
+    font-size: var(--openbot-text-lg);
+    line-height: 22px;
+  }
+
+  .ob-prose > * + * {
+    margin-top: var(--openbot-space-3);
+  }
+
+  .ob-prose strong {
+    color: var(--openbot-text-primary);
+    font-weight: var(--openbot-weight-semibold);
+  }
+
+  .ob-mono {
+    font-family: var(--openbot-font-mono);
+    font-size: var(--openbot-text-sm);
+  }
+}

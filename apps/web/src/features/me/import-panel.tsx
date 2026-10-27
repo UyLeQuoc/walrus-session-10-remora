@@ -30,7 +30,7 @@ export function ImportPanel({ onSaved }: { onSaved: () => void }) {
       {importer.facts.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {importer.facts.map((fact, index) => (
-            <li key={`${fact.type}-${fact.text}`} className="flex items-start gap-2 text-sm">
+            <li key={`${fact.type}-${fact.text}`} className="flex items-start gap-2 text-md">
               <Checkbox
                 aria-label={`Keep: ${fact.text}`}
                 checked={fact.keep}
@@ -52,10 +52,8 @@ export function ImportPanel({ onSaved }: { onSaved: () => void }) {
           {importer.saving ? "Keeping…" : `Remember ${kept} ${kept === 1 ? "fact" : "facts"}`}
         </Button>
       ) : null}
-      {importer.message ? (
-        <p className="text-sm text-muted-foreground">{importer.message}</p>
-      ) : null}
-      {importer.error ? <p className="text-sm text-destructive">{importer.error}</p> : null}
+      {importer.message ? <p className="text-md text-ob-muted">{importer.message}</p> : null}
+      {importer.error ? <p className="text-md text-ob-danger-text">{importer.error}</p> : null}
     </Section>
   );
 }

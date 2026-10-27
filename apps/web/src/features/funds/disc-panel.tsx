@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { Network } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
+import { SettingsGroup } from "@/openbot/pages";
 import { DISCS_CHANGED, useOwnerDiscs } from "./discs";
 import { useSignAndRun } from "./sign";
 
@@ -40,9 +41,9 @@ function DiscRow({
       ? Number((BigInt(d.allowance.currentSpend) * 100n) / BigInt(cap))
       : null;
   return (
-    <li className="flex flex-col gap-3 rounded-xl border p-4 text-sm" data-testid="disc-row">
+    <li className="flex min-w-0 flex-col gap-2.5 px-4 py-3.5 text-md" data-testid="disc-row">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex flex-wrap items-center gap-2 font-medium">
+        <p className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
           {d.disc.name} <StatusBadge status={d.disc.paused ? "paused" : "live"} />
         </p>
         <Button
@@ -58,7 +59,7 @@ function DiscRow({
       {used === null ? null : (
         <Progress value={Math.min(100, used)} aria-label={`${used}% of this Disc spent`} />
       )}
-      <p className="text-muted-foreground">
+      <p className="text-ob-muted tabular-nums">
         {formatUsdc(d.allowance.currentSpend)}
         {cap !== null ? ` of ${formatUsdc(cap)}` : ""} USDC spent · up to{" "}
         {formatUsdc(d.disc.perPaymentCap)} a payment · {d.disc.payees.length} payee
@@ -79,12 +80,12 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
       description="Each remora spends only through its Disc: a spending limit Sui enforces, not us."
     >
       {!cfg ? (
-        <p className="text-sm text-muted-foreground">Remora isn't published on {network} yet.</p>
+        <p className="text-md text-ob-muted">Remora isn't published on {network} yet.</p>
       ) : discs === null ? (
-        <p className="text-sm text-muted-foreground">Reading your Discs…</p>
+        <p className="text-md text-ob-muted">Reading your Discs…</p>
       ) : error ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span className="text-destructive">{error}</span>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-md">
+          <span className="text-ob-danger-text">{error}</span>
           <Button variant="outline" size="sm" onClick={() => void reload()}>
             Try again
           </Button>
@@ -101,11 +102,11 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           }
         />
       ) : (
-        <ul className="flex flex-col gap-2" aria-label="Discs">
+        <SettingsGroup as="ul" aria-label="Discs">
           {discs.map((d) => (
             <DiscRow key={d.disc.id} d={d} cfg={cfg} />
           ))}
-        </ul>
+        </SettingsGroup>
       )}
     </Section>
   );

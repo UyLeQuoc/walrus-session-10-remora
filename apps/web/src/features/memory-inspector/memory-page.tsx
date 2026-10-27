@@ -30,6 +30,7 @@ import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
+import { DataTable, SettingsGroup } from "@/openbot/pages";
 import {
   ClaudeCodeCard,
   CorrectDialog,
@@ -66,7 +67,7 @@ function RemorasTab() {
     return (
       <div className="flex flex-col gap-3">
         <Skeleton className="h-9 w-64" />
-        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full rounded-ob-card" />
       </div>
     );
   }
@@ -116,21 +117,23 @@ function RemorasTab() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(m?.namespaces ?? []).map((ns) => (
-          <Toggle
-            key={ns}
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            pressed={active === ns}
-            aria-label={`Filter by ${ns}`}
-            onPressedChange={(on) => setNamespace(on ? ns : null)}
-          >
-            {ns} · {m?.counts[ns] ?? 0}
-          </Toggle>
-        ))}
-      </div>
+      {m?.namespaces.length ? (
+        <div className="flex flex-wrap gap-2">
+          {(m?.namespaces ?? []).map((ns) => (
+            <Toggle
+              key={ns}
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              pressed={active === ns}
+              aria-label={`Filter by ${ns}`}
+              onPressedChange={(on) => setNamespace(on ? ns : null)}
+            >
+              {ns} · {m?.counts[ns] ?? 0}
+            </Toggle>
+          ))}
+        </div>
+      ) : null}
 
       <ExpiryAlert count={(m?.rows ?? []).filter((x) => x.expiresSoon && !x.hiddenAt).length} />
       {current ? (
@@ -148,7 +151,7 @@ function RemorasTab() {
 
       {m?.mismatches.length ? (
         <p
-          className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm text-warning-foreground"
+          className="rounded-ob-lg border border-ob-warning-soft bg-ob-warning-soft px-4 py-3 text-md text-ob-warning-text"
           data-testid="index-warning"
         >
           Index check:{" "}
@@ -158,14 +161,14 @@ function RemorasTab() {
           . New writes take about 30 s to land; if this stays, some writes didn't make it.
         </p>
       ) : null}
-      {mem.error ? <p className="text-sm text-destructive">{mem.error}</p> : null}
+      {mem.error ? <p className="text-md text-ob-danger-text">{mem.error}</p> : null}
 
       {results.length ? (
-        <ul className="flex flex-col gap-2 text-sm" aria-label="Search results">
+        <SettingsGroup as="ul" className="text-md" aria-label="Search results">
           {results.map((x) => (
             <li
               key={x.blobId}
-              className="flex flex-wrap items-start justify-between gap-2 rounded-lg border p-3"
+              className="flex flex-wrap items-start justify-between gap-2 px-4 py-3"
               data-testid="memory-result"
             >
               <span className="min-w-0 flex-1">
@@ -178,81 +181,79 @@ function RemorasTab() {
               </span>
             </li>
           ))}
-        </ul>
+        </SettingsGroup>
       ) : null}
 
       {/* Desktop table. */}
-      <div className="hidden overflow-x-auto rounded-xl border md:block">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase">
-            <tr>
-              <th className="px-3 py-2 font-medium">Blob</th>
-              <th className="px-3 py-2 font-medium">Namespace</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Stored</th>
-              <th className="px-3 py-2 font-medium">Expires</th>
-              <th className="px-3 py-2 text-right font-medium">Size</th>
-              <th className="px-3 py-2 text-right font-medium">
-                <span className="sr-only">Actions</span>
-              </th>
+      <DataTable frameClassName="hidden md:block">
+        <thead>
+          <tr>
+            <th>Blob</th>
+            <th>Namespace</th>
+            <th>Status</th>
+            <th>Stored</th>
+            <th>Expires</th>
+            <th data-align="right">Size</th>
+            <th data-align="right">
+              <span className="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.blobId} data-testid="memory-row">
+              <td className="w-64 max-w-64">
+                <Hash value={row.blobId} label="blob" />
+                <RowFlags row={row} />
+              </td>
+              <td className="max-w-52 truncate" title={row.namespace}>
+                {row.namespace}
+              </td>
+              <td>
+                {row.status === "active" ? (
+                  <StatusBadge status="active" />
+                ) : (
+                  <Badge variant="outline">expired</Badge>
+                )}
+              </td>
+              <td data-tone="muted">
+                <Time value={row.createdAt} />
+              </td>
+              <td
+                data-tone="muted"
+                className={cn(row.expiresSoon && "font-medium text-ob-warning-text")}
+              >
+                {row.expiresAt ? day(row.expiresAt) : "pending"}
+              </td>
+              <td data-align="right" data-numeric>
+                {size(row.size)}
+              </td>
+              <td data-align="right" className="whitespace-nowrap">
+                <HideButton remoraId={id} m={row} hidden={!!row.hiddenAt} onDone={refresh} />
+                <CorrectDialog remoraId={id} m={row} onDone={refresh} />
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.blobId} className="border-t" data-testid="memory-row">
-                <td className="w-64 max-w-64 px-3 py-2">
-                  <Hash value={row.blobId} label="blob" />
-                  <RowFlags row={row} />
-                </td>
-                <td className="max-w-52 truncate px-3 py-2" title={row.namespace}>
-                  {row.namespace}
-                </td>
-                <td className="px-3 py-2">
-                  {row.status === "active" ? (
-                    <StatusBadge status="active" />
-                  ) : (
-                    <Badge variant="outline">expired</Badge>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-muted-foreground">
-                  <Time value={row.createdAt} />
-                </td>
-                <td
-                  className={cn(
-                    "px-3 py-2 text-muted-foreground",
-                    row.expiresSoon && "font-medium text-warning-foreground",
-                  )}
-                >
-                  {row.expiresAt ? day(row.expiresAt) : "pending"}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">{size(row.size)}</td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
-                  <HideButton remoraId={id} m={row} hidden={!!row.hiddenAt} onDone={refresh} />
-                  <CorrectDialog remoraId={id} m={row} onDone={refresh} />
-                </td>
-              </tr>
-            ))}
-            {m && !rows.length ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
-                  {active ? `Nothing in ${active} yet.` : "Nothing stored yet."}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {m && !rows.length ? (
+            <tr>
+              <td colSpan={7} data-tone="muted" className="py-6 text-center">
+                {active ? `Nothing in ${active} yet.` : "Nothing stored yet."}
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </DataTable>
 
       {/* Phone: one card per blob. */}
-      <ul className="flex flex-col gap-2 md:hidden">
+      <SettingsGroup as="ul" className="md:hidden">
         {rows.map((row) => (
-          <li key={row.blobId} className="flex flex-col gap-1 rounded-lg border p-3 text-sm">
+          <li key={row.blobId} className="flex min-w-0 flex-col gap-1 px-4 py-3 text-md">
             <Hash value={row.blobId} label="blob" />
             <RowFlags row={row} />
-            <span className="truncate text-muted-foreground" title={row.namespace}>
+            <span className="truncate text-ob-muted" title={row.namespace}>
               {row.namespace}
             </span>
-            <span className="flex items-center justify-between gap-2 text-muted-foreground">
+            <span className="flex items-center justify-between gap-2 text-ob-muted">
               {row.status === "active" ? (
                 <StatusBadge status="active" />
               ) : (
@@ -270,11 +271,11 @@ function RemorasTab() {
           </li>
         ))}
         {m && !rows.length ? (
-          <li className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+          <li className="p-4 text-center text-md text-ob-muted">
             {active ? `Nothing in ${active} yet.` : "Nothing stored yet."}
           </li>
         ) : null}
-      </ul>
+      </SettingsGroup>
       {current && m ? <ClaudeCodeCard remoraId={current.id} namespaces={m.namespaces} /> : null}
     </div>
   );
@@ -320,10 +321,10 @@ function Memory() {
           </TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
-        <TabsContent value="remoras" className="pt-4">
+        <TabsContent value="remoras" className="pt-3">
           <RemorasTab />
         </TabsContent>
-        <TabsContent value="chat" className="pt-4">
+        <TabsContent value="chat" className="pt-3">
           <ChatMemory />
         </TabsContent>
       </Tabs>

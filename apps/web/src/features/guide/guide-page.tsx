@@ -27,13 +27,16 @@ function Tiles({
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {items.map((item) => (
-        <div key={item.title} className="flex items-start gap-3 rounded-xl border bg-card p-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+        <div
+          key={item.title}
+          className="flex items-start gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-ob-accent-soft text-ob-accent-text">
             <item.icon className="size-4" />
           </span>
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">{item.title}</p>
-            <p className="text-sm text-muted-foreground">{item.detail}</p>
+            <p className="text-md text-ob-muted">{item.detail}</p>
           </div>
         </div>
       ))}
@@ -95,7 +98,7 @@ export function GuidePage() {
             },
           ]}
         />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           Start from Scout (buys answers) or Sentinel (watches wallets).{" "}
           <Link className="link" to="/remoras/new">
             Create one
@@ -109,7 +112,7 @@ export function GuidePage() {
         lead="Each fact is a typed line, encrypted on Walrus. Any chat or channel can recall it; the newest fact wins."
       >
         <MemoryFlow />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           Browse every blob, search it, export it, or own it with your wallet in{" "}
           <Link className="link" to="/memory">
             Memory
@@ -146,7 +149,7 @@ export function GuidePage() {
             },
           ]}
         />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           See the split, move coins, and pause a budget in{" "}
           <Link className="link" to="/funds">
             Funds
@@ -160,7 +163,7 @@ export function GuidePage() {
         lead="Every payment and answer leaves a Wake: what was bought, what it cost, and why."
       >
         <ProofGrid />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           Paste a digest or a Wake id in{" "}
           <Link className="link" to="/verify">
             Verify a receipt
@@ -184,7 +187,7 @@ export function GuidePage() {
       </GuideSection>
 
       {me?.surveyUrl ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           Used Remora for a bit?{" "}
           <a className="link" href={me.surveyUrl} target="_blank" rel="noreferrer">
             Tell me how it went

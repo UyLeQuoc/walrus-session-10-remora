@@ -29,11 +29,11 @@ const ACTION: Record<DecisionRef["action"], string> = {
 
 function Decision({ label, d }: { label: string; d: DecisionRef }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-lg border p-3 text-sm">
-      <span className="text-xs text-muted-foreground uppercase">{label}</span>
-      <span className="font-medium">{ACTION[d.action]}</span>
-      <span className="text-muted-foreground">{d.summary}</span>
-      <span className="text-xs text-muted-foreground">
+    <div className="flex min-w-0 flex-col gap-1 rounded-ob-lg bg-ob-control-hover p-3 text-md">
+      <span className="text-xs font-medium text-ob-muted">{label}</span>
+      <span className="font-medium text-ob-text">{ACTION[d.action]}</span>
+      <span className="text-ob-secondary">{d.summary}</span>
+      <span className="text-xs text-ob-muted">
         {new Date(d.at).toLocaleString()} · {d.memories.length} memor
         {d.memories.length === 1 ? "y" : "ies"} used
       </span>
@@ -48,13 +48,13 @@ function Decision({ label, d }: { label: string; d: DecisionRef }) {
 export function ProofView({ proof }: { proof: ProofOfLearning }) {
   return (
     <div className="flex flex-col gap-3" data-testid="proof">
-      <p className="text-sm">{proof.change.summary}</p>
+      <p className="text-md font-medium text-ob-text">{proof.change.summary}</p>
       <div className="grid gap-2 sm:grid-cols-2">
         <Decision label="Before" d={proof.before} />
         <Decision label="After" d={proof.after} />
       </div>
-      <div className="flex flex-col gap-1 text-sm" data-testid="proof-delta">
-        <span className="text-xs text-muted-foreground uppercase">What it learned in between</span>
+      <div className="flex flex-col gap-1.5 text-md" data-testid="proof-delta">
+        <span className="text-xs font-medium text-ob-muted">What it learned in between</span>
         {proof.delta.map((m) => (
           <div key={m.blobId} className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{m.namespace}</Badge>
@@ -80,37 +80,59 @@ function SeriesChart({ s }: { s: LearningSeries }) {
   const points = s.points.filter((p) => p.value !== null);
   const last = points.at(-1);
   return (
-    <div
-      className="flex min-w-0 flex-col gap-2 rounded-xl border p-3"
-      data-testid="learning-series"
-      data-metric={s.metric}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">{meta.title}</span>
-        <span className="text-sm tabular-nums" data-testid="learning-latest">
+    <div className="ob-card min-w-0 gap-2" data-testid="learning-series" data-metric={s.metric}>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-md text-ob-muted">{meta.title}</span>
+        <span
+          className="text-2xl leading-8 font-semibold tracking-tight text-ob-text tabular-nums"
+          data-testid="learning-latest"
+        >
           {last?.value != null ? meta.format(last.value) : "—"}
         </span>
       </div>
       {points.length ? (
-        <ChartContainer config={config} className="h-32 w-full">
-          <LineChart data={points} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-            <CartesianGrid vertical={false} />
-            <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={11} />
-            <YAxis
-              width={44}
+        <ChartContainer config={config} className="aspect-auto h-36 w-full">
+          <LineChart data={points} margin={{ left: 0, right: 12, top: 12, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--openbot-border-strong)" />
+            <XAxis
+              dataKey="day"
               tickLine={false}
               axisLine={false}
+              minTickGap={32}
+              tickMargin={8}
               fontSize={11}
+              stroke="var(--openbot-text-muted)"
+            />
+            <YAxis
+              width={48}
+              tickLine={false}
+              axisLine={false}
+              tickCount={4}
+              domain={s.metric === "cost_per_useful" ? [0, "auto"] : [0, 1]}
+              ticks={s.metric === "cost_per_useful" ? undefined : [0, 0.5, 1]}
+              fontSize={11}
+              stroke="var(--openbot-text-muted)"
               tickFormatter={(v: number) => meta.format(v)}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Line dataKey="value" type="monotone" stroke="var(--color-value)" strokeWidth={2} dot />
+            <ChartTooltip
+              cursor={{ stroke: "var(--openbot-text-muted)", strokeWidth: 1 }}
+              content={<ChartTooltipContent />}
+            />
+            <Line
+              dataKey="value"
+              type="monotone"
+              stroke="var(--color-value)"
+              strokeWidth={2}
+              dot={{ r: 2.5, strokeWidth: 0, fill: "var(--color-value)" }}
+              activeDot={{ r: 4, strokeWidth: 0 }}
+              isAnimationActive={false}
+            />
           </LineChart>
         </ChartContainer>
       ) : (
-        <p className="py-6 text-center text-xs text-muted-foreground">No data yet.</p>
+        <p className="py-8 text-center text-md text-ob-muted">No data yet.</p>
       )}
-      <span className="text-xs text-muted-foreground">
+      <span className="text-xs text-ob-muted">
         {s.source}. {dataPoints(points.reduce((n, p) => n + p.n, 0))}.
       </span>
     </div>
@@ -126,9 +148,11 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
         title="How it's learning"
         description="From its own receipts and your 👍/👎. A day without data has no point."
       >
-        {learning.error ? <p className="text-sm text-destructive">{learning.error}</p> : null}
-        {!learning.data && !learning.error ? <Skeleton className="h-40 w-full" /> : null}
-        <div className="grid gap-3 md:grid-cols-2">
+        {learning.error ? <p className="text-md text-ob-danger-text">{learning.error}</p> : null}
+        {!learning.data && !learning.error ? (
+          <Skeleton className="h-40 w-full rounded-ob-card" />
+        ) : null}
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {(learning.data?.series ?? []).map((s) => (
             <SeriesChart key={s.metric} s={s} />
           ))}
@@ -138,16 +162,16 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
         title="Proof of Learning"
         description="The same kind of input, a different decision, and the memory that made the difference."
       >
-        {proofs.error ? <p className="text-sm text-destructive">{proofs.error}</p> : null}
+        {proofs.error ? <p className="text-md text-ob-danger-text">{proofs.error}</p> : null}
         {proofs.data && !proofs.data.proofs.length ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="max-w-3xl text-md text-ob-muted">
             Nothing to show yet: a proof appears once it decides differently on the same kind of
             input after learning something (for a Sentinel, mark a ping 👎 noise).
           </p>
         ) : null}
         <ul className="flex max-w-3xl flex-col gap-4">
           {(proofs.data?.proofs ?? []).map((p) => (
-            <li key={p.after.receiptId} className="rounded-xl border p-4">
+            <li key={p.after.receiptId} className="ob-card">
               <ProofView proof={p} />
             </li>
           ))}

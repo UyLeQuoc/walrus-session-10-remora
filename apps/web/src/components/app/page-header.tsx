@@ -1,8 +1,9 @@
 /**
  * The title block for a page (plan §2.2): an `h1`, an optional badge and description, and actions
- * that wrap under the title on narrow screens.
+ * that wrap under the title on narrow screens. Drawn as openbot's page heading (ADR-0069).
  */
 import type { ReactNode } from "react";
+import { PageHeading } from "@/openbot/pages";
 
 export function PageHeader({
   title,
@@ -15,16 +16,5 @@ export function PageHeader({
   actions?: ReactNode;
   badge?: ReactNode;
 }) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h1 className="min-w-0 text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
-          {badge}
-        </div>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-    </div>
-  );
+  return <PageHeading title={title} description={description} actions={actions} badge={badge} />;
 }

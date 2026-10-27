@@ -3,6 +3,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageColumn } from "@/components/app/page";
+import { Logo } from "@/components/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WalletPicker } from "@/components/wallet-picker";
@@ -10,6 +11,7 @@ import { useWalletResume } from "@/features/connect/wallet-resume";
 import { useMe } from "@/features/me/use-me";
 import { WalletNetworkWarning } from "@/features/network/network-switch";
 import { useNetwork } from "@/lib/network";
+import { AuthCard } from "@/openbot/pages";
 import type { Result } from "./api";
 
 /** The wallet behind the server session, or null (A1: the session, not just a connected wallet). */
@@ -99,18 +101,28 @@ export function RequireOwner({
   }
   if (loading) {
     return (
-      <PageColumn className="gap-3 py-6">
+      <PageColumn className="py-6 md:py-8">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full rounded-ob-card" />
       </PageColumn>
     );
   }
+  // The h1 stays on the page's left edge like every other page's title (the layout invariant);
+  // the sign-in itself is a centred card in openbot's AccountLogin shape, with Remora's mark.
   return (
-    <PageColumn className="items-start gap-3 py-6">
-      <h1 className="text-xl font-semibold tracking-tight md:text-2xl">Sign in</h1>
-      <p className="text-sm text-muted-foreground">Sign in with your wallet to see {what}.</p>
-      <WalletPicker label="Sign in with your wallet" signIn onSignedIn={reload} />
+    <PageColumn className="py-6 md:py-8 [[data-slot=page-column]_&]:p-0!">
+      {/* Inside a page that already has its own h1 (Connections), the page's title stands. */}
+      <div className="ob-page-header [[data-slot=page-column]_[data-slot=page-column]_&]:hidden">
+        <h1 className="ob-page-title">Sign in</h1>
+      </div>
+      <AuthCard
+        className="[[data-slot=page-column]_[data-slot=page-column]_&]:min-h-0 [[data-slot=page-column]_[data-slot=page-column]_&]:place-items-start [[data-slot=page-column]_[data-slot=page-column]_&]:py-0"
+        mark={<Logo size={44} background decorative />}
+        description={<>Sign in with your wallet to see {what}.</>}
+      >
+        <WalletPicker label="Sign in with your wallet" signIn onSignedIn={reload} />
+      </AuthCard>
     </PageColumn>
   );
 }

@@ -30,10 +30,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelPicker } from "@/features/chat/model-picker";
-import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
+import { DEFAULT_MODEL_ID, modelById, priceLabel } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
 import { LearningSection } from "@/features/learning/learning";
 import { parseUsdc, usdc } from "@/lib/usdc";
+import { cn } from "@/lib/utils";
+import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from "@/openbot/pages";
 import { api } from "./api";
 import { budgetLine } from "./budget";
 import { FeedList } from "./feed-list";
@@ -173,26 +175,29 @@ function AskCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
       title={`Ask ${r.name}`}
       description="It buys data when that helps, and tells you what each answer cost."
     >
-      <div className="flex flex-col gap-2">
+      <SurfaceCard className="gap-2 p-2">
         <Textarea
           aria-label="Question"
           rows={2}
           placeholder="Is package 0x2 safe to depend on?"
+          className="min-h-16 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         <div className="flex justify-end">
-          <Button type="button" disabled={busy || !q.trim()} onClick={() => void ask()}>
+          <Button type="button" size="sm" disabled={busy || !q.trim()} onClick={() => void ask()}>
             {busy ? <Spinner /> : null}
             {busy ? "Thinking…" : "Ask"}
           </Button>
         </div>
-        {answer ? (
-          <p className="whitespace-pre-wrap text-sm" data-testid="answer">
+      </SurfaceCard>
+      {answer ? (
+        <SurfaceCard tone="muted">
+          <p className="text-md whitespace-pre-wrap text-ob-text" data-testid="answer">
             {answer}
           </p>
-        ) : null}
-      </div>
+        </SurfaceCard>
+      ) : null}
     </Section>
   );
 }
@@ -219,26 +224,43 @@ function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
           Teach
         </Button>
       </div>
-      <ul className="flex flex-col gap-1" aria-label="Rules">
+      <SettingsGroup
+        as="ul"
+        aria-label="Rules"
+        className={cn(!(rules.data?.rules ?? []).length && "hidden")}
+      >
         {(rules.data?.rules ?? []).map((x) => (
-          <li key={x.id} className="flex items-center justify-between gap-2 text-sm">
-            <span>{x.text}</span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => void api.deleteRule(r.id, x.id).then(() => rules.refresh())}
-            >
-              Forget
-            </Button>
-          </li>
+          <SettingsRow
+            as="li"
+            key={x.id}
+            size="compact"
+            title={<span className="font-normal">{x.text}</span>}
+            actions={
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => void api.deleteRule(r.id, x.id).then(() => rules.refresh())}
+              >
+                Forget
+              </Button>
+            }
+          />
         ))}
-      </ul>
+      </SettingsGroup>
     </Section>
   );
 }
 
-function BudgetSection({ r, reload }: { r: RemoraView; reload: () => void }) {
+function BudgetSection({
+  r,
+  reload,
+  layout = "stack",
+}: {
+  r: RemoraView;
+  reload: () => void;
+  layout?: "stack" | "split";
+}) {
   const meter = useBudget(r.id, Boolean(r.config.budget));
   const { run } = useOwnerTx();
   const b = r.config.budget;
@@ -246,8 +268,12 @@ function BudgetSection({ r, reload }: { r: RemoraView; reload: () => void }) {
   const [cap, setCap] = useState(b ? usdc(b.perPaymentCap) : "0.05");
   if (!b)
     return (
-      <Section title="Budget" description="Read-only: this remora has no Disc and never pays.">
-        <p className="text-sm text-muted-foreground">No budget to change.</p>
+      <Section
+        layout={layout}
+        title="Budget"
+        description="Read-only: this remora has no Disc and never pays."
+      >
+        <p className="text-md text-ob-muted">No budget to change.</p>
       </Section>
     );
 
@@ -267,45 +293,47 @@ function BudgetSection({ r, reload }: { r: RemoraView; reload: () => void }) {
   };
 
   return (
-    <Section title="Budget" description={budgetLine(r)}>
-      <BudgetMeter meter={meter.meter} window={b.window} />
-      {meter.error ? <p className="text-sm text-destructive">{meter.error}</p> : null}
-      {r.discId ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="budget-monthly">Monthly limit</Label>
-            <Input
-              id="budget-monthly"
-              className="w-28"
-              aria-label="Monthly limit"
-              value={monthly}
-              onChange={(e) => setMonthly(e.target.value)}
+    <Section layout={layout} title="Budget" description={budgetLine(r)}>
+      <SurfaceCard>
+        <BudgetMeter meter={meter.meter} window={b.window} />
+        {meter.error ? <p className="text-md text-ob-danger-text">{meter.error}</p> : null}
+        {r.discId ? (
+          <div className="flex flex-wrap items-end gap-2 border-t border-ob-border-grouped pt-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="budget-monthly">Monthly limit</Label>
+              <Input
+                id="budget-monthly"
+                className="w-28"
+                aria-label="Monthly limit"
+                value={monthly}
+                onChange={(e) => setMonthly(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="budget-cap">Per payment</Label>
+              <Input
+                id="budget-cap"
+                className="w-28"
+                aria-label="Per payment"
+                value={cap}
+                onChange={(e) => setCap(e.target.value)}
+              />
+            </div>
+            <ConfirmAction
+              trigger={
+                <Button type="button" variant="outline">
+                  Change budget
+                </Button>
+              }
+              title={`Change ${r.name}'s budget?`}
+              description="This revokes the old Disc and issues a new one. You'll sign one transaction."
+              confirmLabel="Change budget"
+              tone="default"
+              onConfirm={change}
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="budget-cap">Per payment</Label>
-            <Input
-              id="budget-cap"
-              className="w-28"
-              aria-label="Per payment"
-              value={cap}
-              onChange={(e) => setCap(e.target.value)}
-            />
-          </div>
-          <ConfirmAction
-            trigger={
-              <Button type="button" variant="outline">
-                Change budget
-              </Button>
-            }
-            title={`Change ${r.name}'s budget?`}
-            description="This revokes the old Disc and issues a new one. You'll sign one transaction."
-            confirmLabel="Change budget"
-            tone="default"
-            onConfirm={change}
-          />
-        </div>
-      ) : null}
+        ) : null}
+      </SurfaceCard>
     </Section>
   );
 }
@@ -328,8 +356,12 @@ function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
     }
   };
   return (
-    <Section title="Identity" description="The name and the one-sentence persona it answers as.">
-      <div className="flex flex-col gap-4">
+    <Section
+      layout="split"
+      title="Identity"
+      description="The name and the one-sentence persona it answers as."
+    >
+      <SurfaceCard className="gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="remora-name">Name</Label>
           <Input
@@ -351,12 +383,12 @@ function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
           />
         </div>
         <div className="flex justify-end">
-          <Button type="button" disabled={busy || !changed} onClick={() => void save()}>
+          <Button type="button" size="sm" disabled={busy || !changed} onClick={() => void save()}>
             {busy ? <Spinner /> : null}
             Save
           </Button>
         </div>
-      </div>
+      </SurfaceCard>
     </Section>
   );
 }
@@ -364,6 +396,7 @@ function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
 /** D9 (ADR-0042): the model this remora thinks with, from the shared catalog. */
 function BrainSection({ r, reload }: { r: RemoraView; reload: () => void }) {
   const [busy, setBusy] = useState(false);
+  const model = modelById(r.config.model ?? DEFAULT_MODEL_ID);
   const choose = async (id: string) => {
     setBusy(true);
     const out = await api.edit(r.id, { model: id || null });
@@ -378,16 +411,28 @@ function BrainSection({ r, reload }: { r: RemoraView; reload: () => void }) {
   };
   return (
     <Section
+      layout="split"
       title="Brain"
       description="The model it answers with. Every choice can call tools and costs at most $1 per 1M tokens."
     >
-      <div className="flex items-center gap-2" data-testid="remora-model">
-        <ModelPicker
-          value={r.config.model ?? DEFAULT_MODEL_ID}
-          onChange={(id) => void choose(id)}
+      <SettingsGroup>
+        <SettingsRow
+          stack
+          title={model.label}
+          description={
+            priceLabel(model) === "—" ? undefined : `${model.vendor} · ${priceLabel(model)}`
+          }
+          actions={
+            <div className="flex items-center gap-2" data-testid="remora-model">
+              <ModelPicker
+                value={r.config.model ?? DEFAULT_MODEL_ID}
+                onChange={(id) => void choose(id)}
+              />
+              {busy ? <Spinner /> : null}
+            </div>
+          }
         />
-        {busy ? <Spinner /> : null}
-      </div>
+      </SettingsGroup>
     </Section>
   );
 }
@@ -407,6 +452,7 @@ function SchedulesSection({ r }: { r: RemoraView }) {
   };
   return (
     <Section
+      layout="split"
       title="Schedules"
       description="A question it asks on its own, and tells you the answer."
     >
@@ -426,42 +472,51 @@ function SchedulesSection({ r }: { r: RemoraView }) {
           Add
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground" data-testid="schedule-preview">
+      <p className="text-md text-ob-muted" data-testid="schedule-preview">
         {preview.data
           ? `${preview.data.human}: next ${preview.data.next.map((t) => new Date(t).toLocaleString()).join(", ")}`
           : preview.error || "…"}
       </p>
-      <ul className="flex flex-col gap-1">
+      <SettingsGroup as="ul" className={cn(!schedules.length && "hidden")}>
         {schedules.map((s) => (
-          <li key={s.id} className="flex items-center justify-between gap-2 text-sm">
-            <span>
-              {s.human}: {s.question}
-              {s.paused ? <span className="ml-2 text-muted-foreground">(paused)</span> : null}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() =>
-                void api.pauseSchedule(r.id, s.id, !s.paused).then((out) => {
-                  if (!out.ok) toast.error(out.error);
-                  void list.refresh();
-                })
-              }
-            >
-              {s.paused ? "Resume" : "Pause"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => void api.removeSchedule(r.id, s.id).then(() => list.refresh())}
-            >
-              Remove
-            </Button>
-          </li>
+          <SettingsRow
+            as="li"
+            key={s.id}
+            size="compact"
+            title={
+              <span className="font-normal">
+                {s.human}: {s.question}
+                {s.paused ? <span className="ml-2 text-ob-muted">(paused)</span> : null}
+              </span>
+            }
+            actions={
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    void api.pauseSchedule(r.id, s.id, !s.paused).then((out) => {
+                      if (!out.ok) toast.error(out.error);
+                      void list.refresh();
+                    })
+                  }
+                >
+                  {s.paused ? "Resume" : "Pause"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void api.removeSchedule(r.id, s.id).then(() => list.refresh())}
+                >
+                  Remove
+                </Button>
+              </>
+            }
+          />
         ))}
-      </ul>
+      </SettingsGroup>
     </Section>
   );
 }
@@ -471,36 +526,39 @@ function SourcesSection({ r }: { r: RemoraView }) {
   const rows = s.data?.sources ?? [];
   if (!rows.length) return null;
   return (
-    <Section title="Sources" description="From your 👍/👎; written to its memory as it learns.">
-      <ul className="flex flex-col gap-2 text-sm">
+    <Section
+      layout="split"
+      title="Sources"
+      description="From your 👍/👎; written to its memory as it learns."
+    >
+      <SettingsGroup as="ul">
         {rows.map((x) => (
-          <li key={x.payee} className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-medium">{x.payee}</span>
-            <span className="text-muted-foreground">
-              {x.calls} calls · {x.useful} useful · {x.noise} noise · {usdc(x.spent)} USDC spent
-            </span>
-          </li>
+          <SettingsRow
+            as="li"
+            key={x.payee}
+            size="compact"
+            title={x.payee}
+            description={`${x.calls} calls · ${x.useful} useful · ${x.noise} noise · ${usdc(x.spent)} USDC spent`}
+          />
         ))}
-      </ul>
+      </SettingsGroup>
     </Section>
   );
 }
 
 function KeysSection({ r }: { r: RemoraView }) {
   return (
-    <Section title="Keys" description="The key that acts, and the Disc that caps it.">
-      <dl className="flex flex-col gap-2 text-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <dt className="text-muted-foreground">Spending key</dt>
-          <dd className="min-w-0 max-w-full">{r.address ? <Hash value={r.address} /> : "—"}</dd>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <dt className="text-muted-foreground">
-            <Term name="Disc">Disc</Term>
-          </dt>
-          <dd className="min-w-0 max-w-full">{r.discId ? <Hash value={r.discId} /> : "—"}</dd>
-        </div>
-      </dl>
+    <Section
+      layout="split"
+      title="Keys"
+      description="The key that acts, and the Disc that caps it."
+    >
+      <PropertyList>
+        <Property term="Spending key">{r.address ? <Hash value={r.address} /> : "—"}</Property>
+        <Property term={<Term name="Disc">Disc</Term>}>
+          {r.discId ? <Hash value={r.discId} /> : "—"}
+        </Property>
+      </PropertyList>
     </Section>
   );
 }
@@ -509,6 +567,7 @@ function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
   const { run } = useOwnerTx();
   return (
     <Section
+      layout="split"
       title="Danger zone"
       tone="danger"
       description="Both actions need a signature and take effect immediately."
@@ -517,7 +576,7 @@ function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
         {r.discId ? (
           <ConfirmAction
             trigger={
-              <Button type="button" variant="outline" className="text-destructive">
+              <Button type="button" variant="destructive">
                 <KeyRound /> Rotate key
               </Button>
             }
@@ -536,7 +595,7 @@ function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
         {r.status !== "retired" ? (
           <ConfirmAction
             trigger={
-              <Button type="button" variant="outline" className="text-destructive">
+              <Button type="button" variant="destructive">
                 <Trash2 /> Retire
               </Button>
             }
@@ -559,10 +618,10 @@ function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
 
 function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 lg:gap-10">
       <IdentitySection r={r} reload={reload} />
       <BrainSection r={r} reload={reload} />
-      <BudgetSection r={r} reload={reload} />
+      <BudgetSection r={r} reload={reload} layout="split" />
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}
       <KeysSection r={r} />
@@ -600,7 +659,7 @@ function Remora({ id }: { id: string }) {
       <Page title="Remora">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full rounded-ob-card" />
       </Page>
     );
   }
@@ -646,14 +705,14 @@ function Remora({ id }: { id: string }) {
       ) : null}
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
-        <TabsList variant="line" className="max-w-full overflow-x-auto">
+        <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="learning">Learning</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="flex flex-col gap-8 pt-4">
+        <TabsContent value="overview" className="flex flex-col gap-8 pt-5">
           {r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
           ) : (
@@ -672,7 +731,7 @@ function Remora({ id }: { id: string }) {
           </Section>
         </TabsContent>
 
-        <TabsContent value="activity" className="flex flex-col gap-4 pt-4">
+        <TabsContent value="activity" className="flex flex-col gap-4 pt-5">
           <div className="flex justify-end">
             <Button asChild variant="outline" size="sm">
               <Link to={`/memory?remora=${r.id}`}>Its memory</Link>
@@ -681,11 +740,11 @@ function Remora({ id }: { id: string }) {
           <FeedList items={events} />
         </TabsContent>
 
-        <TabsContent value="learning" className="flex flex-col gap-8 pt-4">
+        <TabsContent value="learning" className="flex flex-col gap-8 pt-5">
           <LearningSection remoraId={r.id} />
         </TabsContent>
 
-        <TabsContent value="settings" className="pt-4">
+        <TabsContent value="settings" className="pt-5">
           <SettingsTab r={r} reload={reload} />
         </TabsContent>
       </Tabs>

@@ -19,7 +19,7 @@ describe("Page", () => {
     expect(scroller.className).toContain("overflow-y-auto");
     const column = scroller.firstElementChild as HTMLElement;
     expect(column.className).toContain("w-full");
-    expect(column.className).toContain("px-4 sm:px-6 lg:px-10");
+    expect(column.className).toContain("px-4 md:px-8");
     expect(column.className).not.toContain("max-w-");
     expect(column.className).not.toContain("mx-auto");
   });

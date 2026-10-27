@@ -46,7 +46,7 @@ export function HatchBadge({ templateId, name }: { templateId: string; name: str
 
   const note = (kind: Kind) =>
     status?.kind === kind ? (
-      <span className="text-sm text-muted-foreground" role="status">
+      <span className="text-md text-ob-muted" role="status">
         {status.ok ? "Copied" : "Copy failed"}
       </span>
     ) : null;
@@ -56,12 +56,12 @@ export function HatchBadge({ templateId, name }: { templateId: string; name: str
       <div data-testid="hatch-badge">
         <Link
           to={path}
-          className="inline-flex max-w-full items-center gap-3 rounded-lg border bg-card px-4 py-3 text-card-foreground no-underline transition-colors hover:bg-muted"
+          className="inline-flex max-w-full items-center gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped px-4 py-3 text-ob-text no-underline transition-colors hover:bg-ob-control-hover"
         >
           <GitFork className="size-5 shrink-0" aria-hidden />
           <span className="flex min-w-0 flex-col">
             <span className="font-semibold">Hatch this remora</span>
-            <span className="truncate text-sm text-muted-foreground">{name}</span>
+            <span className="truncate text-md text-ob-muted">{name}</span>
           </span>
         </Link>
       </div>
@@ -80,7 +80,7 @@ export function HatchBadge({ templateId, name }: { templateId: string; name: str
           {note("markdown")}
         </div>
         <pre
-          className="overflow-x-auto rounded-md bg-muted p-3 text-xs"
+          className="overflow-x-auto rounded-ob-lg bg-ob-control-hover p-3 font-mono text-xs text-ob-secondary"
           data-testid="hatch-badge-markdown"
         >
           {markdown}
@@ -101,7 +101,7 @@ export function HatchBadge({ templateId, name }: { templateId: string; name: str
           {note("html")}
         </div>
         <pre
-          className="overflow-x-auto rounded-md bg-muted p-3 text-xs"
+          className="overflow-x-auto rounded-ob-lg bg-ob-control-hover p-3 font-mono text-xs text-ob-secondary"
           data-testid="hatch-badge-html"
         >
           {html}

@@ -11,7 +11,7 @@ export function BudgetMeter({
   window: "day" | "week" | "month" | null;
 }) {
   if (!meter?.window) {
-    return <p className="text-sm text-muted-foreground">Reading the Disc…</p>;
+    return <p className="text-md text-ob-muted">Reading the Disc…</p>;
   }
   const limit = BigInt(meter.window.limit);
   const spent = BigInt(meter.window.spent);
@@ -20,21 +20,21 @@ export function BudgetMeter({
   return (
     <div className="flex flex-col gap-2" data-testid="budget-meter">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm">
-          <span className="text-lg font-semibold tabular-nums">{usdc(left)}</span> of {usdc(limit)}{" "}
-          USDC left this {window ?? "window"}
+        <p className="text-md text-ob-secondary">
+          <span className="text-base font-semibold tracking-tight text-ob-text tabular-nums">
+            {usdc(left)}
+          </span>{" "}
+          of {usdc(limit)} USDC left this {window ?? "window"}
         </p>
         {meter.forecast?.runsOutOn ? (
-          <p className="text-xs text-muted-foreground">
-            runs out around {meter.forecast.runsOutOn}
-          </p>
+          <p className="text-xs text-ob-muted">runs out around {meter.forecast.runsOutOn}</p>
         ) : null}
       </div>
       <Progress
         value={Math.min(100, Math.max(0, used))}
         aria-label={`${used}% of this ${window ?? "window"}'s budget spent`}
       />
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-ob-muted tabular-nums">
         {usdc(spent)} spent in total{meter.paused ? " · paused" : ""}
       </p>
     </div>
