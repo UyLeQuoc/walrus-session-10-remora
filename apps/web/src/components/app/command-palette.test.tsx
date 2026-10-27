@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 import { CommandPalette } from "@/components/app/command-palette";
 
 vi.mock("@/features/remoras/api", () => ({
-  api: { remoras: vi.fn(async () => ({ ok: true, data: { remoras: [] } })) },
+  api: {
+    remoras: vi.fn(async () => ({ ok: true, data: { remoras: [] } })),
+    rooms: vi.fn(async () => ({ ok: true, data: { rooms: [] } })),
+  },
 }));
 
 vi.mock("@/features/remoras/hooks", async (importOriginal) => {
