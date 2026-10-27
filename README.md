@@ -148,5 +148,11 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 
 ## License
 
-[MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)). The vendored ASCII ocean keeps its upstream MIT notice in
+[MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)), except one folder:
+
+- **`apps/web/src/openbot/`** is openbot's UI ported to React, under
+  [PolyForm Noncommercial 1.0.0](apps/web/src/openbot/LICENSE) with Synthetify Labs' Required Notices
+  ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)). Use it only for noncommercial purposes.
+
+The vendored ASCII ocean and the Inter font keep their own notices in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
