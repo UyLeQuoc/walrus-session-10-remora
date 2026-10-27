@@ -97,7 +97,6 @@ export function AppSidebar({
                 <AgentRow
                   to="/approvals"
                   onClick={onNavigate}
-                  active={pathname === "/approvals"}
                   avatar={<RemoraAvatar id={w.remora} name={w.remora} />}
                   status={
                     <AgentStatusWaiting>

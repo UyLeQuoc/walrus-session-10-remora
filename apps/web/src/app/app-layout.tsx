@@ -99,10 +99,13 @@ export function AppLayout() {
   useEffect(() => {
     setMobilePane((pane) => (pane === "workspace" ? "main" : pane));
   }, [pathname]);
-  // A closed side panel hands the phone back to the page.
+  // A side panel that opens on a phone takes the screen; a closed one hands it back to the page.
+  const panelOwner = sidePanel?.owner ?? null;
   useEffect(() => {
-    if (!sidePanel) setMobilePane((pane) => (pane === "panel" ? "main" : pane));
-  }, [sidePanel]);
+    if (panelOwner) {
+      if (phone) setMobilePane("panel");
+    } else setMobilePane((pane) => (pane === "panel" ? "main" : pane));
+  }, [panelOwner, phone]);
   // Cmd/Ctrl+B folds the roster to its faces and back.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -212,7 +215,8 @@ export function AppLayout() {
                     icon: <Users aria-hidden />,
                     count: approvals.length,
                   },
-                  { id: "main", label: title, icon: <MessageCircle aria-hidden /> },
+                  // A fixed name: the page title here would repeat page controls ("Verify").
+                  { id: "main", label: "Page", icon: <MessageCircle aria-hidden /> },
                   ...(sidePanel
                     ? [
                         {
@@ -231,16 +235,19 @@ export function AppLayout() {
             leftWidth={compact ? LEFT.compact : leftWidth}
             sideWidth={sidePanel && !phone ? sideWidth : 0}
           >
-            <AppSidebar
-              compact={compact && !phone}
-              onExpand={() => setRosterCompact(false)}
-              networkHere={!networkInHeader}
-              approvals={approvals}
-              onNewChat={requestNewChat}
-              onOpenChat={requestOpenChat}
-              onNavigate={() => setMobilePane("main")}
-              activeChatId={activeChatId}
-            />
+            {/* On a phone the roster mounts only in its own pane, so nothing hidden repeats the page. */}
+            {phone && mobilePane !== "workspace" ? null : (
+              <AppSidebar
+                compact={compact && !phone}
+                onExpand={() => setRosterCompact(false)}
+                networkHere={!networkInHeader}
+                approvals={approvals}
+                onNewChat={requestNewChat}
+                onOpenChat={requestOpenChat}
+                onNavigate={() => setMobilePane("main")}
+                activeChatId={activeChatId}
+              />
+            )}
             <PanelResizer
               className="left-panel-resizer"
               label="Resize the roster"

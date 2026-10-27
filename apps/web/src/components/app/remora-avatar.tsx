@@ -49,7 +49,7 @@ export function RemoraAvatar({
         color: `var(--openbot-file-${tint})`,
       }}
     >
-      {name.trim().slice(0, 1).toUpperCase() || "?"}
+      {size < 16 ? null : name.trim().slice(0, 1).toUpperCase() || "?"}
     </span>
   );
 }

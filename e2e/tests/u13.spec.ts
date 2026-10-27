@@ -11,6 +11,14 @@ import { connectAndSignIn, installTestWallet } from "../support/test-wallet";
 
 type Route = { path: string; name: string; ready?: (page: Page) => Promise<unknown> };
 
+// Every shot loads a page's reads; a run counts as its own client so the local server's per-address
+// limit (iplimit.ts, 200 an hour) does not refuse the sign-in halfway through a full set.
+test.use({
+  extraHTTPHeaders: {
+    "x-forwarded-for": `10.13.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
+  },
+});
+
 const ROUTES: Route[] = [
   { path: "/", name: "home" },
   { path: "/chat", name: "chat" },
@@ -101,4 +109,63 @@ test("U13: every route in openbot's UI, desktop and 375 px, light and dark", asy
       }
     }
   }
+});
+
+test("U13: Cmd/Ctrl+K, Tab order, reduced motion and the N18 labels", async ({ page }) => {
+  test.setTimeout(5 * 60_000);
+  const kp = burner();
+  await installTestWallet(page, kp);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await connectAndSignIn(page);
+  await settle(page);
+
+  // Cmd/Ctrl+K: openbot's global search, Connections among the pages, Enter opens it.
+  // The Desktop Chrome device reports Windows, so the palette listens for Ctrl.
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("textbox", { name: "Search pages and remoras" });
+  await expect(search).toBeVisible();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: "screenshots/u13-search-1280-light.png" });
+  await search.fill("conn");
+  await expect(page.getByRole("option", { name: /Connections/ })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/connections$/);
+
+  // Tab order: the rail first (logo, then the pages top to bottom), then the roster.
+  await page.goto("/");
+  await settle(page);
+  const order: string[] = [];
+  for (let i = 0; i < 9; i++) {
+    await page.keyboard.press("Tab");
+    order.push(
+      await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        return el?.getAttribute("aria-label") ?? el?.textContent?.trim() ?? "";
+      }),
+    );
+  }
+  expect(order.slice(0, 5)).toEqual([
+    "Remora home",
+    "Home",
+    "Chat",
+    expect.stringMatching(/^Approvals/),
+    "Funds",
+  ]);
+
+  // Reduced motion: no movement on press or open.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const transition = await page
+    .getByRole("button", { name: "New chat" })
+    .evaluate((el) => getComputedStyle(el).transitionDuration);
+  expect(transition.split(",").every((d) => Number.parseFloat(d) <= 0.0001)).toBe(true);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
+  // N18: the labels a screen reader needs are still there.
+  await page.goto("/chat");
+  await settle(page);
+  await expect(page.getByLabel("Ask your remora")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Model and memory details" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search chats" })).toBeVisible();
 });

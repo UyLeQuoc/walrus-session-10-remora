@@ -2,6 +2,7 @@
 import type { ProofOfLearning, WakeView } from "@remora/schema";
 import { useState } from "react";
 import { Link } from "react-router";
+import { ShellSidePanel, useHasSidePanel } from "@/app/shell";
 import { Term } from "@/components/app/glossary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,8 @@ export function WhyDrawer({ view, label = "Why?" }: { view: WakeView; label?: st
 }
 
 /** N4 on live data: loads the event's Wake when opened. */
-export function WhyButton({ eventId }: { eventId: string }) {
+/** `compact`: the 24px action-row size, for a chat line. */
+export function WhyButton({ eventId, compact = false }: { eventId: string; compact?: boolean }) {
   const [state, setState] = useState<{
     view: WakeView | null;
     summary: string;
@@ -119,6 +121,8 @@ export function WhyButton({ eventId }: { eventId: string }) {
     proof: ProofOfLearning | null;
   } | null>(null);
   const [showProof, setShowProof] = useState(false);
+  const [docked, setDocked] = useState(false);
+  const inShell = useHasSidePanel();
   const open = async () => {
     if (state) return;
     const r = await api.why(eventId);
@@ -134,13 +138,69 @@ export function WhyButton({ eventId }: { eventId: string }) {
       proof: (proofs?.ok && proofs.data.proofs.find((p) => p.after.receiptId === w?.id)) || null,
     });
   };
+  const body = (
+    <>
+      {state?.error ? <p className="px-4 text-sm text-destructive">{state.error}</p> : null}
+      {state && !state.error && !state.view ? (
+        <p className="px-4 text-sm text-muted-foreground">
+          No receipt for this one: nothing was decided.
+        </p>
+      ) : null}
+      {state?.proof ? (
+        <div className="flex flex-col gap-2 px-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start"
+            aria-expanded={showProof}
+            onClick={() => setShowProof((v) => !v)}
+          >
+            What changed?
+          </Button>
+          {showProof ? <ProofView proof={state.proof} /> : null}
+        </div>
+      ) : null}
+      {state?.view ? <WakeDetails view={state.view} /> : null}
+    </>
+  );
+  const trigger = (
+    <Button
+      type="button"
+      variant="ghost"
+      size={compact ? "xs" : "sm"}
+      aria-expanded={inShell ? docked : undefined}
+      onClick={
+        inShell
+          ? () => {
+              setDocked(true);
+              void open();
+            }
+          : undefined
+      }
+    >
+      Why?
+    </Button>
+  );
+  // In the app shell, the receipt opens in the docked side panel (ADR-0069); alone, in a sheet.
+  if (inShell)
+    return (
+      <>
+        {trigger}
+        <ShellSidePanel open={docked} title="Why" onClose={() => setDocked(false)}>
+          <div className="-mx-4 flex flex-col gap-3">
+            <p className="px-4 text-sm text-muted-foreground">
+              {state?.summary ?? "Loading the receipt…"}{" "}
+              {state?.view ? anchoredBadge(state.view.anchored) : null}
+            </p>
+            {body}
+          </div>
+        </ShellSidePanel>
+      </>
+    );
   return (
     <Sheet onOpenChange={(o) => o && void open()}>
-      <SheetTrigger asChild>
-        <Button type="button" variant="ghost" size="sm">
-          Why?
-        </Button>
-      </SheetTrigger>
+      <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Why</SheetTitle>
@@ -149,28 +209,7 @@ export function WhyButton({ eventId }: { eventId: string }) {
             {state?.view ? anchoredBadge(state.view.anchored) : null}
           </SheetDescription>
         </SheetHeader>
-        {state?.error ? <p className="px-4 text-sm text-destructive">{state.error}</p> : null}
-        {state && !state.error && !state.view ? (
-          <p className="px-4 text-sm text-muted-foreground">
-            No receipt for this one: nothing was decided.
-          </p>
-        ) : null}
-        {state?.proof ? (
-          <div className="flex flex-col gap-2 px-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="self-start"
-              aria-expanded={showProof}
-              onClick={() => setShowProof((v) => !v)}
-            >
-              What changed?
-            </Button>
-            {showProof ? <ProofView proof={state.proof} /> : null}
-          </div>
-        ) : null}
-        {state?.view ? <WakeDetails view={state.view} /> : null}
+        {body}
       </SheetContent>
     </Sheet>
   );

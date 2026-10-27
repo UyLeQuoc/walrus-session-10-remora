@@ -6,6 +6,9 @@
 @import "./openbot/theme.css";
 @import "./openbot/base.css";
 @import "./openbot/shell/shell.css";
+@import "./openbot/shell/global-search.css";
+@import "./openbot/pages/pages.css";
+@import "./openbot/conversation/conversation.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/features/remoras/api";
 import { usdc } from "@/lib/usdc";
+import { InteractionCard } from "@/openbot";
 
 export function InlineApproval({
   payload,
@@ -58,49 +59,58 @@ export function InlineApproval({
     onDone();
   };
 
+  const question =
+    kind === "over_limit_payment" && amount && payee
+      ? `Pay ${usdc(amount)} USDC to ${payee}? It's over this remora's per-payment cap, so you pay it once, from your balance.`
+      : kind === "schedule"
+        ? `Ask “${String(payload.question ?? "")}” ${String(payload.human ?? "on a schedule")}?`
+        : "This needs your decision.";
+  // openbot's approval card (ADR-0069): a title, its status, the question, then the actions.
   return (
-    <div
-      className="flex w-fit max-w-full flex-col gap-2 rounded-xl border bg-card p-3 text-sm"
+    <InteractionCard
       data-testid="inline-approval"
+      tone={status === "pending" ? "warning" : undefined}
+      title={kind === "schedule" ? "A schedule to approve" : "Needs your approval"}
+      status={
+        status === "pending" ? (
+          <Badge variant="warning">Waiting for you</Badge>
+        ) : (
+          <Badge variant={status === "approved" ? "success" : "outline"}>
+            {status === "approved" ? "Approved" : status === "rejected" ? "Declined" : status}
+          </Badge>
+        )
+      }
+      actions={
+        status === "pending" ? (
+          <>
+            {kind === "over_limit_payment" ? (
+              <Button type="button" size="sm" disabled={!!busy} onClick={() => void pay()}>
+                Pay once{amount ? ` (${usdc(amount)} USDC)` : ""}
+              </Button>
+            ) : (
+              <Button type="button" size="sm" disabled={!!busy} onClick={() => void decide(true)}>
+                Approve
+              </Button>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!!busy}
+              onClick={() => void decide(false)}
+            >
+              Decline
+            </Button>
+            {busy ? (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Spinner /> {busy}
+              </span>
+            ) : null}
+          </>
+        ) : undefined
+      }
     >
-      <p>
-        {kind === "over_limit_payment" && amount && payee
-          ? `Pay ${usdc(amount)} USDC to ${payee}? It's over this remora's per-payment cap, so you pay it once, from your balance.`
-          : kind === "schedule"
-            ? `Ask “${String(payload.question ?? "")}” ${String(payload.human ?? "on a schedule")}?`
-            : "This needs your decision."}
-      </p>
-      {status === "pending" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {kind === "over_limit_payment" ? (
-            <Button type="button" size="sm" disabled={!!busy} onClick={() => void pay()}>
-              Pay once{amount ? ` (${usdc(amount)} USDC)` : ""}
-            </Button>
-          ) : (
-            <Button type="button" size="sm" disabled={!!busy} onClick={() => void decide(true)}>
-              Approve
-            </Button>
-          )}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!!busy}
-            onClick={() => void decide(false)}
-          >
-            Decline
-          </Button>
-          {busy ? (
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Spinner /> {busy}
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <Badge variant={status === "approved" ? "secondary" : "outline"} className="self-start">
-          {status === "approved" ? "Approved" : status === "rejected" ? "Declined" : status}
-        </Badge>
-      )}
-    </div>
+      {question}
+    </InteractionCard>
   );
 }

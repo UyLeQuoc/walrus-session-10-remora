@@ -16,11 +16,12 @@ import { Time } from "@/components/app/time";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { usdc } from "@/lib/usdc";
+import { InteractionCard } from "@/openbot";
 
 interface Paid {
   id: string;
@@ -72,23 +73,52 @@ function ApprovalCard({
     toast.success(yes ? "Approved." : "Declined.");
     onDone();
   };
+  // openbot's approval card (ADR-0069): who asks and its state, what it wants, then the actions.
   return (
-    <Card data-testid="approval">
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
+    <InteractionCard
+      data-testid="approval"
+      className="w-full"
+      tone={a.status === "pending" ? "warning" : undefined}
+      title={
+        <span className="flex flex-wrap items-center gap-2">
           {a.remora}
           {a.status === "pending" ? (
             <StatusBadge status="pending" />
           ) : (
             <Badge variant="outline">{a.status}</Badge>
           )}
-          <Time value={a.createdAt} className="ml-auto" />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+        </span>
+      }
+      status={<Time value={a.createdAt} className="shrink-0 text-xs text-ob-muted" />}
+      actions={
+        a.status === "pending" ? (
+          <>
+            {a.kind === "over_limit_payment" ? (
+              <Button type="button" disabled={!!busy} onClick={() => void pay()}>
+                Pay once{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
+              </Button>
+            ) : (
+              <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
+                Approve
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!!busy}
+              onClick={() => void decide(false)}
+            >
+              Decline
+            </Button>
+            {busy ? <span className="text-sm text-muted-foreground">{busy}</span> : null}
+          </>
+        ) : undefined
+      }
+    >
+      <div className="flex flex-col gap-2">
         {a.kind === "over_limit_payment" && p.amount && p.payee ? (
           <>
-            <p className="text-2xl font-semibold tabular-nums">
+            <p className="text-2xl font-semibold text-ob-text tabular-nums">
               {usdc(p.amount)} USDC{" "}
               <span className="text-base font-normal text-muted-foreground">to {p.payee}</span>
             </p>
@@ -97,38 +127,16 @@ function ApprovalCard({
             </p>
           </>
         ) : (
-          <p className="text-sm">{a.summary}</p>
+          <p className="text-sm text-ob-secondary">{a.summary}</p>
         )}
         {p.question ? <p className="text-sm text-muted-foreground">For: “{p.question}”</p> : null}
         {answer ? (
-          <p className="whitespace-pre-wrap text-sm" data-testid="approval-answer">
+          <p className="whitespace-pre-wrap text-sm text-ob-text" data-testid="approval-answer">
             {answer}
           </p>
         ) : null}
-      </CardContent>
-      {a.status === "pending" ? (
-        <CardFooter className="flex-wrap gap-2">
-          {a.kind === "over_limit_payment" ? (
-            <Button type="button" disabled={!!busy} onClick={() => void pay()}>
-              Pay once{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
-            </Button>
-          ) : (
-            <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
-              Approve
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!!busy}
-            onClick={() => void decide(false)}
-          >
-            Decline
-          </Button>
-          {busy ? <span className="text-sm text-muted-foreground">{busy}</span> : null}
-        </CardFooter>
-      ) : null}
-    </Card>
+      </div>
+    </InteractionCard>
   );
 }
 

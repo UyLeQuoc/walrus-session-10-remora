@@ -1,11 +1,14 @@
 /**
- * N7: a global search over the pages and the signed-in owner's remoras. Cmd+K on Mac, Ctrl+K
- * elsewhere opens it. It reads only the remoras list the Remoras page already loads (no new API),
- * and a signed-out owner or a failed list just shows no remoras group.
+ * N7: a global search over the pages, the signed-in owner's remoras and rooms, and a few actions,
+ * drawn as openbot's global search (ADR-0069). Cmd+K on Mac, Ctrl+K elsewhere opens it. It reads
+ * only the lists the roster already loads (no new API); a signed-out owner or a failed list just
+ * shows no remoras or rooms group.
  */
-import { Brain, Fish, Inbox, type LucideIcon, Wallet } from "lucide-react";
+import { CornerDownLeft, Hash, type LucideIcon, Plus, Search, SquarePen } from "lucide-react";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { RAIL_FOOTER, RAIL_PAGES } from "@/app/app-rail";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import {
   Dialog,
   DialogContent,
@@ -13,24 +16,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { api } from "@/features/remoras/api";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
 
-// The same items as the sidebar's navigation (app-sidebar.tsx).
-const PAGES = [
-  { to: "/", label: "Home", icon: Fish },
-  { to: "/approvals", label: "Approvals", icon: Inbox },
-  { to: "/funds", label: "Funds", icon: Wallet },
-  { to: "/memory", label: "Memory", icon: Brain },
+// The same pages as the rail (app-rail.tsx), Connections included, then the actions.
+const PAGES = [...RAIL_PAGES, ...RAIL_FOOTER];
+const ACTIONS = [
+  { to: "/chat", label: "New chat", icon: SquarePen },
+  { to: "/remoras/new", label: "New remora", icon: Plus },
 ] as const;
+
+type Group = "Pages" | "Remoras" | "Rooms" | "Actions";
 
 interface Result {
   key: string;
   label: string;
   to: string;
-  group: "Pages" | "Remoras";
+  group: Group;
   icon?: LucideIcon;
+  detail?: string;
+  avatar?: { id: string; name: string };
 }
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -46,6 +51,11 @@ export function CommandPalette() {
       owner
         ? api.remoras()
         : Promise.resolve({ ok: true as const, data: { remoras: [] as never[] } }),
+    [owner],
+  );
+  const rooms = useLoad(
+    () =>
+      owner ? api.rooms() : Promise.resolve({ ok: true as const, data: { rooms: [] as never[] } }),
     [owner],
   );
 
@@ -72,15 +82,33 @@ export function CommandPalette() {
       icon: p.icon,
     }));
     const mine: Result[] = (remoras.data?.remoras ?? [])
-      .filter((r) => matches(r.name))
+      .filter((r) => r.status !== "retired" && matches(r.name))
       .map((r) => ({
         key: `remora:${r.id}`,
         label: r.name,
         to: `/remoras/${r.id}`,
         group: "Remoras",
+        detail: r.template,
+        avatar: { id: r.id, name: r.name },
       }));
-    return [...pages, ...mine];
-  }, [query, remoras.data]);
+    const shared: Result[] = (rooms.data?.rooms ?? [])
+      .filter((room) => matches(room.name))
+      .map((room) => ({
+        key: `room:${room.id}`,
+        label: room.name,
+        to: `/chat/room/${room.id}`,
+        group: "Rooms",
+        icon: Hash,
+      }));
+    const actions: Result[] = ACTIONS.filter((a) => matches(a.label)).map((a) => ({
+      key: `action:${a.to}`,
+      label: a.label,
+      to: a.to,
+      group: "Actions",
+      icon: a.icon,
+    }));
+    return [...pages, ...mine, ...shared, ...actions];
+  }, [query, remoras.data, rooms.data]);
 
   const close = () => {
     setOpen(false);
@@ -108,23 +136,27 @@ export function CommandPalette() {
   };
 
   const current = results.length ? Math.min(active, results.length - 1) : -1;
-  const groups = (["Pages", "Remoras"] as const).filter((g) => results.some((r) => r.group === g));
+  const groups = (["Pages", "Remoras", "Rooms", "Actions"] as const).filter((g) =>
+    results.some((r) => r.group === g),
+  );
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
       <DialogContent
-        className="top-[20%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-lg"
+        className="global-search-dialog top-[112px] flex w-[min(640px,calc(100vw-32px))] max-w-none translate-y-0 flex-col gap-0 overflow-hidden rounded-ob-card border-0 bg-ob-control p-0 shadow-[0_0_0_1px_var(--openbot-dialog-ring),var(--openbot-shadow-overlay)] sm:max-w-none"
         showCloseButton={false}
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Search pages and remoras</DialogTitle>
           <DialogDescription>Type to filter, then press Enter to open.</DialogDescription>
         </DialogHeader>
-        <div className="border-b p-2">
-          <Input
+        <div className="global-search-control">
+          <Search aria-hidden />
+          <input
             autoFocus
+            className="global-search-input"
             aria-label="Search pages and remoras"
-            placeholder="Search pages and remoras"
+            placeholder="Search pages, remoras and rooms"
             value={query}
             aria-controls="command-palette-results"
             aria-activedescendant={
@@ -141,14 +173,14 @@ export function CommandPalette() {
           id="command-palette-results"
           role="listbox"
           aria-label="Results"
-          className="max-h-80 overflow-y-auto p-2"
+          className="global-search-results"
         >
           {results.length === 0 ? (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">No matches</p>
+            <p className="global-search-empty">No matches</p>
           ) : (
             groups.map((group) => (
-              <div key={group} role="presentation" className="pb-2 last:pb-0">
-                <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{group}</p>
+              <div key={group} role="presentation">
+                <p className="global-search-section">{group}</p>
                 {results.map((result, index) =>
                   result.group === group ? (
                     <button
@@ -160,12 +192,18 @@ export function CommandPalette() {
                       tabIndex={-1}
                       onMouseEnter={() => setActive(index)}
                       onClick={() => go(result)}
-                      className={`flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-left text-sm ${
-                        index === current ? "bg-accent text-accent-foreground" : ""
-                      }`}
+                      className="global-search-result"
                     >
-                      {result.icon ? <result.icon className="mr-2 size-4 shrink-0" /> : null}
-                      <span className="min-w-0 flex-1 truncate">{result.label}</span>
+                      <span className="global-search-icon">
+                        {result.avatar ? (
+                          <RemoraAvatar id={result.avatar.id} name={result.avatar.name} size={20} />
+                        ) : result.icon ? (
+                          <result.icon aria-hidden />
+                        ) : null}
+                      </span>
+                      <span className="global-search-result-title">{result.label}</span>
+                      <span className="global-search-result-detail">{result.detail}</span>
+                      <CornerDownLeft aria-hidden className="global-search-result-enter size-3.5" />
                     </button>
                   ) : null,
                 )}
@@ -173,6 +211,11 @@ export function CommandPalette() {
             ))
           )}
         </div>
+        <p className="global-search-footer">
+          <span>↑↓ to move</span>
+          <span>Enter to open</span>
+          <span>Esc to close</span>
+        </p>
       </DialogContent>
     </Dialog>
   );

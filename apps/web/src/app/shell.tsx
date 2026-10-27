@@ -135,8 +135,18 @@ export function ShellSidePanel({
     () => () => setSidePanel?.((current) => (current?.owner === owner ? null : current)),
     [setSidePanel, owner],
   );
+  // Another page piece took the panel from this one: this one is closed now, so it can open again.
+  const current = shell?.sidePanel?.owner;
+  const held = useRef(false);
+  useEffect(() => {
+    if (current === owner) held.current = true;
+    else if (held.current) {
+      held.current = false;
+      if (open && current) handlers.current.onClose();
+    }
+  }, [open, current, owner]);
   const node = shell?.sidePanelNode;
-  if (!open || !node || shell?.sidePanel?.owner !== owner) return null;
+  if (!open || !node || current !== owner) return null;
   return createPortal(children, node);
 }
 
@@ -145,7 +155,10 @@ export function useHasSidePanel(): boolean {
   return Boolean(useContext(ShellContext)?.setSidePanel);
 }
 
-/** Replaces the top row's title with a page's own heading group (an avatar, a name, a picker). */
+/**
+ * Replaces the top row's title with a page's own heading group (a face, a name, a picker). Outside the
+ * app shell (a page mounted alone in a test) it renders in place.
+ */
 export function ShellHeaderStart({ children }: { children: ReactNode }) {
   const shell = useContext(ShellContext);
   const claim = shell?.claimHeader;
@@ -153,12 +166,15 @@ export function ShellHeaderStart({ children }: { children: ReactNode }) {
     claim?.(1);
     return () => claim?.(-1);
   }, [claim]);
-  const node = shell?.headerStartNode;
+  if (!shell?.claimHeader) return <div className="flex min-w-0 items-center gap-2">{children}</div>;
+  const node = shell.headerStartNode;
   return node ? createPortal(children, node) : null;
 }
 
 /** Adds a page's controls to the end of the top row, before the network and panic controls. */
 export function ShellHeaderEnd({ children }: { children: ReactNode }) {
-  const node = useContext(ShellContext)?.headerEndNode;
+  const shell = useContext(ShellContext);
+  if (!shell?.claimHeader) return <div className="flex items-center gap-1">{children}</div>;
+  const node = shell.headerEndNode;
   return node ? createPortal(children, node) : null;
 }

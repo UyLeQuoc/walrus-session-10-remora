@@ -8,10 +8,12 @@ import type { RoomResponder } from "@remora/schema";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { toast } from "sonner";
-import { useShellTitle } from "@/app/shell";
+import { ShellHeaderEnd, ShellHeaderStart, useShellTitle } from "@/app/shell";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { AgentChatEmpty, ChannelAvatar, ConversationScroll } from "@/openbot";
 import { type Line, lineFromRoom } from "./lines";
 import { ThreadComposer } from "./thread-composer";
 import { ThreadView } from "./thread-view";
@@ -79,47 +81,65 @@ function RoomChat({ id }: { id: string }) {
         ? "→ nobody (no @mention)"
         : null;
 
+  const ids = new Map(all.map((r) => [r.name, r.id]));
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6 lg:px-10">
-        <h1 className="text-base font-semibold"># {room?.name ?? "…"}</h1>
-        <span className="text-xs text-muted-foreground" data-testid="room-members">
+      <ShellHeaderStart>
+        <ChannelAvatar size={22}>
+          {members.slice(0, 4).map((m) => (
+            <RemoraAvatar
+              key={m.id}
+              id={m.id}
+              name={m.name}
+              size={members.length === 1 ? 22 : 10}
+            />
+          ))}
+        </ChannelAvatar>
+        <h1 className="conversation-title m-0 shrink-0 font-medium"># {room?.name ?? "…"}</h1>
+        <span
+          className="hidden min-w-0 truncate text-xs text-ob-muted md:inline"
+          data-testid="room-members"
+          title={members.map((m) => m.name).join(", ")}
+        >
           {members.map((m) => m.name).join(", ") || "no remoras yet"}
         </span>
-        <div className="ml-auto flex flex-wrap items-center gap-2 text-sm">
-          <NativeSelect
-            aria-label="Who answers"
-            size="sm"
-            value={room?.responder ?? "auto"}
-            onChange={(e) => void set({ responder: e.target.value as RoomResponder })}
-          >
-            {Object.entries(RESPONDER).map(([k, v]) => (
-              <NativeSelectOption key={k} value={k}>
-                {v}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-          <NativeSelect
-            aria-label="Lead"
-            size="sm"
-            value={room?.leadId ?? ""}
-            onChange={(e) => void set({ leadId: e.target.value || null })}
-          >
-            <NativeSelectOption value="">Lead: first member</NativeSelectOption>
-            {members.map((m) => (
-              <NativeSelectOption key={m.id} value={m.id}>
-                Lead: {m.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </div>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-10">
+      </ShellHeaderStart>
+      <ShellHeaderEnd>
+        <NativeSelect
+          aria-label="Who answers"
+          size="sm"
+          className="hidden sm:block"
+          value={room?.responder ?? "auto"}
+          onChange={(e) => void set({ responder: e.target.value as RoomResponder })}
+        >
+          {Object.entries(RESPONDER).map(([k, v]) => (
+            <NativeSelectOption key={k} value={k}>
+              {v}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+        <NativeSelect
+          aria-label="Lead"
+          size="sm"
+          className="hidden sm:block"
+          value={room?.leadId ?? ""}
+          onChange={(e) => void set({ leadId: e.target.value || null })}
+        >
+          <NativeSelectOption value="">Lead: first member</NativeSelectOption>
+          {members.map((m) => (
+            <NativeSelectOption key={m.id} value={m.id}>
+              Lead: {m.name}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </ShellHeaderEnd>
+      <ConversationScroll>
         {shown.length === 0 && !messages.loading ? (
-          <p className="text-sm text-muted-foreground">
-            Talk to the whole team. Name one with @, like “@Sentinel ignore incoming SUI under
-            0.01”, or just ask, and the right one answers.
-          </p>
+          <AgentChatEmpty
+            ready={`# ${room?.name ?? "room"}`}
+            title="Talk to the whole team."
+            description="Talk to the whole team. Name one with @, like “@Sentinel ignore incoming SUI under 0.01”, or just ask, and the right one answers."
+          />
         ) : null}
         <ThreadView
           lines={shown}
@@ -127,17 +147,16 @@ function RoomChat({ id }: { id: string }) {
           waitingFor="The team"
           showNames
           routeLabel={routeLabel}
+          remoraIds={ids}
           onChanged={() => void messages.refresh()}
         />
-      </div>
-      <div className="px-4 pb-4 sm:px-6 lg:px-10">
-        <ThreadComposer
-          placeholder={`Message #${room?.name ?? "room"}… (@ to name a remora)`}
-          disabled={waiting || !members.length}
-          mentions={[...members.map((m) => m.name), "everyone"]}
-          onSend={(t) => void send(t)}
-        />
-      </div>
+      </ConversationScroll>
+      <ThreadComposer
+        placeholder={`Message #${room?.name ?? "room"}… (@ to name a remora)`}
+        disabled={waiting || !members.length}
+        mentions={[...members.map((m) => m.name), "everyone"]}
+        onSend={(t) => void send(t)}
+      />
     </div>
   );
 }

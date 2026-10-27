@@ -8,7 +8,13 @@
  * The roster. Presentational only: the caller passes the rows' data, avatars and handlers.
  */
 import { ChevronDown, Clock3, Search } from "lucide-react";
-import { type ComponentProps, forwardRef, type ReactNode, useState } from "react";
+import {
+  type ComponentProps,
+  type CSSProperties,
+  forwardRef,
+  type ReactNode,
+  useState,
+} from "react";
 import { Link } from "react-router";
 import { readStored, writeStored } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -330,6 +336,13 @@ export function AgentStatusWaiting({ children }: { children: ReactNode }) {
 }
 
 /** Up to four member faces in the square of one avatar: a room. */
-export function ChannelAvatar({ children }: { children: ReactNode }) {
-  return <span className="channel-avatar-cluster">{children}</span>;
+export function ChannelAvatar({ children, size }: { children: ReactNode; size?: number }) {
+  return (
+    <span
+      className="channel-avatar-cluster"
+      style={size ? ({ "--channel-avatar-size": `${size}px` } as CSSProperties) : undefined}
+    >
+      {children}
+    </span>
+  );
 }

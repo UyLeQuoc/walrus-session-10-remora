@@ -6,7 +6,7 @@
  * Recalled memories stay collapsed so they don't crowd the conversation, and every entry links to
  * its blob on Walrus, so a claim about remembering is checkable rather than asserted.
  */
-import { BookmarkCheck, BookmarkPlus, Brain, FileText, Search } from "lucide-react";
+import { BookmarkCheck, BookmarkPlus, Brain, FileText, ListChecks, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Trace,
@@ -19,6 +19,7 @@ import {
   TraceTitle,
 } from "@/components/ui/trace";
 import type { RecalledMemory } from "@/features/chat/recalled";
+import { AgentSteps } from "@/openbot";
 
 type ToolPart = Record<string, unknown>;
 
@@ -96,20 +97,43 @@ export function TurnTrace({
   tools: ToolPart[];
 }) {
   if (recalled.length === 0 && !file && tools.length === 0) return null;
+  const steps = (recalled.length > 0 ? 1 : 0) + (file ? 1 : 0) + tools.length;
+  const saved = tools.filter(
+    (part) =>
+      part.type === "tool-remember" &&
+      part.state === "output-available" &&
+      (part.output as { saved?: boolean } | undefined)?.saved !== false,
+  ).length;
+  const memory = [
+    recalled.length ? `${recalled.length} recalled` : "",
+    saved ? `${saved} saved` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  // openbot's steps of a turn (ADR-0069) under one summary line. They start open: what a remora
+  // recalled and saved is the proof of its memory, so it is shown, and the person can fold it.
   return (
-    <Trace aria-label="What Remora did">
-      {recalled.length > 0 ? <RecalledStep memories={recalled} /> : null}
-      {file ? (
-        <TraceLine>
-          <TraceIcon>
-            <FileText />
-          </TraceIcon>
-          <TraceTitle>Read your file {file.name}</TraceTitle>
-        </TraceLine>
-      ) : null}
-      {tools.map((part, index) => (
-        <ToolStep key={`${String(part.type)}-${index}`} part={part} />
-      ))}
-    </Trace>
+    <AgentSteps
+      defaultOpen
+      icon={<ListChecks aria-hidden className="agent-step-icon" />}
+      summary={`${steps} ${steps === 1 ? "step" : "steps"}`}
+      detail={memory ? `Memory: ${memory}` : undefined}
+      label={`What Remora did: ${steps} ${steps === 1 ? "step" : "steps"}${memory ? `, memory ${memory}` : ""}`}
+    >
+      <Trace aria-label="What Remora did">
+        {recalled.length > 0 ? <RecalledStep memories={recalled} /> : null}
+        {file ? (
+          <TraceLine>
+            <TraceIcon>
+              <FileText />
+            </TraceIcon>
+            <TraceTitle>Read your file {file.name}</TraceTitle>
+          </TraceLine>
+        ) : null}
+        {tools.map((part, index) => (
+          <ToolStep key={`${String(part.type)}-${index}`} part={part} />
+        ))}
+      </Trace>
+    </AgentSteps>
   );
 }

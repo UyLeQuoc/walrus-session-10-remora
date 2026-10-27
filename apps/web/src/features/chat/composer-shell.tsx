@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { ComposerSend } from "@/openbot";
 import { type ComposerMeter, formatContext, formatPrice } from "./composer-meter";
 import { ModelPicker } from "./model-picker";
 
@@ -54,13 +55,13 @@ export function ComposerShell({
     <div
       data-slot="composer-shell"
       className={cn(
-        "relative flex w-full flex-col overflow-hidden rounded-3xl border border-input bg-background shadow-md dark:bg-input/30 dark:shadow-xs",
-        "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
-        "[&_textarea]:field-sizing-content [&_textarea]:block [&_textarea]:min-h-16 [&_textarea]:w-full [&_textarea]:resize-none [&_textarea]:border-0 [&_textarea]:bg-transparent [&_textarea]:p-4 [&_textarea]:text-base [&_textarea]:whitespace-pre-wrap [&_textarea]:outline-none [&_textarea]:placeholder:text-muted-foreground [&_textarea]:disabled:cursor-not-allowed [&_textarea]:disabled:opacity-50",
+        // openbot's composer (ADR-0069): a 12px surface with a hairline, the field over the toolbar.
+        "composer relative flex w-full flex-col overflow-hidden",
+        "[&_textarea]:field-sizing-content [&_textarea]:block [&_textarea]:min-h-12 [&_textarea]:w-full [&_textarea]:resize-none [&_textarea]:border-0 [&_textarea]:bg-transparent [&_textarea]:px-1 [&_textarea]:pt-0.5 [&_textarea]:pb-2 [&_textarea]:text-sm [&_textarea]:leading-5 [&_textarea]:whitespace-pre-wrap [&_textarea]:outline-none [&_textarea]:placeholder:text-ob-muted [&_textarea]:disabled:cursor-not-allowed [&_textarea]:disabled:opacity-50",
         command && "[&_textarea]:text-transparent [&_textarea]:caret-foreground",
       )}
     >
-      {attachment ? <div className="px-3 pt-3">{attachment}</div> : null}
+      {attachment ? <div className="pb-2">{attachment}</div> : null}
       <div className="relative max-h-60 overflow-y-auto scroll-fade-y">
         {command ? <CommandPaint text={text} /> : null}
         <textarea
@@ -74,7 +75,7 @@ export function ComposerShell({
         />
       </div>
       <TooltipProvider delayDuration={200}>
-        <div className="flex items-center gap-1 px-2 pb-2">
+        <div className="composer-toolbar">
           {memory ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -170,15 +171,13 @@ export function ComposerShell({
             </Tooltip>
           ) : null}
 
-          <Button
-            type="submit"
-            size="icon"
+          <ComposerSend
             aria-label={busy ? "Stop" : "Send"}
             disabled={!busy && text.trim() === ""}
-            className="ml-auto rounded-full"
+            className="ml-auto"
           >
-            {busy ? <Square className="fill-current" /> : <ArrowUp />}
-          </Button>
+            {busy ? <Square className="size-3 fill-current" /> : <ArrowUp />}
+          </ComposerSend>
         </div>
       </TooltipProvider>
     </div>
@@ -192,9 +191,9 @@ function CommandPaint({ text }: { text: string }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 min-h-16 p-4 text-base whitespace-pre-wrap wrap-break-word"
+      className="pointer-events-none absolute inset-x-0 top-0 min-h-12 px-1 pt-0.5 pb-2 text-sm leading-5 whitespace-pre-wrap wrap-break-word"
     >
-      <span data-command-token className="text-primary">
+      <span data-command-token className="text-ob-accent-text">
         {command}
       </span>
       <span data-command-rest className="text-foreground">

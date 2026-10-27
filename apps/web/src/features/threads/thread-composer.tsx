@@ -4,8 +4,7 @@
  */
 import { ArrowUp } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Composer, ComposerSend } from "@/openbot";
 
 /** The `@partial` being typed at the end of the text, if any. */
 export function mentionQuery(text: string): string | null {
@@ -48,18 +47,19 @@ export function ThreadComposer({
       else send();
     }
   };
+  // openbot's composer (ADR-0069): the field on top, the toolbar under it, send as the filled control.
   return (
-    <div className="relative w-full">
+    <div className="composer-wrap">
       {options.length ? (
         <ul
-          className="absolute bottom-full left-3 mb-2 flex flex-col overflow-hidden rounded-lg border bg-popover text-sm shadow-md"
+          className="absolute bottom-full left-6 z-20 mb-2 flex min-w-40 flex-col overflow-hidden rounded-ob-md bg-ob-control p-1 text-sm shadow-[0_0_0_1px_var(--openbot-border),0_4px_6px_-1px_var(--openbot-shadow-popover-ambient)]"
           aria-label="Mention"
         >
           {options.map((name) => (
             <li key={name}>
               <button
                 type="button"
-                className="w-full px-3 py-1.5 text-left hover:bg-muted"
+                className="w-full rounded-ob-sm px-2 py-1.5 text-left hover:bg-ob-hover"
                 onClick={() => complete(name)}
               >
                 @{name}
@@ -68,36 +68,30 @@ export function ThreadComposer({
           ))}
         </ul>
       ) : null}
-      <div
-        className={cn(
-          "flex w-full flex-col overflow-hidden rounded-3xl border border-input bg-background shadow-md dark:bg-input/30",
-          "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
-        )}
-      >
-        <textarea
-          aria-label="Message"
-          value={text}
-          rows={1}
-          placeholder={placeholder}
-          disabled={disabled}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-          className="field-sizing-content block max-h-48 min-h-14 w-full resize-none border-0 bg-transparent p-4 text-base outline-none placeholder:text-muted-foreground"
-        />
-        <div className="flex items-center gap-1 px-2 pb-2">
-          {toolbar}
-          <Button
+      <Composer
+        field={
+          <textarea
+            aria-label="Message"
+            value={text}
+            rows={1}
+            placeholder={placeholder}
+            disabled={disabled}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+        }
+        tools={toolbar}
+        primary={
+          <ComposerSend
             type="button"
-            size="icon"
-            className="ml-auto rounded-full"
             aria-label="Send"
             disabled={disabled || !text.trim()}
             onClick={send}
           >
-            <ArrowUp />
-          </Button>
-        </div>
-      </div>
+            <ArrowUp aria-hidden />
+          </ComposerSend>
+        }
+      />
     </div>
   );
 }

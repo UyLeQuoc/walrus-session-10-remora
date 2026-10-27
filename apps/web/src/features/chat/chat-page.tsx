@@ -216,7 +216,7 @@ export function ChatPage() {
             <MessageScrollerProvider defaultScrollPosition="end">
               <MessageScroller className="min-h-0 flex-1">
                 <MessageScrollerViewport>
-                  <MessageScrollerContent className="mx-auto w-full max-w-3xl px-4 py-6">
+                  <MessageScrollerContent className="mx-auto w-full max-w-[880px] gap-3 px-3 py-4">
                     <JumpToLatest messageId={lastId ?? null} />
                     {messages.map((m, index) => {
                       const asked = m.role === "assistant" ? questionBefore(messages, index) : null;
@@ -251,7 +251,7 @@ export function ChatPage() {
             </MessageScrollerProvider>
             <div
               data-slot="composer-dock"
-              className="mx-auto flex w-full max-w-3xl shrink-0 flex-col px-4 pb-4"
+              className="mx-auto flex w-full max-w-[904px] shrink-0 flex-col px-3 pb-3"
             >
               <CitationNote note={citations.note} onRetry={citations.retry} />
               <FollowUpRow suggestions={follow.suggestions} onPick={setText} />

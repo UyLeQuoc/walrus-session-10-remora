@@ -913,8 +913,10 @@
   .conversation-heading-group {
     display: flex;
     min-width: 0;
+    flex: 1 1 auto;
     align-items: center;
     gap: 7px;
+    overflow: hidden;
   }
 
   .conversation-title {

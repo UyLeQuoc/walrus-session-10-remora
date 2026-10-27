@@ -13,24 +13,43 @@ const components: Components = {
   ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
   a: ({ href, children }) => (
-    <a href={href} className="underline underline-offset-2" target="_blank" rel="noreferrer">
+    <a href={href} target="_blank" rel="noreferrer">
       {children}
     </a>
+  ),
+  // openbot's message tables and headings (ADR-0069); the classes live in @/openbot's CSS.
+  table: ({ children }) => (
+    <div className="message-markdown-table-scroll">
+      <table className="message-markdown-table">{children}</table>
+    </div>
+  ),
+  h1: ({ children }) => (
+    <h3 className="message-markdown-heading" data-level="1">
+      {children}
+    </h3>
+  ),
+  h2: ({ children }) => (
+    <h4 className="message-markdown-heading" data-level="2">
+      {children}
+    </h4>
+  ),
+  h3: ({ children }) => (
+    <h5 className="message-markdown-heading" data-level="3">
+      {children}
+    </h5>
   ),
   code: ({ className, children }) => {
     const fenced = typeof className === "string" && className.includes("language-");
     if (fenced) return <code className={cn("font-mono text-xs", className)}>{children}</code>;
-    return <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]">{children}</code>;
+    return <code>{children}</code>;
   },
   pre: ({ children }) => {
     const block = fencedBlock(children);
     const label = block.language ? `${block.language} code` : "code";
     return (
-      <div className="my-3 overflow-hidden rounded-lg bg-muted">
-        <div className="flex items-center gap-2 px-3 pt-3">
-          {block.language ? (
-            <span className="text-sm text-muted-foreground">{block.language}</span>
-          ) : null}
+      <div className="message-code-block">
+        <div className="message-code-header">
+          {block.language ? <span className="message-code-language">{block.language}</span> : null}
           <div className="ml-auto">
             <CopyButton
               value={block.text}
@@ -41,9 +60,7 @@ const components: Components = {
             />
           </div>
         </div>
-        <pre className="overflow-x-auto px-3 pb-3 font-mono text-xs leading-relaxed">
-          {children}
-        </pre>
+        <pre>{children}</pre>
       </div>
     );
   },
@@ -78,7 +95,7 @@ export const Markdown = memo(function Markdown({
   const blockId = useId();
   const blocks = useMemo(() => blocksOf(children), [children]);
   return (
-    <div className={cn("max-w-none text-sm leading-relaxed", className)}>
+    <div className={cn("message-markdown max-w-none text-sm leading-relaxed", className)}>
       {blocks.map((block, index) => (
         <MarkdownBlock key={`${blockId}-${index}`} content={block} />
       ))}
