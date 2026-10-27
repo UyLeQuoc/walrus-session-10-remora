@@ -18,8 +18,8 @@ const Report = HealthReport.extend({ startedAt: z.string().optional() });
 type Report = z.infer<typeof Report>;
 
 const TONE = {
-  ok: "bg-emerald-500",
-  degraded: "bg-amber-500",
+  ok: "bg-success",
+  degraded: "bg-warning",
   down: "bg-destructive",
 } as const;
 const LABEL = { ok: "ok", degraded: "degraded", down: "down" } as const;

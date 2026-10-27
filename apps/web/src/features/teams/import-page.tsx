@@ -203,7 +203,7 @@ function Importer() {
             ))}
           </ul>
           {preview.warnings.length ? (
-            <ul className="flex max-w-3xl flex-col gap-1 text-sm text-amber-700 dark:text-amber-300">
+            <ul className="flex max-w-3xl flex-col gap-1 text-sm text-ob-warning-text">
               {preview.warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}

@@ -1,0 +1,96 @@
+/*
+ * Ported from nightly-labs/openbot src/renderer/src/styles/base.css, packages/ui/src/features/account/auth.css
+ * (scroll bars) and packages/ui/src/styles/primitives.css (links, reduced motion) @ aa3c498.
+ * PolyForm Noncommercial 1.0.0, see ./LICENSE.
+ */
+
+@layer base {
+  body {
+    background: var(--openbot-bg-canvas);
+    color: var(--openbot-text-primary);
+    font-family: var(--openbot-font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  /* Lucide icons draw at openbot's 1.5 stroke (1px at 16px). */
+  svg.lucide {
+    stroke-width: var(--openbot-icon-stroke);
+  }
+
+  ::selection {
+    background: var(--openbot-accent-strong);
+  }
+
+  /* No vertical scroll bar: the wheel, the trackpad and the keyboard still scroll. Horizontal bars
+     stay, because a mouse wheel cannot scroll a code block or a table sideways. */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: var(--openbot-scrollbar-size);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-border-strong);
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  /* A link inside text: the accent text color, underlined on hover. */
+  .link {
+    color: var(--openbot-accent-text);
+    text-decoration: none;
+    text-underline-offset: 4px;
+    border-radius: var(--openbot-radius-xs);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .link:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .link:focus-visible {
+    outline: 0;
+    box-shadow: var(--openbot-focus-ring);
+  }
+}
+
+/* Reduced motion: no movement on press, hover or open; spinners and skeletons slow down instead of
+   stopping, so a loading state still reads as loading. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  [data-slot="button"]:active {
+    scale: 1 !important;
+  }
+
+  [data-slot="skeleton"],
+  [data-slot="spinner"] {
+    animation-duration: 1.8s !important;
+  }
+
+  [data-state="open"],
+  [data-state="closed"] {
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -3,17 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 const alertVariants = cva(
-  "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
+  "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-ob-lg border border-ob-border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
   {
     variants: {
       variant: {
         default: "bg-card text-card-foreground",
         success:
-          "bg-card text-success-foreground *:data-[slot=alert-description]:text-success-foreground/90 [&>svg]:text-success",
+          "border-ob-success-soft bg-ob-success-soft text-ob-success-text *:data-[slot=alert-description]:text-ob-success-text/90 [&>svg]:text-ob-success",
         warning:
-          "bg-card text-warning-foreground *:data-[slot=alert-description]:text-warning-foreground/90 [&>svg]:text-warning",
+          "border-ob-warning-soft bg-ob-warning-soft text-ob-warning-text *:data-[slot=alert-description]:text-ob-warning-text/90 [&>svg]:text-ob-warning",
         destructive:
-          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 [&>svg]:text-current",
+          "border-ob-danger-soft bg-ob-danger-soft text-ob-danger-text *:data-[slot=alert-description]:text-ob-danger-text/90 [&>svg]:text-current",
       },
     },
     defaultVariants: {

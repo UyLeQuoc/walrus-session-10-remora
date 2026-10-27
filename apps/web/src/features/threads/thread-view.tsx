@@ -19,9 +19,9 @@ import { InlineApproval } from "./inline-approval";
 import { CHIP_TYPES, type Line, WHY_TYPES } from "./lines";
 
 const CHIP_TONE: Partial<Record<NonNullable<Line["type"]>, string>> = {
-  payment: "border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
+  payment: "border-ob-success-soft text-ob-success-text",
   blocked: "border-destructive/50 text-destructive",
-  shadow: "border-amber-500/50 text-amber-700 dark:text-amber-300",
+  shadow: "border-ob-warning-soft text-ob-warning-text",
   rule_learned: "border-primary/40 text-primary",
 };
 
@@ -106,7 +106,7 @@ function RemoraLine({
           <InlineApproval payload={line.payload} onDone={onChanged} />
         ) : (
           <Bubble align="start">
-            <BubbleContent className={cn(line.type === "ping" && "border-amber-500/50")}>
+            <BubbleContent className={cn(line.type === "ping" && "border-ob-warning-soft")}>
               {line.type === "ping" ? (
                 <Badge variant="outline" className="mb-1">
                   Ping
