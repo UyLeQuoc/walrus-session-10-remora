@@ -54,6 +54,7 @@ export default defineConfig({
     { name: "u8", testMatch: /u8\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // U12 (F14): agents through MCP. Claimed for U12 (docs/handoffs/2026-10-25-uy-to-huan-u12-claim.md).
     { name: "u12", testMatch: /u12\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "u13", testMatch: /u13\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // The signed-in light/dark screenshot pass (plan §7.3). Opt in with AUDIT=1 so the default run
     // stays fast and only spends the burner when someone asks for the pictures.
     ...(process.env.AUDIT === "1"

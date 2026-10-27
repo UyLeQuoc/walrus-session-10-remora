@@ -1,31 +1,67 @@
 /**
- * The sidebar's Remoras and Rooms (ADR-0042): your remoras as contacts (open a 1-1 chat) and the rooms
- * they share. Shown once the session has a wallet; collapsed sidebars keep only the icons above.
+ * The roster's Remoras and Rooms (ADR-0042, ADR-0069): your remoras as contacts (open a 1-1 chat)
+ * and the rooms they share, as openbot's agent rows. Signed out, the one thing to try without a
+ * wallet (H7, ADR-0051).
  */
-import { Egg, Fish, Hash, Plus } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router";
+import type { Room } from "@remora/schema";
+import { Fish, Plus, Upload } from "lucide-react";
+import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
-import {
-  SidebarGroup,
-  SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { api } from "@/features/remoras/api";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
-import { cn } from "@/lib/utils";
+import {
+  AgentRow,
+  AgentRowItem,
+  AgentStatusDot,
+  ChannelAvatar,
+  SidebarIconButton,
+  SidebarSection,
+} from "@/openbot";
 
-const DOT: Record<string, string> = {
-  active: "bg-emerald-500",
-  shadow: "bg-amber-500",
-  paused: "bg-muted-foreground",
-  creating: "bg-sky-500",
+type RemoraRow = {
+  id: string;
+  name: string;
+  template: string;
+  status: string;
+  updatedAt: string;
+  config: { persona: string };
 };
 
-export function SidebarTeam({ onNavigate }: { onNavigate: () => void }) {
+const TONE: Record<string, "success" | "warning" | "accent" | "muted"> = {
+  active: "success",
+  shadow: "warning",
+  paused: "muted",
+  creating: "accent",
+};
+
+const STATE: Record<string, string> = {
+  active: "live",
+  shadow: "in shadow mode",
+  paused: "paused",
+  creating: "being created",
+};
+
+/** "14:05" today, "Oct 25" before. */
+export function rosterTime(iso: string, now = new Date()): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  return at.toDateString() === now.toDateString()
+    ? at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+    : at.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function title(template: string): string {
+  return template.slice(0, 1).toUpperCase() + template.slice(1);
+}
+
+export function SidebarTeam({
+  onNavigate,
+  query = "",
+}: {
+  onNavigate: () => void;
+  query?: string;
+}) {
   const { owner } = useOwner();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -33,29 +69,40 @@ export function SidebarTeam({ onNavigate }: { onNavigate: () => void }) {
   const remoras = useLoad(() => (owner ? api.remoras() : Promise.resolve(none)), [owner], 60_000);
   const rooms = useLoad(
     () =>
-      owner ? api.rooms() : Promise.resolve({ ok: true as const, data: { rooms: [] as never[] } }),
+      owner ? api.rooms() : Promise.resolve({ ok: true as const, data: { rooms: [] as Room[] } }),
     [owner],
     60_000,
   );
-  // Signed out: the one thing to try without a wallet (H7, ADR-0051).
   if (!owner)
     return (
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu aria-label="Try Remora">
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === "/playground"} tooltip="Try Scout">
-                <Link to="/playground" onClick={onNavigate}>
-                  <Fish />
-                  <span>Try Scout, no wallet</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <SidebarSection name="Try Remora" listLabel="Try Remora">
+        <AgentRowItem>
+          <AgentRow
+            to="/playground"
+            onClick={onNavigate}
+            active={pathname === "/playground"}
+            avatar={
+              <span className="grid size-9 place-items-center rounded-full bg-ob-control-hover text-ob-muted">
+                <Fish aria-hidden className="size-4" />
+              </span>
+            }
+            name="Try Scout"
+            badge="no wallet"
+            preview="Ask one paid question on testnet"
+            label="Try Scout, no wallet"
+          />
+        </AgentRowItem>
+      </SidebarSection>
     );
-  const live = (remoras.data?.remoras ?? []).filter((r) => r.status !== "retired");
+
+  const q = query.trim().toLowerCase();
+  const all = (remoras.data?.remoras ?? []) as RemoraRow[];
+  const live = all.filter((r) => r.status !== "retired");
+  const byId = new Map(live.map((r) => [r.id, r]));
+  const shown = q ? live.filter((r) => r.name.toLowerCase().includes(q)) : live;
+  const roomList = (rooms.data?.rooms ?? []).filter((room) =>
+    q ? room.name.toLowerCase().includes(q) : true,
+  );
   const newRoom = async () => {
     const out = await api.createRoom({
       name: "New room",
@@ -69,86 +116,85 @@ export function SidebarTeam({ onNavigate }: { onNavigate: () => void }) {
   };
   return (
     <>
-      <SidebarGroup>
-        <SidebarGroupLabel>Remoras</SidebarGroupLabel>
-        <SidebarGroupAction asChild title="New remora">
-          <Link to="/remoras/new" aria-label="New remora" onClick={onNavigate}>
-            <Plus />
-          </Link>
-        </SidebarGroupAction>
-        <SidebarGroupContent>
-          <SidebarMenu aria-label="Remora contacts">
-            {live.map((r) => (
-              <SidebarMenuItem key={r.id}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === `/chat/r/${r.id}`}
-                  tooltip={r.name}
-                >
-                  <Link to={`/chat/r/${r.id}`} onClick={onNavigate}>
-                    <span className="relative flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
-                      {r.name.slice(0, 1).toUpperCase()}
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full",
-                          DOT[r.status] ?? "bg-muted",
-                        )}
+      <SidebarSection
+        name="Remoras"
+        listLabel="Remora contacts"
+        storageKey="remora.roster.remoras"
+        action={
+          <SidebarIconButton label="New remora" onClick={() => navigate("/remoras/new")}>
+            <Plus aria-hidden />
+          </SidebarIconButton>
+        }
+      >
+        {shown.map((r) => (
+          <AgentRowItem key={r.id}>
+            <AgentRow
+              to={`/chat/r/${r.id}`}
+              onClick={onNavigate}
+              active={pathname === `/chat/r/${r.id}`}
+              avatar={<RemoraAvatar id={r.id} name={r.name} />}
+              status={<AgentStatusDot tone={TONE[r.status] ?? "muted"} />}
+              name={r.name}
+              badge={title(r.template)}
+              time={rosterTime(r.updatedAt)}
+              preview={r.config.persona}
+              label={`${r.name}, ${title(r.template)}, ${STATE[r.status] ?? r.status}`}
+            />
+          </AgentRowItem>
+        ))}
+        {remoras.data && !live.length ? (
+          <AgentRowItem>
+            <AgentRow
+              to="/remoras/import"
+              onClick={onNavigate}
+              size="compact"
+              avatar={<Upload aria-hidden />}
+              name="Import a team…"
+            />
+          </AgentRowItem>
+        ) : null}
+        {q && !shown.length && live.length ? <li className="empty-search">No remoras</li> : null}
+      </SidebarSection>
+      <SidebarSection
+        name="Rooms"
+        listLabel="Rooms"
+        storageKey="remora.roster.rooms"
+        action={
+          <SidebarIconButton label="New room" onClick={() => void newRoom()}>
+            <Plus aria-hidden />
+          </SidebarIconButton>
+        }
+      >
+        {roomList.map((room) => {
+          const members = room.memberIds
+            .map((id) => byId.get(id))
+            .filter((r): r is RemoraRow => Boolean(r));
+          return (
+            <AgentRowItem key={room.id}>
+              <AgentRow
+                to={`/chat/room/${room.id}`}
+                onClick={onNavigate}
+                active={pathname === `/chat/room/${room.id}`}
+                avatar={
+                  <ChannelAvatar>
+                    {members.slice(0, 4).map((m) => (
+                      <RemoraAvatar
+                        key={m.id}
+                        id={m.id}
+                        name={m.name}
+                        size={members.length === 1 ? 36 : 17}
                       />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith("/hatchery")}
-                tooltip="Hatchery"
-              >
-                <Link to="/hatchery" onClick={onNavigate}>
-                  <Egg />
-                  <span>Hatchery</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {remoras.data && !live.length ? (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/remoras/import" onClick={onNavigate}>
-                    <span className="text-muted-foreground">Import a team…</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ) : null}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-      <SidebarGroup>
-        <SidebarGroupLabel>Rooms</SidebarGroupLabel>
-        <SidebarGroupAction title="New room" aria-label="New room" onClick={() => void newRoom()}>
-          <Plus />
-        </SidebarGroupAction>
-        <SidebarGroupContent>
-          <SidebarMenu aria-label="Rooms">
-            {(rooms.data?.rooms ?? []).map((room) => (
-              <SidebarMenuItem key={room.id}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === `/chat/room/${room.id}`}
-                  tooltip={room.name}
-                >
-                  <Link to={`/chat/room/${room.id}`} onClick={onNavigate}>
-                    <Hash />
-                    <span className="min-w-0 flex-1 truncate">{room.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+                    ))}
+                  </ChannelAvatar>
+                }
+                name={room.name}
+                preview={members.map((m) => m.name).join(", ") || "No members yet"}
+                label={`${room.name}, room`}
+              />
+            </AgentRowItem>
+          );
+        })}
+      </SidebarSection>
     </>
   );
 }
