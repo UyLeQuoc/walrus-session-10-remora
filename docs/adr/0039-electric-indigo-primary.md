@@ -1,6 +1,6 @@
 # ADR-0039: Primary colour — electric indigo
 
-- **Status:** Accepted
+- **Status:** Accepted; the visual design is superseded by ADR-0069 (openbot's UI)
 - **Date:** 2026-10-19
 - **Deciders:** Huấn
 

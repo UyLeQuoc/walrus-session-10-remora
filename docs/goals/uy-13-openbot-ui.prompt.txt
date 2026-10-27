@@ -1,0 +1,60 @@
+Goal U13: Remora's web in openbot's UI, the whole UI, before U9 (ADR-0069). Decide, write the ADR, continue; anything for Uy goes on the final list.
+
+Source of truth: docs/goals/uy-13-openbot-ui.md. Read it fully, plus the files it lists.
+
+Setup:
+- Claim: docs/handoffs/2026-10-27-uy-to-huan-u13-claim.md. Pull main and check Huấn's state first.
+- Tag pre-u13-ui on main and push it. Work on the branch u13-openbot-ui; open a PR and merge it when green.
+- Upstream: reference/openbot at aa3c498. Read only; never install, build or run it.
+
+Part A, license frame (first commit):
+- Ported code lives only in apps/web/src/openbot/, with LICENSE (PolyForm Noncommercial 1.0.0 plus both Required Notice lines verbatim), a README mapping each file to its upstream path, and a header on every file.
+- Update the root README and THIRD_PARTY_NOTICES.md (add Inter, OFL).
+- No openbot brand, avatars, artwork or copy. Remora keeps its logo, its own avatars and its copy.
+
+Part B: openbot's tokens (both themes, type, radii, density, motion, neutral focus) in openbot/tokens.css, mapped onto shadcn's variables. Add Inter Variable. Restyle components/ui, keeping the Radix behaviour, data-slots, props and roles. Fix .link, sonner's theme, the webmanifest colour and raw palette classes.
+
+Part C, shell:
+- An icon rail.
+- The roster: resizable, snapping to 88px avatars, with Waiting, Remoras and Rooms sections, search and context menus. NetworkSelect (testnet-badge) and PanicButton go in its topbar.
+- The main pane, a docked right panel (profile, memory, Why?, verify).
+- Phone (≤720px): a bottom nav and one pane at a time.
+- Cmd+K as GlobalSearch, with Connections added.
+
+Part D, conversation (/chat, threads, rooms):
+- openbot's header, timeline, bubbles, AgentSteps for the trace, ChatActionMarkers for payments and ApprovalCards (click, same button names), then the composer.
+- Keep the label "Message", aria-label "Ask your remora" and the placeholder "Message your remora…".
+
+Part E: restyle every other page in openbot's page, settings and data-table style, including sign-in as a centered card.
+
+Part F:
+- Every e2e selector stays (test ids, labels, roles, texts, Radix attributes, the h1 left edge, the data-slot gutters).
+- Class-asserting unit tests assert behaviour or the new classes.
+- Add tests for the resizer, the compact roster, the bottom nav and the right panel.
+
+Exit (run once; re-run only a fixed step):
+- typecheck, lint, test and build are green; note the bundle size.
+- e2e smoke, mobile and AUDIT=1 audit are green. The testnet specs run once; any blocker (Tatum 402, the burner's USDC) is named.
+- Screenshots of every route at 1280 and 375 px, light and dark, in docs/e2e/screenshots/u13-*. Look at each; put the chat and the room side by side with openbot's a-channel/a-thread.
+- Cmd+K, Tab order, reduced motion and the N18 labels are checked.
+
+Finish:
+- docs/spikes/<date>-u13-exit.md, ending with the list for Uy.
+- docs/ux/README, the README screenshots, the goals README, a landed handoff to Huấn.
+- Merge the PR and stop every server.
+
+Hard rules:
+- No deploy, no mainnet money or publish.
+- Ported code only inside apps/web/src/openbot/, each file with its header. Never run openbot's code.
+- Never change packages/schema, lib/api.ts, routes.tsx or the data hooks' logic. Never edit reference/.
+- Never rewrite an accepted ADR. Every decision gets an ADR in the same commit.
+- No force-push, .env or keys in commits.
+- Before each push: git pull --rebase origin main (or rebase the branch) && bun run typecheck && bun run lint && bun run test.
+
+Done when:
+- The PR is merged and pre-u13-ui is tagged.
+- The exit passes, or each failing step names its blocker.
+- typecheck, lint, test, build, e2e smoke/mobile/audit and CI are green.
+- Docs are written and everything is pushed.
+
+Finish with a short Vietnamese summary for Uy.

@@ -1,6 +1,6 @@
 # ADR-0036: UI foundation — warm theme, page components, a quieter kit
 
-- **Status:** Accepted
+- **Status:** Accepted; the visual design is superseded by ADR-0069 (openbot's UI)
 - **Date:** 2026-10-19
 - **Deciders:** Huấn
 
