@@ -3,31 +3,30 @@ import type { Template } from "@remora/schema";
 import { Package, Shield } from "lucide-react";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GalleryCard } from "@/openbot/pages";
 
 export function TemplateCard({ slug, template }: { slug: string; template: Template }) {
   const spends = Boolean(template.budgetSuggestion.perPaymentUsd);
   return (
     <Link
       to={`/remoras/new?template=${slug}`}
-      className="block rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="block min-w-0 rounded-ob-card text-left focus-visible:shadow-[0_0_0_1px_var(--openbot-border-focus)] focus-visible:outline-none"
     >
-      <Card className="h-full transition-colors hover:bg-muted/40">
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2">
-            {spends ? (
-              <Package className="size-4 text-primary" />
-            ) : (
-              <Shield className="size-4 text-primary" />
-            )}
+      <GalleryCard
+        as="div"
+        interactive
+        media={spends ? <Package /> : <Shield />}
+        title={
+          <>
             {template.name}
-            <Badge variant={spends ? "accent" : "outline"}>
+            <Badge variant={spends ? "accent" : "secondary"}>
               {spends ? "Spends USDC" : "Read-only"}
             </Badge>
-          </CardTitle>
-          <CardDescription>{template.summary}</CardDescription>
-        </CardHeader>
-      </Card>
+          </>
+        }
+      >
+        {template.summary}
+      </GalleryCard>
     </Link>
   );
 }

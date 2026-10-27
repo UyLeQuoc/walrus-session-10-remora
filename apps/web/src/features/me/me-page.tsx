@@ -9,14 +9,6 @@ import { Page } from "@/components/app/page";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChainPanel } from "@/features/me/chain-panel";
 import { ChangesPanel } from "@/features/me/changes-panel";
@@ -29,6 +21,7 @@ import { useMe } from "@/features/me/use-me";
 import { useUsage } from "@/features/me/use-usage";
 import { WalletReadPanel } from "@/features/me/wallet-read-panel";
 import { WalletSignIn } from "@/features/me/wallet-signin";
+import { EmptyPanel } from "@/openbot/pages";
 
 export function ChatMemory() {
   const { me, memories, error, load } = useMe();
@@ -40,8 +33,8 @@ export function ChatMemory() {
       <div className="flex flex-col gap-3">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-24 w-full" />
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <Skeleton className="h-24 w-full rounded-ob-card" />
+        {error ? <p className="text-md text-ob-danger-text">{error}</p> : null}
       </div>
     );
   }
@@ -49,22 +42,16 @@ export function ChatMemory() {
   if (me.mode === "anonymous") {
     return (
       <div className="flex flex-col gap-6">
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon" className="bg-primary/15 text-primary">
-              <Library />
-            </EmptyMedia>
-            <EmptyTitle>Nothing remembered yet</EmptyTitle>
-            <EmptyDescription>
-              Tell a remora something in the chat. It shows up here once it is on Walrus.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
+        <EmptyPanel
+          icon={<Library />}
+          title="Nothing remembered yet"
+          description="Tell a remora something in the chat. It shows up here once it is on Walrus."
+          action={
             <Button asChild>
               <Link to="/chat">Start chatting</Link>
             </Button>
-          </EmptyContent>
-        </Empty>
+          }
+        />
         {linked ? null : <WalletSignIn onSignedIn={load} />}
       </div>
     );
@@ -82,13 +69,13 @@ export function ChatMemory() {
           </Badge>
           <Badge variant="outline">{me.memoryEnabled ? "remembering" : "paused"}</Badge>
           {me.namespace ? (
-            <span className="min-w-48 max-w-xs flex-1 text-sm text-muted-foreground">
+            <span className="min-w-48 max-w-xs flex-1 text-md text-ob-muted">
               <Hash value={me.namespace} label="namespace" />
             </span>
           ) : null}
         </div>
         {owned ? null : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-md text-ob-muted">
             Right now Remora keeps it under its own account. Own it with a wallet below.
           </p>
         )}

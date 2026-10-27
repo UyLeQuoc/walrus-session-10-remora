@@ -1,0 +1,86 @@
+/*
+ * Ported from nightly-labs/openbot apps/mobile/global.css (its `@theme inline` mapping of the
+ * --openbot-* tokens to Tailwind) and packages/brand/src/tokens.css @ aa3c498.
+ * PolyForm Noncommercial 1.0.0, see ./LICENSE.
+ *
+ * Tailwind names for openbot's tokens, prefixed `ob-` so they never collide with shadcn's: `bg-ob-control-hover`,
+ * `text-ob-muted`, `rounded-ob-card`, `text-md`. Remora's components use these to take openbot's look.
+ */
+
+@theme inline {
+  --font-sans: var(--openbot-font-sans);
+  --font-mono: var(--openbot-font-mono);
+
+  --text-md: var(--openbot-text-md);
+  --text-md--line-height: var(--openbot-leading-md);
+
+  --color-ob-canvas: var(--openbot-bg-canvas);
+  --color-ob-frame: var(--openbot-bg-frame);
+  --color-ob-sidebar: var(--openbot-bg-sidebar);
+  --color-ob-sheet: var(--openbot-bg-sheet);
+  --color-ob-sheet-inset: var(--openbot-bg-sheet-inset);
+  --color-ob-grouped: var(--openbot-bg-grouped);
+  --color-ob-border-grouped: var(--openbot-border-grouped);
+  --color-ob-surface: var(--openbot-bg-surface);
+  --color-ob-raised: var(--openbot-bg-surface-raised);
+  --color-ob-control: var(--openbot-bg-control);
+  --color-ob-control-hover: var(--openbot-bg-control-hover);
+  --color-ob-control-active: var(--openbot-bg-control-active);
+  --color-ob-tabs-bar: var(--openbot-tabs-bar-bg);
+  --color-ob-tabs-pill: var(--openbot-tabs-pill-bg);
+  --color-ob-glass: var(--openbot-bg-glass);
+  --color-ob-overlay: var(--openbot-dialog-overlay);
+  --color-ob-dialog-ring: var(--openbot-dialog-ring);
+  --color-ob-hover: var(--openbot-hover);
+  --color-ob-border: var(--openbot-border);
+  --color-ob-border-strong: var(--openbot-border-strong);
+  --color-ob-focus: var(--openbot-border-focus);
+
+  --color-ob-text: var(--openbot-text-primary);
+  --color-ob-secondary: var(--openbot-text-secondary);
+  --color-ob-muted: var(--openbot-text-muted);
+  --color-ob-dim: var(--openbot-text-dim);
+  --color-ob-placeholder: var(--openbot-text-placeholder);
+  --color-ob-inverse: var(--openbot-surface-light);
+  --color-ob-on-inverse: var(--openbot-text-on-light);
+  --color-ob-on-inverse-muted: var(--openbot-text-muted-on-light);
+
+  --color-ob-accent: var(--openbot-accent);
+  --color-ob-accent-hover: var(--openbot-accent-hover);
+  --color-ob-accent-text: var(--openbot-accent-text);
+  --color-ob-accent-soft: var(--openbot-accent-soft);
+  --color-ob-accent-strong: var(--openbot-accent-strong);
+  --color-ob-success: var(--openbot-success);
+  --color-ob-success-text: var(--openbot-success-text);
+  --color-ob-success-soft: var(--openbot-success-soft);
+  --color-ob-warning: var(--openbot-warning);
+  --color-ob-warning-text: var(--openbot-warning-text);
+  --color-ob-warning-soft: var(--openbot-warning-soft);
+  --color-ob-approval-soft: var(--openbot-approval-badge-soft);
+  --color-ob-danger: var(--openbot-danger);
+  --color-ob-danger-text: var(--openbot-danger-text);
+  --color-ob-danger-soft: var(--openbot-danger-soft);
+  --color-ob-danger-soft-hover: var(--openbot-danger-soft-hover);
+  --color-ob-danger-focus: var(--openbot-danger-focus);
+  --color-ob-unread: var(--openbot-unread-surface);
+  --color-ob-on-unread: var(--openbot-unread-text);
+  --color-ob-message-badge: var(--openbot-message-badge-text);
+  --color-ob-message-badge-soft: var(--openbot-message-badge-soft);
+
+  --color-ob-table-border: var(--openbot-data-table-border);
+  --color-ob-table-header: var(--openbot-data-table-header-text);
+  --color-ob-table-text: var(--openbot-data-table-text);
+
+  --radius-ob-xs: var(--openbot-radius-xs);
+  --radius-ob-sm: var(--openbot-radius-sm);
+  --radius-ob-md: var(--openbot-radius-md);
+  --radius-ob-lg: var(--openbot-radius-lg);
+  --radius-ob-card: var(--openbot-radius-card);
+  --radius-ob-grouped: var(--openbot-radius-grouped);
+  --radius-ob-xl: var(--openbot-radius-xl);
+  --radius-ob-bubble: var(--openbot-radius-bubble);
+  --radius-ob-modal: var(--openbot-radius-modal);
+
+  --ease-ob-out: var(--openbot-ease-out);
+  --ease-ob-in-out: var(--openbot-ease-in-out);
+}

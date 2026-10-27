@@ -149,8 +149,8 @@ export function PlaygroundPage() {
 
       {!loading && !session ? (
         <Section title="How it works">
-          <div className="flex max-w-3xl flex-col gap-3 text-sm" data-testid="playground-intro">
-            <ul className="list-disc pl-5 text-muted-foreground">
+          <div className="flex max-w-3xl flex-col gap-3 text-md" data-testid="playground-intro">
+            <ul className="list-disc pl-5 text-ob-muted">
               <li>
                 Your Scout is live at once, with a <b>{open?.limits.discUsdc ?? "1.00"} USDC</b>{" "}
                 Disc on {open?.network ?? "testnet"}.
@@ -166,7 +166,7 @@ export function PlaygroundPage() {
                 <AlertTitle>Not right now</AlertTitle>
                 <AlertDescription>
                   {open.reason}{" "}
-                  <span className="text-muted-foreground">
+                  <span className="text-ob-muted">
                     Try again later, or{" "}
                     <Link className="link" to="/remoras/new">
                       get your own Scout
@@ -181,7 +181,7 @@ export function PlaygroundPage() {
                 <Fish /> Start my Scout
               </Button>
               {busy ? (
-                <span className="flex items-center gap-2 text-muted-foreground">
+                <span className="flex items-center gap-2 text-ob-muted">
                   <Spinner /> {busy}
                 </span>
               ) : null}
@@ -201,12 +201,12 @@ export function PlaygroundPage() {
             }
           >
             <div
-              className="grid max-w-3xl gap-3 rounded-xl border p-4 text-sm sm:grid-cols-2"
+              className="grid max-w-3xl gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4 text-md sm:grid-cols-2"
               data-testid="playground-status"
             >
               <div className="flex flex-col gap-3">
                 <span className="flex items-baseline justify-between">
-                  <span className="text-muted-foreground">Budget</span>
+                  <span className="text-ob-muted">Budget</span>
                   <span className="tabular-nums" data-testid="playground-spent">
                     {session.spentUsdc} of {session.budgetUsdc} USDC
                   </span>
@@ -226,7 +226,7 @@ export function PlaygroundPage() {
               </div>
               <div className="flex flex-col gap-3">
                 <span className="flex items-baseline justify-between">
-                  <span className="text-muted-foreground">Questions left</span>
+                  <span className="text-ob-muted">Questions left</span>
                   <span className="tabular-nums" data-testid="playground-questions">
                     {session.questionsLeft}
                   </span>
@@ -251,12 +251,12 @@ export function PlaygroundPage() {
                 {session.answers.map((a) => (
                   <li
                     key={a.eventId}
-                    className="flex flex-col gap-3 rounded-xl border p-4 text-sm"
+                    className="flex flex-col gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4 text-md"
                     data-testid="playground-answer"
                   >
                     <p className="font-medium">{a.question}</p>
                     <Markdown>{a.answer}</Markdown>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-ob-muted">
                       {a.paid.map((p) => (
                         <Badge key={`${p.payee}${p.digest}`} variant="outline">
                           Paid {p.amountUsdc} USDC to {p.payee}
@@ -299,7 +299,7 @@ export function PlaygroundPage() {
                       </Button>
                     ))}
                     {busy ? (
-                      <span className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-3 text-md text-ob-muted">
                         <Spinner /> {busy}
                       </span>
                     ) : null}

@@ -21,6 +21,7 @@ import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useNetwork } from "@/lib/network";
 import { explorerTx } from "@/lib/usdc";
+import { Property, PropertyList } from "@/openbot/pages";
 import { HatchBadge } from "./hatch-badge";
 import { PermissionsList, SafetyPanel, shortAddress } from "./parts";
 
@@ -73,7 +74,7 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
 
   return (
     <div className="flex flex-col gap-3" data-testid="hatch">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-md text-ob-muted">
         It's created under {shortAddress(owner)} in shadow mode. You set its budget later on its
         page; until then the template's suggestion applies, and its Disc caps every payment onchain.
       </p>
@@ -103,7 +104,7 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
           <GitFork /> Hatch it (one signature)
         </Button>
         {step ? (
-          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2 text-md text-ob-muted">
             <Spinner /> {step}
           </span>
         ) : null}
@@ -168,8 +169,8 @@ export function TemplatePage() {
           </Button>
         }
       />
-      {tpl.error ? <p className="text-sm text-destructive">{tpl.error}</p> : null}
-      {!l && !tpl.error ? <Skeleton className="h-48 w-full" /> : null}
+      {tpl.error ? <p className="text-md text-ob-danger-text">{tpl.error}</p> : null}
+      {!l && !tpl.error ? <Skeleton className="h-48 w-full rounded-ob-card" /> : null}
       {l && params.get("published") ? (
         <Alert variant="success">
           <AlertTitle>Published</AlertTitle>
@@ -180,48 +181,38 @@ export function TemplatePage() {
       ) : null}
       {l ? (
         <Section title="Provenance" description="The file on Walrus and its author onchain.">
-          <dl className="grid max-w-3xl gap-2 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
-            <dt className="text-muted-foreground">Author</dt>
-            <dd>
+          <PropertyList className="max-w-3xl">
+            <Property term="Author">
               <Hash value={l.author} label="author" />
-            </dd>
-            <dt className="text-muted-foreground">Walrus blob</dt>
-            <dd data-testid="template-blob">
+            </Property>
+            <Property term="Walrus blob" data-testid="template-blob">
               <Hash value={l.blobId} href={aggregator(network, l.blobId)} label="blob" />
-            </dd>
-            <dt className="text-muted-foreground">Published in</dt>
-            <dd>
+            </Property>
+            <Property term="Published in">
               <Hash
                 value={l.publishDigest}
                 href={explorerTx(network, l.publishDigest)}
                 label="transaction"
               />
-            </dd>
-            <dt className="text-muted-foreground">Template object</dt>
-            <dd>
+            </Property>
+            <Property term="Template object">
               <Hash value={l.templateId} label="template" />
-            </dd>
+            </Property>
             {l.parent ? (
-              <>
-                <dt className="text-muted-foreground">Derived from</dt>
-                <dd>
-                  <Link className="link" to={`/hatchery/${l.parent}`}>
-                    {shortAddress(l.parent)}
-                  </Link>
-                </dd>
-              </>
+              <Property term="Derived from">
+                <Link className="link" to={`/hatchery/${l.parent}`}>
+                  {shortAddress(l.parent)}
+                </Link>
+              </Property>
             ) : null}
             {l.stats ? (
-              <>
-                <dt className="text-muted-foreground">Outcomes</dt>
-                <dd>
-                  {l.stats.usefulAnswers} useful answers from {l.stats.hatched} hatch
-                  {l.stats.hatched === 1 ? "" : "es"}
-                  {l.stats.costPerUsefulUsdc ? `, ${l.stats.costPerUsefulUsdc} USDC each` : ""}
-                </dd>
-              </>
+              <Property term="Outcomes">
+                {l.stats.usefulAnswers} useful answers from {l.stats.hatched} hatch
+                {l.stats.hatched === 1 ? "" : "es"}
+                {l.stats.costPerUsefulUsdc ? `, ${l.stats.costPerUsefulUsdc} USDC each` : ""}
+              </Property>
             ) : null}
-          </dl>
+          </PropertyList>
           {tpl.data ? (
             <div className="flex flex-wrap gap-2">
               <Button
@@ -251,18 +242,21 @@ export function TemplatePage() {
         description="Read back from Walrus and checked again just now."
       >
         <div className="flex max-w-3xl flex-col gap-4" data-testid="consent">
-          {consent.error ? <p className="text-sm text-destructive">{consent.error}</p> : null}
-          {!c && !consent.error ? <Skeleton className="h-40 w-full" /> : null}
+          {consent.error ? <p className="text-md text-ob-danger-text">{consent.error}</p> : null}
+          {!c && !consent.error ? <Skeleton className="h-40 w-full rounded-ob-card" /> : null}
           {c ? (
             <>
               <PermissionsList permissions={c.permissions} />
               {c.payees.length ? (
-                <ul className="flex flex-col gap-1 text-sm" aria-label="Services it may pay">
+                <ul className="ob-group" aria-label="Services it may pay">
                   {c.payees.map((p) => (
-                    <li key={p.ref} className="flex items-center gap-2">
-                      <code className="rounded bg-muted px-1 text-xs">{p.ref}</code>
+                    <li
+                      key={p.ref}
+                      className="flex min-h-10 flex-wrap items-center justify-between gap-2 px-4 py-2 text-md"
+                    >
+                      <code className="font-mono text-xs text-ob-text">{p.ref}</code>
                       {p.known ? (
-                        <span className="text-muted-foreground">
+                        <span className="text-ob-muted tabular-nums">
                           {p.priceUsdc ? `${p.priceUsdc} USDC a call` : "price unknown"}
                         </span>
                       ) : (
@@ -281,7 +275,7 @@ export function TemplatePage() {
                 </AlertDescription>
               </Alert>
               {l?.deprecated ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-md text-ob-muted">
                   Its author deprecated it, so it can't be hatched any more.
                 </p>
               ) : (
@@ -290,7 +284,7 @@ export function TemplatePage() {
                     <>
                       <Hatch id={id} consent={c} owner={owner} />
                       {l && owner.toLowerCase() === l.author.toLowerCase() ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-md text-ob-muted">
                           You published this.{" "}
                           <Deprecate
                             id={id}

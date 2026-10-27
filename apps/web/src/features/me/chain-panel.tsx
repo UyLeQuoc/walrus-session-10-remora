@@ -46,16 +46,16 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
             {busy ? "Opening…" : "Own this memory"}
           </Button>
         )}
-        <dl className="space-y-2 text-sm">
+        <dl className="space-y-2 text-md">
           <div className="flex items-baseline justify-between gap-4">
-            <dt className="shrink-0 text-muted-foreground">Account</dt>
+            <dt className="shrink-0 text-ob-muted">Account</dt>
             <dd className="min-w-0 flex-1">
               <Hash value={account.accountId} href={account.explorerUrl} label="account id" />
             </dd>
           </div>
           {account.owner && (
             <div className="flex items-baseline justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">Owner</dt>
+              <dt className="shrink-0 text-ob-muted">Owner</dt>
               <dd className="min-w-0 flex-1">
                 <Hash value={account.owner} href={account.ownerUrl} label="owner" />
               </dd>
@@ -64,15 +64,15 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
         </dl>
 
         {account.unreadable ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-md text-ob-muted">
             The object could not be read from the chain just now. The link above still resolves.
           </p>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm font-medium">
+            <p className="text-md font-medium">
               Keys that can read this memory ({account.delegates?.length ?? 0})
             </p>
-            <ul className="divide-y rounded-md border text-sm">
+            <ul className="ob-group text-md">
               {(account.delegates ?? []).map((d) => (
                 <li
                   key={d.publicKeyHex}
@@ -86,7 +86,7 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
                 </li>
               ))}
               {(account.delegates?.length ?? 0) === 0 && (
-                <li className="px-3 py-2 text-muted-foreground">
+                <li className="px-3 py-2 text-ob-muted">
                   No delegate keys. Nothing but the owner can read this account.
                 </li>
               )}

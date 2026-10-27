@@ -22,7 +22,7 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
         <div className="flex w-full flex-col gap-6">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full rounded-ob-card" />
         </div>
       </Page>
     );
@@ -43,17 +43,17 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
           }
         />
         <div className="flex w-full flex-col gap-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="max-w-2xl text-md text-ob-muted">
             {kind === "connect"
               ? "The same memory is readable from Claude Code or any other Walrus Memory client you sign in. Anything you told it before this stays in Remora's own account, where it cannot be moved from, so Remora reads both. You can revoke its access to yours at any time with /disconnect."
               : "What you told it before you connected lives in Remora's account rather than yours, so that part it can still read; /memory forget all makes it unrecallable. Nothing was deleted, and /connect grants access again."}
           </p>
           {selfPaid ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-md text-ob-muted">
               Gas sponsorship was unavailable, so your wallet paid for this transaction.
             </p>
           ) : null}
-          <p className="text-sm">You can close this tab and go back to the chat.</p>
+          <p className="text-md">You can close this tab and go back to the chat.</p>
         </div>
       </Page>
     );
@@ -73,7 +73,7 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
         }
       />
       <div className="flex w-full flex-col gap-6">
-        <p className="text-sm text-muted-foreground">
+        <p className="max-w-2xl text-md text-ob-muted">
           {kind === "connect" ? (
             <>
               Right now Remora keeps your memory under its own account. Walrus Memory normally
@@ -90,12 +90,12 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
         </p>
 
         {info ? (
-          <dl className="flex flex-col gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
-            <div className="flex justify-between gap-4">
+          <dl className="ob-group ob-props max-w-2xl">
+            <div className="ob-prop">
               <dt>Key label</dt>
               <dd className="font-mono">{info.label}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="ob-prop">
               <dt className="shrink-0">Delegate key</dt>
               <dd className="min-w-0 flex-1">
                 <Web3Address value={info.publicKey} />
@@ -104,8 +104,8 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
           </dl>
         ) : null}
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {step === "working" ? <p className="text-sm">{status}</p> : null}
+        {error ? <p className="text-md text-ob-danger-text">{error}</p> : null}
+        {step === "working" ? <p className="text-md">{status}</p> : null}
 
         {linkDead ? null : account ? (
           <Button onClick={() => void run()} disabled={step === "working"}>
@@ -116,11 +116,7 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
                 : "Revoke access"}
           </Button>
         ) : resume.pending ? (
-          <p
-            className="text-sm text-muted-foreground"
-            role="status"
-            aria-label="Connecting your wallet"
-          >
+          <p className="text-md text-ob-muted" role="status" aria-label="Connecting your wallet">
             Connecting your wallet…
           </p>
         ) : (

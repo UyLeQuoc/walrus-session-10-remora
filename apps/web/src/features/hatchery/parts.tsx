@@ -16,28 +16,30 @@ const TRIGGER: Record<string, string> = {
 
 export function PermissionsList({ permissions }: { permissions: TemplatePermissions[] }) {
   return (
-    <ul className="flex flex-col gap-3" aria-label="What it can do">
+    <ul className="ob-group" aria-label="What it can do">
       {permissions.map((p) => (
         <li
           key={p.remora}
-          className="flex flex-col gap-2 rounded-lg border p-3 text-sm"
+          className="flex min-w-0 flex-col gap-1.5 px-4 py-3 text-md"
           data-testid="template-permissions"
         >
-          <p className="flex flex-wrap items-center gap-2 font-medium">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
             {p.remora} <Badge variant="outline">{p.template}</Badge>
             {p.model ? <Badge variant="secondary">{modelById(p.model).label}</Badge> : null}
           </p>
-          <p className="text-muted-foreground">
+          <p className="text-ob-muted">
             Wakes {p.triggers.map((t) => TRIGGER[t] ?? t).join(", ") || "when asked"}.
           </p>
-          <p>
+          <p className="text-ob-secondary">
             {p.payees.length ? (
               <>
                 May pay only{" "}
                 {p.payees.map((ref, i) => (
                   <span key={ref}>
                     {i ? ", " : ""}
-                    <code className="rounded bg-muted px-1 text-xs">{ref}</code>
+                    <code className="rounded-ob-xs bg-ob-control-hover px-1 font-mono text-xs">
+                      {ref}
+                    </code>
                   </span>
                 ))}
                 {p.budget ? `, ${p.budget}` : ""}.
@@ -46,7 +48,7 @@ export function PermissionsList({ permissions }: { permissions: TemplatePermissi
               "Never pays."
             )}
           </p>
-          <p className="text-xs text-muted-foreground">Tools: {p.tools.join(", ")}</p>
+          <p className="text-xs text-ob-muted">Tools: {p.tools.join(", ")}</p>
         </li>
       ))}
     </ul>

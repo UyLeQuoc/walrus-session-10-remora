@@ -146,7 +146,25 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 - **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge (M2, M8–M12).
 - **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).
 
+## Screenshots
+
+The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)). The
+full set, every route at 1280 and 375 px in light and dark, is in
+[docs/e2e/screenshots](docs/e2e/screenshots) (`u13-*`).
+
+| A room of remoras | A remora |
+|---|---|
+| ![A room: faces, coloured names, a paid answer and a ping](docs/e2e/screenshots/u13-room-1280-dark.png) | ![A remora's page: ask, budget, recent activity](docs/e2e/screenshots/u13-remora-1280-light.png) |
+| **Home** | **Approvals on a phone** |
+| ![Home: approvals waiting, stats, your remoras](docs/e2e/screenshots/u13-home-1280-light.png) | ![Approvals at 375 px](docs/e2e/screenshots/u13-approvals-375-dark.png) |
+
 ## License
 
-[MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)). The vendored ASCII ocean keeps its upstream MIT notice in
+[MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)), except one folder:
+
+- **`apps/web/src/openbot/`** is openbot's UI ported to React, under
+  [PolyForm Noncommercial 1.0.0](apps/web/src/openbot/LICENSE) with Synthetify Labs' Required Notices
+  ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)). Use it only for noncommercial purposes.
+
+The vendored ASCII ocean and the Inter font keep their own notices in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

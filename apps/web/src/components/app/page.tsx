@@ -1,8 +1,9 @@
 /**
  * The one place a page's width, padding, scroll area and document title are decided (ADR-0036).
  *
- * Every page is the full width of the shell: one gutter (`px-4 sm:px-6 lg:px-10`), no centred
- * `max-w-*` track, no `mx-auto`. That keeps the `h1` on the same x on every route (Phase 6 §2).
+ * Every page is the full width of the shell: one gutter (`px-4 md:px-8`, openbot's 16px on a phone
+ * and 32px on a desktop, ADR-0069), no centred `max-w-*` track, no `mx-auto`. That keeps the `h1`
+ * on the same x on every route (Phase 6 §2).
  * A form whose fields would become unreadable when stretched constrains its own fields to
  * `max-w-2xl`; the page header and section headings stay on the page's left edge.
  *
@@ -17,10 +18,7 @@ import { cn } from "@/lib/utils";
 /** The page's own full-width column; used by `Page` and the `RequireOwner` banners. */
 export function PageColumn({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div
-      data-slot="page-column"
-      className={cn("flex w-full flex-col px-4 sm:px-6 lg:px-10", className)}
-    >
+    <div data-slot="page-column" className={cn("flex w-full flex-col px-4 md:px-8", className)}>
       <div className="flex w-full flex-col gap-6">{children}</div>
     </div>
   );

@@ -1,0 +1,1207 @@
+/*
+ * Ported from nightly-labs/openbot @ aa3c498:
+ *   src/renderer/src/features/window/window.css (the window, the frame card),
+ *   packages/ui/src/features/window/page-rail.css (the page rail),
+ *   src/renderer/src/styles/app-shell.css (frame grid, panel resizer, sidebar, topbar, search,
+ *     sections, waiting group, agent rows, compact sidebar),
+ *   packages/ui/src/features/channels/channel-avatar.css (the 2x2 room avatar),
+ *   packages/ui/src/features/conversation/styles/header-layout.css and header-controls.css (the top row),
+ *   src/renderer/src/features/web-client/web-client.css (the phone layout and its bottom navigation).
+ * PolyForm Noncommercial 1.0.0, see ../LICENSE.
+ *
+ * Desktop and the web client's tablet widths: the page rail at the left, then one card with the
+ * roster, the main pane and the docked side panel. The rail and the top row share the frame color,
+ * so they read as one L around the card. At 720px and below: one pane at a time and a bottom nav.
+ */
+
+@layer components {
+  /* The window: the rail, then the frame. */
+  .app-window {
+    --window-frame: var(--openbot-bg-frame);
+    --window-edge: var(--openbot-space-1);
+    --window-hairline-height: var(--openbot-icon-lg);
+    --left-header-height: 38px;
+    display: grid;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    background: var(--window-frame);
+    color: var(--openbot-text-primary);
+  }
+
+  /* The page rail. */
+  .window-rail {
+    position: relative;
+    display: flex;
+    width: 52px;
+    min-height: 0;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: calc(var(--left-header-height) + var(--openbot-space-1)) 0 var(--openbot-space-3);
+  }
+
+  .window-rail-logo {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    height: var(--left-header-height);
+    align-items: center;
+    justify-content: center;
+    padding-top: 2px;
+  }
+
+  .window-rail-logo-link {
+    display: flex;
+    border-radius: var(--openbot-radius-sm);
+  }
+
+  .window-rail-logo-link:focus-visible {
+    outline: 0;
+    box-shadow: var(--openbot-focus-ring);
+  }
+
+  .window-rail-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--openbot-space-1-5);
+  }
+
+  .window-rail-button {
+    position: relative;
+    display: flex;
+    width: var(--openbot-control-lg);
+    height: var(--openbot-control-lg);
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--openbot-radius-lg);
+    background: transparent;
+    padding: 0;
+    color: var(--openbot-text-muted);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .window-rail-button:hover {
+      background: var(--openbot-bg-control-hover);
+      color: var(--openbot-text-primary);
+    }
+  }
+
+  .window-rail-button:active {
+    scale: 0.97;
+  }
+
+  .window-rail-button[aria-current="page"],
+  .window-rail-button[aria-current="page"]:hover {
+    background: var(--openbot-bg-control-active);
+    color: var(--openbot-text-primary);
+  }
+
+  .window-rail-button:focus-visible {
+    outline: 0;
+    box-shadow: var(--openbot-focus-ring);
+  }
+
+  .window-rail-button svg {
+    width: var(--openbot-icon-lg);
+    height: var(--openbot-icon-lg);
+  }
+
+  /* A count on a rail button, such as the approvals waiting. */
+  .window-rail-count {
+    position: absolute;
+    top: 2px;
+    right: 1px;
+    display: inline-grid;
+    min-width: 16px;
+    height: 16px;
+    place-items: center;
+    border: 2px solid var(--window-frame);
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-warning);
+    padding: 0 3px;
+    color: var(--openbot-bg-sidebar);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1;
+    box-sizing: content-box;
+  }
+
+  /* The frame: the roster, the resizer, the main pane and the side panel, as columns. */
+  .app-frame {
+    position: relative;
+    display: grid;
+    container-type: inline-size;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    grid-template-columns:
+      var(--left-panel-width, 280px) 0 minmax(0, 1fr)
+      var(--side-panel-width, 0px);
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+    background: var(--openbot-bg-canvas);
+    transition: grid-template-columns var(--panel-resize-duration, var(--openbot-duration-overlay))
+      cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .app-frame > * {
+    min-height: 0;
+  }
+
+  html.panel-resizing {
+    --panel-resize-duration: 0ms;
+    cursor: col-resize;
+    user-select: none;
+  }
+
+  /* The panel resizer: a 16px handle centred on the line, with a fading hairline while it is used. */
+  .panel-resizer {
+    position: relative;
+    z-index: 40;
+    display: flex;
+    width: 16px;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: col-resize;
+    touch-action: none;
+    transform: translateX(-50%);
+    user-select: none;
+  }
+
+  .panel-resizer::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--openbot-text-dim) 50%, transparent);
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .panel-resizer:hover::after,
+  .panel-resizer:focus-visible::after,
+  .panel-resizer-active::after {
+    opacity: 1;
+  }
+
+  .panel-resizer:focus-visible {
+    outline: 0;
+    box-shadow: inset 0 0 0 1px var(--openbot-border-strong);
+  }
+
+  .right-panel-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: auto;
+  }
+
+  /* The roster: openbot's sidebar. */
+  .sidebar {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    overflow: hidden;
+    flex-direction: column;
+    background: var(--openbot-bg-sidebar);
+    color: var(--openbot-text-primary);
+    container-type: inline-size;
+  }
+
+  .sidebar-topbar {
+    position: relative;
+    display: flex;
+    height: var(--left-header-height);
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--openbot-space-2);
+    border-bottom: 1px solid var(--openbot-border);
+    padding: 2px 6px 0 10px;
+  }
+
+  .sidebar-topbar-actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .sidebar-icon-button {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    border: 0;
+    border-radius: var(--openbot-radius-sm);
+    background: transparent;
+    padding: 0;
+    color: var(--openbot-text-muted);
+    cursor: pointer;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .sidebar-icon-button:hover {
+      background: var(--openbot-bg-control-hover);
+      color: var(--openbot-text-primary);
+    }
+  }
+
+  .sidebar-icon-button:active {
+    transform: scale(0.97);
+  }
+
+  .sidebar-icon-button:focus-visible {
+    outline: 0;
+    box-shadow: var(--openbot-focus-ring);
+  }
+
+  .sidebar-icon-button svg {
+    width: var(--openbot-icon-md);
+    height: var(--openbot-icon-md);
+  }
+
+  .sidebar-search-wrap {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 8px 12px 6px;
+  }
+
+  .search-field {
+    display: flex;
+    height: 32px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--openbot-border-strong);
+    border-radius: var(--openbot-radius-md);
+    background: var(--openbot-bg-control);
+    padding: 0 10px;
+    color: var(--openbot-text-muted);
+    transition:
+      opacity var(--openbot-duration-fast) ease,
+      transform var(--openbot-duration-fast) ease;
+  }
+
+  .search-field:focus-within {
+    border-color: var(--openbot-border-focus);
+  }
+
+  .search-field svg {
+    width: var(--openbot-icon-sm);
+    height: var(--openbot-icon-sm);
+    flex: 0 0 auto;
+  }
+
+  .search-field input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-md);
+    line-height: 18px;
+  }
+
+  .search-field input::placeholder {
+    color: var(--openbot-text-muted);
+  }
+
+  .sidebar-compact-search {
+    position: absolute;
+    inset: 8px 12px 6px;
+    display: none;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: var(--openbot-radius-sm);
+    background: transparent;
+    color: var(--openbot-text-muted);
+    cursor: pointer;
+  }
+
+  .sidebar-compact-search:hover {
+    background: var(--openbot-hover);
+    color: var(--openbot-text-primary);
+  }
+
+  .sidebar-body {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--openbot-space-2);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 4px 8px 12px;
+  }
+
+  .sidebar-footer {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: var(--openbot-space-2);
+    border-top: 1px solid var(--openbot-border);
+    padding: 8px;
+  }
+
+  /* A section: a quiet 12px heading that toggles it, a chevron on hover, an action at the end. */
+  .sidebar-section {
+    position: relative;
+    border-radius: var(--openbot-radius-md);
+  }
+
+  .sidebar-section-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .sidebar-section-toggle {
+    display: flex;
+    min-width: 0;
+    height: 32px;
+    flex: 1;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    border: 0;
+    border-radius: var(--openbot-radius-md);
+    padding: 0 7px;
+    background: transparent;
+    color: var(--openbot-text-readable);
+    cursor: pointer;
+    transition: color var(--openbot-duration-hover) ease-out;
+  }
+
+  .sidebar-section-toggle:hover,
+  .sidebar-section-toggle:focus-visible {
+    color: var(--openbot-text-secondary);
+    outline: 0;
+  }
+
+  .sidebar-section-toggle:focus-visible {
+    box-shadow: var(--openbot-focus-ring);
+  }
+
+  .sidebar-section-toggle:active {
+    scale: 0.96;
+  }
+
+  .sidebar-section-name {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--openbot-text-sm);
+    font-weight: 400;
+    line-height: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-section-chevron {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    opacity: 0;
+    transform: rotate(0deg);
+    transition:
+      opacity var(--openbot-duration-hover) ease-out,
+      transform var(--openbot-duration-fast) var(--openbot-ease-out);
+  }
+
+  .sidebar-section-toggle:hover .sidebar-section-chevron,
+  .sidebar-section-toggle:focus-visible .sidebar-section-chevron {
+    opacity: 1;
+  }
+
+  .sidebar-section-chevron-collapsed {
+    transform: rotate(-90deg);
+  }
+
+  .sidebar-section-collapse {
+    display: grid;
+    opacity: 1;
+    grid-template-rows: 1fr;
+    transition-property: grid-template-rows, opacity;
+    transition-duration: var(--openbot-duration-normal), var(--openbot-duration-fast);
+    transition-timing-function: var(--openbot-ease-out), ease-out;
+  }
+
+  .sidebar-section-collapse[data-collapsed] {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+
+  .sidebar-section-body {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* "Needs you" is not a section: plain text with a count, and a rule ends it. */
+  .sidebar-waiting-group {
+    border-bottom: 1px solid var(--openbot-border);
+    padding-bottom: var(--openbot-space-2);
+  }
+
+  .sidebar-waiting-group-name {
+    display: flex;
+    min-width: 0;
+    height: 32px;
+    align-items: center;
+    gap: var(--openbot-space-2);
+    margin: 0;
+    padding: 0 7px;
+    color: var(--openbot-text-readable);
+    font-size: var(--openbot-text-sm);
+    font-weight: 400;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .sidebar-waiting-group-count {
+    display: inline-grid;
+    min-width: 16px;
+    height: 16px;
+    place-items: center;
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-warning);
+    padding: 0 4px;
+    color: var(--openbot-bg-sidebar);
+    font-size: var(--openbot-text-sm);
+    font-weight: 650;
+  }
+
+  /* An agent row: a 36px avatar, the name with a role chip and a time, then one line of preview. */
+  .agent-row {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 54px;
+    min-height: 54px;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--openbot-radius-md);
+    background: transparent;
+    padding: 8px;
+    color: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      background-color var(--openbot-duration-hover) ease,
+      transform var(--openbot-duration-normal) ease;
+  }
+
+  .agent-row + .agent-row,
+  .agent-row-item + .agent-row-item {
+    margin-top: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .agent-row:hover {
+      background: var(--openbot-bg-control);
+    }
+  }
+
+  .agent-row:active {
+    transform: scale(0.99);
+  }
+
+  .agent-row:focus-visible {
+    outline: 0;
+    box-shadow: var(--openbot-focus-ring);
+  }
+
+  .agent-row-active,
+  .agent-row-active:hover {
+    background: var(--openbot-bg-surface);
+  }
+
+  /* A row with one line: a recent chat. */
+  .agent-row[data-size="compact"] {
+    height: 32px;
+    min-height: 32px;
+    padding: 0 8px;
+  }
+
+  .agent-row-item {
+    position: relative;
+  }
+
+  .agent-row-item-action {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border: 0;
+    border-radius: var(--openbot-radius-sm);
+    background: transparent;
+    color: var(--openbot-text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-50%);
+  }
+
+  .agent-row-item:hover .agent-row-item-action,
+  .agent-row-item:focus-within .agent-row-item-action {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .agent-row-item-action {
+      opacity: 1;
+    }
+  }
+
+  .agent-row-item-action:hover {
+    background: var(--openbot-bg-control-hover);
+    color: var(--openbot-text-primary);
+  }
+
+  .agent-row-item-action svg {
+    width: var(--openbot-icon-sm);
+    height: var(--openbot-icon-sm);
+  }
+
+  .agent-row-avatar {
+    position: relative;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    place-items: center;
+  }
+
+  .agent-row[data-size="compact"] .agent-row-avatar {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
+    color: var(--openbot-text-muted);
+  }
+
+  .agent-row[data-size="compact"] .agent-row-avatar svg {
+    width: var(--openbot-icon-md);
+    height: var(--openbot-icon-md);
+  }
+
+  .agent-row-agent-status {
+    position: absolute;
+    z-index: 1;
+    right: -5px;
+    bottom: -3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--openbot-bg-sidebar);
+    box-shadow: 0 1px 3px var(--openbot-shadow-popover-ambient);
+    pointer-events: none;
+  }
+
+  .agent-row-active .agent-row-agent-status {
+    border-color: var(--openbot-bg-surface);
+  }
+
+  /* A small state dot: live, in shadow, paused, being created. */
+  .agent-row-agent-status-dot {
+    right: -3px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-text-dim);
+  }
+
+  .agent-row-agent-status-dot[data-tone="success"] {
+    background: var(--openbot-success);
+  }
+
+  .agent-row-agent-status-dot[data-tone="warning"] {
+    background: var(--openbot-warning);
+  }
+
+  .agent-row-agent-status-dot[data-tone="accent"] {
+    background: var(--openbot-accent);
+  }
+
+  /* An agent that waits for the user: amber, a little larger, the first badge the eye finds. */
+  .agent-row-agent-status-waiting {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-warning);
+    color: var(--openbot-bg-sidebar);
+  }
+
+  .agent-row-agent-status-waiting svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .agent-row-agent-status-unread {
+    min-width: 16px;
+    height: 16px;
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-text-primary);
+    padding: 0 3px;
+    color: var(--openbot-bg-sidebar);
+    font-size: var(--openbot-text-sm);
+    font-weight: 650;
+    line-height: 12px;
+  }
+
+  .agent-row-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .agent-row-heading {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .agent-row-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+  }
+
+  .agent-row-title:has(.agent-role-badge) {
+    --agent-role-badge-collapsed-width: calc(2ch + 9px);
+    display: grid;
+    grid-template-columns:
+      fit-content(calc(100% - var(--agent-role-badge-collapsed-width) - 5px))
+      minmax(var(--agent-role-badge-collapsed-width), 1fr);
+  }
+
+  .agent-row-title strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-lg);
+    font-weight: 500;
+    line-height: 20px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-row[data-size="compact"] .agent-row-title strong {
+    color: var(--openbot-text-secondary);
+    font-size: var(--openbot-text-md);
+    font-weight: 400;
+  }
+
+  .agent-row-active[data-size="compact"] .agent-row-title strong {
+    color: var(--openbot-text-primary);
+  }
+
+  .agent-role-badge {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    height: 18px;
+    min-height: 18px;
+    align-items: center;
+    overflow: hidden;
+    flex: 0 1 auto;
+    justify-self: start;
+    border: 0.5px solid var(--openbot-border);
+    border-radius: var(--openbot-radius-xs);
+    background: var(--openbot-hover);
+    padding: 2px 4px;
+    color: var(--openbot-text-readable);
+    font-size: var(--openbot-text-sm);
+    font-weight: 400;
+    line-height: 14px;
+  }
+
+  .agent-role-badge > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-row-time {
+    min-width: 0;
+    flex: 0 0 auto;
+    color: var(--openbot-text-readable);
+    font-size: var(--openbot-text-sm);
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  @container (max-width: 210px) {
+    .agent-row-time {
+      display: none;
+    }
+  }
+
+  .agent-row-wait-chip {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 3px;
+    border-radius: var(--openbot-radius-pill);
+    background: var(--openbot-warning-soft);
+    padding: 1px 7px 1px 5px;
+    color: var(--openbot-warning-text);
+    font-size: var(--openbot-text-sm);
+    font-weight: var(--openbot-weight-semibold);
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .agent-row-wait-chip svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .agent-row-preview {
+    display: block;
+    margin-top: 0;
+    overflow: hidden;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-md);
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .empty-search {
+    margin: 32px 0;
+    color: var(--openbot-text-readable);
+    font-size: var(--openbot-text-md);
+    text-align: center;
+  }
+
+  /* The compact roster: 88px of avatars. Names, previews, the search field and the section names go. */
+  .sidebar-compact .sidebar-topbar {
+    justify-content: center;
+    padding-inline: 6px;
+  }
+
+  .sidebar-compact .sidebar-search-wrap {
+    height: 46px;
+    padding-inline: 12px;
+  }
+
+  .sidebar-compact .search-field {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-8px);
+  }
+
+  .sidebar-compact .sidebar-compact-search {
+    display: grid;
+  }
+
+  .sidebar-compact .agent-row {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .sidebar-compact .agent-row-copy,
+  .sidebar-compact .sidebar-section-name,
+  .sidebar-compact .sidebar-waiting-group-name > span:first-child,
+  .sidebar-compact .agent-row-item-action,
+  .sidebar-compact .sidebar-section-action,
+  .sidebar-compact [data-compact-hidden] {
+    display: none;
+  }
+
+  .sidebar-compact .sidebar-section-toggle,
+  .sidebar-compact .sidebar-waiting-group-name {
+    justify-content: center;
+  }
+
+  /* The room avatar: up to four member faces in the square of one agent avatar. */
+  .channel-avatar-cluster {
+    --channel-avatar-size: 36px;
+    --channel-avatar-pitch: calc(var(--channel-avatar-size) * 0.44);
+    --channel-avatar-face: calc(var(--channel-avatar-size) * 0.48);
+    display: grid;
+    grid-template: repeat(2, var(--channel-avatar-pitch)) / repeat(2, var(--channel-avatar-pitch));
+    place-content: center;
+    place-items: center;
+    width: var(--channel-avatar-size);
+    min-width: var(--channel-avatar-size);
+    height: var(--channel-avatar-size);
+  }
+
+  .channel-avatar-cluster > * {
+    width: var(--channel-avatar-face);
+    height: var(--channel-avatar-face);
+  }
+
+  .channel-avatar-cluster > :only-child {
+    --channel-avatar-face: var(--channel-avatar-size);
+    grid-area: 1 / 1 / 3 / 3;
+  }
+
+  .channel-avatar-cluster > :first-child:nth-last-child(2),
+  .channel-avatar-cluster > :first-child:nth-last-child(2) ~ * {
+    grid-row: 1 / span 2;
+  }
+
+  .channel-avatar-cluster > :first-child:nth-last-child(3) ~ :last-child {
+    grid-column: 1 / span 2;
+  }
+
+  /* The main pane, and its top row: the heading group at the start, the controls at the end. */
+  .app-main {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .app-main-body {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .conversation-header {
+    position: relative;
+    display: flex;
+    height: var(--left-header-height);
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--openbot-space-2);
+    border-bottom: 1px solid var(--openbot-border);
+    padding: 0 12px 0 8px;
+    background: transparent;
+  }
+
+  .conversation-heading-group {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 7px;
+    overflow: hidden;
+  }
+
+  .conversation-title {
+    display: flex;
+    min-width: 0;
+    height: var(--openbot-control-sm);
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    border-radius: var(--openbot-radius-sm);
+    background: transparent;
+    padding: 2px 4px;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-md);
+    font-weight: 400;
+    line-height: 18px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .conversation-title > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .conversation-header-actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--openbot-space-1);
+  }
+
+  /* The side panel: the right part of the card, its line to the main pane drawn by the card. */
+  .side-panel {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--openbot-bg-sidebar);
+  }
+
+  .side-panel[hidden] {
+    display: none;
+  }
+
+  .side-panel-header {
+    display: flex;
+    height: var(--left-header-height);
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--openbot-space-2);
+    border-bottom: 1px solid var(--openbot-border);
+    padding: 0 8px 0 12px;
+  }
+
+  .side-panel-title {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: var(--openbot-text-primary);
+    font-size: var(--openbot-text-md);
+    font-weight: var(--openbot-weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .side-panel-tabs {
+    display: flex;
+    gap: 2px;
+    border-radius: var(--openbot-radius-md);
+    background: var(--openbot-tabs-bar-bg);
+    padding: 2px;
+  }
+
+  .side-panel-tab {
+    height: 24px;
+    border: 0;
+    border-radius: var(--openbot-radius-sm);
+    background: transparent;
+    padding: 0 8px;
+    color: var(--openbot-text-muted);
+    font-size: var(--openbot-text-sm);
+    font-weight: var(--openbot-weight-medium);
+    cursor: pointer;
+  }
+
+  .side-panel-tab[aria-selected="true"] {
+    background: var(--openbot-tabs-pill-bg);
+    box-shadow: 0 0 0 1px var(--openbot-border);
+    color: var(--openbot-text-primary);
+  }
+
+  .side-panel-body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--openbot-space-4);
+  }
+
+  /* The bottom navigation exists only on a phone. */
+  .web-mobile-navigation {
+    display: none;
+  }
+
+  /* Above 720px: the card. The top row (topbar, pane header, side panel header) sits on the frame
+     colour; the card starts under it, with a hairline and four rounded corners. */
+  @media (min-width: 721px) {
+    .app-frame-edge {
+      isolation: isolate;
+      padding: 0 calc(var(--window-edge) + 1px) calc(var(--window-edge) + 1px) 0;
+      background: var(--window-frame);
+    }
+
+    .app-frame-edge::before {
+      position: absolute;
+      z-index: -1;
+      inset: calc(var(--left-header-height) - 1px) var(--window-edge) var(--window-edge) 0;
+      border: 1px solid var(--openbot-border);
+      border-radius: var(--openbot-radius-card);
+      background: var(--openbot-bg-canvas);
+      content: "";
+      pointer-events: none;
+    }
+
+    .app-frame-edge > .sidebar,
+    .app-frame-edge > .app-main,
+    .app-frame-edge > .side-panel {
+      background: transparent;
+    }
+
+    .app-frame-edge .sidebar-topbar,
+    .app-frame-edge .conversation-header,
+    .app-frame-edge .side-panel-header {
+      border-bottom: 0;
+    }
+
+    /* The line between the roster and the main pane starts at the card's top line. */
+    .app-frame-edge > .sidebar::before {
+      position: absolute;
+      z-index: -1;
+      inset: var(--left-header-height) 0 0 auto;
+      width: 1px;
+      background: var(--openbot-border);
+      content: "";
+      pointer-events: none;
+    }
+
+    /* In the top row, a short line ends the roster's part. */
+    .app-frame-edge > .sidebar:not(.sidebar-compact) .sidebar-topbar::after {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      width: 1px;
+      height: var(--window-hairline-height);
+      translate: 0 -50%;
+      background: var(--openbot-border-strong);
+      content: "";
+      pointer-events: none;
+    }
+
+    .app-frame-edge > .side-panel::before {
+      position: absolute;
+      z-index: -1;
+      inset: calc(var(--left-header-height) - 1px) auto 0 0;
+      width: 1px;
+      background: var(--openbot-border);
+      content: "";
+      pointer-events: none;
+    }
+
+    .app-frame-edge .sidebar-search-wrap {
+      padding-top: 11px;
+    }
+
+    .app-frame-edge .sidebar-footer {
+      margin-bottom: calc(var(--window-edge) + 1px);
+    }
+  }
+
+  /* A phone: one pane at a time, and a bottom navigation to switch. */
+  @media (max-width: 720px) {
+    .app-window {
+      --web-mobile-navigation-height: 64px;
+      grid-template-columns: minmax(0, 1fr);
+      background: var(--openbot-bg-canvas);
+    }
+
+    .app-window > .window-rail {
+      display: none;
+    }
+
+    .app-window[data-mobile-pane="workspace"] {
+      grid-template-columns: 56px minmax(0, 1fr);
+    }
+
+    .app-window[data-mobile-pane="workspace"] > .window-rail {
+      display: flex;
+      padding-bottom: calc(
+        var(--web-mobile-navigation-height) + env(safe-area-inset-bottom, 0px) + var(--openbot-space-3)
+      );
+    }
+
+    .app-frame {
+      grid-template-columns: minmax(0, 1fr);
+      padding-bottom: calc(var(--web-mobile-navigation-height) + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-frame > .panel-resizer {
+      display: none;
+    }
+
+    .app-window[data-mobile-pane="main"] .app-frame > .sidebar,
+    .app-window[data-mobile-pane="main"] .app-frame > .side-panel {
+      display: none;
+    }
+
+    .app-window[data-mobile-pane="panel"] .app-frame > .sidebar,
+    .app-window[data-mobile-pane="panel"] .app-frame > .app-main {
+      display: none;
+    }
+
+    .app-window[data-mobile-pane="workspace"] .app-frame > .app-main,
+    .app-window[data-mobile-pane="workspace"] .app-frame > .side-panel {
+      display: none;
+    }
+
+    .app-window[data-mobile-pane="workspace"] .app-frame > .sidebar {
+      width: auto;
+    }
+
+    .web-mobile-navigation {
+      position: fixed;
+      z-index: var(--openbot-layer-popover);
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      min-height: var(--web-mobile-navigation-height);
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid var(--openbot-border);
+      background: color-mix(in srgb, var(--openbot-bg-sidebar) 94%, transparent);
+      padding: var(--openbot-space-2) max(var(--openbot-space-3), env(safe-area-inset-left, 0px))
+        calc(var(--openbot-space-2) + env(safe-area-inset-bottom, 0px))
+        max(var(--openbot-space-3), env(safe-area-inset-right, 0px));
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+    }
+
+    .web-mobile-navigation-list {
+      display: grid;
+      width: min(100%, 360px);
+      grid-template-columns: repeat(var(--web-mobile-navigation-items, 2), minmax(0, 1fr));
+      gap: var(--openbot-space-1);
+    }
+
+    .web-mobile-navigation-button {
+      position: relative;
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      gap: var(--openbot-space-2);
+      border: 1px solid transparent;
+      border-radius: var(--openbot-radius-lg);
+      background: transparent;
+      color: var(--openbot-text-muted);
+      font-size: var(--openbot-text-sm);
+      font-weight: var(--openbot-weight-semibold);
+      cursor: pointer;
+    }
+
+    .web-mobile-navigation-button[data-active="true"] {
+      border-color: var(--openbot-border);
+      background: var(--openbot-bg-control);
+      color: var(--openbot-text-primary);
+    }
+
+    .web-mobile-navigation-button svg {
+      width: var(--openbot-icon-md);
+      height: var(--openbot-icon-md);
+    }
+  }
+}

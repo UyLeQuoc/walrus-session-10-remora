@@ -61,7 +61,7 @@ export function VerifyPage() {
         description="Paste a transaction digest or a Wake id. We check it against Sui through Tatum; no sign-in needed."
       />
       <form
-        className="flex flex-col gap-2 sm:flex-row"
+        className="flex flex-col gap-2 sm:max-w-2xl sm:flex-row"
         onSubmit={(e) => {
           e.preventDefault();
           if (input.trim()) navigate(`/verify/${input.trim()}`);
@@ -81,8 +81,8 @@ export function VerifyPage() {
 
       {state.loading ? (
         <div className="flex flex-col gap-2">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-20 w-full rounded-ob-card" />
+          <Skeleton className="h-32 w-full rounded-ob-card" />
         </div>
       ) : null}
       {state.error ? (
@@ -101,25 +101,29 @@ export function VerifyPage() {
         <>
           <div
             className={cn(
-              "flex flex-col gap-2 rounded-xl border p-5",
-              allOk ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5",
+              "flex flex-col gap-1.5 rounded-ob-card border px-5 py-4",
+              allOk
+                ? "border-ob-success-soft bg-ob-success-soft"
+                : "border-ob-danger-soft bg-ob-danger-soft",
             )}
             data-testid="verify-verdict"
           >
             <div className="flex flex-wrap items-center gap-2">
               {allOk ? (
-                <CheckCircle2 className="size-6 text-success" />
+                <CheckCircle2 className="size-5 text-ob-success" />
               ) : (
-                <XCircle className="size-6 text-destructive" />
+                <XCircle className="size-5 text-ob-danger" />
               )}
-              <p className="text-lg font-semibold">{allOk ? "Verified" : "Doesn't check out"}</p>
+              <p className="text-base font-semibold tracking-tight text-ob-text">
+                {allOk ? "Verified" : "Doesn't check out"}
+              </p>
               {r.anchored ? (
                 <StatusBadge status="verified" />
               ) : (
                 <Badge variant="outline">not anchored</Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-md text-ob-secondary">
               {allOk
                 ? "The receipt matches the chain."
                 : "At least one check did not match. Treat the claim as unproven."}
@@ -127,19 +131,19 @@ export function VerifyPage() {
           </div>
 
           <Section title="What we checked">
-            <ul className="flex flex-col gap-2 text-sm" aria-label="Checks">
+            <ul className="ob-group" aria-label="Checks">
               {r.checks.map((c) => (
-                <li key={c.name} className="flex items-start gap-2">
+                <li key={c.name} className="flex items-start gap-3 px-4 py-3 text-md">
                   {c.ok === null ? (
-                    <CircleMinus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <CircleMinus className="mt-0.5 size-4 shrink-0 text-ob-dim" />
                   ) : c.ok ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ob-success" />
                   ) : (
-                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-ob-danger" />
                   )}
-                  <span>
-                    <span className="font-medium">{c.name}</span>{" "}
-                    <span className="break-all text-muted-foreground">{c.detail}</span>
+                  <span className="min-w-0">
+                    <span className="font-medium text-ob-text">{c.name}</span>{" "}
+                    <span className="break-all text-ob-muted">{c.detail}</span>
                   </span>
                 </li>
               ))}
@@ -161,10 +165,13 @@ export function VerifyPage() {
 
       {!r && !state.loading && !state.error ? (
         <Section title="What we check" description="Nothing here asks you to take Remora's word.">
-          <ul className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {CHECKS.map((line) => (
-              <li key={line} className="flex items-start gap-3 rounded-xl border bg-card p-4">
-                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+              <li
+                key={line}
+                className="ob-card flex-row items-start gap-3 text-md text-ob-secondary"
+              >
+                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ob-accent-text" />
                 {line}
               </li>
             ))}

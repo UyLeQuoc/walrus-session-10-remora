@@ -74,7 +74,9 @@ export function MemoriesTable({
           return (
             <span>
               {ago(memory.createdAt)}
-              {soon !== null ? <span className="text-destructive"> expires in {soon}d</span> : null}
+              {soon !== null ? (
+                <span className="text-ob-danger-text"> expires in {soon}d</span>
+              ) : null}
             </span>
           );
         },
@@ -90,7 +92,7 @@ export function MemoriesTable({
         enableSorting: false,
         cell: ({ row }) => {
           const blobId = row.original.blobId;
-          if (!blobId) return <span className="text-muted-foreground">not written yet</span>;
+          if (!blobId) return <span className="text-ob-muted">not written yet</span>;
           const address = <Web3Address value={blobId} className="text-xs" />;
           if (!row.original.explorerUrl) return address;
           return (
@@ -112,7 +114,7 @@ export function MemoriesTable({
               header: "Used in",
               enableSorting: false,
               cell: ({ row }: { row: { original: Memory } }) => (
-                <span className="text-muted-foreground">
+                <span className="text-ob-muted">
                   {usedInLabel(row.original.blobId ? (uses[row.original.blobId] ?? 0) : 0)}
                 </span>
               ),
@@ -188,34 +190,36 @@ export function MemoriesTable({
         </Select>
       ) : null}
       {tableState.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No {tableState.type} memories.</p>
+        <p className="text-md text-ob-muted">No {tableState.type} memories.</p>
       ) : (
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((group) => (
-              <TableRow key={group.id}>
-                {group.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className={row.original.hidden ? "opacity-60" : undefined}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="overflow-hidden">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="ob-data-table-frame">
+          <Table className="text-md">
+            <TableHeader className="bg-ob-raised">
+              {table.getHeaderGroups().map((group) => (
+                <TableRow key={group.id}>
+                  {group.headers.map((header) => (
+                    <TableHead key={header.id} className="h-9 px-3">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className={row.original.hidden ? "opacity-60" : undefined}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="overflow-hidden px-3 py-2.5">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
       {tableState.paginated && tableState.data.length > 0 ? (
         <Pagination>
@@ -248,16 +252,12 @@ export function MemoriesTable({
 function Status({ memory }: { memory: Memory }) {
   if (memory.hidden) return <Badge variant="outline">hidden</Badge>;
   if (memory.status === "pending") {
-    return <span className="text-muted-foreground">writing to Walrus…</span>;
+    return <span className="text-ob-muted">writing to Walrus…</span>;
   }
   if (memory.status === "failed") {
-    return <span className="text-muted-foreground">write failed</span>;
+    return <span className="text-ob-muted">write failed</span>;
   }
-  return (
-    <Badge variant="outline" className="border-primary/40 text-primary">
-      stored
-    </Badge>
-  );
+  return <Badge variant="accent">stored</Badge>;
 }
 
 function RowActions({

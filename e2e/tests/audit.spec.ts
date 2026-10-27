@@ -29,7 +29,14 @@ const PAGES: Array<[string, string]> = [
 ];
 
 /** The app does not auto-connect, so after a navigation the session stays but the wallet must reconnect. */
+// A full light and dark pass is hundreds of reads; each page counts as its own client so the local
+// server's per-address limit (iplimit.ts, 200 an hour) never leaves a "too many requests" state in a
+// picture (U13, ADR-0070).
+const freshClient = () =>
+  `10.14.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+
 async function goto(page: Page, path: string) {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
   await page.goto(path);
   const reconnect = page.getByRole("button", { name: "Reconnect" });
   await reconnect.waitFor({ state: "visible", timeout: 8_000 }).catch(() => {});

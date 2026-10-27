@@ -18,9 +18,9 @@ const Report = HealthReport.extend({ startedAt: z.string().optional() });
 type Report = z.infer<typeof Report>;
 
 const TONE = {
-  ok: "bg-emerald-500",
-  degraded: "bg-amber-500",
-  down: "bg-destructive",
+  ok: "bg-ob-success",
+  degraded: "bg-ob-warning",
+  down: "bg-ob-danger",
 } as const;
 const LABEL = { ok: "ok", degraded: "degraded", down: "down" } as const;
 
@@ -82,24 +82,24 @@ export function HealthBoard() {
           </Button>
         }
       />
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {!report && !error ? <Skeleton className="h-64 w-full" /> : null}
+      {error ? <p className="text-md text-ob-danger-text">{error}</p> : null}
+      {!report && !error ? <Skeleton className="h-64 w-full rounded-ob-card" /> : null}
       {report ? (
         <>
-          <ul className="grid gap-2 md:grid-cols-2" aria-label="Health items">
+          <ul className="grid gap-3 md:grid-cols-2" aria-label="Health items">
             {report.items.map((i) => (
               <li
                 key={i.name}
-                className="flex flex-col gap-1 rounded-xl border p-3 text-sm"
+                className="flex flex-col gap-1 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-3 text-md"
                 data-testid="health-item"
                 data-status={i.status}
               >
-                <span className="flex items-center gap-2 font-medium">
+                <span className="flex items-center gap-2 text-sm font-medium text-ob-text">
                   <span aria-hidden className={cn("size-2 rounded-full", TONE[i.status])} />
                   {i.name}
-                  <span className="ml-auto text-xs text-muted-foreground">{LABEL[i.status]}</span>
+                  <span className="ml-auto text-xs text-ob-muted">{LABEL[i.status]}</span>
                 </span>
-                <span className="text-muted-foreground">{i.detail}</span>
+                <span className="text-ob-muted">{i.detail}</span>
                 {i.fix ? <span className="text-xs">Fix: {i.fix}</span> : null}
               </li>
             ))}
@@ -109,19 +109,24 @@ export function HealthBoard() {
             description="Server failures and struggling dependencies, by route."
           >
             {report.errors.length ? (
-              <ul className="flex flex-col gap-1 text-sm" aria-label="Recent errors">
+              <ul className="ob-group" aria-label="Recent errors">
                 {report.errors.map((e) => (
-                  <li key={`${e.route}${e.code}`} className="flex flex-wrap gap-2">
-                    <code className="rounded bg-muted px-1 text-xs">{e.route}</code>
+                  <li
+                    key={`${e.route}${e.code}`}
+                    className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-md"
+                  >
+                    <code className="rounded-ob-xs bg-ob-control-hover px-1 font-mono text-xs">
+                      {e.route}
+                    </code>
                     <Badge variant="outline">{e.code}</Badge>
-                    <span className="text-muted-foreground">
+                    <span className="text-ob-muted">
                       ×{e.count}, last {new Date(e.lastAt).toLocaleTimeString()}: {e.message}
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">None since the server started.</p>
+              <p className="text-md text-ob-muted">None since the server started.</p>
             )}
           </Section>
         </>

@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNetwork } from "@/lib/network";
+import { CardGrid } from "@/openbot/pages";
 import { api, exportTeam } from "./api";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
@@ -93,27 +94,27 @@ function Dashboard() {
       ) : null}
 
       {remoras.loading && !remoras.data ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          <Skeleton className="h-36 w-full" />
-          <Skeleton className="h-36 w-full" />
-        </div>
+        <CardGrid>
+          <Skeleton className="h-36 w-full rounded-ob-card" />
+          <Skeleton className="h-36 w-full rounded-ob-card" />
+        </CardGrid>
       ) : live.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <CardGrid>
           {live.map((r) => (
             <RemoraCard key={r.id} remora={r} />
           ))}
-        </div>
+        </CardGrid>
       ) : (
         <EmptyState
           icon={<Fish />}
           title="Your first remora"
           description="Scout buys answers with a budget Sui enforces. Sentinel watches wallets and learns what matters. Pick a template to start."
           action={
-            <div className="grid w-full max-w-sm gap-3 sm:max-w-none sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <CardGrid className="w-full max-w-2xl">
               {list.map(([slug, template]) => (
                 <TemplateCard key={slug} slug={slug} template={template} />
               ))}
-            </div>
+            </CardGrid>
           }
         />
       )}

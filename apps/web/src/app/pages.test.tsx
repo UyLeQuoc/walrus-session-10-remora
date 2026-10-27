@@ -306,7 +306,7 @@ describe("chat page", () => {
     const openAccount = screen.getByRole("link", { name: "Open Account" });
     expect(copyNamespace.getAttribute("data-variant")).toBe("ghost");
     expect(copyNamespace.getAttribute("data-size")).toBe("icon-sm");
-    expect(copyNamespace.className).toContain("group-hover/message:opacity-100");
+    expect(copyNamespace.className).toContain("[.message-entry:hover_&]:opacity-100");
     expect(openAccount.getAttribute("data-variant")).toBe("ghost");
     expect(openAccount.getAttribute("data-size")).toBe("icon-sm");
     expect(openAccount.getAttribute("href")).toBe("https://suiscan.xyz/mainnet/object/0xfull");
@@ -395,6 +395,16 @@ describe("chat page", () => {
     expect(seen).not.toMatch(/memory you own/i);
   });
 
+  /** Opens the memory side panel unless the stored choice already has it open (ADR-0070). */
+  async function openMemoryPanel(user: ReturnType<typeof userEvent.setup>) {
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^(Open|Close) memory$/ })).toBeDefined(),
+    );
+    const open = screen.queryByRole("button", { name: "Open memory" });
+    if (open) await user.click(open);
+    await screen.findByRole("complementary", { name: "Memory" });
+  }
+
   function mountChat() {
     return render(
       <MemoryRouter>
@@ -411,28 +421,19 @@ describe("chat page", () => {
 
   it("fills the page with a rail, a composer, and no instruction block", () => {
     const { container } = mountChat();
-    const shell = container.querySelector("[data-slot='sidebar']") as HTMLElement;
-    const rail = container.querySelector("[data-sidebar='sidebar']") as HTMLElement;
-    if (!shell || !rail) throw new Error("sidebar missing");
-    expect(shell.getAttribute("data-variant")).toBe("inset");
-    const railText = rail.textContent ?? "";
-    expect(railText.indexOf("New chat")).toBeGreaterThanOrEqual(0);
-    expect(railText.indexOf("New chat")).toBeLessThan(railText.indexOf("Memory"));
-    const group = rail.querySelector("[data-sidebar='group']");
-    expect(group?.className).toContain("p-2");
-    expect(group?.textContent).toContain("New chat");
-    expect(group?.textContent).toContain("Memory");
-    expect(
-      within(rail)
-        .getByRole("link", { name: /^memory$/i })
-        .getAttribute("href"),
-    ).toBe("/memory");
-    const sidebarToggle = container.querySelector(
-      "header [data-sidebar='trigger']",
-    ) as HTMLButtonElement;
-    expect(sidebarToggle.getAttribute("data-slot")).toBe("sidebar-trigger");
-    expect(sidebarToggle.className).not.toContain("size-9");
-    expect(sidebarToggle.querySelector("svg")).toBeTruthy();
+    // openbot's shell (ADR-0069): the page rail, the roster, and the main pane's top row.
+    const rail = screen.getByRole("navigation", { name: "Pages" });
+    expect(within(rail).getByRole("link", { name: "Memory" }).getAttribute("href")).toBe("/memory");
+    expect(within(rail).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    expect(within(rail).getByRole("link", { name: "Chat" }).getAttribute("href")).toBe("/chat");
+    const roster = screen.getByRole("complementary", { name: "Roster" });
+    expect(within(roster).getByRole("button", { name: "New chat" })).toBeDefined();
+    const fold = screen.getByRole("button", { name: "Collapse the roster" });
+    expect(fold.getAttribute("aria-controls")).toBe("remora-roster");
+    expect(fold.querySelector("svg")).toBeTruthy();
+    expect(container.querySelector("[data-slot='sidebar-inset']")).toBeTruthy();
     const cluster = container.querySelector("[data-slot='empty-cluster']");
     expect(cluster).toBeTruthy();
     expect(cluster?.parentElement?.className).toMatch(/items-center/);
@@ -452,12 +453,30 @@ describe("chat page", () => {
     expect(greeting.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(box.compareDocumentPosition(suggestion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(suggestion.getAttribute("data-slot")).toBe("button");
-    expect(suggestion.className).toContain("text-sm");
+    // openbot's small button (ADR-0069): 32px tall, 12px text.
+    expect(suggestion.getAttribute("data-size")).toBe("sm");
     expect(screen.getByRole("button", { name: /send/i })).toBeDefined();
     expect(screen.queryByText(/^Try one$/)).toBeNull();
     const seen = container.textContent ?? "";
     for (const phrase of HIDDEN_GUIDANCE) expect(seen).not.toMatch(phrase);
     expect(screen.queryByRole("button", { name: /switch to (dark|light)/i })).toBeNull();
+  });
+
+  it("folds the roster to its faces and moves the network into the top row", async () => {
+    const user = userEvent.setup();
+    mountChat();
+    const roster = screen.getByRole("complementary", { name: "Roster" });
+    const header = document.querySelector("header.conversation-header") as HTMLElement;
+    expect(roster.className).not.toContain("sidebar-compact");
+    expect(roster.querySelector("[data-testid='testnet-badge']")).toBeTruthy();
+    expect(header.querySelector("[data-testid='testnet-badge']")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Collapse the roster" }));
+    expect(roster.className).toContain("sidebar-compact");
+    expect(roster.querySelector("[data-testid='testnet-badge']")).toBeNull();
+    expect(header.querySelector("[data-testid='testnet-badge']")).toBeTruthy();
+    expect(screen.getAllByTestId("testnet-badge")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Expand the roster" }));
+    expect(roster.className).not.toContain("sidebar-compact");
   });
 
   it("sends from the button and from Enter, and Shift+Enter does not", async () => {
@@ -498,7 +517,7 @@ describe("chat page", () => {
     const shell = filled.closest("[data-slot='composer-shell']");
     const token = shell?.querySelector("[data-command-token]");
     expect(token?.textContent).toBe("/memory");
-    expect(token?.className).toContain("text-primary");
+    expect(token?.className).toContain("text-ob-accent-text");
     expect(screen.getByRole("option", { name: /\/memory search/i })).toBeDefined();
     expect(screen.getByRole("option", { name: /\/memory forget <blob>/i })).toBeDefined();
     await user.type(filled, " search");
@@ -532,20 +551,17 @@ describe("chat page", () => {
     expect(copies).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Copy value" })).toBeNull();
     expect(retry[0]?.previousElementSibling).toBe(copies[1]);
+    // openbot's action row (ADR-0069): ghost controls in `.message-actions`, shown on hover.
     for (const control of [edit[0], retry[0], copies[0], copies[1]]) {
       expect(control?.getAttribute("data-variant")).toBe("ghost");
-      expect(control?.getAttribute("data-size")).toBe("icon-sm");
-      expect(control?.className).toContain("opacity-0");
-      expect(control?.className).toContain("group-hover/message:opacity-100");
+      expect(control?.closest(".message-actions")).toBeTruthy();
+      expect(control?.closest(".message-action-row")).toBeTruthy();
     }
-    const actions = copies[1]?.closest("[data-slot='message-actions']");
-    const content = copies[1]?.closest("[data-slot='message-content']");
-    expect(actions?.className).not.toMatch(/gap-/);
-    expect(content?.className).toContain("gap-1");
+    expect(copies[1]?.closest("[data-slot='message-actions']")).toBeTruthy();
     const code = screen.getByRole("button", { name: "Copy ts code" });
     expect(code.getAttribute("data-variant")).toBe("ghost");
     expect(code.getAttribute("data-size")).toBe("icon-sm");
-    expect(code.className).toContain("group-hover/message:opacity-100");
+    expect(code.className).toContain("[.message-entry:hover_&]:opacity-100");
 
     await user.click(copies[1] as HTMLElement);
     await waitFor(() => {
@@ -622,26 +638,11 @@ describe("chat page", () => {
     mountChat();
     expect(await screen.findByRole("button", { name: "Postgres on 5433" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Vietnamese answers" })).toBeDefined();
-    const search = screen.getByRole("textbox", { name: "Search chats" });
-    expect(search.closest("[data-slot='input-group']")?.querySelector("svg")).toBeTruthy();
-    expect(search.closest("[data-slot='scroll-area']")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Postgres on 5433" }).closest("[data-slot='scroll-area']"),
-    ).toBeTruthy();
-    expect(document.querySelector("[data-slot='sidebar-content']")?.className).toContain(
-      "overflow-hidden",
-    );
-    const viewport = document.querySelector("[data-slot='scroll-area-viewport']");
-    expect(viewport?.className).toContain("scroll-fade-y");
-    expect(viewport?.className).toContain("min-w-0");
-    expect(
-      screen.getByRole("button", { name: "Postgres on 5433" }).closest("[data-slot='sidebar-menu']")
-        ?.className,
-    ).toContain("pb-2");
-    // The chat row fills the same inset as the nav items and the search input (§3).
-    const chatRow = screen.getByRole("button", { name: "Postgres on 5433" });
-    expect(chatRow.className).toContain("w-full");
-    expect(chatRow.querySelector("span")?.className).toContain("truncate");
+    // The roster's one search field filters the chats (and the remoras and rooms).
+    const search = screen.getByRole("searchbox", { name: "Search chats" });
+    const chats = screen.getByRole("list", { name: "Chats" });
+    expect(within(chats).getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Delete Postgres on 5433" })).toBeDefined();
     await user.type(search, "postgres");
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Vietnamese answers" })).toBeNull();
@@ -910,6 +911,7 @@ describe("chat page", () => {
     await act(async () => {
       setChatStatus("ready");
     });
+    await openMemoryPanel(user);
     expect(await screen.findByText("Postgres runs on 5433")).toBeDefined();
     expect(screen.queryByText("Could not load what this chat remembered.")).toBeNull();
   });
@@ -999,8 +1001,10 @@ describe("chat page", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Open memory" })).toBeDefined());
     expect(screen.queryByRole("dialog")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Open memory" }));
-    expect(await screen.findByRole("dialog")).toBeDefined();
-    expect(screen.getByText("Nothing remembered in this chat yet.")).toBeDefined();
+    // It opens in the shell's side panel (ADR-0069), not over the chat as a dialog.
+    const panel = await screen.findByRole("complementary", { name: "Memory" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(panel).getByText("Nothing remembered in this chat yet.")).toBeDefined();
   });
 
   it("keeps the memory panel off the chat on a tablet until the person opens it", async () => {
@@ -1028,14 +1032,28 @@ describe("chat page", () => {
     expect(screen.getByText(/or your Google account/)).toBeDefined();
   });
 
-  it("closes the sidebar on a phone once the person starts a new chat", async () => {
+  it("closes the roster on a phone once the person starts a new chat", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("innerWidth", 500);
-    mountChat();
-    await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }));
-    const sheet = await screen.findByRole("dialog", { name: "Sidebar" });
-    await user.click(within(sheet).getByRole("button", { name: "New chat" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Sidebar" })).toBeNull());
+    // A phone (ADR-0069): one pane at a time, switched by the bottom navigation.
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query.includes("max-width: 720px"),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    );
+    const { container } = mountChat();
+    const panes = screen.getByRole("navigation", { name: "Panes" });
+    await user.click(within(panes).getByRole("button", { name: /Remoras/ }));
+    const window = container.querySelector(".app-window");
+    expect(window?.getAttribute("data-mobile-pane")).toBe("workspace");
+    const roster = screen.getByRole("complementary", { name: "Roster" });
+    await user.click(within(roster).getByRole("button", { name: "New chat" }));
+    await waitFor(() => expect(window?.getAttribute("data-mobile-pane")).toBe("main"));
   });
 
   it("shows a remembered fact become stored without calling the relayer", async () => {
@@ -1065,6 +1083,7 @@ describe("chat page", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     mountChat();
+    await openMemoryPanel(userEvent.setup());
     expect(await screen.findByText("on Walrus")).toBeDefined();
     expect(screen.getByText("Just remembered")).toBeDefined();
     const urls = fetchMock.mock.calls.map((call) => String(call[0]));

@@ -1,89 +1,64 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/inter/wght-italic.css";
+@import "./openbot/tokens.css";
+@import "./openbot/theme.css";
+@import "./openbot/base.css";
+@import "./openbot/shell/shell.css";
+@import "./openbot/shell/global-search.css";
+@import "./openbot/pages/pages.css";
+@import "./openbot/conversation/conversation.css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Remora tokens (ADR-0036, ADR-0039). Warm neutrals (hue ~85-90, very low chroma), one electric
- * indigo accent for both themes, and semantic success/warning. The indigo replaces the softened teal
- * that ADR-0036 shipped.
+ * Remora's look is openbot's (ADR-0069): its tokens live in ./openbot/ (PolyForm Noncommercial), and
+ * shadcn's variables below point at them, so every kit component takes the new palette. The openbot
+ * tokens switch with the `.dark` class themselves, so one mapping serves both themes.
+ *
+ * - primary: openbot's inverted element (near-black on light, near-white on dark), its default button.
+ * - accent: the hover ink of menus and ghost controls. openbot's blue is `ob-accent` / `ob-accent-text`.
+ * - ring: the neutral focus grey; openbot never draws a blue ring or a halo.
  */
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.985 0.004 90);
-  --foreground: oklch(0.26 0.008 85);
-  --card: oklch(0.995 0.002 90);
-  --card-foreground: oklch(0.26 0.008 85);
-  --popover: oklch(0.995 0.002 90);
-  --popover-foreground: oklch(0.26 0.008 85);
-  --primary: oklch(0.55 0.22 280);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.955 0.006 90);
-  --secondary-foreground: oklch(0.26 0.008 85);
-  --muted: oklch(0.955 0.006 90);
-  --muted-foreground: oklch(0.5 0.01 85);
-  --accent: oklch(0.95 0.03 280);
-  --accent-foreground: oklch(0.26 0.008 85);
-  --destructive: oklch(0.56 0.17 28);
-  --success: oklch(0.55 0.11 155);
-  --success-foreground: oklch(0.31 0.06 155);
-  --warning: oklch(0.7 0.13 75);
-  --warning-foreground: oklch(0.36 0.07 60);
-  --border: oklch(0.9 0.006 90);
-  --input: oklch(0.9 0.006 90);
-  --ring: oklch(0.55 0.22 280);
+  --background: var(--openbot-bg-canvas);
+  --foreground: var(--openbot-text-primary);
+  --card: var(--openbot-bg-surface);
+  --card-foreground: var(--openbot-text-primary);
+  --popover: var(--openbot-bg-sheet);
+  --popover-foreground: var(--openbot-text-primary);
+  --primary: var(--openbot-surface-light);
+  --primary-foreground: var(--openbot-text-on-light);
+  --secondary: var(--openbot-bg-control-hover);
+  --secondary-foreground: var(--openbot-text-primary);
+  --muted: var(--openbot-bg-control-hover);
+  --muted-foreground: var(--openbot-text-muted);
+  --accent: var(--openbot-hover);
+  --accent-foreground: var(--openbot-text-primary);
+  --destructive: var(--openbot-danger);
+  --success: var(--openbot-success);
+  --success-foreground: var(--openbot-success-text);
+  --warning: var(--openbot-warning);
+  --warning-foreground: var(--openbot-warning-text);
+  --border: var(--openbot-border-strong);
+  --input: var(--openbot-border-strong);
+  --ring: var(--openbot-border-focus);
   --spacing: 0.25rem;
-  --chart-1: var(--primary);
-  --chart-2: oklch(0.58 0.12 155);
-  --chart-3: oklch(0.68 0.13 75);
-  --chart-4: oklch(0.6 0.14 28);
-  --chart-5: oklch(0.55 0.1 320);
-  --sidebar: oklch(0.965 0.006 90);
-  --sidebar-foreground: oklch(0.26 0.008 85);
-  --sidebar-primary: oklch(0.55 0.22 280);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.955 0.006 90);
-  --sidebar-accent-foreground: oklch(0.26 0.008 85);
-  --sidebar-border: oklch(0.9 0.006 90);
-  --sidebar-ring: oklch(0.55 0.22 280);
-}
-
-.dark {
-  --background: oklch(0.27 0.004 85);
-  --foreground: oklch(0.93 0.006 90);
-  --card: oklch(0.31 0.004 85);
-  --card-foreground: oklch(0.93 0.006 90);
-  --popover: oklch(0.31 0.004 85);
-  --popover-foreground: oklch(0.93 0.006 90);
-  --primary: oklch(0.72 0.16 280);
-  --primary-foreground: oklch(0.18 0.04 280);
-  --secondary: oklch(0.33 0.004 85);
-  --secondary-foreground: oklch(0.93 0.006 90);
-  --muted: oklch(0.33 0.004 85);
-  --muted-foreground: oklch(0.72 0.01 85);
-  --accent: oklch(0.3 0.05 280);
-  --accent-foreground: oklch(0.93 0.006 90);
-  --destructive: oklch(0.66 0.15 28);
-  --success: oklch(0.72 0.11 155);
-  --success-foreground: oklch(0.9 0.06 155);
-  --warning: oklch(0.78 0.12 80);
-  --warning-foreground: oklch(0.92 0.06 90);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.16 280);
-  --chart-1: var(--primary);
-  --chart-2: oklch(0.72 0.11 155);
-  --chart-3: oklch(0.78 0.12 80);
-  --chart-4: oklch(0.68 0.13 28);
-  --chart-5: oklch(0.7 0.1 320);
-  --sidebar: oklch(0.235 0.004 85);
-  --sidebar-foreground: oklch(0.93 0.006 90);
-  --sidebar-primary: oklch(0.72 0.16 280);
-  --sidebar-primary-foreground: oklch(0.18 0.04 280);
-  --sidebar-accent: oklch(0.3 0.004 85);
-  --sidebar-accent-foreground: oklch(0.93 0.006 90);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.72 0.16 280);
+  --chart-1: var(--openbot-chart-1);
+  --chart-2: var(--openbot-chart-2);
+  --chart-3: var(--openbot-chart-3);
+  --chart-4: var(--openbot-chart-4);
+  --chart-5: var(--openbot-chart-5);
+  --sidebar: var(--openbot-bg-sidebar);
+  --sidebar-foreground: var(--openbot-text-primary);
+  --sidebar-primary: var(--openbot-surface-light);
+  --sidebar-primary-foreground: var(--openbot-text-on-light);
+  --sidebar-accent: var(--openbot-bg-control-active);
+  --sidebar-accent-foreground: var(--openbot-text-primary);
+  --sidebar-border: var(--openbot-border);
+  --sidebar-ring: var(--openbot-border-focus);
 }
 
 @theme inline {

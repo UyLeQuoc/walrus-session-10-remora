@@ -46,7 +46,7 @@ export function Examples({
           type="button"
           variant="ghost"
           size="sm"
-          className="liquid-glass h-auto justify-start rounded-full px-3 py-1.5 text-left font-normal text-muted-foreground hover:bg-white/30 hover:text-foreground dark:hover:bg-white/10"
+          className="liquid-glass h-auto max-w-full justify-start rounded-full px-3 py-1.5 text-left font-normal whitespace-normal text-muted-foreground hover:bg-white/30 hover:text-foreground dark:hover:bg-white/10"
           onClick={() =>
             "reload" in row && row.reload
               ? onReloadAndAsk("What do my remoras remember?")

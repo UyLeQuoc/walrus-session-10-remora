@@ -66,11 +66,11 @@ const statusLabel = (t: McpToken) =>
 function CopyRow({ label, value, testId }: { label: string; value: string; testId: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-md text-ob-muted">{label}</span>
       <div className="flex items-start gap-2">
         <code
           data-testid={testId}
-          className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs"
+          className="min-w-0 flex-1 break-all rounded-ob-md bg-ob-control-hover px-3 py-2 font-mono text-xs text-ob-secondary"
         >
           {value}
         </code>
@@ -82,14 +82,14 @@ function CopyRow({ label, value, testId }: { label: string; value: string; testI
 
 function Created({ c, onDone }: { c: McpTokenCreated; onDone: () => void }) {
   return (
-    <Card data-testid="token-created" className="border-primary/40">
+    <Card data-testid="token-created" className="border-ob-accent-strong">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <KeyRound className="size-4" /> Copy it now: it's shown once
+          <KeyRound className="size-4 text-ob-accent-text" /> Copy it now: it's shown once
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           {c.token.name} can act for {c.token.remoraName} as <code>mcp:{c.token.client}</code> until{" "}
           <OnDate value={c.token.expiresAt} />. Remora keeps only a hash, so it can't show this
           again.
@@ -150,7 +150,7 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
     );
   return (
     <form
-      className="flex max-w-2xl flex-col gap-5"
+      className="ob-card max-w-2xl gap-5 p-5"
       onSubmit={(e) => {
         e.preventDefault();
         void create();
@@ -182,22 +182,25 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
           ))}
         </NativeSelect>
       </Field>
-      <fieldset className="flex flex-col gap-3">
+      <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-medium">What it may do</legend>
-        {SCOPES.map(({ scope, label, hint }) => (
-          <div key={scope} className="flex items-start gap-3">
-            <Checkbox
-              id={`scope-${scope}`}
-              checked={scopes.includes(scope)}
-              onCheckedChange={(v) => toggle(scope, v === true)}
-              aria-label={label}
-            />
-            <label htmlFor={`scope-${scope}`} className="flex flex-col gap-0.5 text-sm">
-              <span className="font-medium">{label}</span>
-              <span className="text-muted-foreground">{hint}</span>
-            </label>
-          </div>
-        ))}
+        <div className="ob-group" data-surface="subtle">
+          {SCOPES.map(({ scope, label, hint }) => (
+            <div key={scope} className="ob-row items-start" data-size="compact">
+              <Checkbox
+                id={`scope-${scope}`}
+                checked={scopes.includes(scope)}
+                onCheckedChange={(v) => toggle(scope, v === true)}
+                aria-label={label}
+                className="mt-0.5"
+              />
+              <label htmlFor={`scope-${scope}`} className="ob-row-content cursor-pointer">
+                <span className="ob-row-title text-md">{label}</span>
+                <span className="ob-row-description">{hint}</span>
+              </label>
+            </div>
+          ))}
+        </div>
       </fieldset>
       <Field>
         <FieldLabel htmlFor="mcp-days">Expires after</FieldLabel>
@@ -222,24 +225,26 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
 
 function Calls({ id }: { id: string }) {
   const calls = useLoad(() => connections.calls(id), [id]);
-  if (calls.loading) return <p className="text-sm text-muted-foreground">Loading calls…</p>;
-  if (calls.error) return <p className="text-sm text-destructive">{calls.error}</p>;
+  if (calls.loading) return <p className="text-md text-ob-muted">Loading calls…</p>;
+  if (calls.error) return <p className="text-md text-ob-danger-text">{calls.error}</p>;
   const rows: McpCall[] = calls.data?.calls ?? [];
-  if (!rows.length) return <p className="text-sm text-muted-foreground">No calls yet.</p>;
+  if (!rows.length) return <p className="text-md text-ob-muted">No calls yet.</p>;
   return (
-    <ul className="flex flex-col divide-y" data-testid="token-calls">
+    <ul className="ob-group" data-surface="subtle" data-testid="token-calls">
       {rows.map((c) => (
-        <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
-          <span className={c.ok ? "text-success" : "text-destructive"}>{c.ok ? "✓" : "✗"}</span>
+        <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-md">
+          <span className={c.ok ? "text-ob-success-text" : "text-ob-danger-text"}>
+            {c.ok ? "✓" : "✗"}
+          </span>
           <code className="font-mono text-xs">{c.tool}</code>
           {c.spend ? <span className="tabular-nums">{usdc(c.spend)} USDC</span> : null}
-          {c.error ? <span className="text-muted-foreground">{c.error}</span> : null}
+          {c.error ? <span className="text-ob-muted">{c.error}</span> : null}
           {c.wakeId ? (
-            <Link className="underline" to={`/verify/${c.wakeId}`}>
+            <Link className="link" to={`/verify/${c.wakeId}`}>
               Wake
             </Link>
           ) : null}
-          <Time value={c.at} className="ml-auto text-muted-foreground" />
+          <Time value={c.at} className="ml-auto text-ob-muted" />
         </li>
       ))}
     </ul>
@@ -254,7 +259,7 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           {t.name}
-          <span className="text-sm font-normal text-muted-foreground">
+          <span className="text-md font-normal text-ob-muted">
             for {t.remoraName} · <code>mcp:{t.client}</code> · {t.prefix}…
           </span>
           <span className="ml-auto">
@@ -274,28 +279,28 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
             </Badge>
           ))}
         </div>
-        <dl className="grid grid-cols-3 gap-3 text-sm sm:max-w-md">
-          <div>
-            <dt className="text-muted-foreground">Calls</dt>
-            <dd className="text-lg font-semibold tabular-nums" data-testid="token-call-count">
+        <dl className="grid grid-cols-3 gap-3 text-md sm:max-w-md">
+          <div className="flex flex-col gap-1">
+            <dt className="text-xs text-ob-muted">Calls</dt>
+            <dd className="text-base font-semibold tabular-nums" data-testid="token-call-count">
               {t.calls}
             </dd>
           </div>
-          <div>
-            <dt className="text-muted-foreground">Spent</dt>
+          <div className="flex flex-col gap-1">
+            <dt className="text-xs text-ob-muted">Spent</dt>
             <dd
-              className="whitespace-nowrap text-lg font-semibold tabular-nums"
+              className="whitespace-nowrap text-base font-semibold tabular-nums"
               data-testid="token-spend"
             >
               {usdc(t.spend)} USDC
             </dd>
           </div>
-          <div>
-            <dt className="text-muted-foreground">Memories</dt>
-            <dd className="text-lg font-semibold tabular-nums">{t.memories}</dd>
+          <div className="flex flex-col gap-1">
+            <dt className="text-xs text-ob-muted">Memories</dt>
+            <dd className="text-base font-semibold tabular-nums">{t.memories}</dd>
           </div>
         </dl>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           Made <Time value={t.createdAt} />
           {t.lastUsedAt ? (
             <>
@@ -315,11 +320,11 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
         </p>
         <button
           type="button"
-          className="flex w-fit items-center gap-1 text-sm underline-offset-4 hover:underline"
+          className="-ml-1 flex w-fit items-center gap-1 rounded-ob-sm px-1 text-md text-ob-secondary hover:bg-ob-hover hover:text-ob-text"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
         >
-          <ChevronDown className={`size-4 ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
           Recent calls
         </button>
         {open ? <Calls id={t.id} /> : null}
@@ -328,7 +333,7 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
         <CardFooter>
           <ConfirmAction
             trigger={
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" size="sm">
                 Revoke
               </Button>
             }
@@ -381,9 +386,9 @@ export function ConnectionsPage() {
                   <AlertDescription>{list.error}</AlertDescription>
                 </Alert>
               ) : list.data && !list.data.tokens.length ? (
-                <p className="text-sm text-muted-foreground">No agent is connected yet.</p>
+                <p className="text-md text-ob-muted">No agent is connected yet.</p>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   {(list.data?.tokens ?? []).map((t) => (
                     <TokenCard key={t.id} t={t} onChange={() => void list.refresh()} />
                   ))}

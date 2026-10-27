@@ -3,22 +3,22 @@
  * the K2 status board (ADR-0052).
  */
 import { Link, Route, Routes } from "react-router";
+import { Page, PageHeader } from "@/components/app/page";
 import { HealthBoard } from "./health-board";
 
 function LabIndex() {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-2 p-6">
-      <h1 className="text-lg font-semibold">Lab</h1>
-      <p className="text-sm text-muted-foreground">Ops consoles for Remora.</p>
-      <ul className="list-disc pl-5 text-sm">
-        <li>
-          <Link className="link" to="/lab/health">
+    <Page title="Lab">
+      <PageHeader title="Lab" description="Ops consoles for Remora." />
+      <ul className="ob-group max-w-2xl">
+        <li className="px-4 py-3 text-md text-ob-secondary">
+          <Link className="link font-medium" to="/lab/health">
             Health
           </Link>
           : every dependency's status, with the fix when one isn't ok.
         </li>
       </ul>
-    </div>
+    </Page>
   );
 }
 

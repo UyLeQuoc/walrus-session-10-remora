@@ -4,12 +4,10 @@ import { useRef, useState } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
-import { Message, MessageContent } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommandTableView } from "@/features/chat/command-table";
 import { Markdown } from "@/features/chat/markdown";
-import { messageActionClass } from "@/features/chat/message-action";
 import type { RecalledMemory } from "@/features/chat/recalled";
 import { selectedFact } from "@/features/chat/selected-fact";
 import { Thinking, useSmoothedText } from "@/features/chat/streaming-text";
@@ -17,6 +15,7 @@ import { fileCiteOf } from "@/features/chat/transcript";
 import { TurnTrace } from "@/features/chat/turn-trace";
 import type { Comparison } from "@/features/chat/use-compare";
 import { WithoutMemory } from "@/features/chat/without-memory";
+import { MessageActions, MessageEntry } from "@/openbot";
 
 interface ChatMessage {
   id: string;
@@ -71,8 +70,38 @@ export function ChatTurn({
 
   if (message.role === "user") {
     return (
-      <Message align="end">
-        <MessageContent className="gap-1" ref={rootRef} onMouseUp={readSelection}>
+      <MessageEntry
+        align="end"
+        footer={
+          canEdit && !editor ? (
+            <TooltipProvider delayDuration={200}>
+              <MessageActions>
+                <span data-slot="message-actions" className="contents">
+                  <AnswerCopy value={spoken} label="message" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Edit message"
+                    onClick={() => {
+                      setDraft(spoken);
+                      setEditing(true);
+                    }}
+                  >
+                    <Pencil />
+                  </Button>
+                </span>
+              </MessageActions>
+            </TooltipProvider>
+          ) : undefined
+        }
+      >
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: it reads a selection to offer "Remember"; nothing activates. */}
+        <div
+          className="flex w-full flex-col items-end gap-1"
+          ref={rootRef}
+          onMouseUp={readSelection}
+        >
           {editor ? (
             <div className="flex w-full flex-col">
               <Textarea
@@ -86,7 +115,6 @@ export function ChatTurn({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className={messageActionClass}
                   onClick={() => {
                     setDraft(spoken);
                     setEditing(false);
@@ -98,7 +126,6 @@ export function ChatTurn({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className={messageActionClass}
                   disabled={draft.trim() === "" || draft.trim() === spoken}
                   onClick={() => {
                     onEdit(draft);
@@ -110,8 +137,8 @@ export function ChatTurn({
               </div>
             </div>
           ) : (
-            <Bubble align="end" variant="muted">
-              <BubbleContent className="whitespace-pre-wrap bg-muted!">{spoken}</BubbleContent>
+            <Bubble align="end" variant="secondary">
+              <BubbleContent className="whitespace-pre-wrap">{spoken}</BubbleContent>
             </Bubble>
           )}
           {fact && !editor ? (
@@ -121,28 +148,8 @@ export function ChatTurn({
               </Button>
             </div>
           ) : null}
-          {canEdit && !editor ? (
-            <TooltipProvider delayDuration={200}>
-              <div data-slot="message-actions" className="flex justify-end">
-                <AnswerCopy value={spoken} label="message" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className={messageActionClass}
-                  aria-label="Edit message"
-                  onClick={() => {
-                    setDraft(spoken);
-                    setEditing(true);
-                  }}
-                >
-                  <Pencil />
-                </Button>
-              </div>
-            </TooltipProvider>
-          ) : null}
-        </MessageContent>
-      </Message>
+        </div>
+      </MessageEntry>
     );
   }
 
@@ -154,57 +161,77 @@ export function ChatTurn({
   const command = isCommand(message);
   const table = sanitizeTable((message.metadata as { table?: unknown } | undefined)?.table);
   const file = fileCiteOf((message.metadata as { document?: unknown } | undefined)?.document);
+  // openbot's agent line: the steps above, the answer in the surface bubble, the actions under it.
   return (
-    <Message>
-      <MessageContent className="gap-1" ref={rootRef} onMouseUp={readSelection}>
-        <div className="flex w-full min-w-0 flex-col gap-2.5">
-          <TurnTrace recalled={recalled} file={file} tools={tools} />
-          {table ? (
-            <CommandTableView table={table} />
-          ) : shown ? (
-            command ? (
-              <p className="whitespace-pre-wrap text-sm">{shown}</p>
-            ) : (
-              <Markdown>{shown}</Markdown>
-            )
-          ) : (
-            live && <Thinking />
-          )}
-        </div>
+    <MessageEntry
+      align="start"
+      footer={
+        canAnswer && !command && shown ? (
+          <TooltipProvider delayDuration={200}>
+            <MessageActions>
+              <span data-slot="message-actions" className="contents">
+                <AnswerCopy value={shown} label="message" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Retry answer"
+                  onClick={onRetry}
+                >
+                  <RotateCcw />
+                </Button>
+              </span>
+            </MessageActions>
+          </TooltipProvider>
+        ) : undefined
+      }
+    >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: it reads a selection to offer "Remember"; nothing activates. */}
+      <div className="flex w-full min-w-0 flex-col gap-1" ref={rootRef} onMouseUp={readSelection}>
+        <TurnTrace recalled={recalled} file={file} tools={tools} />
+        {table ? (
+          <CommandTableView table={table} />
+        ) : shown ? (
+          <Bubble align="start" variant="muted" data-slot="answer">
+            <BubbleContent>
+              {command ? (
+                <p className="whitespace-pre-wrap text-sm">{shown}</p>
+              ) : (
+                <Markdown>{shown}</Markdown>
+              )}
+            </BubbleContent>
+          </Bubble>
+        ) : (
+          live && <Thinking />
+        )}
         {onCompare && recalled.length > 0 && !command && shown && !streaming ? (
           comparison ? (
             <WithoutMemory comparison={comparison} />
           ) : (
-            <Button type="button" variant="ghost" className="self-start" onClick={onCompare}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={onCompare}
+            >
               <Columns2 />
               Answer without memory
             </Button>
           )
         ) : null}
         {fact && !command ? (
-          <Button type="button" variant="outline" onClick={() => onRemember(fact)}>
+          <Button
+            type="button"
+            variant="outline"
+            className="self-start"
+            onClick={() => onRemember(fact)}
+          >
             Remember
           </Button>
         ) : null}
-        {canAnswer && !command && shown ? (
-          <TooltipProvider delayDuration={200}>
-            <div data-slot="message-actions" className="flex items-center">
-              <AnswerCopy value={shown} label="message" />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className={messageActionClass}
-                aria-label="Retry answer"
-                onClick={onRetry}
-              >
-                <RotateCcw />
-              </Button>
-            </div>
-          </TooltipProvider>
-        ) : null}
-      </MessageContent>
-    </Message>
+      </div>
+    </MessageEntry>
   );
 }
 
@@ -212,13 +239,7 @@ function AnswerCopy({ value, label }: { value: string; label: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <CopyButton
-          value={value}
-          label={label}
-          variant="ghost"
-          size="icon-sm"
-          className={messageActionClass}
-        />
+        <CopyButton value={value} label={label} variant="ghost" size="icon-sm" />
       </TooltipTrigger>
       <TooltipContent>{`Copy ${label}`}</TooltipContent>
     </Tooltip>

@@ -11,6 +11,7 @@ import { Time } from "@/components/app/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usdc } from "@/lib/usdc";
+import { SettingsGroup } from "@/openbot/pages";
 import { api } from "./api";
 import { WhyButton } from "./why-drawer";
 
@@ -27,6 +28,25 @@ const LABEL: Record<FeedItem["type"], string> = {
   rule_learned: "Learned",
   handoff: "Handoff",
   config_changed: "Edited",
+};
+
+/** openbot's soft tints: money and answers read as success, a block as danger, the rest neutral. */
+const BADGE: Record<
+  FeedItem["type"],
+  "secondary" | "success" | "warning" | "destructive" | "accent"
+> = {
+  action: "secondary",
+  message: "secondary",
+  answer: "accent",
+  payment: "success",
+  blocked: "destructive",
+  shadow: "warning",
+  approval_needed: "warning",
+  ping: "accent",
+  episode: "secondary",
+  rule_learned: "success",
+  handoff: "secondary",
+  config_changed: "secondary",
 };
 
 /** A sentence for the item; amounts in USDC where the payload has one. */
@@ -80,20 +100,22 @@ export function FeedList({
   items: FeedItem[];
   showRemora?: boolean;
 }) {
-  if (!items.length) return <p className="text-sm text-muted-foreground">Nothing yet.</p>;
+  if (!items.length) return <p className="text-md text-ob-muted">Nothing yet.</p>;
   return (
-    <ol className="divide-y rounded-xl border" aria-label="Activity">
+    <SettingsGroup as="ol" aria-label="Activity">
       {items.map((e) => {
         const answer =
           e.type === "answer" ? String((e.payload as { answer?: string }).answer ?? "") : "";
         return (
-          <li key={e.id} className="flex flex-col gap-1 p-3 text-sm" data-testid="feed-item">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <li
+            key={e.id}
+            className="flex min-w-0 flex-col gap-1.5 px-4 py-3 text-md"
+            data-testid="feed-item"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <span className="min-w-0">
-                <Badge variant={e.type === "blocked" ? "destructive" : "outline"}>
-                  {LABEL[e.type]}
-                </Badge>{" "}
-                <span className="text-muted-foreground">
+                <Badge variant={BADGE[e.type]}>{LABEL[e.type]}</Badge>{" "}
+                <span className="text-ob-muted">
                   {showRemora ? `${e.remora} · ` : ""}
                   <Time value={e.createdAt} /> ·{" "}
                 </span>
@@ -104,10 +126,10 @@ export function FeedList({
                 {e.receiptId ? <WhyButton eventId={e.id} /> : null}
               </span>
             </div>
-            {answer ? <p className="whitespace-pre-wrap text-foreground">{answer}</p> : null}
+            {answer ? <p className="whitespace-pre-wrap text-ob-secondary">{answer}</p> : null}
           </li>
         );
       })}
-    </ol>
+    </SettingsGroup>
   );
 }

@@ -5,16 +5,20 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/app/theme-choice"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  // Remora's own theme hook: next-themes has no provider in this app.
+  const [theme] = useTheme()
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      position="top-right"
+      duration={6000}
+      visibleToasts={6}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
@@ -24,10 +28,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--normal-bg": "var(--openbot-bg-control)",
+          "--normal-text": "var(--openbot-text-primary)",
+          "--normal-border": "var(--openbot-border-strong)",
+          "--border-radius": "var(--openbot-radius-lg)",
         } as React.CSSProperties
       }
       {...props}

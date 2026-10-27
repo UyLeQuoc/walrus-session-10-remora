@@ -19,6 +19,7 @@ import { RemoraCard } from "@/features/remoras/remora-card";
 import { TemplateCard } from "@/features/remoras/template-card";
 import { useNetwork } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
+import { CardGrid } from "@/openbot/pages";
 
 const HERO = "Always-on agents you own.";
 const SUB = "Memory you can read · a budget Sui enforces · a receipt for every action.";
@@ -93,16 +94,16 @@ function Dashboard({ owner }: { owner: string }) {
         }
       >
         {remoras.loading && !remoras.data ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
-          </div>
+          <CardGrid>
+            <Skeleton className="h-32 w-full rounded-ob-card" />
+            <Skeleton className="h-32 w-full rounded-ob-card" />
+          </CardGrid>
         ) : live.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <CardGrid>
             {live.map((r) => (
               <RemoraCard key={r.id} remora={r} />
             ))}
-          </div>
+          </CardGrid>
         ) : (
           <EmptyState
             icon={<Fish />}
@@ -122,8 +123,8 @@ function Dashboard({ owner }: { owner: string }) {
       <Section title="Activity">
         {feed.loading && !feed.data ? (
           <div className="flex flex-col gap-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full rounded-ob-card" />
+            <Skeleton className="h-16 w-full rounded-ob-card" />
           </div>
         ) : (
           <FeedList items={feed.data?.events ?? []} showRemora />
@@ -139,21 +140,23 @@ function EmptyHome() {
 
   return (
     <Page title="Remora" description="Always-on agents you own.">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-balance">{HERO}</h1>
-        <p className="text-base text-muted-foreground">{SUB}</p>
+      <header className="ob-page-header-copy gap-2 pt-2">
+        <h1 className="ob-page-title text-balance md:text-[32px] md:leading-[38px] md:tracking-[-0.03em]">
+          {HERO}
+        </h1>
+        <p className="ob-page-description md:text-base">{SUB}</p>
       </header>
       <SetupChecklist variant="full" />
       {list.length ? (
         <Section title="Start from a template">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <CardGrid>
             {list.map(([slug, template]) => (
               <TemplateCard key={slug} slug={slug} template={template} />
             ))}
-          </div>
+          </CardGrid>
         </Section>
       ) : null}
-      <p className="text-sm text-muted-foreground">
+      <p className="text-md text-ob-muted">
         Already at home here?{" "}
         <Link className="link" to="/chat">
           Open the chat
@@ -178,7 +181,7 @@ export function HomePage() {
     return (
       <Page title="Remora">
         <Skeleton className="h-10 w-2/3" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full rounded-ob-card" />
       </Page>
     );
   }

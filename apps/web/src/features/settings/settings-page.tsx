@@ -34,7 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePanic } from "@/features/funds/use-panic";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
-import { cn } from "@/lib/utils";
+import { SettingsGroup, SettingsRow } from "@/openbot/pages";
 
 const NOTIFY: Array<{
   value: OwnerSettings["notify"];
@@ -75,9 +75,8 @@ function Policy() {
   if (!s || !saved) {
     return (
       <div className="flex flex-col gap-3">
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-40 w-full rounded-ob-card" />
+        <Skeleton className="h-36 w-full rounded-ob-card" />
       </div>
     );
   }
@@ -105,36 +104,69 @@ function Policy() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="timezone">Timezone</Label>
-          <Combobox
-            items={zones}
-            value={s.timezone}
-            onValueChange={(value) => value && setS({ ...s, timezone: value })}
-          >
-            <ComboboxInput
-              id="timezone"
-              aria-label="Timezone"
-              placeholder="Search timezones"
-              showTrigger
-            />
-            <ComboboxContent>
-              <ComboboxEmpty>No timezone found.</ComboboxEmpty>
-              <ComboboxList>
-                {zones.map((zone) => (
-                  <ComboboxItem key={zone} value={zone}>
-                    {zone}
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="quiet-hours">Quiet hours</Label>
+      <SettingsGroup>
+        <SettingsRow
+          stack
+          title={<Label htmlFor="timezone">Timezone</Label>}
+          actions={
+            <Combobox
+              items={zones}
+              value={s.timezone}
+              onValueChange={(value) => value && setS({ ...s, timezone: value })}
+            >
+              <ComboboxInput
+                id="timezone"
+                aria-label="Timezone"
+                placeholder="Search timezones"
+                className="w-full sm:w-60"
+                showTrigger
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>No timezone found.</ComboboxEmpty>
+                <ComboboxList>
+                  {zones.map((zone) => (
+                    <ComboboxItem key={zone} value={zone}>
+                      {zone}
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          }
+        />
+        <SettingsRow
+          align="start"
+          title={<Label htmlFor="quiet-hours">Quiet hours</Label>}
+          description={
+            <>
+              {quiet ? (
+                <span className="mt-1.5 flex items-center gap-2">
+                  <Input
+                    aria-label="Quiet from"
+                    type="time"
+                    className="w-32"
+                    value={s.quietStart ?? "22:00"}
+                    onChange={(e) => setS({ ...s, quietStart: e.target.value || null })}
+                  />
+                  <span className="text-md text-ob-muted">to</span>
+                  <Input
+                    aria-label="Quiet until"
+                    type="time"
+                    className="w-32"
+                    value={s.quietEnd ?? "07:00"}
+                    onChange={(e) => setS({ ...s, quietEnd: e.target.value || null })}
+                  />
+                </span>
+              ) : (
+                <span className="block">Off: remoras can reach you at any hour.</span>
+              )}
+              <span className="mt-1 block">
+                Urgent pings (a big outflow, a payment waiting for you) still come during quiet
+                hours.
+              </span>
+            </>
+          }
+          actions={
             <Switch
               id="quiet-hours"
               aria-label="Quiet hours"
@@ -147,72 +179,49 @@ function Policy() {
                 })
               }
             />
-          </div>
-          {quiet ? (
-            <div className="flex items-center gap-2">
-              <Input
-                aria-label="Quiet from"
-                type="time"
-                value={s.quietStart ?? "22:00"}
-                onChange={(e) => setS({ ...s, quietStart: e.target.value || null })}
-              />
-              <span className="text-sm text-muted-foreground">to</span>
-              <Input
-                aria-label="Quiet until"
-                type="time"
-                value={s.quietEnd ?? "07:00"}
-                onChange={(e) => setS({ ...s, quietEnd: e.target.value || null })}
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Off: remoras can reach you at any hour.</p>
-          )}
-          <p className="text-sm text-muted-foreground">
-            Urgent pings (a big outflow, a payment waiting for you) still come during quiet hours.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="language">Language</Label>
-          <Select
-            value={s.language}
-            onValueChange={(value) => setS({ ...s, language: value as "en" | "vi" })}
-          >
-            <SelectTrigger id="language" aria-label="Language" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="vi">Tiếng Việt</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          }
+        />
+        <SettingsRow
+          stack
+          title={<Label htmlFor="language">Language</Label>}
+          actions={
+            <Select
+              value={s.language}
+              onValueChange={(value) => setS({ ...s, language: value as "en" | "vi" })}
+            >
+              <SelectTrigger id="language" aria-label="Language" className="w-full sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="vi">Tiếng Việt</SelectItem>
+              </SelectContent>
+            </Select>
+          }
+        />
+      </SettingsGroup>
 
       <div className="flex flex-col gap-2">
-        <Label>How loud</Label>
+        <Label className="px-1 text-md font-normal text-ob-secondary">How loud</Label>
         <RadioGroup
           value={s.notify}
           onValueChange={(value) => setS({ ...s, notify: value as OwnerSettings["notify"] })}
-          className="grid gap-2 sm:grid-cols-3"
+          className="ob-group gap-0"
         >
           {NOTIFY.map((option) => (
             <Label
               key={option.value}
               htmlFor={`notify-${option.value}`}
-              className={cn(
-                "flex cursor-pointer items-start gap-2 rounded-lg border p-3",
-                s.notify === option.value && "border-primary bg-primary/5",
-              )}
+              className="ob-row cursor-pointer items-start font-normal hover:bg-ob-hover"
             >
               <RadioGroupItem
                 id={`notify-${option.value}`}
                 value={option.value}
                 className="mt-0.5"
               />
-              <span>
-                <span className="block font-medium">{option.title}</span>
-                <span className="block text-sm text-muted-foreground">{option.body}</span>
+              <span className="ob-row-content">
+                <span className="ob-row-title">{option.title}</span>
+                <span className="ob-row-description">{option.body}</span>
               </span>
             </Label>
           ))}
@@ -220,9 +229,10 @@ function Policy() {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        {changed ? null : <span className="text-sm text-muted-foreground">All changes saved</span>}
+        {changed ? null : <span className="text-md text-ob-muted">All changes saved</span>}
         <Button
           type="button"
+          size="sm"
           variant={changed ? "default" : "outline"}
           disabled={!changed || busy}
           onClick={() => void save()}
@@ -247,35 +257,43 @@ function TelegramLink() {
     else toast.error(out.error);
   };
   return (
-    <div className="flex flex-col gap-3 text-sm">
-      <p className="flex items-center gap-2">
-        <span className={link ? "text-warning" : "text-muted-foreground"}>
-          {link ? "Code ready" : "Not linked"}
-        </span>
-        <span className="text-muted-foreground">
-          {link
-            ? "Send the code to the bot to finish."
-            : "Link it to talk to remoras where you are."}
-        </span>
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" onClick={() => void make()}>
-          Link Telegram
-        </Button>
-        {link ? (
-          <span data-testid="telegram-code" className="flex flex-wrap items-center gap-2">
-            {link.url ? (
-              <a className="link" href={link.url} target="_blank" rel="noreferrer">
-                Open the bot
-              </a>
-            ) : (
-              "Send the bot"
-            )}{" "}
-            <Hash value={link.code} label="link code" /> within {link.expiresInMinutes} minutes.
+    <SettingsGroup>
+      <SettingsRow
+        stack
+        title={
+          <span className={link ? "text-ob-warning-text" : "text-ob-text"}>
+            {link ? "Code ready" : "Not linked"}
           </span>
-        ) : null}
-      </div>
-    </div>
+        }
+        description={
+          <>
+            {link
+              ? "Send the code to the bot to finish."
+              : "Link it to talk to remoras where you are."}
+            {link ? (
+              <span
+                data-testid="telegram-code"
+                className="mt-1.5 flex flex-wrap items-center gap-2 text-ob-secondary"
+              >
+                {link.url ? (
+                  <a className="link" href={link.url} target="_blank" rel="noreferrer">
+                    Open the bot
+                  </a>
+                ) : (
+                  "Send the bot"
+                )}{" "}
+                <Hash value={link.code} label="link code" /> within {link.expiresInMinutes} minutes.
+              </span>
+            ) : null}
+          </>
+        }
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={() => void make()}>
+            Link Telegram
+          </Button>
+        }
+      />
+    </SettingsGroup>
   );
 }
 
@@ -290,7 +308,7 @@ function Panic() {
     >
       <ConfirmAction
         trigger={
-          <Button type="button" variant="outline" className="self-start text-destructive">
+          <Button type="button" variant="destructive" className="self-start">
             <OctagonPause /> Pause everything
           </Button>
         }

@@ -3,7 +3,7 @@
  * for what Walrus Memory can actually do. Nothing stored can be deleted or edited, so hiding is our
  * own filter, a correction supersedes a fact, and "forget all" only drops a namespace's index.
  */
-import { Copy, Download } from "lucide-react";
+import { ChevronRight, Copy, Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -117,7 +117,9 @@ export function CorrectDialog({
           </DialogDescription>
         </DialogHeader>
         {current ? (
-          <p className="rounded-md bg-muted p-2 text-xs whitespace-pre-wrap">{current}</p>
+          <p className="rounded-ob-md bg-ob-control-hover p-2.5 text-xs whitespace-pre-wrap text-ob-secondary">
+            {current}
+          </p>
         ) : null}
         <Textarea
           aria-label="The right fact"
@@ -239,13 +241,25 @@ export function ClaudeCodeCard({
   const server = API_URL || window.location.origin;
   const command = `claude mcp add remora -e REMORA_SESSION=${session ?? "<sign in first>"} -e REMORA_API_URL=${server} -- bun <repo>/packages/mcp/src/bin.ts`;
   return (
-    <details className="rounded-xl border p-3 text-sm" data-testid="claude-code">
-      <summary className="cursor-pointer font-medium">Use this memory in Claude Code</summary>
-      <div className="mt-2 flex flex-col gap-2">
-        <p className="text-muted-foreground">
+    <details
+      className="group rounded-ob-card border border-ob-border-grouped bg-ob-grouped text-md open:pb-4"
+      data-testid="claude-code"
+    >
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-ob-card px-4 font-medium text-ob-text hover:bg-ob-hover [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          aria-hidden
+          className="size-4 text-ob-muted transition-transform group-open:rotate-90"
+        />
+        Use this memory in Claude Code
+      </summary>
+      <div className="mt-1 flex flex-col gap-2 px-4">
+        <p className="text-ob-muted">
           Remora's MCP server maps these namespaces, so Claude Code can recall from them with
-          <code className="mx-1 rounded bg-muted px-1 text-xs">remora_recall</code>. The command
-          carries your session: anyone who has it can read your remoras until you sign out.
+          <code className="mx-1 rounded-ob-xs bg-ob-control-hover px-1 font-mono text-xs">
+            remora_recall
+          </code>
+          . The command carries your session: anyone who has it can read your remoras until you sign
+          out.
         </p>
         <ul className="flex flex-col gap-0.5 font-mono text-xs" aria-label="Namespaces for MCP">
           {namespaces.map((ns) => (

@@ -6,13 +6,15 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
-import { useShellTitle } from "@/app/shell";
+import { ShellHeaderEnd, ShellHeaderStart, useShellTitle } from "@/app/shell";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { AgentChatEmpty, ConversationScroll } from "@/openbot";
 import { type Line, lineFromFeed, withContext } from "./lines";
 import { ThreadComposer } from "./thread-composer";
 import { ThreadView } from "./thread-view";
@@ -68,37 +70,37 @@ function Thread({ id }: { id: string }) {
   const live = r?.status === "active" || r?.status === "shadow";
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
-      <header className="flex flex-wrap items-center gap-2 border-b px-4 py-3 sm:px-6 lg:px-10">
-        <span
-          aria-hidden
-          className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-        >
-          {r?.name.slice(0, 1).toUpperCase() ?? "·"}
-        </span>
-        <h1 className="text-base font-semibold">{r?.name ?? "…"}</h1>
+      <ShellHeaderStart>
+        {r ? <RemoraAvatar id={r.id} name={r.name} size={20} /> : null}
+        <h1 className="conversation-title m-0 shrink-0 font-medium">{r?.name ?? "…"}</h1>
         {r ? <StatusBadge status={r.status} /> : null}
-        <span className="text-xs text-muted-foreground">{r?.template}</span>
-        <div className="ml-auto flex items-center gap-1">
-          {r ? (
-            <span data-testid="thread-model">
-              <ModelPicker
-                value={r.config.model ?? DEFAULT_MODEL_ID}
-                onChange={(m) => void choose(m)}
-              />
-            </span>
-          ) : null}
-          <Button asChild variant="ghost" size="sm">
-            <Link to={`/remoras/${id}`}>Details</Link>
-          </Button>
-        </div>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-10">
-        {shown.length === 0 && !feed.loading ? (
-          <p className="text-sm text-muted-foreground">
-            {r?.template === "sentinel"
-              ? 'Tell it what matters, like "ignore incoming SUI under 0.01", or ask what it watches.'
-              : "Ask it anything onchain. It buys data when that helps and tells you what it cost."}
-          </p>
+        <span className="hidden text-xs text-ob-muted sm:inline">{r?.template}</span>
+      </ShellHeaderStart>
+      <ShellHeaderEnd>
+        {r ? (
+          <span data-testid="thread-model">
+            <ModelPicker
+              value={r.config.model ?? DEFAULT_MODEL_ID}
+              onChange={(m) => void choose(m)}
+            />
+          </span>
+        ) : null}
+        <Button asChild variant="ghost" size="sm">
+          <Link to={`/remoras/${id}`}>Details</Link>
+        </Button>
+      </ShellHeaderEnd>
+      <ConversationScroll>
+        {shown.length === 0 && !feed.loading && r ? (
+          <AgentChatEmpty
+            avatar={<RemoraAvatar id={r.id} name={r.name} size={64} />}
+            ready={`${r.name} is ready.`}
+            title={r.template === "sentinel" ? "Tell it what matters." : "Ask it anything onchain."}
+            description={
+              r.template === "sentinel"
+                ? 'Tell it what matters, like "ignore incoming SUI under 0.01", or ask what it watches.'
+                : "Ask it anything onchain. It buys data when that helps and tells you what it cost."
+            }
+          />
         ) : null}
         <ThreadView
           lines={shown}
@@ -106,18 +108,16 @@ function Thread({ id }: { id: string }) {
           waitingFor={r?.name}
           onChanged={() => void feed.refresh()}
         />
-      </div>
-      <div className="px-4 pb-4 sm:px-6 lg:px-10">
-        <ThreadComposer
-          placeholder={
-            live
-              ? `Message ${r?.name ?? "your remora"}…`
-              : `${r?.name ?? "This remora"} is ${r?.status ?? "loading"}.`
-          }
-          disabled={!live || waiting}
-          onSend={(t) => void send(t)}
-        />
-      </div>
+      </ConversationScroll>
+      <ThreadComposer
+        placeholder={
+          live
+            ? `Message ${r?.name ?? "your remora"}…`
+            : `${r?.name ?? "This remora"} is ${r?.status ?? "loading"}.`
+        }
+        disabled={!live || waiting}
+        onSend={(t) => void send(t)}
+      />
     </div>
   );
 }

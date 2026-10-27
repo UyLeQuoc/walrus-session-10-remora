@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { ShellSidePanel, useHasSidePanel } from "@/app/shell";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -14,7 +15,17 @@ export function MemoryPanel({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const inShell = useHasSidePanel();
   const body = <div className="flex min-h-0 flex-1 flex-col">{children}</div>;
+  // In the app shell the memory opens in the docked side panel (ADR-0069), on a phone as its own pane.
+  if (inShell)
+    return (
+      <ShellSidePanel open={open} title="Memory" onClose={onClose}>
+        <div data-slot="memory-panel" className="-m-4 flex min-h-0 flex-1 flex-col">
+          {body}
+        </div>
+      </ShellSidePanel>
+    );
   if (mobile) {
     return (
       <Sheet

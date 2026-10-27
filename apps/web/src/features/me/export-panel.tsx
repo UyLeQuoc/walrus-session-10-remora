@@ -23,7 +23,7 @@ export function ExportPanel({ onError }: { onError: (message: string) => void })
           </Button>
         </div>
         {coverage && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-md text-ob-muted">
             {coverage.memories} memories, text for {coverage.withText}, verified for{" "}
             <span className="font-medium text-foreground">{coverage.verified}</span>.
           </p>

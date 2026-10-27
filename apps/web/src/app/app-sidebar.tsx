@@ -1,179 +1,168 @@
 /**
- * B4: five navigation items, Recents, a compact setup card while setup is unfinished, and the
- * account menu. Get started, Verify, Settings, the guide and the channel card moved into the menu.
+ * The roster (ADR-0069, openbot's sidebar): the network and the panic control in its top row, one
+ * search for chats, remoras and rooms, then "Needs you", Remoras, Rooms and Chats, and the account at
+ * the foot. Compact (88px) keeps only the faces.
  */
-import { Brain, Cable, Fish, Inbox, Search, SquarePen, Trash2, Wallet } from "lucide-react";
+import type { ApprovalRequest } from "@remora/schema";
+import { Inbox, MessageSquare, SquarePen, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation } from "react-router";
-import { navActive } from "@/app/nav-active";
+import { useLocation } from "react-router";
 import { AccountMenu } from "@/components/app/account-menu";
+import { NetworkSelect } from "@/components/app/network-select";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { SetupChecklist } from "@/components/app/setup-checklist";
-import { Logo } from "@/components/logo";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { filterConversations } from "@/features/chat/conversations-filter";
 import { useConversations } from "@/features/chat/use-conversations";
-import { api } from "@/features/remoras/api";
-import { useLoad, useOwner } from "@/features/remoras/hooks";
-import { SidebarTeam } from "@/features/threads/sidebar-team";
+import { PanicButton } from "@/features/funds/panic-button";
+import { useOwner } from "@/features/remoras/hooks";
+import { rosterTime, SidebarTeam } from "@/features/threads/sidebar-team";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { cn } from "@/lib/utils";
+import {
+  AgentRow,
+  AgentRowAction,
+  AgentRowItem,
+  AgentStatusWaiting,
+  Sidebar,
+  SidebarBody,
+  SidebarFooter,
+  SidebarIconButton,
+  SidebarSearch,
+  SidebarSection,
+  SidebarTopbar,
+  SidebarTopbarActions,
+  SidebarWaitingGroup,
+} from "@/openbot";
 
-const NAV = [
-  { to: "/", label: "Home", icon: Fish },
-  { to: "/approvals", label: "Approvals", icon: Inbox },
-  { to: "/funds", label: "Funds", icon: Wallet },
-  { to: "/memory", label: "Memory", icon: Brain },
-  { to: "/connections", label: "Connections", icon: Cable },
-] as const;
+export const ROSTER_ID = "remora-roster";
+
+/** The remoras that wait for the owner, one row each, with how many approvals they hold. */
+function waiting(approvals: ApprovalRequest[]): Array<{ remora: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const a of approvals) counts.set(a.remora, (counts.get(a.remora) ?? 0) + 1);
+  return [...counts].map(([remora, count]) => ({ remora, count }));
+}
 
 export function AppSidebar({
+  compact,
+  onExpand,
+  networkHere,
+  approvals,
   onNewChat,
   onOpenChat,
+  onNavigate,
   activeChatId,
 }: {
+  compact: boolean;
+  onExpand: () => void;
+  /** Whether the network and panic controls sit here (else the main pane's top row has them). */
+  networkHere: boolean;
+  approvals: ApprovalRequest[];
   onNewChat: () => void;
   onOpenChat: (id: string) => void;
+  onNavigate: () => void;
   activeChatId: string | null;
 }) {
-  const { state, setOpenMobile } = useSidebar();
-  const closeOnPhone = () => setOpenMobile(false);
   const { pathname } = useLocation();
-  const collapsed = state === "collapsed";
+  const { owner } = useOwner();
   const { items, remove } = useConversations();
   const [text, setText] = useState("");
   const query = useDebouncedValue(text);
-  const shown = filterConversations(items, query);
-  const { owner } = useOwner();
-  const inbox = useLoad(
-    () =>
-      owner
-        ? api.approvals()
-        : Promise.resolve({ ok: true as const, data: { approvals: [] as never[] } }),
-    [owner],
-    30_000,
-  );
-  const pending = inbox.data?.approvals.length ?? 0;
+  const chats = filterConversations(items, query);
+  const waits = owner ? waiting(approvals) : [];
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
-      <SidebarHeader>
-        <Link
-          to="/"
-          className="flex items-center rounded-md px-2 py-1.5"
-          onClick={closeOnPhone}
-          aria-label={collapsed ? "Home" : undefined}
-        >
-          <Logo size={collapsed ? 24 : 28} tone="primary" background withText={!collapsed} />
-        </Link>
-      </SidebarHeader>
-      <SidebarContent className="overflow-hidden">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  type="button"
-                  onClick={() => {
-                    closeOnPhone();
-                    onNewChat();
-                  }}
+    <Sidebar compact={compact} id={ROSTER_ID} label="Roster">
+      <SidebarTopbar>
+        {networkHere && !compact ? <NetworkSelect /> : null}
+        <SidebarTopbarActions>
+          {networkHere && !compact ? <PanicButton /> : null}
+          <SidebarIconButton label="New chat" onClick={onNewChat}>
+            <SquarePen aria-hidden />
+          </SidebarIconButton>
+        </SidebarTopbarActions>
+      </SidebarTopbar>
+      <SidebarSearch
+        value={text}
+        onChange={setText}
+        label="Search chats"
+        placeholder="Search"
+        onExpand={onExpand}
+      />
+      <SidebarBody>
+        {waits.length ? (
+          <SidebarWaitingGroup name="Needs you" count={approvals.length}>
+            {waits.map((w) => (
+              <AgentRowItem key={w.remora}>
+                <AgentRow
+                  to="/approvals"
+                  onClick={onNavigate}
+                  avatar={<RemoraAvatar id={w.remora} name={w.remora} />}
+                  status={
+                    <AgentStatusWaiting>
+                      <Inbox aria-hidden />
+                    </AgentStatusWaiting>
+                  }
+                  name={w.remora}
+                  waitChip={w.count > 1 ? `${w.count} to approve` : "Approve"}
+                  preview="Asks you to approve a payment"
+                  label={`${w.remora} waits for your approval (${w.count})`}
+                />
+              </AgentRowItem>
+            ))}
+          </SidebarWaitingGroup>
+        ) : null}
+        <SidebarTeam onNavigate={onNavigate} query={query} />
+        {items.length > 0 ? (
+          <SidebarSection name="Chats" listLabel="Chats" storageKey="remora.roster.chats">
+            {chats.length === 0 ? (
+              <li className="empty-search">No chats</li>
+            ) : (
+              chats.map((item) => (
+                <AgentRowItem
+                  key={item.id}
+                  action={
+                    <AgentRowAction
+                      label={`Delete ${item.title}`}
+                      onClick={() => {
+                        void remove(item.id).then((ok) => {
+                          if (ok && item.id === activeChatId) onNewChat();
+                        });
+                      }}
+                    >
+                      <Trash2 aria-hidden />
+                    </AgentRowAction>
+                  }
                 >
-                  <SquarePen />
-                  <span>New chat</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {NAV.map(({ to, label, icon: Icon }) => (
-                <SidebarMenuItem key={to}>
-                  <SidebarMenuButton asChild isActive={navActive(to, pathname)} tooltip={label}>
-                    <Link to={to} onClick={closeOnPhone}>
-                      <Icon />
-                      <span>{label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  {to === "/approvals" && pending > 0 ? (
-                    <SidebarMenuBadge>{pending}</SidebarMenuBadge>
-                  ) : null}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        {!collapsed ? <SidebarTeam onNavigate={closeOnPhone} /> : null}
-        {!collapsed && items.length > 0 && (
-          <SidebarGroup className="min-h-0 flex-1">
-            <SidebarGroupLabel>Recents</SidebarGroupLabel>
-            <SidebarGroupContent className="flex min-h-0 flex-1 flex-col">
-              <div className="shrink-0 pb-2">
-                <InputGroup>
-                  <InputGroupAddon>
-                    <Search />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    value={text}
-                    aria-label="Search chats"
-                    placeholder="Search chats"
-                    onChange={(event) => setText(event.target.value)}
+                  <AgentRow
+                    size="compact"
+                    active={item.id === activeChatId && pathname === "/chat"}
+                    avatar={<MessageSquare aria-hidden />}
+                    name={item.title}
+                    time={rosterTime(item.updatedAt)}
+                    label={item.title}
+                    onClick={() => {
+                      onNavigate();
+                      onOpenChat(item.id);
+                    }}
                   />
-                </InputGroup>
-              </div>
-              <ScrollArea
-                className="min-h-0 flex-1"
-                viewportClassName="scroll-fade-y [&>div]:block! [&>div]:min-w-0"
-              >
-                {shown.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-sm text-muted-foreground">No chats</p>
-                ) : (
-                  <SidebarMenu className="pb-2">
-                    {shown.map((item) => (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          type="button"
-                          isActive={item.id === activeChatId}
-                          onClick={() => {
-                            closeOnPhone();
-                            onOpenChat(item.id);
-                          }}
-                        >
-                          <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                        </SidebarMenuButton>
-                        <SidebarMenuAction
-                          aria-label={`Delete ${item.title}`}
-                          showOnHover
-                          onClick={() => {
-                            void remove(item.id).then((ok) => {
-                              if (ok && item.id === activeChatId) onNewChat();
-                            });
-                          }}
-                        >
-                          <Trash2 />
-                        </SidebarMenuAction>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                )}
-              </ScrollArea>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-      </SidebarContent>
-      <SidebarFooter className="gap-2">
-        <SetupChecklist variant="compact" />
-        <AccountMenu />
+                </AgentRowItem>
+              ))
+            )}
+          </SidebarSection>
+        ) : null}
+      </SidebarBody>
+      <SidebarFooter>
+        <div data-compact-hidden>
+          <SetupChecklist variant="compact" />
+        </div>
+        {/* AccountMenu hides its address and balance under a collapsed sidebar's data attribute. */}
+        <div
+          className={cn("group w-full", compact && "flex justify-center")}
+          data-collapsible={compact ? "icon" : undefined}
+        >
+          <AccountMenu />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

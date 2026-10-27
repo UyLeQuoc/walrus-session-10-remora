@@ -23,9 +23,9 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
       }
     >
       {read.refusal ? (
-        <p className="text-sm text-muted-foreground">{read.refusal}</p>
+        <p className="text-md text-ob-muted">{read.refusal}</p>
       ) : read.readable === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-ob-muted">
           Nothing in your own account yet. What you told Remora as a guest stays in Remora's
           account, which your wallet cannot open.
         </p>
@@ -33,7 +33,7 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
       {read.results.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {read.results.map((result) => (
-            <li key={result.blobId} className="flex flex-wrap items-start gap-2 text-sm">
+            <li key={result.blobId} className="flex flex-wrap items-start gap-2 text-md">
               {"text" in result ? (
                 <>
                   <span className="min-w-0 flex-1 break-words">{result.text}</span>
@@ -42,7 +42,7 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
                   </Badge>
                 </>
               ) : (
-                <span className="text-muted-foreground">
+                <span className="text-ob-muted">
                   {result.type}: {result.error}
                 </span>
               )}
@@ -55,7 +55,7 @@ export function WalletReadPanel({ memories }: { memories: Memory[] }) {
           Download what my wallet read
         </Button>
       ) : null}
-      {read.error ? <p className="text-sm text-destructive">{read.error}</p> : null}
+      {read.error ? <p className="text-md text-ob-danger-text">{read.error}</p> : null}
     </Section>
   );
 }

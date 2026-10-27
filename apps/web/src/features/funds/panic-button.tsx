@@ -35,11 +35,11 @@ export function PanicButton() {
   const trigger = (
     <Button
       type="button"
-      variant="outline"
+      variant="destructive"
       size="sm"
       aria-label="Pause all spending"
       disabled={busy}
-      className="h-8 gap-1.5 rounded-full border-destructive/30 bg-destructive/5 px-2.5 text-destructive shadow-none hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/30 sm:px-3 dark:border-destructive/40 dark:bg-destructive/10 dark:hover:bg-destructive/20"
+      className="h-7 gap-1.5 rounded-full px-2.5 text-ob-danger-text sm:px-3"
     >
       <OctagonPause />
       <span className="hidden sm:inline">Pause all</span>
