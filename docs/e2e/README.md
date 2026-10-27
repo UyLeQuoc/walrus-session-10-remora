@@ -23,6 +23,7 @@ E2E_BASE_URL=https://<main> bun run e2e:main           # smoke against a deploym
 | `testnet` | The burner wallet signs in (A1), every API call carries `x-remora-network: testnet` (A9), Detect funds, Withdraw 0.10 to a coin when there are no coins, Move to the address balance (A4), then **Pause all** (now: confirm dialog → signature) and Resume each Disc (N10) |
 | `audit` | Opt in with `AUDIT=1`. Signs in with the burner and writes every page in light and dark to `docs/e2e/screenshots/audit-{light,dark}-<page>.png` (plan §7.3), including a remora's Overview / Activity / Settings tabs, `/connect` and the 404 page, plus the signed-out Home in a second context. Reads only; no payment |
 | `w2` | **The W2 exit** (U5 Phase C), with the burner as owner:<ul><li>sign in → create a Scout with a Disc in **under 3 minutes**;</li><li>go live and ask: it pays `sui-risk` and answers, and the Wake verifies anchored (G3);</li><li>an over-limit `odds` purchase is paid once from the inbox (E4);</li><li>a Sentinel learns "ignore incoming SUI under 0.01" and applies it to real transfers (0.001 → ignored, 0.02 → ping);</li><li>the Scout is retired (B8): the owner signs the revoke.</li></ul>Global setup revokes any `remora-*` Disc a stopped run left behind.Timings and digests go to `e2e/test-results/w2-exit.json` |
+| `u13` | **The U13 exit** ([ADR-0069](../adr/0069-openbot-ui-ported-under-polyform.md)): signs in with the burner and writes every route at 1280 and 375 px, light and dark, to `screenshots/u13-<route>-<width>-<theme>.png`, asserting no horizontal scroll. `U13_ROUTES`, `U13_WIDTHS` and `U13_THEMES` narrow it. A second test checks Ctrl+K (the global search), the Tab order, reduced motion and the N18 labels. Each shot counts as its own client (`x-forwarded-for`), and so does each `audit` page, so the local server's per-address limit never leaves a 429 state in a picture (ADR-0070) |
 
 ## Env (root `.env`, never committed)
 
@@ -50,6 +51,7 @@ Each run writes them to `e2e/screenshots/` (gitignored). The latest set is copie
 |---|---|
 | `audit-light-*.png` / `audit-dark-*.png` | every page signed in, desktop, both themes (`AUDIT=1`, plan §7.3): the static pages plus a remora's `remora-overview` / `remora-activity` / `remora-settings` tabs, `connect`, and `not-found` |
 | `audit-{light,dark}-home-signed-out.png` | Home signed out, both themes (the second audit test, no wallet installed) |
+| `u13-<route>-<1280\|375>-<light\|dark>.png` | U13: every route in openbot's UI, signed in; `u13-search-1280-light.png` is Ctrl+K |
 | `smoke-*.png` | signed out, desktop |
 | `mobile-*.png` | signed out, phone |
 | `testnet-funds-paused.png` | after Pause all |

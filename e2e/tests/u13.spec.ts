@@ -11,13 +11,12 @@ import { connectAndSignIn, installTestWallet } from "../support/test-wallet";
 
 type Route = { path: string; name: string; ready?: (page: Page) => Promise<unknown> };
 
-// Every shot loads a page's reads; a run counts as its own client so the local server's per-address
-// limit (iplimit.ts, 200 an hour) does not refuse the sign-in halfway through a full set.
-test.use({
-  extraHTTPHeaders: {
-    "x-forwarded-for": `10.13.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
-  },
-});
+// Every shot loads a page's reads, and a full set is hundreds of them. Each shot counts as its own
+// client, so the local server's per-address limit (iplimit.ts, 200 an hour) does not refuse a read
+// halfway through the set and leave a "too many requests" state in the picture.
+const freshClient = () =>
+  `10.13.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+test.use({ extraHTTPHeaders: { "x-forwarded-for": freshClient() } });
 
 const ROUTES: Route[] = [
   { path: "/", name: "home" },
@@ -93,6 +92,7 @@ test("U13: every route in openbot's UI, desktop and 375 px, light and dark", asy
   )) {
     for (const width of widths) {
       for (const theme of themes) {
+        await page.setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
         await page.setViewportSize({ width, height: width < 500 ? 812 : 900 });
         await page.evaluate((t) => localStorage.setItem("remora.theme", t), theme);
         await page.goto(route.path);

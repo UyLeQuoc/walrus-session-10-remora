@@ -19,14 +19,13 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 11 | [U10: the mainnet pass (mainnet money, owned memory, Walrus Sites)](uy-10-mainnet-pass.md) ([prompt](uy-10-mainnet-pass.prompt.txt)) | Uy's agent + Uy at every mainnet transaction | When Uy calls it | U9 |
 | 12 | [U11: Receipts (Track 1) and Kitty (Track 3) on Remora's rails](uy-11-receipts-and-kitty.md) ([prompt](uy-11-receipts-and-kitty.prompt.txt)) | Uy's agent, unattended overnight | ✅ **Done Oct 25: both exits passed on testnet** ([notes](../spikes/2026-10-25-u11-exit.md)); then the web with wallets ([ADR-0064](../adr/0064-receipts-kitty-web-with-wallets.md)) and the split into `total-recall-receipts` and `total-recall-kitty` ([ADR-0065](../adr/0065-split-receipts-and-kitty-repos.md)) | U8 ✅ |
 | 13 | [U12: agents use Remora, Receipts and Kitty through MCP (a UI and an MCP server in each)](uy-12-agents-mcp.md) ([prompt](uy-12-agents-mcp.prompt.txt)) | Uy's agent (+ the Connections page if Huấn hasn't started it, ADR-0027) | ✅ **Done Oct 25: U12 exit on testnet in all three repos** ([notes](../spikes/2026-10-25-u12-exit.md), [handoff](../handoffs/2026-10-25-uy-to-huan-u12-landed.md)); real wallets and remote Receipts/Kitty MCP clients unverified | U11 |
-| 14 | [U13: Remora's web in openbot's UI (the whole UI, ported under PolyForm Noncommercial)](uy-13-openbot-ui.md) ([prompt](uy-13-openbot-ui.prompt.txt)) | Uy's agent (claims `apps/web`, [claim](../handoffs/2026-10-27-uy-to-huan-u13-claim.md)) | **Next, before U9** ([ADR-0069](../adr/0069-openbot-ui-ported-under-polyform.md)) | U12 ✅ |
+| 14 | [U13: Remora's web in openbot's UI (the whole UI, ported under PolyForm Noncommercial)](uy-13-openbot-ui.md) ([prompt](uy-13-openbot-ui.prompt.txt)) | Uy's agent (claims `apps/web`, [claim](../handoffs/2026-10-27-uy-to-huan-u13-claim.md)) | ✅ **Done Oct 27: the whole web in openbot's UI** (PR #15, [notes](../spikes/2026-10-27-u13-exit.md), [handoff](../handoffs/2026-10-27-uy-to-huan-u13-landed.md), [ADR-0069](../adr/0069-openbot-ui-ported-under-polyform.md), [ADR-0070](../adr/0070-u13-openbot-ui-implementation.md)); U12's MCP recall step waits on the memory relayer | U12 ✅ |
 
 ## How to run one
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-13-openbot-ui.prompt.txt       # next (<4000 chars each)
-pbcopy < docs/goals/uy-09-testnet-launch.prompt.txt   # after U13
+pbcopy < docs/goals/uy-09-testnet-launch.prompt.txt   # next (<4000 chars each)
 ```
 
 Each goal has two files:
