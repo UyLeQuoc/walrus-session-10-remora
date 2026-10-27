@@ -395,6 +395,16 @@ describe("chat page", () => {
     expect(seen).not.toMatch(/memory you own/i);
   });
 
+  /** Opens the memory side panel unless the stored choice already has it open (ADR-0070). */
+  async function openMemoryPanel(user: ReturnType<typeof userEvent.setup>) {
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^(Open|Close) memory$/ })).toBeDefined(),
+    );
+    const open = screen.queryByRole("button", { name: "Open memory" });
+    if (open) await user.click(open);
+    await screen.findByRole("complementary", { name: "Memory" });
+  }
+
   function mountChat() {
     return render(
       <MemoryRouter>
@@ -901,7 +911,7 @@ describe("chat page", () => {
     await act(async () => {
       setChatStatus("ready");
     });
-    await user.click(screen.getByRole("button", { name: "Open memory" }));
+    await openMemoryPanel(user);
     expect(await screen.findByText("Postgres runs on 5433")).toBeDefined();
     expect(screen.queryByText("Could not load what this chat remembered.")).toBeNull();
   });
@@ -1073,7 +1083,7 @@ describe("chat page", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     mountChat();
-    await userEvent.click(await screen.findByRole("button", { name: "Open memory" }));
+    await openMemoryPanel(userEvent.setup());
     expect(await screen.findByText("on Walrus")).toBeDefined();
     expect(screen.getByText("Just remembered")).toBeDefined();
     const urls = fetchMock.mock.calls.map((call) => String(call[0]));
