@@ -17,6 +17,8 @@ own `LICENSE` and a file map in its README. Remora's pages, data, copy, logo and
   `text-ob-secondary`, `text-ob-accent-text` (openbot's blue, for links and info), `bg-ob-success-soft`
   with `text-ob-success-text`, the same for `warning` and `danger`. Radii: `rounded-ob-card` (14),
   `rounded-ob-grouped` (16), `rounded-ob-bubble` (22). Type: `text-md` is 13px.
+- **Icons come only from `lucide-react`; no emoji or text glyphs as icons** (ADR-0072). Mark decorative
+  icons `aria-hidden`, size them with `size-*`, and give status icons text for screen readers.
 - **The page frame is still `Page` / `PageColumn` / `PageHeader` / `Section`** (`components/app`). Only
   `Page` sets width, gutter and the document title, so every `h1` keeps one left edge (the e2e checks it).
 - **The shell gives a page three slots** (`app/shell.tsx`):

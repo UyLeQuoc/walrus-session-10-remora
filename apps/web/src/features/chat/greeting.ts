@@ -6,13 +6,7 @@
  * must not keep showing the same line: pinning the pick to the calendar day
  * made every refresh look frozen.
  */
-export const GREETING_ACCENT = {
-  wave: "👋",
-  spark: "✦",
-  smile: ":)",
-} as const;
-
-export type GreetingAccent = keyof typeof GREETING_ACCENT;
+export type GreetingAccent = "wave" | "spark" | "smile";
 
 export type Greeting = {
   id: string;

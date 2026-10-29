@@ -5,7 +5,7 @@
  * ask you.
  */
 import type { McpCall, McpScope, McpToken, McpTokenCreated } from "@remora/schema";
-import { Cable, ChevronDown, KeyRound } from "lucide-react";
+import { Cable, ChevronDown, CircleCheck, CircleX, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -85,7 +85,8 @@ function Created({ c, onDone }: { c: McpTokenCreated; onDone: () => void }) {
     <Card data-testid="token-created" className="border-ob-accent-strong">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <KeyRound className="size-4 text-ob-accent-text" /> Copy it now: it's shown once
+          <KeyRound className="size-4 text-ob-accent-text" aria-hidden /> Copy it now: it's shown
+          once
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -234,7 +235,12 @@ function Calls({ id }: { id: string }) {
       {rows.map((c) => (
         <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-md">
           <span className={c.ok ? "text-ob-success-text" : "text-ob-danger-text"}>
-            {c.ok ? "✓" : "✗"}
+            {c.ok ? (
+              <CircleCheck aria-hidden className="size-4" />
+            ) : (
+              <CircleX aria-hidden className="size-4" />
+            )}
+            <span className="sr-only">{c.ok ? "OK" : "Failed"}</span>
           </span>
           <code className="font-mono text-xs">{c.tool}</code>
           {c.spend ? <span className="tabular-nums">{usdc(c.spend)} USDC</span> : null}

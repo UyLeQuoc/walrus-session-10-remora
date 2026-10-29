@@ -1,6 +1,13 @@
+import { Hand, type LucideIcon, Smile, Sparkles } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Greeting, GreetingAccent } from "./greeting";
-import { GREETING_ACCENT, greetingText } from "./greeting";
+import { greetingText } from "./greeting";
+
+const ACCENT_ICON: Record<GreetingAccent, LucideIcon> = {
+  wave: Hand,
+  spark: Sparkles,
+  smile: Smile,
+};
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 const WORD_STAGGER = 0.04;
@@ -58,9 +65,15 @@ function AccentMark({
   delay: number;
   reduced: boolean;
 }) {
-  const symbol = GREETING_ACCENT[accent];
+  const Glyph = ACCENT_ICON[accent];
   const className = accentClass(accent);
-  if (reduced) return <span className={className}> {symbol}</span>;
+  if (reduced)
+    return (
+      <span className={className}>
+        {" "}
+        <Glyph aria-hidden className="size-[1em]" />
+      </span>
+    );
   const motionProps = accentMotion(accent);
   return (
     <motion.span
@@ -70,7 +83,7 @@ function AccentMark({
       transition={{ duration: motionProps.duration, delay, ease: EASE }}
     >
       {" "}
-      {symbol}
+      <Glyph aria-hidden className="size-[1em]" />
     </motion.span>
   );
 }

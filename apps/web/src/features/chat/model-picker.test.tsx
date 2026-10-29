@@ -55,7 +55,7 @@ describe("the model picker", () => {
     await user.click(screen.getByRole("button", { name: "Model: Claude Haiku 5.5" }));
     const row = await screen.findByRole("menuitemradio", { name: /Claude Haiku 5.5/ });
     row.focus();
-    expect(await screen.findByText("Tool calling ✓")).toBeTruthy();
+    expect(await screen.findByText("Tool calling")).toBeTruthy();
     expect(screen.getByText("Images")).toBeTruthy();
     expect(screen.getByText("Files/PDF")).toBeTruthy();
   });

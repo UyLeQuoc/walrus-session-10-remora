@@ -40,7 +40,7 @@ export function CapabilityList({ model }: { model: ChatModel }) {
         })}
       </ul>
       <p className="flex items-center gap-2">
-        <Check className="size-3.5" /> Tool calling ✓
+        <Check className="size-3.5" aria-hidden /> Tool calling
       </p>
     </div>
   );

@@ -4,7 +4,7 @@
  * (ADR-0004). A zero coin balance shows a tick, never a disabled primary button.
  */
 import { toDiscError } from "@remora/disc-sdk";
-import { ChevronDown, Coins } from "lucide-react";
+import { Check, ChevronDown, Coins } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Term } from "@/components/app/glossary";
@@ -108,7 +108,9 @@ function Funds({ owner }: { owner: string }) {
             coins > 0n ? (
               "Needs moving to your address balance."
             ) : (
-              <span className="text-ob-success-text">✓ Nothing to move</span>
+              <span className="inline-flex items-center gap-1 text-ob-success-text">
+                <Check aria-hidden className="size-3.5" /> Nothing to move
+              </span>
             )
           }
           data-testid="coins"
@@ -183,7 +185,7 @@ function Funds({ owner }: { owner: string }) {
 
       <Section title="Where it goes" description="A short version of the money path.">
         <div className="flex items-start gap-3 rounded-ob-card bg-ob-control-hover p-4 text-md">
-          <Coins className="mt-0.5 size-4 shrink-0 text-ob-accent-text" />
+          <Coins className="mt-0.5 size-4 shrink-0 text-ob-accent-text" aria-hidden />
           <p className="text-ob-secondary">
             USDC in coins → your address balance → each remora's Disc → a merchant. A Disc can only
             spend what is already in your address balance, and only up to its cap.

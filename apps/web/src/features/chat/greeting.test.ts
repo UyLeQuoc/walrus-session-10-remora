@@ -71,7 +71,6 @@ describe("greeting for the reader's local hour", () => {
     if (!waved) throw new Error("wave greeting missing");
     const spoken = greetingText(waved);
     expect(spoken).toBe(`${waved.hello}. ${waved.invite}`);
-    expect(spoken).not.toContain("👋");
     expect(greetingText(GREETINGS.morning[0])).toBe(
       `${GREETINGS.morning[0].hello} ${GREETINGS.morning[0].invite}`,
     );
