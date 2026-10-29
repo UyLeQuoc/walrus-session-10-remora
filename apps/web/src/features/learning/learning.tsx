@@ -146,7 +146,7 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
     <>
       <Section
         title="How it's learning"
-        description="From its own receipts and your 👍/👎. A day without data has no point."
+        description="From its own receipts and your thumbs up and down. A day without data has no point."
       >
         {learning.error ? <p className="text-md text-ob-danger-text">{learning.error}</p> : null}
         {!learning.data && !learning.error ? (
@@ -166,7 +166,7 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
         {proofs.data && !proofs.data.proofs.length ? (
           <p className="max-w-3xl text-md text-ob-muted">
             Nothing to show yet: a proof appears once it decides differently on the same kind of
-            input after learning something (for a Sentinel, mark a ping 👎 noise).
+            input after learning something (for a Sentinel, thumbs-down a ping as noise).
           </p>
         ) : null}
         <ul className="flex max-w-3xl flex-col gap-4">

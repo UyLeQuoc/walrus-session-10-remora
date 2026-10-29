@@ -4,7 +4,16 @@
  * only the lists the roster already loads (no new API); a signed-out owner or a failed list just
  * shows no remoras or rooms group.
  */
-import { CornerDownLeft, Hash, type LucideIcon, Plus, Search, SquarePen } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CornerDownLeft,
+  Hash,
+  type LucideIcon,
+  Plus,
+  Search,
+  SquarePen,
+} from "lucide-react";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { RAIL_FOOTER, RAIL_PAGES } from "@/app/app-rail";
@@ -212,7 +221,10 @@ export function CommandPalette() {
           )}
         </div>
         <p className="global-search-footer">
-          <span>↑↓ to move</span>
+          <span className="inline-flex items-center gap-0.5">
+            <ArrowUp aria-hidden className="size-3" />
+            <ArrowDown aria-hidden className="size-3" /> to move
+          </span>
           <span>Enter to open</span>
           <span>Esc to close</span>
         </p>

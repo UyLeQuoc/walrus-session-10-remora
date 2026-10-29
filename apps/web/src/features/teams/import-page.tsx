@@ -5,6 +5,7 @@
  * paused; a team file never carries keys, memories or anyone's addresses.
  */
 import type { TeamPreview } from "@remora/schema";
+import { Check } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -188,7 +189,15 @@ function Importer() {
                 <p className="text-ob-muted">{r.budget ?? "Read-only: no budget, never pays."}</p>
                 {r.rules.map((rule) => (
                   <p key={rule.text}>
-                    Rule: “{rule.text}” {rule.understood ? "✓" : "(read by its model at import)"}
+                    Rule: “{rule.text}”{" "}
+                    {rule.understood ? (
+                      <span className="inline-flex align-middle text-ob-success-text">
+                        <Check aria-hidden className="size-3.5" />
+                        <span className="sr-only">understood</span>
+                      </span>
+                    ) : (
+                      "(read by its model at import)"
+                    )}
                   </p>
                 ))}
                 {r.schedules.map((s) => (

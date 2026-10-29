@@ -30,6 +30,7 @@ import {
 } from "@remora/schema";
 import { z } from "zod";
 import { apiFetch, errorMessage } from "@/lib/api";
+import { CostResponse } from "./cost";
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -87,6 +88,8 @@ export const api = {
     call("POST", `/api/remoras/${id}/retire/confirm`, Remora, digest ? { digest } : {}),
   budget: (id: string) =>
     call("GET", `/api/remoras/${id}/budget`, z.object({ meter: BudgetMeter.nullable() })),
+  cost: (id: string, month: string) =>
+    call("GET", `/api/remoras/${id}/cost?month=${encodeURIComponent(month)}`, CostResponse),
   budgetTx: (id: string, budget: unknown) =>
     call("POST", `/api/remoras/${id}/budget`, Tx, { budget }),
   budgetConfirm: (id: string, digest: string, budget: unknown) =>

@@ -1,14 +1,15 @@
 /**
- * N20: the public status page. Anyone can open it without signing in. It shows the overall health
- * and each item's name, status and detail. The `fix` and `value` fields stay internal and are not shown.
- * It refreshes every 60 s.
+ * N20/H2: the public status page. Anyone can open it without signing in. It reads the safe
+ * `GET /api/status` and shows a name and a status per item, nothing more. It refreshes every 60 s
+ * and pauses while the tab is hidden.
  */
-import type { HealthReport } from "@remora/schema";
-import { useCallback, useEffect, useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
+import { CircleAlert, CircleCheck, CircleHelp, CircleX } from "lucide-react";
+import { Page, PageHeader, Section } from "@/components/app/page";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { PublicStatus } from "./status-contract";
 
 const OVERALL = {
   ok: "All systems operational",
@@ -18,50 +19,48 @@ const OVERALL = {
 
 const LABEL = { ok: "Operational", degraded: "Degraded", down: "Down" } as const;
 
-const BADGE = {
-  ok: "secondary",
-  degraded: "warning",
-  down: "destructive",
-} as const;
+const BADGE = { ok: "success", degraded: "warning", down: "destructive" } as const;
+
+const ICON = { ok: CircleCheck, degraded: CircleAlert, down: CircleX } as const;
+
+async function fetchStatus(): Promise<PublicStatus> {
+  const res = await apiFetch("/api/status");
+  if (!res.ok) throw new Error(`status ${res.status}`);
+  return PublicStatus.parse(await res.json());
+}
 
 export function StatusPage() {
-  const [report, setReport] = useState<HealthReport | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await apiFetch("/api/health/deep");
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      setReport((await res.json()) as HealthReport);
-      setFailed(false);
-    } catch {
-      setFailed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), 60_000);
-    return () => clearInterval(t);
-  }, [load]);
+  const query = useQuery({
+    queryKey: ["public-status"],
+    queryFn: fetchStatus,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const report = query.data;
+  const unknown = query.isError && !report;
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Status</h1>
+    <Page title="Status" description="Whether Remora's services are up right now." index>
+      <PageHeader title="Status" description="Whether Remora's services are up right now." />
 
-      {failed ? (
-        <Alert variant="destructive">
-          <AlertTitle>Status unavailable</AlertTitle>
-          <AlertDescription>
+      {query.isPending ? <Skeleton className="h-48 w-full" data-testid="status-loading" /> : null}
+
+      {unknown ? (
+        <Section title="Status unknown">
+          <p
+            className="flex items-center gap-2 text-sm text-ob-secondary"
+            data-testid="status-unknown"
+          >
+            <CircleHelp className="size-4 shrink-0" aria-hidden />
             We could not reach the status check. Try again in a minute.
-          </AlertDescription>
-        </Alert>
+          </p>
+        </Section>
       ) : null}
 
-      {!report && !failed ? <Skeleton className="h-48 w-full" /> : null}
-
-      {report && !failed ? (
-        <>
+      {report ? (
+        <Section title="Systems">
           <p
             className="text-lg font-medium"
             data-testid="status-overall"
@@ -70,25 +69,24 @@ export function StatusPage() {
             {OVERALL[report.status]}
           </p>
           <ul className="flex flex-col gap-2" aria-label="Systems">
-            {report.items.map((item) => (
-              <li
-                key={item.name}
-                className="flex flex-col gap-1 rounded-xl border p-3 text-sm"
-                data-testid="status-item"
-                data-status={item.status}
-              >
-                <span className="flex items-center gap-2 font-medium">
-                  {item.name}
-                  <Badge variant={BADGE[item.status]} className="ml-auto">
-                    {LABEL[item.status]}
-                  </Badge>
-                </span>
-                <span className="text-muted-foreground">{item.detail}</span>
-              </li>
-            ))}
+            {report.items.map((item) => {
+              const Icon = ICON[item.status];
+              return (
+                <li
+                  key={item.name}
+                  className="flex items-center gap-2 rounded-ob-card border border-ob-border p-3 text-sm"
+                  data-testid="status-item"
+                  data-status={item.status}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
+                  <Badge variant={BADGE[item.status]}>{LABEL[item.status]}</Badge>
+                </li>
+              );
+            })}
           </ul>
-        </>
+        </Section>
       ) : null}
-    </main>
+    </Page>
   );
 }

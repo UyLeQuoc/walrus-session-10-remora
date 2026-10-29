@@ -20,7 +20,7 @@ describe("greeting line", () => {
     expect(quiet?.closest("[aria-hidden='true']")).toBeNull();
     const hello = container.querySelector("[data-slot='hello']");
     expect(hello?.textContent).toContain("Oh, hello");
-    expect(hello?.textContent).toContain("✦");
+    expect(hello?.querySelector("svg")).toBeTruthy();
     expect(container.textContent).toContain("What are we figuring out today?");
     expect(container.querySelector("[aria-hidden='true']")).toBeTruthy();
   });

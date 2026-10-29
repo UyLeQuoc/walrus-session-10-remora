@@ -4,19 +4,19 @@
  * No sign-in needed: it only reads public chain data and the stored Wake.
  */
 import type { VerifyResult } from "@remora/schema";
-import { CheckCircle2, CircleMinus, ShieldCheck, XCircle } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Page, PageHeader, Section } from "@/components/app/page";
-import { StatusBadge } from "@/components/app/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/features/remoras/api";
 import { WakeDetails } from "@/features/remoras/why-drawer";
-import { cn } from "@/lib/utils";
+import { ShareControl } from "./share-control";
+import { useOwnsWake } from "./use-owns-wake";
+import { CheckList, VerifyVerdict } from "./verify-result";
 
 const CHECKS = [
   "The intent hash matches what the remora says it did.",
@@ -52,7 +52,7 @@ export function VerifyPage() {
       );
   }, [ref]);
   const r = state.result;
-  const allOk = r ? r.checks.every((c) => c.ok !== false) : false;
+  const owns = useOwnsWake(r?.wake.agent);
 
   return (
     <Page title="Verify a receipt" description="Check a remora receipt against Sui.">
@@ -99,56 +99,17 @@ export function VerifyPage() {
 
       {r ? (
         <>
-          <div
-            className={cn(
-              "flex flex-col gap-1.5 rounded-ob-card border px-5 py-4",
-              allOk
-                ? "border-ob-success-soft bg-ob-success-soft"
-                : "border-ob-danger-soft bg-ob-danger-soft",
-            )}
-            data-testid="verify-verdict"
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              {allOk ? (
-                <CheckCircle2 className="size-5 text-ob-success" />
-              ) : (
-                <XCircle className="size-5 text-ob-danger" />
-              )}
-              <p className="text-base font-semibold tracking-tight text-ob-text">
-                {allOk ? "Verified" : "Doesn't check out"}
-              </p>
-              {r.anchored ? (
-                <StatusBadge status="verified" />
-              ) : (
-                <Badge variant="outline">not anchored</Badge>
-              )}
-            </div>
-            <p className="text-md text-ob-secondary">
-              {allOk
-                ? "The receipt matches the chain."
-                : "At least one check did not match. Treat the claim as unproven."}
-            </p>
-          </div>
+          <VerifyVerdict checks={r.checks} anchored={r.anchored} />
 
           <Section title="What we checked">
-            <ul className="ob-group" aria-label="Checks">
-              {r.checks.map((c) => (
-                <li key={c.name} className="flex items-start gap-3 px-4 py-3 text-md">
-                  {c.ok === null ? (
-                    <CircleMinus className="mt-0.5 size-4 shrink-0 text-ob-dim" />
-                  ) : c.ok ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ob-success" />
-                  ) : (
-                    <XCircle className="mt-0.5 size-4 shrink-0 text-ob-danger" />
-                  )}
-                  <span className="min-w-0">
-                    <span className="font-medium text-ob-text">{c.name}</span>{" "}
-                    <span className="break-all text-ob-muted">{c.detail}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <CheckList checks={r.checks} />
           </Section>
+
+          {owns && r ? (
+            <Section title="Share this proof">
+              <ShareControl wakeId={r.receiptId} />
+            </Section>
+          ) : null}
 
           <Section title="Receipt">
             <WakeDetails

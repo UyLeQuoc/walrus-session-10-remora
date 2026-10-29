@@ -1,49 +1,11 @@
 /**
- * N20: the public status page on a fake API. It needs no wallet and no session.
+ * N20/H2: the public status page on a fake `/api/status`. It needs no wallet and no session.
  */
-import type { HealthReport } from "@remora/schema";
-import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { STATUS_DEGRADED, STATUS_OK } from "./status.fixture";
 import { StatusPage } from "./status-page";
-
-const okReport: HealthReport = {
-  status: "ok",
-  checkedAt: "2026-10-23T10:00:00.000Z",
-  errors: [],
-  items: [
-    {
-      name: "Walrus storage",
-      status: "ok",
-      detail: "Reachable",
-      value: null,
-      threshold: null,
-      fix: null,
-    },
-    {
-      name: "Sui gRPC",
-      status: "ok",
-      detail: "Answering within budget",
-      value: 42,
-      threshold: 500,
-      fix: null,
-    },
-  ],
-};
-
-const downReport: HealthReport = {
-  ...okReport,
-  status: "down",
-  items: [
-    {
-      name: "Walrus storage",
-      status: "down",
-      detail: "Upload failing",
-      value: null,
-      threshold: null,
-      fix: "Restart the relayer",
-    },
-  ],
-};
 
 beforeEach(() => {
   const m = new Map<string, string>();
@@ -55,53 +17,115 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function fakeHealth(body: HealthReport) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => Response.json(body)),
+function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <StatusPage />
+    </QueryClientProvider>,
   );
 }
 
-describe("status page (N20)", () => {
-  it("shows the overall line and the items when everything is ok", async () => {
-    fakeHealth(okReport);
-    render(<StatusPage />);
+function fakeStatus(body: unknown, init?: ResponseInit) {
+  const fetchMock = vi.fn(async (_url: RequestInfo | URL) => Response.json(body, init));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+describe("status page (H2)", () => {
+  it("shows a skeleton while loading", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    renderPage();
+    expect(screen.getByTestId("status-loading")).toBeDefined();
+  });
+
+  it("shows the overall line and every item when all is ok", async () => {
+    const fetchMock = fakeStatus(STATUS_OK);
+    renderPage();
 
     const overall = await screen.findByTestId("status-overall");
     expect(overall.textContent).toContain("All systems operational");
     expect(overall.dataset.status).toBe("ok");
+    expect(screen.getAllByTestId("status-item")).toHaveLength(STATUS_OK.items.length);
+    expect(screen.getAllByText("Operational")).toHaveLength(STATUS_OK.items.length);
 
-    const items = screen.getAllByTestId("status-item");
-    expect(items).toHaveLength(2);
-    expect(screen.getByText("Walrus storage")).toBeDefined();
-    expect(screen.getByText("Answering within budget")).toBeDefined();
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+    expect(urls.every((u) => u.endsWith("/api/status"))).toBe(true);
+    expect(urls.some((u) => u.includes("/api/health/deep"))).toBe(false);
   });
 
-  it("shows Major outage when the report is down, and hides the fix text", async () => {
-    fakeHealth(downReport);
-    render(<StatusPage />);
+  it("names degraded and down items in text", async () => {
+    fakeStatus(STATUS_DEGRADED);
+    renderPage();
 
-    await waitFor(() =>
-      expect(screen.getByTestId("status-overall").textContent).toContain("Major outage"),
-    );
-    expect(screen.getByTestId("status-overall").dataset.status).toBe("down");
-    expect(screen.getByTestId("status-item").dataset.status).toBe("down");
-    expect(screen.queryByText("Restart the relayer")).toBeNull();
+    expect((await screen.findByTestId("status-overall")).textContent).toContain("degraded");
+    expect(screen.getByText("Degraded")).toBeDefined();
+    expect(screen.getByText("Down")).toBeDefined();
   });
 
-  it("shows Status unavailable and no raw error text when the fetch fails", async () => {
+  it("shows Status unknown, with no error text, when the request fails", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
         throw new TypeError("Failed to fetch secret-host.internal");
       }),
     );
-    render(<StatusPage />);
+    renderPage();
 
-    expect(await screen.findByText("Status unavailable")).toBeDefined();
-    expect(
-      screen.getByText("We could not reach the status check. Try again in a minute."),
-    ).toBeDefined();
+    expect(await screen.findByText("Status unknown")).toBeDefined();
     expect(screen.queryByText(/secret-host/)).toBeNull();
+  });
+
+  it("shows Status unknown on a 404", async () => {
+    fakeStatus({ error: "not found", traceId: "trace-404" }, { status: 404 });
+    renderPage();
+
+    expect(await screen.findByText("Status unknown")).toBeDefined();
+    expect(screen.queryByText(/trace-404/)).toBeNull();
+  });
+
+  it("renders the overall line and no rows when items is empty", async () => {
+    fakeStatus({ status: "ok", items: [] });
+    renderPage();
+
+    const overall = await screen.findByTestId("status-overall");
+    expect(overall.textContent).toContain("All systems operational");
+    expect(screen.queryAllByTestId("status-item")).toHaveLength(0);
+  });
+
+  it("shows Status unknown when an item has a status value it does not know", async () => {
+    fakeStatus({ status: "ok", items: [{ name: "Memory relayer", status: "weird" }] });
+    renderPage();
+
+    expect(await screen.findByText("Status unknown")).toBeDefined();
+    expect(screen.queryByTestId("status-item")).toBeNull();
+  });
+
+  it("renders none of detail, fix, value or traceId", async () => {
+    fakeStatus({
+      status: "degraded",
+      traceId: "trace-abc-123",
+      items: [
+        {
+          name: "Memory relayer",
+          status: "degraded",
+          detail: "the relayer answered 429 (account_sustained)",
+          fix: "Wait for the hourly budget",
+          value: "balance 0.84 SUI",
+          threshold: 500,
+          traceId: "trace-item-9",
+        },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Memory relayer")).toBeDefined();
+    const html = document.body.textContent ?? "";
+    for (const secret of ["429", "hourly budget", "0.84", "trace-abc-123", "trace-item-9"]) {
+      expect(html).not.toContain(secret);
+    }
   });
 });

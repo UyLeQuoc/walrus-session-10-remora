@@ -15,6 +15,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ProofView } from "@/features/learning/learning";
+import { ShareControl } from "@/features/verify/share-control";
+import { useOwnsWake } from "@/features/verify/use-owns-wake";
 import { useNetwork } from "@/lib/network";
 import { explorerTx, formatUsdc } from "@/lib/usdc";
 import { api } from "./api";
@@ -115,6 +117,8 @@ export function WhyDrawer({ view, label = "Why?" }: { view: WakeView; label?: st
 export function WhyButton({ eventId, compact = false }: { eventId: string; compact?: boolean }) {
   const [state, setState] = useState<{
     view: WakeView | null;
+    /** The stored Wake's id, for sharing it (H5). */
+    wakeId: string | null;
     summary: string;
     error: string;
     /** G5: the proof this decision is the "after" of, if any. */
@@ -123,16 +127,21 @@ export function WhyButton({ eventId, compact = false }: { eventId: string; compa
   const [showProof, setShowProof] = useState(false);
   const [docked, setDocked] = useState(false);
   const inShell = useHasSidePanel();
+  // H5: Share only for the owner of the Wake's remora (its signing address matches one of the
+  // owner's remoras). False while that loads, so Share never flashes for a non-owner.
+  const owns = useOwnsWake(state?.view?.wake.agent);
   const open = async () => {
     if (state) return;
     const r = await api.why(eventId);
-    if (!r.ok) return setState({ view: null, summary: "", error: r.error, proof: null });
+    if (!r.ok)
+      return setState({ view: null, wakeId: null, summary: "", error: r.error, proof: null });
     const w = r.data.wake;
     const proofs = w ? await api.proofs(r.data.event.remoraId) : null;
     setState({
       view: w
         ? { wakeBlobId: null, intentHash: w.intentHash, anchored: w.anchored, wake: w.wake }
         : null,
+      wakeId: w?.id ?? null,
       summary: r.data.event.summary,
       error: "",
       proof: (proofs?.ok && proofs.data.proofs.find((p) => p.after.receiptId === w?.id)) || null,
@@ -162,6 +171,12 @@ export function WhyButton({ eventId, compact = false }: { eventId: string; compa
         </div>
       ) : null}
       {state?.view ? <WakeDetails view={state.view} /> : null}
+      {owns && state?.wakeId ? (
+        <div className="flex flex-col gap-2 px-4 pb-6">
+          <h3 className="text-sm font-medium">Share this proof</h3>
+          <ShareControl wakeId={state.wakeId} />
+        </div>
+      ) : null}
     </>
   );
   const trigger = (
