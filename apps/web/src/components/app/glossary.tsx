@@ -10,6 +10,8 @@ export const GLOSSARY = {
   Reef: "Reef is the directory of paid services that remoras can buy from.",
   Sonar: "Sonar is the safety check that can stop a payment before it is sent.",
   "Why?": "Why? shows the memories and the record behind a remora's answer.",
+  "sponsored gas":
+    "Gas is the network fee for a transaction on Sui. Remora pays it for you, so it never comes out of your USDC.",
   "shadow mode":
     "A remora in shadow mode runs but does not pay or send. It shows what it would have done.",
 } as const;

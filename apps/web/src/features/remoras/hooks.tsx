@@ -1,5 +1,6 @@
 /** Shared pieces of the W2 pages: the signed-in owner, a loader with refresh, and the wallet gate. */
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageColumn } from "@/components/app/page";
@@ -12,7 +13,7 @@ import { useMe } from "@/features/me/use-me";
 import { WalletNetworkWarning } from "@/features/network/network-switch";
 import { useNetwork } from "@/lib/network";
 import { AuthCard } from "@/openbot/pages";
-import type { Result } from "./api";
+import { api, type Result } from "./api";
 
 /** The wallet behind the server session, or null (A1: the session, not just a connected wallet). */
 export function useOwner(): { owner: string | null; loading: boolean; reload: () => void } {
@@ -125,4 +126,25 @@ export function RequireOwner({
       </AuthCard>
     </PageColumn>
   );
+}
+
+/**
+ * N15: one remora's cost for one `YYYY-MM` month. The month is part of the key, so changing it
+ * fetches that month and going back to one already read shows it at once. A failed read is not
+ * retried: the card says cost isn't available and the rest of the page carries on.
+ */
+export function useRemoraCost(remoraId: string, month: string) {
+  const network = useNetwork();
+  return useQuery({
+    queryKey: ["remora-cost", network, remoraId, month],
+    queryFn: async () => {
+      const r = await api.cost(remoraId, month);
+      if (!r.ok) throw new Error(r.error);
+      return r.data;
+    },
+    enabled: Boolean(remoraId),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 }

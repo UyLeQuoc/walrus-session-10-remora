@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from "@/openbot/pages";
 import { api } from "./api";
 import { budgetLine } from "./budget";
+import { CostCard } from "./cost-card";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
 import { useBudget } from "./use-budget";
@@ -529,7 +530,7 @@ function SourcesSection({ r }: { r: RemoraView }) {
     <Section
       layout="split"
       title="Sources"
-      description="From your 👍/👎; written to its memory as it learns."
+      description="From your thumbs up and down; written to its memory as it learns."
     >
       <SettingsGroup as="ul">
         {rows.map((x) => (
@@ -718,7 +719,10 @@ function Remora({ id }: { id: string }) {
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}
-          <BudgetSection r={r} reload={reload} />
+          <div className="grid items-start gap-8 lg:grid-cols-2">
+            <BudgetSection r={r} reload={reload} />
+            <CostCard remoraId={r.id} />
+          </div>
           <Section
             title="Recent activity"
             actions={
