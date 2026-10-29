@@ -35,6 +35,7 @@ import { usePanic } from "@/features/funds/use-panic";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { SettingsGroup, SettingsRow } from "@/openbot/pages";
+import { LeaveRemora } from "./leave-remora";
 
 const NOTIFY: Array<{
   value: OwnerSettings["notify"];
@@ -348,6 +349,7 @@ function Settings() {
         <TelegramLink />
       </Section>
       <Panic />
+      <LeaveRemora />
     </Page>
   );
 }
