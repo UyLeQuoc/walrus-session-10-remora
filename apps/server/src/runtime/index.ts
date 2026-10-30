@@ -30,10 +30,11 @@ import { reefFor } from "../money/reef.ts";
 import { startWatcher } from "../triggers/watch.ts";
 import { createBrain } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { createFactLedger, withFacts } from "./facts.ts";
 import { inspect } from "./inspector.ts";
 import type { JobHandler } from "./jobs.ts";
 import { PgKeyStore } from "./keys.ts";
-import { SlidingLimiter } from "./limits.ts";
+import { addUsage, SlidingLimiter } from "./limits.ts";
 import { createRemoraMemory } from "./memory.ts";
 import { memoryIndexFor } from "./memory-controls.ts";
 import { createNotifier } from "./notify.ts";
@@ -58,20 +59,32 @@ const small = createModel({
   model: env.LLM_SMALL_MODEL ?? env.LLM_MODEL,
 });
 
+const brain = createBrain({
+  answer: answer.primary,
+  answerId: answer.id,
+  answerFor: (id) => modelFor(id).primary,
+  check: small.primary,
+  parse: small.primary,
+  parseId: env.LLM_SMALL_MODEL ?? env.LLM_MODEL,
+});
+
+/** F15 (ADR-0074): the facts behind memory; extraction tokens count against the remora's daily cap. */
+const facts = createFactLedger(db, {
+  log,
+  ...(env.MEMORY_FACTS === "on" && brain.extractFacts ? { extract: brain.extractFacts } : {}),
+  onTokens: (r, tokens) => addUsage(db, r.id, tokens),
+});
+
 export const runtime: RuntimeDeps = {
   db,
   networks,
   signer,
   log,
   reef,
-  memory: createRemoraMemory(operator, log, memoryIndexFor(db)),
-  brain: createBrain({
-    answer: answer.primary,
-    answerId: answer.id,
-    answerFor: (id) => modelFor(id).primary,
-    check: small.primary,
-    parse: small.primary,
-  }),
+  memory: withFacts(createRemoraMemory(operator, log, memoryIndexFor(db)), facts),
+  facts,
+  admissionJudge: env.MEMORY_ADMISSION_JUDGE === "on",
+  brain,
   notifier: createNotifier({
     db,
     ...(telegramBot

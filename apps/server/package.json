@@ -17,6 +17,8 @@
     "capacity": "tsx scripts/capacity.ts",
     "ops": "tsx scripts/ops.ts",
     "verify": "tsx scripts/verify.ts",
+    "probe:facts": "tsx scripts/probe-facts.ts",
+    "probe:facts:walrus": "tsx scripts/probe-facts-walrus.ts",
     "diagnose": "tsx scripts/diagnose.ts"
   },
   "dependencies": {

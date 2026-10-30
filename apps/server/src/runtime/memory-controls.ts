@@ -2,11 +2,23 @@
  * F4, F5, F8 (ADR-0046, ADR-0048): what an owner can do with a remora's memory, honestly.
  * - **Hide** one memory: our own filter on recall and dedupe (the blob stays on Walrus; it can be undone).
  * - **Correct** a fact: a `[correction]` that names the blob it replaces; the old one stops being recalled.
- * - **Forget all** in a namespace: the relayer drops that namespace's index; blobs stay until they expire.
+ * - **Forget all** in a namespace: the relayer drops that namespace's index; blobs stay until they expire,
+ *   and the facts read from them are retracted (F15).
  * - **Expiry**: from the relayer's read API, flagged under 30 days.
  * - **Export**: metadata always, text when recall returns it, verified against the hash we recorded.
  */
-import { and, type Db, desc, eq, inArray, isNotNull, ne, or, remoraMemories } from "@remora/db";
+import {
+  and,
+  type Db,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  memoryFacts,
+  ne,
+  or,
+  remoraMemories,
+} from "@remora/db";
 import { createMemoryPort, type MemoryType, RelayerExtras, type WriteEvent } from "@remora/memory";
 import type { InspectorResponse, RemoraMemoryExport } from "@remora/schema";
 import { MEMORY_TYPES } from "@remora/schema";
@@ -118,8 +130,10 @@ export async function correct(
   assertNamespace(namespaces, input.namespace);
   const text = input.text.trim();
   if (!text) throw new RemoraError("memory.empty", "Say what the right fact is.");
+  // The owner said it: in the facts ledger it outranks anything a remora or an agent wrote (F15).
   const res = await memory.remember(r, input.namespace, "correction", text.slice(0, 2_000), {
     replaces: input.blobId,
+    asserted: "owner",
   });
   if (res.indexId) {
     await db
@@ -158,6 +172,12 @@ export async function forgetNamespace(
     .update(remoraMemories)
     .set({ hiddenAt: new Date() })
     .where(and(eq(remoraMemories.remoraId, r.id), eq(remoraMemories.namespace, ns)));
+  await db
+    .update(memoryFacts)
+    .set({ status: "retracted", closedAt: new Date() })
+    .where(
+      and(eq(memoryFacts.namespace, namespaceFor(r, ns)), ne(memoryFacts.status, "retracted")),
+    );
   return {
     namespace: ns,
     note: "Recall no longer finds these memories. Walrus Memory can't delete a stored blob, so they stay encrypted on Walrus until they expire.",

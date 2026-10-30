@@ -7,6 +7,7 @@ import type { Db } from "@remora/db";
 import type { RemoraConfig } from "@remora/schema";
 import type { ResolvedReef } from "../money/reef.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
+import type { FactLedger } from "../runtime/facts.ts";
 import { SlidingLimiter } from "../runtime/limits.ts";
 import type { Remora } from "../runtime/remoras.ts";
 import { policyCheck } from "../runtime/sonar.ts";
@@ -151,6 +152,8 @@ export function harness(opts: {
   notSaved?: string;
   /** What memory recall returns. */
   recalled?: { blobId: string; namespace: string; text: string; distance: number }[];
+  /** The facts ledger (F15); absent like on a server without one. */
+  facts?: FactLedger;
 }): Harness {
   const calls: CallRecord[] = [];
   const inserts: Harness["inserts"] = [];
@@ -191,6 +194,7 @@ export function harness(opts: {
       },
     },
     notifier: { send: async () => {} },
+    ...(opts.facts ? { facts: opts.facts } : {}),
     limiter: new SlidingLimiter(),
     webBase: ORIGIN,
     fetch: (async () =>

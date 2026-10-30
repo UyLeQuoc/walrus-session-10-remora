@@ -4,17 +4,19 @@
  * - money moves only through `pay` → the remora's Disc (Sonar, then the onchain caps);
  * - over the Disc's limit nothing is signed; `approval_request` asks the owner, who pays once in the web;
  * - memory writes are `episode` or `source`, scrubbed and tagged `[by:mcp:<client>]`; a `rule` waits for
- *   the owner's yes;
+ *   the owner's yes. In the facts ledger an agent's claim never outranks the owner's (F15);
  * - anything a third party wrote comes back inside an untrusted boundary.
  */
 import { randomBytes } from "node:crypto";
 import { normalizeStructTag, normalizeSuiAddress } from "@mysten/sui/utils";
 import { and, approvals, eq, remoraEvents } from "@remora/db";
 import { type PaymentRequired, toX402Network } from "@remora/disc-sdk";
+import { currentAt } from "@remora/memory";
 import type { McpScope, RemoraConfig } from "@remora/schema";
 import type { ResolvedReef } from "../money/reef.ts";
 import { usdcLabel } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
+import { type FactView, factLine } from "../runtime/facts.ts";
 import type { Remora } from "../runtime/remoras.ts";
 import { scoutAsk } from "../runtime/scout.ts";
 import { verifyWake } from "../runtime/verify.ts";
@@ -268,20 +270,33 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
           refuse("That namespace belongs to another remora; this token reads only its own.");
         const ns = mapped ? mapped[2] : raw;
         if (ns && !namespaces.includes(ns)) refuse(`${r.name} has no ${ns} memories.`);
-        const found = await rt.memory.recall(r, query, ns ? [ns] : recallNamespaces(namespaces), 8);
+        const searched = ns ? [ns] : recallNamespaces(namespaces);
+        const found = await rt.memory.recall(r, query, searched, 8);
         if (!found.length) return { text: "Nothing in this remora's memory matches." };
+        // F15: an agent sees history too, marked: what no longer holds, and what holds now instead.
+        const { stale, current } = rt.facts
+          ? await rt.facts
+              .validity(
+                r,
+                searched,
+                found.map((m) => m.blobId),
+              )
+              .catch(() => ({ stale: new Map(), current: [] as FactView[] }))
+          : { stale: new Map(), current: [] as FactView[] };
         const framed = untrusted(
           "Walrus Memory",
-          found
-            .map((m) =>
+          [
+            ...found.map((m) =>
               JSON.stringify({
                 namespace: m.namespace,
                 blob: m.blobId,
                 relevance: Number((1 - m.distance).toFixed(2)),
                 text: m.text,
+                ...(stale.has(m.blobId) ? { holds: false, why: stale.get(m.blobId) } : {}),
               }),
-            )
-            .join("\n"),
+            ),
+            ...current.map((f) => `Holds now: ${factLine(f)}`),
+          ].join("\n"),
         );
         // A client that reads structuredContent instead of the text (Claude Code does) must get the
         // memory text too, still inside its untrusted boundary.
@@ -294,6 +309,65 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
               distance: m.distance,
             })),
             memories: framed,
+          },
+        };
+      },
+    },
+    {
+      name: "remora_facts",
+      description:
+        "What the remora holds true now, as facts: subject, predicate, value, since when and who said it (the owner, the remora's own records, an agent). `asOf` (an ISO date) answers what held then. Disputed claims, which wait for the owner, are listed apart.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          asOf: { type: "string", description: "A date or time, ISO 8601. Default: now." },
+          subject: { type: "string", description: "Only this subject, e.g. owner or reef:brief." },
+        },
+        additionalProperties: false,
+      },
+      scope: "memory:read",
+      async run({ remora: r }, args) {
+        if (!rt.facts) refuse("Facts aren't set up on this server.");
+        const raw = str(args.asOf, 40);
+        const at = raw
+          ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T23:59:59Z` : raw)
+          : new Date();
+        if (Number.isNaN(at.getTime())) refuse("`asOf` must be an ISO date.");
+        const subject = str(args.subject, 80).toLowerCase();
+        const all = (await rt.facts?.list(r, d.config(r).namespaces)) ?? [];
+        const mine = all.filter(
+          (f) => !f.hidden && (!subject || f.subject.toLowerCase() === subject),
+        );
+        const holding = currentAt(mine, at.getTime());
+        const disputed = mine.filter((f) => f.status === "disputed");
+        if (!holding.length && !disputed.length)
+          return { text: `${r.name} holds no facts${subject ? ` about ${subject}` : ""} yet.` };
+        const pick = (f: FactView) => ({
+          id: f.id,
+          namespace: f.namespace,
+          slot: f.slot,
+          value: f.value,
+          since: f.validFrom ?? f.observedAt,
+          until: f.validUntil,
+          assertedBy: f.assertedBy,
+          version: f.version,
+          blobIds: f.blobIds,
+        });
+        return {
+          text: untrusted(
+            `${r.name}'s fact ledger`,
+            [
+              `Holds ${raw ? `as of ${at.toISOString().slice(0, 10)}` : "now"}:`,
+              ...holding.map((f) => `- ${factLine(f)}`),
+              ...(disputed.length
+                ? ["Disputed, waiting for the owner:", ...disputed.map((f) => `- ${factLine(f)}`)]
+                : []),
+            ].join("\n"),
+          ),
+          structured: {
+            asOf: at.toISOString(),
+            facts: holding.map(pick),
+            disputed: disputed.map(pick),
           },
         };
       },

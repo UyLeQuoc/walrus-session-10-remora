@@ -48,6 +48,13 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   LLM_SMALL_MODEL: z.string().optional(),
   REMORA_DAILY_TOKENS: z.coerce.number().int().positive().default(200_000),
   /**
+   * F15 (ADR-0074): reading new memories for facts with the small model. On by default; off keeps
+   * only the parsed `SOURCE` lines.
+   */
+  MEMORY_FACTS: z.enum(["on", "off"]).default("on"),
+  /** F15: a model pass that drops admitted memories it calls useless. Off by default (≤ 1.5 s, fails open). */
+  MEMORY_ADMISSION_JUDGE: z.enum(["on", "off"]).default("off"),
+  /**
    * D1 chain trigger for Sentinels. It streams from Tatum the whole time it's on, so it's off unless
    * the one instance that watches sets it; a forgotten local server spent a month's credits (ADR-0058).
    */

@@ -908,6 +908,36 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     );
   });
 
+  // ── F15: the facts behind memory (ADR-0074) ────────────────────────────────
+  app.get("/api/remoras/:id/facts", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!rt.facts) throw new RemoraError("facts.unavailable", "Facts aren't set up here.", 409);
+    const raw = c.req.query("asOf");
+    const asOf = raw ? new Date(raw) : undefined;
+    if (asOf && Number.isNaN(asOf.getTime()))
+      throw new RemoraError("facts.bad_date", "asOf must be a date (ISO 8601).");
+    const facts = await rt.facts.list(r, service.config(r).namespaces, asOf ? { asOf } : {});
+    return c.json({
+      asOf: asOf?.toISOString() ?? null,
+      facts,
+      disputes: facts.filter((f) => f.status === "disputed").length,
+    });
+  });
+
+  app.post("/api/remoras/:id/facts/:factId/resolve", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!rt.facts) throw new RemoraError("facts.unavailable", "Facts aren't set up here.", 409);
+    const factId = c.req.param("factId");
+    if (!UUID.test(factId))
+      throw new RemoraError("fact.not_found", "This remora holds no such fact.", 404);
+    const b = await body<{ accept?: boolean }>(c);
+    if (typeof b.accept !== "boolean")
+      throw new RemoraError("fact.bad_request", "Say whether to accept it (true) or reject it.");
+    return c.json({
+      fact: await rt.facts.resolve(r, service.config(r).namespaces, factId, b.accept),
+    });
+  });
+
   app.get("/api/remoras/:id/memory/export", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     if (!d.operator) throw new RemoraError("memory.unavailable", "Memory isn't set up here.", 409);

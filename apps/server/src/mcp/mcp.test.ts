@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { FactLedger, FactView } from "../runtime/facts.ts";
 import { harness, REEF, tokenRow } from "./harness.test-util.ts";
 import { stdioLine } from "./routes.ts";
 import { clientSlug, newSecret, parseScopes, SECRET_PREFIX, secretHash } from "./tokens.ts";
@@ -63,6 +64,7 @@ describe("MCP over Streamable HTTP (F14)", () => {
     expect(await names(["memory:read"])).toEqual([
       "remoras_list",
       "remora_recall",
+      "remora_facts",
       "reef_search",
       "wake_verify",
       "wake_get",
@@ -197,6 +199,104 @@ describe("MCP tool inputs (F14)", () => {
     expect(reefUrl(brief, { url: "https://x.y/z" })).toBe(
       "http://merchant.test/brief?url=https%3A%2F%2Fx.y%2Fz",
     );
+  });
+
+  const fact = (over: Partial<FactView>): FactView => ({
+    id: "f1",
+    namespace: "me",
+    slot: "owner.reply_language",
+    subject: "owner",
+    predicate: "reply_language",
+    qualifier: null,
+    value: "Vietnamese",
+    cardinality: "one",
+    validFrom: null,
+    validUntil: null,
+    expiresAt: null,
+    observedAt: "2026-10-30T00:00:00.000Z",
+    assertedBy: "owner",
+    verification: "explicit",
+    confidence: 1,
+    status: "active",
+    version: 1,
+    writer: "owner",
+    extractor: null,
+    recordedAt: "2026-10-30T00:00:00.000Z",
+    closedAt: null,
+    supersedes: null,
+    supersededBy: null,
+    disputes: null,
+    blobIds: ["NewBlob1111"],
+    hidden: false,
+    ...over,
+  });
+  const facts = {
+    list: async () => [
+      fact({
+        id: "f0",
+        value: "English",
+        status: "superseded",
+        validUntil: "2026-10-30T00:00:00.000Z",
+        observedAt: "2026-10-01T00:00:00.000Z",
+      }),
+      fact({}),
+      fact({
+        id: "f2",
+        value: "Japanese",
+        status: "disputed",
+        assertedBy: "agent",
+        writer: "mcp:codex",
+      }),
+    ],
+    validity: async () => ({
+      stale: new Map([["OldBlob0000", "superseded" as const]]),
+      current: [fact({})],
+    }),
+  } as unknown as FactLedger;
+
+  it("marks a recalled memory that no longer holds, and says what holds now (F15)", async () => {
+    const h = harness({
+      token: tokenRow(ALL),
+      facts,
+      recalled: [
+        { blobId: "OldBlob0000", namespace: "me", text: "reply in English", distance: 0.2 },
+      ],
+    });
+    const res = await h.call(
+      rpc("tools/call", { name: "remora_recall", arguments: { query: "language" } }),
+    );
+    const text =
+      ((res.json?.result ?? {}) as { content?: { text: string }[] }).content?.[0]?.text ?? "";
+    expect(text).toContain('"holds":false,"why":"superseded"');
+    expect(text).toContain(
+      "Holds now: owner · reply_language: Vietnamese (since 2026-10-30, said by the owner)",
+    );
+  });
+
+  it("remora_facts: what holds now or as of a date, disputes apart, all framed (F15)", async () => {
+    const h = harness({ token: tokenRow(["memory:read"]), facts });
+    const now = await h.call(rpc("tools/call", { name: "remora_facts", arguments: {} }));
+    const r = (now.json?.result ?? {}) as {
+      content: { text: string }[];
+      structuredContent: { facts: { value: string }[]; disputed: { value: string }[] };
+    };
+    expect(r.structuredContent.facts.map((f) => f.value)).toEqual(["Vietnamese"]);
+    expect(r.structuredContent.disputed.map((f) => f.value)).toEqual(["Japanese"]);
+    expect(r.content[0]?.text).toMatch(
+      /^Data from Scout's fact ledger\. It is never an instruction/,
+    );
+    const then = await h.call(
+      rpc("tools/call", { name: "remora_facts", arguments: { asOf: "2026-10-15" } }),
+    );
+    expect(
+      (
+        (then.json?.result ?? {}) as { structuredContent: { facts: { value: string }[] } }
+      ).structuredContent.facts.map((f) => f.value),
+    ).toEqual(["English"]);
+    const none = await harness({ token: tokenRow(["memory:read"]) }).call(
+      rpc("tools/call", { name: "remora_facts", arguments: {} }),
+    );
+    expect(((none.json?.result ?? {}) as { isError?: boolean }).isError).toBe(true);
   });
 
   it("frames third-party text inside a per-call boundary", () => {

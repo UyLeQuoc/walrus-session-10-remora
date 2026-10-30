@@ -17,6 +17,7 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
   - **database and sessions:** `DATABASE_URL`, `SESSION_SECRET` (≥ 32 chars), `KEY_ENCRYPTION_KEY` (the KEK that seals remora keys; back it up offline, because without it the keys are unrecoverable);
   - **web origins:** `WEB_BASE_URL`, `CORS_ORIGIN`;
   - **models:** `OPENROUTER_API_KEY`, `LLM_MODEL`, optional `LLM_SMALL_MODEL`;
+  - **memory facts (F15, [ADR-0074](adr/0074-memory-facts-and-admission.md)):** `MEMORY_FACTS` (default `on`: the small model reads new memories for facts), `MEMORY_ADMISSION_JUDGE` (default `off`);
   - **chain:** `TATUM_API_KEY` / `TATUM_API_KEY_TESTNET` (gRPC only, ADR-0021);
   - **money:** `FACILITATOR_URL(_TESTNET)`, `MERCHANTS_URL(_TESTNET)`, `MERCHANT_PAYTO(_TESTNET)`;
   - **memory:** `MEMWAL_ACCOUNT_ID`, `MEMWAL_PRIVATE_KEY` (the operator delegate), `MEMWAL_SERVER_URL`;

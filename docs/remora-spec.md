@@ -336,11 +336,36 @@ execution. The `Coin` escrow fallback is dropped. Evidence:
 - every memory shows **"used in N decisions"**, linked from its Wakes;
 - an "open in Walrus Console" link lets you verify independently.
 
+**Facts and admission (F15, [ADR-0074](adr/0074-memory-facts-and-admission.md), after Dewee):**
+
+- **A facts ledger beside Walrus Memory.** Every write to `me`, `feedback` or `sources` is read for the
+  facts it asserts:
+  - Remora's own `SOURCE` lines are parsed;
+  - free text goes to the small model, in the background.
+
+  Each fact is a slot (`owner.reply_language`, `reef:brief.track_record`) with a value, when it holds,
+  when it was heard, who asserted it and the blobs it rests on.
+- **`reconcile` is deterministic.**
+  - A newer fact supersedes only with enough authority (owner > runtime > agent > extractor);
+    otherwise it's a dispute the owner settles.
+  - A late report of the past becomes history, and `asOf` answers what held on a date.
+  - An owner's correction supersedes everything the corrected memory asserted.
+- **Admission before the model reads recall:**
+  - drop what no longer holds and repeats;
+  - cap at 10, 8 per namespace and about 600 tokens;
+  - add "what's true now" for any slot a dropped memory spoke about;
+  - optionally, a judge that only drops and fails open.
+
+  The Wake cites only what was admitted.
+
 **Rules of thumb:**
 
-- Memory holds *conclusions*; Postgres holds counters.
-- Read the latest state with `sort: "recent"`.
+- Memory holds *conclusions*; Postgres holds counters, and the facts ledger indexes what the
+  conclusions assert.
+- Read the latest state with `sort: "recent"`, and what still holds from the facts ledger.
 - Remember that `distance` is cosine distance, so lower means more similar.
+- A structured record whose next version differs only in its numbers (a track record) is written
+  without the semantic duplicate check, which would otherwise swallow it.
 
 ---
 

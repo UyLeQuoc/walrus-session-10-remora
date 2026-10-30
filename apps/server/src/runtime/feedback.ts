@@ -41,7 +41,10 @@ export async function giveFeedback(
       if (s) {
         const perUseful = s.useful ? Number(s.spent) / 1e6 / s.useful : null;
         const line = `SOURCE ${payee} · ${s.calls} calls · ${s.useful} useful · ${s.noise} noise · ${perUseful === null ? "no useful answers yet" : `$${perUseful.toFixed(3)} per useful answer`} · as_of ${new Date().toISOString().slice(0, 10)}`;
-        void deps.memory.remember(r, "sources", "source", line).catch(() => {});
+        // Each score is the source's next version, close in text to the last one: the semantic
+        // duplicate check swallowed every update after the first (measured, ADR-0074). The facts
+        // ledger supersedes the old score instead.
+        void deps.memory.remember(r, "sources", "source", line, { dedupe: false }).catch(() => {});
       }
     }
     return { learned: payees.length ? `scored ${payees.length} source(s)` : "noted" };

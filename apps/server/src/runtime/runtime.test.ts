@@ -19,9 +19,11 @@ import {
   inArray,
   jobs,
   like,
+  memoryFacts,
   ownerSettings,
   receipts,
   remoraEvents,
+  remoraMemories,
   remoras,
   rooms,
   sentinelRules,
@@ -49,9 +51,10 @@ import type { ResolvedReef } from "../money/reef.ts";
 import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
 import { type Brain, type UntrustedData, wrapUntrusted } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { createFactLedger, withFacts } from "./facts.ts";
 import { giveFeedback } from "./feedback.ts";
 import { SlidingLimiter } from "./limits.ts";
-import type { RemoraMemory } from "./memory.ts";
+import type { Recalled, RemoraMemory } from "./memory.ts";
 import type { Notice } from "./notify.ts";
 import { createRemoraService, type Remora } from "./remoras.ts";
 import { routeByText } from "./rooms.ts";
@@ -232,12 +235,14 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
 
   // A model that obeys the injection: it asks to pay whatever URL the untrusted data names.
   const seenModels: (string | undefined)[] = [];
+  const seenMemories: string[][] = [];
   let seenData: UntrustedData[] = [];
   let routePick: { id: string | null; p: number } = { id: null, p: 0 };
   const obedient: Brain = {
     answerModel: "fake/obedient",
     async answer(i) {
       seenModels.push(i.model);
+      seenMemories.push(i.memories);
       seenData = i.data;
       const injected = /pay (http\S+)/.exec(i.data.map((d) => d.content).join(" "))?.[1];
       if (injected && i.pay)
@@ -437,9 +442,25 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
   it("👍 on an answer scores its sources (N19 → F2)", async () => {
     const r = await scoutAsk(deps(), scout, "Is 0x2 safe to depend on?");
     const [before] = await db.select().from(sourceStats).where(eq(sourceStats.remoraId, scout.id));
-    expect(await giveFeedback(deps(), OWNER, r.eventId, "useful")).toEqual({
+    const writes: { ns: string; text: string; dedupe?: boolean }[] = [];
+    const recording: RemoraMemory = {
+      ...memory,
+      remember: async (_r, ns, _type, text, o) => {
+        writes.push({ ns, text, ...(o?.dedupe === false ? { dedupe: false } : {}) });
+        return { saved: true, note: "" };
+      },
+    };
+    expect(await giveFeedback(deps({ memory: recording }), OWNER, r.eventId, "useful")).toEqual({
       learned: "scored 1 source(s)",
     });
+    // The new score is the source's next version, written past the semantic duplicate check (F15).
+    expect(writes).toEqual([
+      expect.objectContaining({
+        ns: "sources",
+        text: expect.stringMatching(/^SOURCE reef:sui-risk · /),
+        dedupe: false,
+      }),
+    ]);
     const [after] = await db.select().from(sourceStats).where(eq(sourceStats.remoraId, scout.id));
     expect(after?.useful).toBe((before?.useful ?? 0) + 1);
     await expect(giveFeedback(deps(), ATTACKER, r.eventId, "noise")).rejects.toMatchObject({
@@ -775,6 +796,49 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       (wake?.wake as { intent?: { model?: { id?: string } } } | undefined)?.intent?.model?.id,
     ).toBe("anthropic/claude-haiku-5.5");
     await send(`/api/remoras/${scout.id}`, "PATCH", { model: null });
+  });
+
+  it("Scout reads only what admission lets through, and its Wake cites only that (F15)", async () => {
+    const ledger = createFactLedger(db, { log: createLogger({}, () => {}) });
+    const store: Recalled[] = [];
+    const indexed: RemoraMemory = {
+      recall: async (_r, _q, namespaces) => store.filter((m) => namespaces.includes(m.namespace)),
+      remember: async (r, ns, type, text) => {
+        const blobId = `f15-${process.pid}-${store.length}`;
+        const [row] = await db
+          .insert(remoraMemories)
+          .values({ remoraId: r.id, namespace: ns, type, blobId, status: "stored" })
+          .returning({ id: remoraMemories.id });
+        store.push({ blobId, namespace: ns, text, distance: 0.2 + store.length / 10 });
+        return { saved: true, note: "", ...(row ? { indexId: row.id } : {}) };
+      },
+    };
+    const mem = withFacts(indexed, ledger);
+    try {
+      await mem.remember(scout, "sources", "source", "SOURCE reef:brief · 3 calls · 3 useful");
+      await ledger.idle();
+      await mem.remember(scout, "sources", "source", "SOURCE reef:brief · 9 calls · 7 noise");
+      await ledger.idle();
+      const [stale, current] = store;
+      const r = await scoutAsk(deps({ memory: mem, facts: ledger }), scout, "hello");
+      expect(seenMemories.at(-1)).toEqual([current?.text]);
+      const [wake] = await db
+        .select()
+        .from(receipts)
+        .where(eq(receipts.id, r.receiptId ?? ""));
+      const cited = ((wake?.wake ?? {}) as { intent?: { memories: { blobId: string }[] } }).intent
+        ?.memories;
+      expect(cited?.map((m) => m.blobId)).toEqual([current?.blobId]);
+      const [event] = await db.select().from(remoraEvents).where(eq(remoraEvents.id, r.eventId));
+      expect(event?.payload.admission).toMatchObject({
+        recalled: 2,
+        admitted: 1,
+        rejected: [{ blobId: stale?.blobId, namespace: "sources", reason: "superseded" }],
+        judged: "skipped",
+      });
+    } finally {
+      await db.delete(memoryFacts).where(eq(memoryFacts.remoraId, scout.id));
+    }
   });
 
   it("a 1-1 thread: the owner's line, then the remora's events, oldest first (ADR-0042)", async () => {

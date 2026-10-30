@@ -17,6 +17,12 @@ export interface RememberInput {
   channel?: string;
   knownHashes?: ReadonlySet<string>;
   replaces?: string;
+  /**
+   * This write only: `false` skips the semantic duplicate check whatever the port's default. For a
+   * structured record whose next version differs from the last only in its numbers (ADR-0063,
+   * ADR-0074): within the duplicate distance, but a new fact.
+   */
+  dedupe?: boolean;
 }
 
 /** What the LLM sees. Deliberately small and free of internal ids. */
@@ -135,7 +141,7 @@ export function createMemoryPort({
         namespace: scope.namespace,
         limiter,
         ignore: hidden,
-        dedupe,
+        dedupe: input.dedupe ?? dedupe,
       });
 
       if (outcome.status === "duplicate") {

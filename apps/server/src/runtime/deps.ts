@@ -6,6 +6,7 @@ import type { RemoraSigner } from "@remora/signer";
 import type { Networks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
 import type { Brain } from "./brain.ts";
+import type { FactLedger } from "./facts.ts";
 import type { SlidingLimiter } from "./limits.ts";
 import type { RemoraMemory } from "./memory.ts";
 import type { Notifier } from "./notify.ts";
@@ -17,6 +18,10 @@ export interface RuntimeDeps {
   log: Logger;
   reef: (network: SuiNetwork) => ResolvedReef[];
   memory: RemoraMemory;
+  /** F15 (ADR-0074): the facts behind memory. Absent, admission still dedupes and caps recall. */
+  facts?: FactLedger;
+  /** F15: a model pass over admitted memories (off by default; `MEMORY_ADMISSION_JUDGE=on`). */
+  admissionJudge?: boolean;
   brain: Brain;
   notifier: Notifier;
   limiter: SlidingLimiter;

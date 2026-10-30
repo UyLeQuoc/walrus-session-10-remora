@@ -1,4 +1,18 @@
 export {
+  ADMISSION_DEFAULTS,
+  type Admission,
+  type AdmissionCandidate,
+  type AdmissionPolicy,
+  admit,
+  estimateTokens,
+  type JudgeOutcome,
+  judgeAdmitted,
+  type Rejected,
+  type RejectReason,
+  type Staleness,
+  type UsefulnessJudge,
+} from "./admission.ts";
+export {
   createClient,
   guestScope,
   type MemoryScope,
@@ -15,6 +29,27 @@ export {
   readOperatorEnv,
   withoutBlanks,
 } from "./env.ts";
+export {
+  AUTHORITIES,
+  type Authority,
+  type Cardinality,
+  currentAt,
+  effectiveAt,
+  type Fact,
+  type FactInput,
+  type FactStatus,
+  MAX_VALUE_LENGTH,
+  MIN_CONFIDENCE,
+  parseSourceLine,
+  type Reconciliation,
+  reconcile,
+  type SkipReason,
+  sameValue,
+  slotKey,
+  slotPart,
+  VERIFICATIONS,
+  type Verification,
+} from "./facts.ts";
 export {
   buildMemoryText,
   isMemoryType,

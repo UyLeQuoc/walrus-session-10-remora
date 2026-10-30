@@ -195,6 +195,7 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | F12 | Private namespaces | `MemWalManual` client-side Seal encryption (needs an Enoki Seal key) | W4 |
 | F13 | Memory capsules | Share a subset of memories through a Seal grant (expiring, revocable) | W4 |
 | F14 | **MCP v2: agents act** | Scoped, revocable MCP tokens made in the web (Connections page); tools that write memory, pay through the Disc and request over-limit approvals; Streamable HTTP at `/mcp` as well as stdio; every action a Wake with `via` (ADR-0066). **Built in U12** ([ADR-0067](adr/0067-mcp-v2-details.md)): 10 MCP attacks in CI, 0 paid | W3 |
+| F15 | **Facts & admission** | A facts ledger beside Walrus Memory: each memory's facts with when they hold, who asserted them (owner > runtime > agent > extractor) and the blobs they rest on; deterministic reconcile (supersede, dispute, history, `asOf`); admission drops what no longer holds, repeats and overflow before the model reads recall, and the Wake cites only what was admitted ([ADR-0074](adr/0074-memory-facts-and-admission.md), after Dewee). **Built Oct 31** | W3 |
 
 ### G. Wake (receipts & verification)
 | ID | Feature | Details | Wave |
@@ -311,13 +312,13 @@ limits always apply.
 | N19 | **Feedback everywhere** | "Was this purchase worth it?" and 👍/👎 on answers feed `sources` and rules: the learning loop's raw input | W2 |
 | N20 | Public status page | Runtime, facilitator, Reef, relayer and Tatum health | W3 |
 
-**Totals:** 133 active features (134 rows, minus B11, which M superseded).
+**Totals:** 134 active features (135 rows, minus B11, which M superseded).
 
 | Wave | Count |
 |---|---|
 | W1 | 13 |
 | W2 | 38 |
-| W3 | 56 |
+| W3 | 57 |
 | W4 | 19 |
 | Split W2/W3 (D1, F11) | 2 |
 | Split W3/W4 (L2, H8) | 2 |

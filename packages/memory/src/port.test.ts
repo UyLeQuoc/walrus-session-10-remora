@@ -17,6 +17,7 @@ let byNamespace: Record<string, Array<{ blob_id: string; distance: number }>> = 
 let failing: string | null = null;
 let dedupeIgnored: ReadonlySet<string> | undefined;
 let dedupeCalls = 0;
+let dedupeChecked: boolean | undefined;
 
 vi.mock("./client.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./client.ts")>()),
@@ -33,8 +34,12 @@ vi.mock("./policy.ts", () => ({
     if (failing === ns) throw new Error(`relayer said no for ${ns}`);
     return (byNamespace[ns] ?? []).map((m) => ({ ...m, text: `from ${ns}`, parsed: null }));
   },
-  rememberWithDedupe: async (_client: unknown, opts: { ignore?: ReadonlySet<string> }) => {
+  rememberWithDedupe: async (
+    _client: unknown,
+    opts: { ignore?: ReadonlySet<string>; dedupe?: boolean },
+  ) => {
     dedupeIgnored = opts.ignore;
+    dedupeChecked = opts.dedupe;
     dedupeCalls += 1;
     return {
       status: "accepted",
@@ -172,6 +177,13 @@ describe("retry of a fact already stored", () => {
     expect(result.saved).toBe(false);
     expect(result.note).toContain("nothing written");
     expect(dedupeCalls).toBe(0);
+  });
+
+  it("skips the semantic check for one write when asked, and keeps it by default", async () => {
+    await port().remember({ type: "source", text: "SOURCE reef:brief · 9 calls", dedupe: false });
+    expect(dedupeChecked).toBe(false);
+    await port().remember({ type: "profile", text: "I use pnpm" });
+    expect(dedupeChecked).toBe(true);
   });
 
   it("still stores a line that is not in the known set", async () => {

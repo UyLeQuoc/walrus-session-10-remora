@@ -10,6 +10,7 @@
 
 import type { Logger } from "@remora/chain";
 import {
+  type Authority,
   createMemoryPort,
   type MemoryPort,
   type MemoryType,
@@ -37,8 +38,17 @@ export interface RemoraMemory {
     ns: string,
     type: MemoryType,
     text: string,
-    /** `by` replaces the remora's name in the `[by:…]` tag, e.g. `mcp:claude-code` (F14). */
-    opts?: { replaces?: string; by?: string },
+    /**
+     * `by` replaces the remora's name in the `[by:…]` tag, e.g. `mcp:claude-code` (F14). `asserted`
+     * is who stands behind it in the facts ledger (F15), when the caller knows better than `by`.
+     */
+    opts?: {
+      replaces?: string;
+      by?: string;
+      asserted?: Authority;
+      /** `false`: a structured record, written even when it's near an older version (ADR-0074). */
+      dedupe?: boolean;
+    },
   ): Promise<{ saved: boolean; note: string; indexId?: string }>;
 }
 
@@ -165,6 +175,7 @@ export function createRemoraMemory(
           text,
           channel: "remora",
           ...(opts?.replaces ? { replaces: opts.replaces } : {}),
+          ...(opts?.dedupe === false ? { dedupe: false } : {}),
         }),
         "accept the write",
       ).catch((err) => {

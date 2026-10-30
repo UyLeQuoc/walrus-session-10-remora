@@ -13,6 +13,7 @@ import { handoff, proposeSchedule } from "../tools/propose.ts";
 import { readTools } from "../tools/read.ts";
 import { modelIdFor, type UntrustedData, usdcLabel } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { admitMemories } from "./facts.ts";
 import { addUsage, REMORA_LIMITS, tokensToday } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { intentBase, recordWake, sha256Hex } from "./wake.ts";
@@ -91,8 +92,28 @@ export async function scoutAsk(
     timings[stage] = now - mark;
     mark = now;
   };
-  const memories = await deps.memory.recall(r, question, ["me", "sources", "feedback"]);
+  const namespaces = ["me", "sources", "feedback"];
+  const recalled = await deps.memory.recall(r, question, namespaces);
   lap("recallMs");
+  // F15 (ADR-0074): what the model reads, and what the Wake cites, is what admission let through.
+  const {
+    memories,
+    facts,
+    report: admission,
+  } = await admitMemories(
+    {
+      log: deps.log,
+      ...(deps.facts ? { facts: deps.facts } : {}),
+      ...(deps.admissionJudge && deps.brain.judgeMemories
+        ? { judge: deps.brain.judgeMemories }
+        : {}),
+    },
+    r,
+    question,
+    recalled,
+    namespaces,
+  );
+  lap("admitMs");
   const outcomes: PayOutcome[] = [];
   const data: UntrustedData[] = [];
   const paidPayees: string[] = [];
@@ -123,6 +144,7 @@ export async function scoutAsk(
       persona,
       question,
       memories: memories.map((m) => m.text),
+      ...(facts.length ? { facts } : {}),
       data,
       pay: async ({ payee, url, reason }) => {
         const o = await buy(payee, url, reason);
@@ -132,7 +154,12 @@ export async function scoutAsk(
       },
       tools: opts.playground
         ? chainOnly(
-            readTools({ client: deps.networks.client(r.network), memory: deps.memory, remora: r }),
+            readTools({
+              client: deps.networks.client(r.network),
+              memory: deps.memory,
+              remora: r,
+              ...(deps.facts ? { facts: deps.facts } : {}),
+            }),
           )
         : {
             ...readTools({
@@ -140,6 +167,7 @@ export async function scoutAsk(
               memory: deps.memory,
               remora: r,
               ...(deps.fetch ? { fetch: deps.fetch } : {}),
+              ...(deps.facts ? { facts: deps.facts } : {}),
             }),
             schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
             handoff: ({ to, question: q }) => handoff(deps, r, to, q),
@@ -188,6 +216,7 @@ export async function scoutAsk(
         paidPayees,
         digests: outcomes.flatMap((o) => (o.kind === "paid" && o.digest ? [o.digest] : [])),
         outcomes: outcomes.map((o) => ({ kind: o.kind, eventId: o.eventId })),
+        admission,
       },
       receiptId: wake?.id ?? null,
     })

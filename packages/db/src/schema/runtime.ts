@@ -6,6 +6,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -330,6 +331,67 @@ export const remoraMemories = pgTable(
     index("remora_memories_remora_idx").on(t.remoraId, t.createdAt),
     index("remora_memories_blob_idx").on(t.blobId),
     index("remora_memories_job_idx").on(t.jobId),
+  ],
+);
+
+/**
+ * F15 (ADR-0074): the facts ledger. Each row is one version of one slot (`owner.reply_language`,
+ * `reef:brief.track_record`) in one namespace, with when it holds, who asserted it and the memories
+ * it rests on. The Walrus blobs stay the evidence; this is the index `reconcile` keeps, so the value
+ * is a short derived string, like an event's summary. Retrieval always filters by `namespace`.
+ */
+export const memoryFacts = pgTable(
+  "memory_facts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerAddress: text("owner_address").notNull(),
+    /** The full namespace (`owner:<addr>:me`, `remora:<id>:sources`): the fact's scope. */
+    namespace: text("namespace").notNull(),
+    /** `slotKey()` of subject, predicate and qualifier. */
+    slot: text("slot").notNull(),
+    subject: text("subject").notNull(),
+    predicate: text("predicate").notNull(),
+    qualifier: text("qualifier"),
+    value: text("value").notNull(),
+    cardinality: text("cardinality", { enum: ["one", "many"] }).notNull(),
+    validFrom: timestamp("valid_from", { withTimezone: true }),
+    validUntil: timestamp("valid_until", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+    assertedBy: text("asserted_by", {
+      enum: ["extractor", "agent", "runtime", "owner"],
+    }).notNull(),
+    verification: text("verification", { enum: ["inferred", "explicit"] }).notNull(),
+    confidence: real("confidence").notNull(),
+    status: text("status", { enum: ["active", "superseded", "disputed", "retracted"] })
+      .notNull()
+      .default("active"),
+    version: integer("version").notNull().default(1),
+    /** `remora_memories` rows whose text asserted this value. */
+    sourceMemoryIds: uuid("source_memory_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    /** The version this one replaced, and the one that replaced it. */
+    supersedes: uuid("supersedes"),
+    supersededBy: uuid("superseded_by"),
+    /** For a disputed fact: the active one it contradicts. */
+    disputes: uuid("disputes"),
+    /** The remora whose write it came from; a `me` fact outlives a retired remora. */
+    remoraId: uuid("remora_id").references(() => remoras.id, { onDelete: "set null" }),
+    /** Who wrote the memory: the remora's name, `mcp:<client>` or `owner`. */
+    writer: text("writer").notNull(),
+    /** The model that structured free text into this fact, if one did. */
+    extractor: text("extractor"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** When it stopped being the active or disputed version. */
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("memory_facts_slot_idx").on(t.namespace, t.slot, t.status),
+    index("memory_facts_owner_idx").on(t.ownerAddress, t.createdAt),
+    index("memory_facts_sources_idx").using("gin", t.sourceMemoryIds),
+    // One current value per single-valued slot; reconcile's row lock is the first line, this the last.
+    uniqueIndex("memory_facts_one_active_idx")
+      .on(t.namespace, t.slot)
+      .where(sql`${t.status} = 'active' and ${t.cardinality} = 'one'`),
   ],
 );
 
