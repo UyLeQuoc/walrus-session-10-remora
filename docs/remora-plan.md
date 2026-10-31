@@ -230,9 +230,9 @@ reach; they're on the roadmap now.
 
 ## Submission checklist
 
-- [ ] Walrus Memory writing on **mainnet**, ≥10 memories (show the count from `listMemories`)
-- [ ] Tatum Sui RPC in the core path (gRPC stream + dry-run/execute + facilitator), documented in the
-      README
+- [x] Walrus Memory writing on **mainnet**, ≥10 memories (Oct 31: `bun run diagnose:memory` shows 360)
+- [x] Tatum Sui RPC in the core path (gRPC stream + dry-run/execute + facilitator), documented in the
+      README ("How Remora uses Tatum")
 - [ ] **Flip the repo to public** (`UyLeQuoc/walrus-session-10-remora`, [ADR-0017](adr/0017-github-repo-private-until-submission.md)) by Nov 9,
       after a final review of the docs
 - [ ] Public repo, Apache-2.0/MIT, `.env.example`, one-command dev, Move tests, evals and CI
@@ -240,6 +240,8 @@ reach; they're on the roadmap now.
 - [ ] Working demo URL + playground + Walrus Sites URL + a 2–3 minute video
 - [ ] Blog post published, including **how it learned over time**
 - [ ] Form fields: email, Discord, LinkedIn, Tatum ID, SUI address, Account ID, MEMWAL_AGENT_ID,
-      description, video, repo, feedback on Walrus and on Tatum AI Builder
+      description, video, repo, feedback on Walrus and on Tatum AI Builder, plus the optional ones
+      (field-by-field draft: [launch/submission-draft.md](launch/submission-draft.md))
 - [ ] X + LinkedIn posts tagging @Tatum_io and @WalrusFoundation
-- [ ] Watch Discord for the Mystery Bounty
+- [x] Watch Discord for the Mystery Bounty: it's **Best Use of Agent Payments** (x402 or MPP on Sui), and
+      we enter it ([ADR-0084](adr/0084-enter-best-use-of-agent-payments.md))

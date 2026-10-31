@@ -3,7 +3,7 @@
 **Always-on agents you actually own.** Remora is our entry to the Walrus x Tatum *Total Recall* hackathon (Track 2, Smart Agents for Real Life). Each agent, a *remora*:
 
 - **remembers** in Walrus Memory, which you can read, hide, correct, export and take to Claude Code;
-- **spends** only inside an onchain budget, the **Disc**, built on Sui's native app-bound allowances. Not even its own server can spend past it;
+- **spends** only inside an onchain budget, the **Disc**, built on Sui's native app-bound allowances. Not even its own server can spend past it. It pays for data over **x402**, settled on Sui by our own facilitator;
 - **leaves a receipt** for every action, its **Wake**, with payment intents anchored onchain;
 - **proves what it learned:** the same kind of event, a different decision, and the memory that made the difference.
 

@@ -10,7 +10,8 @@ A remora is an agent that rides along with you and keeps nothing for itself:
 - **the Disc:** one signature gives it a budget it can't exceed: a monthly limit, a per-payment cap, an allowlist of paid services, and an expiry. Sui enforces it, not the prompt;
 - **Sonar:** a deterministic policy checks every payment before signing, and a model can only make it stricter;
 - **the Wake:** a receipt for every decision. Payment intents are anchored onchain (`Paid.intent`), and `/verify` checks them;
-- **the Reef:** the paid data services it may use, paid over x402.
+- **the Reef:** the paid data services it may use, paid over **x402**. Our own `exact` facilitator for Sui
+  sponsors the gas and settles each payment on Sui.
 
 First remora, from sign-in, in **4.4 s** of machine time: one signature for the Disc, then a paid answer in **13 s**.
 

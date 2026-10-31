@@ -4,6 +4,10 @@
 > ([tatum.io/hackathon/total-recall](https://tatum.io/hackathon/total-recall)) and the submission site
 > ([recall-tatum-walrus.vercel.app](https://recall-tatum-walrus.vercel.app)). Captured on 2026-10-18.
 > The official event page is the source of truth for updates.
+>
+> **Rechecked on the live site on 2026-10-31:**
+> - the form has optional fields not listed in the rules (§4);
+> - the Mystery Bounty is now **Best Use of Agent Payments** (§8.2).
 
 ---
 
@@ -72,17 +76,26 @@ contain:
 | Email | — |
 | Discord handle | — |
 | LinkedIn | — |
-| How did you hear about this event? | — |
-| Is this your first Web3 project? | — |
-| **Tatum ID** | Your account ID in the [Tatum dashboard](https://dashboard.tatum.io/) |
+| Telegram ID *(optional, form only)* | — |
+| How did you hear about this event? | A list: Walrus Socials, Tatum Socials, Ads, Hackathon Listings, Friends, Search, Others |
+| Which community or account did you hear about us through? *(optional, form only)* | — |
+| Is this your first Web3 project? | Yes or No |
+| **Tatum ID** | Your account ID in the [Tatum dashboard](https://dashboard.tatum.io/): My Account → My Account Info |
 | **SUI address** | Your Sui wallet address |
-| **Account ID (SUI)** | Most likely your Walrus Memory account ID (a Sui object ID) from the [Memory dashboard](https://memory.walrus.xyz/dashboard). Confirm on Discord if unsure |
+| **Account ID (SUI)** | Your Walrus Memory account ID (a Sui object ID). The form says you get it after you create your first delegate key in the [Memory dashboard](https://memory.walrus.xyz/dashboard) |
 | **MEMWAL_AGENT_ID** | Per the event page: the **public key under "Delegate keys"** of the Walrus Memory agent you create in the Memory dashboard |
 | Project description | — |
 | Short demo video | 2 to 3 minutes |
 | GitHub repo | Must be public |
 | How was your experience building with Walrus? | — |
-| How was your experience building with the Tatum AI Builder? | — |
+| How was your experience building with the Tatum AI Builder? | If you didn't use it, say so briefly |
+| Additional documentation *(optional, form only)* | Docs, blog or deck URL |
+| One bug or friction point with Walrus Memory *(optional, form only)* | — |
+| Social post links *(optional, form only)* | X, LinkedIn: "extra points" |
+| A checkbox *(form only)* | You are 18+ and agree to the Event Rules, the Tatum Terms of Use, the Walrus General Terms of Service and the Walrus Privacy Policy |
+
+The form has no field for a track or a prize. Our field-by-field draft is
+[launch/submission-draft.md](launch/submission-draft.md).
 
 ---
 
@@ -182,7 +195,7 @@ these rules, or that violate these Event Rules or applicable law.
 |---|---|---|
 | **Best Walrus Memory** | $500 | Selected by the Walrus team. Awarded for the **deepest learning loop**: memories that visibly change the product |
 | **Best Tatum AI Builder App** | $500 | Best shippable product built **primarily** with [ai.tatum.io](https://ai.tatum.io) |
-| **Mystery Bounty** | $500 | Revealed closer to the event on [Discord](https://discord.com/invite/walrusprotocol) |
+| **Best Use of Agent Payments** | $500 | The best app across the three tracks that integrates agent payments using **x402 or MPP**, with payments settled on Sui. Announced as the Mystery Bounty; named in the rules on the site by Oct 31 |
 
 **Total prize pool: $4,500.**
 
