@@ -1,32 +1,102 @@
 # Remora
 
-**Always-on agents you actually own.** Remora is our entry to the Walrus x Tatum *Total Recall* hackathon (Track 2, Smart Agents for Real Life). Each agent, a *remora*:
+**Always-on agents you actually own.**
 
-- **remembers** in Walrus Memory, which you can read, hide, correct, export and take to Claude Code;
-- **spends** only inside an onchain budget, the **Disc**, built on Sui's native app-bound allowances. Not even its own server can spend past it. It pays for data over **x402**, settled on Sui by our own facilitator;
-- **leaves a receipt** for every action, its **Wake**, with payment intents anchored onchain;
-- **proves what it learned:** the same kind of event, a different decision, and the memory that made the difference.
-
-All chain I/O goes through **Tatum's Sui gRPC**.
+A *remora* is an AI agent that runs errands for you: it watches your wallet, answers questions, and buys
+the data it needs. Every remora has three things most agents don't:
+- **A budget Sui enforces, not the prompt.** The **Disc** is built on Sui's native app-bound
+  allowances. It pays for data over **x402**, settled on Sui by our own facilitator. Not even Remora's
+  server can spend past it.
+- **A memory you can read, on Walrus.** It learns from your 👍 and 👎. You can inspect it, correct
+  it, export it, and take it to Claude Code.
+- **A receipt for every decision.** Each receipt is a **Wake**. Payment intents are anchored onchain,
+  and every server-side Sui call goes through **Tatum's gRPC**.
 
 > *It goes wherever you go. It cleans up after you. It never takes the wheel.*
 
+## For judges
+| | |
+|---|---|
+| **Entry** | *Total Recall*, **Track 2: Smart Agents for Real Life**. Also **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui, [ADR-0084](docs/adr/0084-enter-best-use-of-agent-payments.md)) |
+| **Watch** | The demo video: **[video URL]** (2:45, [script](docs/remora-plan.md#demo-script-245)) |
+| **Try** | **[app URL]**`/playground`: a Scout with a $1 Disc, no wallet needed |
+| **Read** | The blog post, **[blog URL]** ([draft](docs/launch/blog-draft.md)), then [the docs](docs/README.md) |
+| **Walrus Memory on mainnet** | **360 memories** on Oct 31 (`bun run diagnose:memory` reads the account) |
+| **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas |
+| **Honest about** | [What's real, what isn't](#whats-real-what-isnt), and the [work done before the window](#built-on-prior-work) |
+
 ## In one minute
-1. **An unknown token lands in your wallet.** Your Sentinel pings you and asks your Scout. Scout pays 0.01
-   USDC from its Disc for a `sui-risk` report on the token's package, then answers. The receipt checks
-   out onchain.
-2. **You mark a dust ping 👎.** Sentinel writes a rule to Walrus Memory and stays quiet the next time. That
-   decision's receipt cites the rule's blob.
+1. **An unknown token lands in your wallet.**
+   - Your Sentinel pings you and asks your Scout.
+   - Scout pays 0.01 USDC from its Disc for a `sui-risk` report on the token's package, then answers.
+   - The receipt checks out onchain.
+2. **You mark a dust ping 👎.**
+   - Sentinel writes a rule to Walrus Memory and stays quiet the next time.
+   - That decision's receipt cites the rule's blob.
 3. **A paid answer says "pay this address".**
    - Sonar blocks it.
    - Forced past Sonar, the Disc aborts it onchain.
    - In CI: 28 attacks, 0 overspends.
-4. **If the remora's key ever pays without a decision,** you're told within minutes, and you rotate the
-   key with one signature.
+4. **If the remora's key ever pays without a decision,** you're told within minutes. You rotate the key
+   with one signature.
 
 ## Try it
-- **No wallet:** open `/playground`. You get your own Scout with a **$1 Disc** for a few questions ([ADR-0051](docs/adr/0051-playground.md)). The worst case is $1, enforced onchain, and the Disc is revoked when the session ends.
-- **With a wallet:** sign in, then create a Scout (it buys data to answer you) or a Sentinel (it watches your addresses and learns what matters), or hatch one from the **Hatchery**.
+- **No wallet:** open `/playground`. You get your own Scout with a **$1 Disc** for a few questions
+  ([ADR-0051](docs/adr/0051-playground.md)).
+  - The worst case is $1, enforced onchain.
+  - The Disc is revoked when the session ends.
+- **With a wallet:** sign in, then do one of these:
+  - create a **Scout**, which buys data to answer you;
+  - create a **Sentinel**, which watches your addresses and learns what matters;
+  - hatch a remora from the **Hatchery**.
+
+## How it learns
+The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
+that memory.**
+
+- **Sentinel learns rules from you.** A 👎 on a ping becomes a rule in Walrus Memory. The next event of
+  that kind is ignored, and the Wake for that quiet decision cites the rule's blob.
+  - The Proof view shows both decisions and the one blob that changed between them.
+  - Recorded on testnet: the rule landed on Walrus in 25.3 s
+    ([U7 exit §5](docs/spikes/2026-10-22-u7-exit.md)).
+- **Scout learns which sources are worth paying for.** A 👍 or 👎 on an answer scores the data sources
+  it bought.
+  - Each source keeps a track record, like *"10 calls · 2 useful · 8 noise · $0.050 per useful
+    answer"*.
+  - A newer score replaces the old one.
+- **Memory knows what still holds** ([ADR-0074](docs/adr/0074-memory-facts-and-admission.md), after the
+  [Dewee write-up](https://zuey.me/articles/dewee-memory-khi-ai-khong-chi-biet-nho?lang=vi)).
+  - Each memory's facts go into a ledger next to Walrus Memory: when each fact holds, who said it,
+    and which blobs it rests on.
+  - Before the model reads its recall, admission drops what no longer holds and what repeats. It adds
+    one line of what's true now.
+  - Your word beats an agent's guess, and your own memories rank first
+    ([ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md)).
+- **Nothing is dropped silently.** A write skipped as a duplicate shows in the memory inspector, next
+  to the memory it matched.
+- **It's your memory.**
+  - You can hide, correct or forget a memory, and export to Markdown or JSON.
+  - Claude Code reads the same memories through Remora's MCP server.
+- **Charts** come only from recorded events: Sentinel's noise rate, and Scout's cost per useful answer
+  (`GET /api/learning/export`).
+
+## Agent payments: x402, settled on Sui
+- **The x402 flow.** Scout asks a Reef service, gets `402 Payment Required`, pays from its Disc, and
+  gets the answer.
+- **Our own `exact` facilitator for Sui** ([apps/facilitator](apps/facilitator/README.md)).
+  - **Before it settles, it checks:**
+    - the signature;
+    - a simulation through Tatum;
+    - that the payee and the amount match the request;
+    - for Reef services, that the payment is a Disc `pay` with a matching `Paid` event.
+  - **Then it settles:** it sponsors the gas and executes.
+- **The remora's key holds 0 SUI.** All it can do is spend from its Disc, inside the caps, to the
+  payees on its list.
+- **Agents over MCP pay the same way.** Claude Code, with a scoped token, pays through the remora's
+  Disc. Over the cap, it asks you first.
+- **Red team.** `bun run evals` runs 28 attacks in CI, with 0 overspends
+  ([evals/](evals/README.md)). Under them, the Move tests prove that money reaches only allowlisted
+  payees, within the caps.
 
 ## What it does, with proof
 
@@ -44,7 +114,7 @@ All chain I/O goes through **Tatum's Sui gRPC**.
 | **Sentinel → Scout** | A rule like "check airdrops with Scout" pings and hands the event to your Scout, once, asking about the token's package. Scout's Wake cites the ping's Wake | `runtime.test.ts` (in-process, fake chain); on the deployed testnet at U9 ([ADR-0078](docs/adr/0078-sentinel-hands-off-to-scout.md)) | Oct 31 |
 | **Reality check** | A `Paid` from a remora's Disc with no Wake behind it alerts you within minutes: the sign of a leaked key | `runtime.test.ts` (in-process); [ADR-0077](docs/adr/0077-reality-check-unexplained-payments.md) | Oct 31 |
 | **Red team** | `bun run evals`: 10 agent attacks over MCP, 12 injected payments through Sonar, 6 poisoned templates through the Hatchery review. Each names the layer that stops it | [evals/](evals/README.md): **28 attacks, 0 overspends**, in CI ([ADR-0079](docs/adr/0079-red-team-evals.md)) | Oct 31 |
-| **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. Scout reads only memories that still hold | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4 | Oct 31 |
+| **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. Scout reads only memories that still hold, yours first, and a write skipped as a duplicate is shown, not dropped | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4; [ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md) (in-process) | Oct 31 |
 
 ## How it fits together
 
@@ -68,19 +138,40 @@ flowchart LR
   W -->|issue / revoke / pay once| Sui
 ```
 
-- **Money:** the owner's USDC stays in their address balance. A remora pays with `disc::pay` within the Disc's limits; the facilitator verifies and settles, and the gas station sponsors only Disc payments.
-- **Decisions:** the model proposes and **Sonar** decides with a deterministic policy (a model can only tighten it). Every decision is a Wake, and payment Wakes are anchored by `Paid.intent`.
-- **Memory:** namespaced per remora (`remora:<id>:<ns>`), written through the MemWal relayer, and never on the path of a reply ([ADR-0049](docs/adr/0049-u7-exit-fixes.md)).
+- **Money.** The owner's USDC stays in their address balance.
+  - A remora pays with `disc::pay`, within the Disc's limits.
+  - The facilitator verifies and settles.
+  - The gas station sponsors only Disc payments.
+- **Decisions.** The model proposes, and **Sonar** decides with a deterministic policy. A model can only
+  make the policy stricter.
+  - Every decision is a Wake.
+  - Payment Wakes are anchored by `Paid.intent`.
+- **Memory.** Each remora has its own namespaces (`remora:<id>:<ns>`), written through the MemWal relayer.
+  Memory is never on the path of a reply ([ADR-0049](docs/adr/0049-u7-exit-fixes.md)).
 
 ## How Remora uses Walrus
-- **Walrus Memory** (through the MemWal relayer) holds each remora's rules, sources, episodes, feedback and receipts. Recall feeds every turn, and the inspector shows every blob with its expiry.
-- **Walrus blobs** hold the Hatchery's templates (`remora.team/v1` files, permanent on testnet), read back through the aggregator before every hatch.
-- **Walrus Sites** will mirror the landing and docs (H6, roadmap).
+- **Walrus Memory** (through the MemWal relayer) holds each remora's rules, sources, episodes, feedback
+  and receipts.
+  - Recall feeds every turn, through admission ([How it learns](#how-it-learns)).
+  - The inspector shows every blob with its expiry, and any writes skipped as duplicates.
+  - The account holds 360 memories on mainnet (Oct 31).
+- **Walrus blobs** hold the Hatchery's templates. These are `remora.team/v1` files, stored as permanent
+  blobs on testnet and read back through the aggregator before every hatch.
+- **Walrus Sites** will mirror the landing page and docs (H6, roadmap).
 
 ## How Remora uses Tatum
-Every Sui read, stream and transaction on the server side goes through **Tatum's Sui gRPC**, natively and with an `x-api-key` header, never JSON-RPC ([ADR-0021](docs/adr/0021-sui-grpc-only.md)). That covers the API, the runtime, the facilitator, the gas station and the merchants. There are two exceptions:
-- the **browser**, which signs with the owner's wallet and executes over gRPC-web against a public fullnode, because a Tatum key can't be exposed to the browser;
-- the **memory package's account lookups** (ported from hippo), which read the MemWal registry from the public mainnet fullnode.
+Every Sui read, stream and transaction on the server side goes through **Tatum's Sui gRPC**. It uses a
+native transport with an `x-api-key` header, never JSON-RPC ([ADR-0021](docs/adr/0021-sui-grpc-only.md)).
+That covers the API, the runtime, the facilitator, the gas station and the merchants.
+
+**Tatum's Data API** prices the cost card's gas in USD (`/v4/data/rate/symbol`). Health counts our Tatum
+calls over the last hour ([ADR-0080](docs/adr/0080-tatum-usage-in-health-and-no-resubscribe-backfill.md)).
+
+There are two exceptions to gRPC through Tatum:
+- **The browser** signs with the owner's wallet and executes over gRPC-web against a public fullnode. A
+  Tatum key can't be exposed to the browser.
+- **The memory package's account lookups,** ported from hippo, read the MemWal registry from the public
+  mainnet fullnode.
 
 The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` and checked in CI:
 
@@ -101,6 +192,24 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 | `signAndExecuteTransaction` | TransactionExecutionService | the SDK's sign-then-execute, for the playground funder and scripts | `apps/server/src/playground/index.ts` |
 <!-- tatum-calls:end -->
 
+## What's real, what isn't
+- **Real.**
+  - Money runs on **Sui testnet**: the Disc, the payments, the onchain abort, and every digest above.
+  - Walrus Memory runs on **mainnet**.
+  - All server-side Sui I/O goes through Tatum.
+- **Ours, and labeled as ours.**
+  - The three Reef services are our demo merchants. `odds` is a cached snapshot, and it says so.
+  - The playground's $1 Discs come from our funder.
+- **Tested in-process, not yet on the deployed app:**
+  - Sentinel → Scout;
+  - the reality check;
+  - owner-first admission.
+- **Not yet.**
+  - Memory on your own Walrus account, with a delegate per remora. Until then, memories live in
+    namespaces of the operator's account ([ADR-0030](docs/adr/0030-w2-memory-mode.md)).
+  - Walrus Sites, SuiNS names and the Telegram Mini App ([roadmap](#roadmap-not-built-yet)).
+  - The cost card's model line is an estimate, from total tokens.
+
 ## Quick start (local)
 
 ```bash
@@ -109,19 +218,25 @@ cp .env.example .env            # MEMWAL_*, OPENROUTER_API_KEY, SESSION_SECRET, 
 docker compose up -d --wait     # local Postgres on :5434
 CHANNELS=off bun run dev        # API + web (PORT / WEB_PORT override 8787 / 5173)
 bun run lint && bun run typecheck && bun run test
+bun run evals                   # the red team: 28 attacks, 0 overspends
 bun run diagnose                # the deploy gate: every deployment id onchain, Tatum, relayer, Walrus
 bun run e2e                     # Playwright on testnet with a burner wallet
 ```
 
 ## Safety, ops and decisions
-- [Threat model](docs/threat-model.md): every threat with what stops it and the proof.
+- [Threat model](docs/threat-model.md): every threat, what stops it, and the proof.
 - [Move security](packages/move/SECURITY.md): invariants, permit guards, versioning, upgrade policy.
 - [Deploy runbook](docs/deploy.md): services, env, the `diagnose` gate, rollback.
-- `/lab/health`: one health report ([ADR-0052](docs/adr/0052-health-diagnose-observability.md)).
-- [Decisions](docs/adr/README.md): every decision is an ADR. [Spec](docs/remora-spec.md), [scope](docs/remora-features.md), [plan](docs/remora-plan.md), [docs index](docs/README.md).
+- `/status` shows public health, and `/lab/health` shows the full report
+  ([ADR-0052](docs/adr/0052-health-diagnose-observability.md)).
+- [Decisions](docs/adr/README.md): every decision is an ADR.
+- Also: the [spec](docs/remora-spec.md), [scope](docs/remora-features.md), [plan](docs/remora-plan.md)
+  and [docs index](docs/README.md).
 
 ## Repo layout
-See [docs/remora-spec.md §5](docs/remora-spec.md#5-architecture). Every directory has a README naming its owner ([docs/team-split.md](docs/team-split.md)). Interfaces between the backend and the UI live in [`packages/schema`](packages/schema).
+See [docs/remora-spec.md §5](docs/remora-spec.md#5-architecture).
+- Every directory has a README naming its owner ([docs/team-split.md](docs/team-split.md)).
+- The interfaces between the backend and the UI live in [`packages/schema`](packages/schema).
 
 ## Built on prior work
 
@@ -144,16 +259,23 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
   - Tatum integration;
   - the Hatchery;
   - every Remora UI and UX feature.
+- **Ideas borrowed.** The facts ledger, admission and owner-first ranking come from the
+  [Dewee write-up](https://zuey.me/articles/dewee-memory-khi-ai-khong-chi-biet-nho?lang=vi) and
+  [Dewee's docs](https://dewee.sh/vi/docs/concepts/memory-and-knowledge). We read those, not any code
+  ([ADR-0074](docs/adr/0074-memory-facts-and-admission.md),
+  [ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md)).
 - **Timing, stated openly** ([ADR-0075](docs/adr/0075-pre-window-work-stated.md)). The build window
-  opened on Oct 20, 2026; we count from 00:00 UTC. Remora started two days earlier, and the "Built"
+  opened on Oct 20, 2026, and we count from 00:00 UTC. Remora started two days earlier, and the "Built"
   column above says when each proof was made.
   - **Oct 18:** the bootstrap: the import, removals, scaffold and contracts
     ([ADR-0018](docs/adr/0018-bootstrap-before-window.md)).
-  - **Oct 19, before the window:** the first two waves. W1 was the Disc Move module (v1, testnet),
-    `disc-sdk`, the x402 facilitator and gas station, the checkpoint indexer, and Wakes with intent
-    anchoring. W2 was the runtime with Sonar, Scout and Sentinel, approvals, verify, the inspector,
-    Telegram commands and the first web pages. ADR-0018 said no feature would come before the window,
-    and that didn't hold.
+  - **Oct 19, before the window:** the first two waves.
+    - **W1:** the Disc Move module (v1, testnet), `disc-sdk`, the x402 facilitator and gas station, the
+      checkpoint indexer, and Wakes with intent anchoring.
+    - **W2:** the runtime with Sonar, Scout and Sentinel, approvals, verify, the inspector, Telegram
+      commands and the first web pages.
+
+    ADR-0018 said no feature would come before the window, and that didn't hold.
   - **In the window:**
     - chat, rooms and teams;
     - the Hatchery and its Move package;
@@ -177,20 +299,25 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
   - both Move packages on mainnet, with multisig `UpgradeCap`s;
   - owned memory (a delegate per remora on the owner's own account, ADR-0030);
   - a mainnet Walrus publisher and playground.
-- **More remoras:** Errand, Subscriptions Keeper, Treasurer, Daily Brief, Portfolio Guard, Inbox, Splitter (C3–C9).
-- **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b, D6, D7).
-- **Money:** budget proposals, spend analytics, the merchant kit, Reef reputation, Remora-as-merchant, the MPP adapter, a public facilitator (E5–E13).
+- **More remoras:** Errand, Subscriptions Keeper, Treasurer, Daily Brief, Portfolio Guard, Inbox,
+  Splitter (C3–C9).
+- **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b,
+  D6, D7).
+- **Money:** budget proposals, spend analytics, the merchant kit, Reef reputation, Remora-as-merchant,
+  the MPP adapter, a public facilitator (E5–E13).
 - **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
 - **Proof:** Merkle batch anchors, auditor access (G4, G7).
-- **Channels:** voice and images, the Telegram Mini App, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H3, H6, H8, H9).
-- **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge (M2, M8–M12).
+- **Channels:** voice and images, the Telegram Mini App, Walrus Sites, Discord/Slack/WhatsApp, EN/VI
+  (H2, H3, H6, H8, H9).
+- **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge
+  (M2, M8–M12).
 - **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).
 
 ## Screenshots
 
-The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)). The
-full set, every route at 1280 and 375 px in light and dark, is in
-[docs/e2e/screenshots](docs/e2e/screenshots) (`u13-*`).
+The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)).
+The full set is in [docs/e2e/screenshots](docs/e2e/screenshots) (`u13-*`): every route at 1280 and
+375 px, in light and dark.
 
 | A room of remoras | A remora |
 |---|---|
