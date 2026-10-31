@@ -26,7 +26,7 @@ track only: Smart Agents for Real Life**.
 | [tech-reference.md](tech-reference.md) | **API cheat sheet:** Walrus Memory SDK (+ field notes measured by hippo), Tatum Sui RPC/gRPC/Data API, `sui::allowance`, x402 on Sui, gas, Seal |
 | [threat-model.md](threat-model.md) | **Threat model (I7):** assets, actors, every threat with what stops it and its proof (tests, testnet digests, ADRs), and the honest boundaries |
 | [deploy.md](deploy.md) | **Deploy runbook:** services, env per service, the `bun run diagnose` gate, steps, rollback, the mainnet pass |
-| [launch/blog-draft.md](launch/blog-draft.md) | **Blog draft (L3):** "Rails Before Robots, Part 2", with real testnet numbers |
+| [launch/blog-draft.md](launch/blog-draft.md) | **Blog draft (L3):** "I gave an agent a wallet it can't drain, and a memory I can read" (Rails Before Robots, Part 2): one story, real testnet numbers, `[deploy]` and `[dogfood]` markers |
 | [spikes/](spikes/) | **Exit records:** timings, digests and findings for each goal's testnet exit |
 | [event-rules.md](event-rules.md) | The full event rules in English: dates, eligibility, submission form, requirements, judging, prizes |
 | [ideas/tracks-1-and-3.md](ideas/tracks-1-and-3.md) | Receipts (Track 1) and Kitty (Track 3) on Remora's rails, what an extra entry costs. Being built in this repo (U11, [ADR-0060](adr/0060-build-receipts-and-kitty.md)); entering them is not decided |

@@ -169,29 +169,29 @@ reach; they're on the roadmap now.
 
 ---
 
-## Blog post outline: "Rails Before Robots, Part 2: I built the missing row"
+## Blog post outline: "I gave an agent a wallet it can't drain, and a memory I can read"
 
-1. **Recap.** The audit's scorecard: spending limits were only half green, with Allowances live and no
-   agent product using them.
-2. **Remora in 30 seconds.** The metaphor, plus the Disc, Wake, Sonar and Reef.
-3. **How it uses Walrus:**
-   - memory namespaces, inspector, renewal;
-   - MCP portability and import/export;
-   - Wakes;
-   - Walrus Sites.
-4. **How it uses Tatum:** the gRPC stream, dry-run and execute, the public facilitator, the Data API.
-5. **Address balances + app-bound Allowances in practice.** A code snippet, plus the gotchas:
-   - coins vs address balance;
-   - settlement delay;
-   - no in-place update;
-   - no events;
-   - gas.
-6. **How it learned over time** (required):
-   - charts for Sentinel pings/day and precision, and Scout's $ per useful answer;
-   - **3 real memories** alongside the decisions they changed;
-   - Proof of Learning screenshots.
-7. **The red-team results:** N attacks, 0 overspends, with the abort transaction on an explorer.
-8. **What's next:** the remaining roadmap, Agent Pass compatibility, tunnels.
+*Rails Before Robots, Part 2.* The draft is [launch/blog-draft.md](launch/blog-draft.md). It follows the
+demo's story ([ADR-0081](adr/0081-launch-story.md)) and names x402 on Sui
+([ADR-0084](adr/0084-enter-best-use-of-agent-payments.md)).
+
+1. **The half-green row.** The Oct 15 audit: spending limits were only half green, with allowances live
+   and no agent product using them.
+2. **My wallet, watched.** Before, four moments, after:
+   - the airdrop handoff with a paid check;
+   - a 👎 that becomes a rule;
+   - the injection the Disc aborts;
+   - the key that pays without a decision.
+3. **What a remora is:** the Disc, Sonar, the Wake, the Reef and memory.
+4. **How it learned over time** (required):
+   - Proof of Learning;
+   - the facts ledger;
+   - **[dogfood]** charts and three real memories.
+5. **How it uses Walrus** and **how it uses Tatum.**
+6. **Agent payments:** x402 settled on Sui, and the allowance gotchas.
+7. **Red team:** 28 attacks, 0 overspends.
+8. **What's real, what isn't,** and **what went wrong.**
+9. **Try it.**
 
 ---
 
