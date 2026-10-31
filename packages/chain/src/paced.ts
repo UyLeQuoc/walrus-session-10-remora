@@ -18,7 +18,22 @@ export function isRateLimited(err: unknown): boolean {
 }
 
 const usage = new Map<string, number>();
-const count = (key: string) => usage.set(key, (usage.get(key) ?? 0) + 1);
+/** Requests per minute for the last hour, so health can show the current rate (ADR-0080). */
+const perMinute = new Map<number, number>();
+const count = (key: string) => {
+  usage.set(key, (usage.get(key) ?? 0) + 1);
+  const m = Math.floor(Date.now() / 60_000);
+  perMinute.set(m, (perMinute.get(m) ?? 0) + 1);
+  if (perMinute.size > 61) for (const k of perMinute.keys()) if (k <= m - 60) perMinute.delete(k);
+};
+
+/** Requests and stream frames sent to Tatum in the 60 minutes before `now`. */
+export function tatumCallsLastHour(now = Date.now()): number {
+  const m = Math.floor(now / 60_000);
+  let n = 0;
+  for (const [k, v] of perMinute) if (k > m - 60 && k <= m) n += v;
+  return n;
+}
 
 /**
  * What this process has asked Tatum for since it started: unary requests (retries included) and
@@ -30,6 +45,7 @@ export function tatumUsage(): Record<string, number> {
 
 export function resetTatumUsage() {
   usage.clear();
+  perMinute.clear();
 }
 
 export interface PacingOptions {

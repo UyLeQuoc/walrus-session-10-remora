@@ -1,4 +1,5 @@
 /** Wires health and `diagnose` (ADR-0052) to the real env. */
+import { tatumCallsLastHour } from "@remora/chain";
 import { jobs, sql } from "@remora/db";
 import { createClient, RelayerExtras } from "@remora/memory";
 import { DEPLOYMENTS, type Deployment } from "@remora/schema";
@@ -60,6 +61,7 @@ export function liveHealthDeps(playground?: HealthDeps["playground"]): HealthDep
       return { due: Number(row?.due ?? 0), oldestDueMs: oldest ? Date.now() - oldest : null };
     },
     watcherOn: env.WATCHER === "on",
+    tatumLastHour: () => tatumCallsLastHour(),
     ...(playground ? { playground } : {}),
   };
 }
