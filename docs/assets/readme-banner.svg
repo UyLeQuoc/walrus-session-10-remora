@@ -36,7 +36,8 @@
 
   <!-- Logo tile and word. -->
   <rect x="72" y="64" width="56" height="56" rx="14" fill="#6054ec"/>
-  <svg x="83" y="75" width="34" height="34" viewBox="276 96 348 348">
+  <svg x="83" y="75" width="34" height="34" viewBox="276 96 348 348" aria-hidden="true">
+    <title>Remora logo</title>
     <path fill="#ffffff" d="M330 120H360V420H330A30 30 0 0 1 300 390V150A30 30 0 0 1 330 120ZM360 120H510A30 30 0 0 1 540 150V180H360ZM540 180H570A30 30 0 0 1 600 210V270A30 30 0 0 1 570 300H540ZM360 240H540V300H360ZM480 300H540V360H510A30 30 0 0 1 480 330ZM540 360H600V390A30 30 0 0 1 570 420H540Z"/>
   </svg>
   <text x="144" y="103" class="sans" font-size="30" font-weight="700" fill="#f5f4f0" letter-spacing="-0.5">remora</text>
