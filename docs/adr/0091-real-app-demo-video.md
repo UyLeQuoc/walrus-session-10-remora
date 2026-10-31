@@ -1,6 +1,6 @@
 # ADR-0091: The demo video shows the real app, told as problem → fix
 
-- **Status:** Accepted
+- **Status:** Accepted (its edit and render are superseded by [ADR-0093](0093-demo-video-v2-walform-craft.md); the capture stands)
 - **Date:** 2026-10-31
 - **Deciders:** Uy (asked for "a demo of the real app, real UI, problem and solution, SVG, prettier,
   in the app's design system"; built by Uy's agent)
