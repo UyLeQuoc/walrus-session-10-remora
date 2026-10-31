@@ -3,6 +3,7 @@
  * PolyForm Noncommercial 1.0.0, see ../LICENSE.
  *
  * The page rail: a column of 36px icon buttons, the current page filled, a tooltip naming each one.
+ * Remora (ADR-0095): `labeled` widens it and shows each page's name under its icon.
  */
 import { Slot } from "radix-ui";
 import { type ComponentProps, forwardRef, type ReactNode } from "react";
@@ -14,14 +15,16 @@ export function PageRail({
   top,
   bottom,
   label,
+  labeled = false,
 }: {
   logo?: ReactNode;
   top: ReactNode;
   bottom?: ReactNode;
   label: string;
+  labeled?: boolean;
 }) {
   return (
-    <nav className="window-rail" aria-label={label}>
+    <nav className={cn("window-rail", labeled && "window-rail-labeled")} aria-label={label}>
       {logo ? <div className="window-rail-logo">{logo}</div> : null}
       <div className="window-rail-group">{top}</div>
       {bottom ? <div className="window-rail-group">{bottom}</div> : null}

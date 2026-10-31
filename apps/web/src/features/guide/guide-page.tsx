@@ -1,10 +1,24 @@
 /**
- * `/guide` (N14, Q4): How Remora works in four blocks — an agent, memory, a budget, a receipt — each
+ * `/guide` (N14, Q4, ADR-0095): what Remora is, the two kinds of remora, five steps to start, and what
+ * every page is for; then how it works in four blocks (an agent, memory, a budget, a receipt), each
  * with a picture, a sentence and a link to the page that does it. The Claude Code recipe stays.
  */
-import { ArrowRight, Brain, Gauge, KeyRound, OctagonPause, Wallet, Zap } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  Brain,
+  Fish,
+  Gauge,
+  KeyRound,
+  OctagonPause,
+  Store,
+  Wallet,
+  Zap,
+} from "lucide-react";
 import { Link } from "react-router";
+import { RAIL_FOOTER, RAIL_PAGES } from "@/app/app-rail";
 import { Page, PageHeader } from "@/components/app/page";
+import { WhatIsRemora } from "@/components/app/what-is-remora";
 import { Button } from "@/components/ui/button";
 import {
   ClaudeCodeSteps,
@@ -44,6 +58,76 @@ function Tiles({
   );
 }
 
+const STEPS: Array<{ title: string; to?: string; detail: string }> = [
+  {
+    title: "Try Scout, no wallet",
+    to: "/playground",
+    detail: "Ask a Scout with a $1 spending limit on testnet, and watch it pay for an answer.",
+  },
+  { title: "Sign in", detail: "Connect a Sui wallet with Sign in, at the bottom left." },
+  {
+    title: "Create a remora",
+    to: "/remoras/new",
+    detail:
+      "Pick Scout or Sentinel, set its budget, and sign once. It starts in practice mode: it shows what it would pay, and pays nothing.",
+  },
+  {
+    title: "Use it",
+    detail:
+      "Ask Scout or teach Sentinel on its page or in Chat. Why? under an answer shows its receipt. Press Go live once you trust it.",
+  },
+  {
+    title: "Stay in control",
+    to: "/approvals",
+    detail:
+      "A payment over its cap waits for you in Approvals. Funds shows what it spent, and Pause all stops every remora at once.",
+  },
+];
+
+/** What each page is for, in the rail's order, then the pages the rail doesn't list. */
+const PAGE_HELP: Record<string, string> = {
+  "/": "Your remoras, what waits for you, and everything they did lately. Open a remora to ask or teach it, see its budget, cost and receipts, and what it learned.",
+  "/chat":
+    "Talk to your remoras: ask Scout, teach Sentinel. The same chat works in Telegram and Discord.",
+  "/approvals":
+    "A payment over a remora's cap waits here. Pay it once from your own wallet, or decline.",
+  "/funds": "Your USDC, what each remora has spent of its limit, and Pause all.",
+  "/memory":
+    "Everything your remoras remember, stored on Walrus. Search it, hide or correct a memory, or export it.",
+  "/connections":
+    "Let another agent, like Claude Code or Cursor, use one of your remoras through MCP, within its spending limit.",
+  "/hatchery": "Remoras other people shared. Use one to make your own copy, with your own budget.",
+  "/settings": "Notifications, Telegram and the panic switch.",
+  "/verify":
+    "Paste a transaction digest or a receipt id and check it against Sui. No sign-in needed.",
+};
+const MORE_PAGES = [
+  {
+    to: "/playground",
+    label: "Try Scout",
+    icon: Fish,
+    help: "A Scout with a $1 limit on testnet, no wallet needed.",
+  },
+  {
+    to: "/reef",
+    label: "Services",
+    icon: Store,
+    help: "The paid services a remora may buy from, and what each call costs.",
+  },
+  {
+    to: "/status",
+    label: "Status",
+    icon: Activity,
+    help: "Whether Remora's services are up right now.",
+  },
+];
+const EVERY_PAGE = [
+  ...[...RAIL_PAGES, ...RAIL_FOOTER]
+    .filter((p) => PAGE_HELP[p.to])
+    .map((p) => ({ to: p.to, label: p.label, icon: p.icon, help: PAGE_HELP[p.to] ?? "" })),
+  ...MORE_PAGES,
+];
+
 export function GuidePage() {
   const { me } = useMe();
 
@@ -55,7 +139,7 @@ export function GuidePage() {
     >
       <PageHeader
         title="How Remora works"
-        description="An always-on agent you own: memory you can read, a budget Sui enforces, and a receipt for every action."
+        description="What Remora is, how to start, what every page is for, and how it works underneath."
         actions={
           <>
             <Button asChild>
@@ -70,8 +154,58 @@ export function GuidePage() {
         }
       />
 
+      <WhatIsRemora guideLink={false} />
+
+      <GuideSection title="Start in five steps">
+        <ol className="flex flex-col gap-2" data-testid="guide-steps">
+          {STEPS.map((step, i) => (
+            <li
+              key={step.title}
+              className="flex items-start gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4"
+            >
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ob-accent text-sm font-semibold text-white tabular-nums">
+                {i + 1}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium">
+                  {step.to ? (
+                    <Link className="link" to={step.to}>
+                      {step.title}
+                    </Link>
+                  ) : (
+                    step.title
+                  )}
+                </p>
+                <p className="text-md text-ob-muted">{step.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </GuideSection>
+
+      <GuideSection title="Every page" lead="The pages in the left rail, then three more.">
+        <ul className="grid gap-2 md:grid-cols-2" data-testid="guide-pages">
+          {EVERY_PAGE.map((p) => (
+            <li key={p.to}>
+              <Link
+                to={p.to}
+                className="flex h-full items-start gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-3 hover:bg-ob-control-hover"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ob-accent-soft text-ob-accent-text">
+                  <p.icon className="size-4" aria-hidden />
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-ob-text">{p.label}</span>
+                  <span className="text-md text-ob-muted">{p.help}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </GuideSection>
+
       <GuideSection
-        title="A remora"
+        title="Inside a remora"
         lead="Four parts: a key that acts, memory it can read, a budget it cannot exceed, and triggers that wake it."
       >
         <Tiles

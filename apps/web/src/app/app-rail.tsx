@@ -1,6 +1,8 @@
 /**
  * The page rail (ADR-0069): Remora's pages as icons, the current one filled. Home stays lit on every
- * `/remoras*` route (`navActive`). Approvals carries the count of what waits for the owner.
+ * `/remoras*` route (`navActive`). Approvals carries the count of what waits for the owner. Each
+ * button shows its page's name under the icon (ADR-0095); `short` is that name when the full one is
+ * too wide.
  */
 import {
   BookOpen,
@@ -32,7 +34,7 @@ export const RAIL_PAGES = [
 export const RAIL_FOOTER = [
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/verify", label: "Verify", icon: ShieldCheck },
-  { to: "/guide", label: "How it works", icon: BookOpen },
+  { to: "/guide", label: "How it works", short: "Guide", icon: BookOpen },
 ] as const;
 
 export function AppRail({ pending, onNavigate }: { pending: number; onNavigate?: () => void }) {
@@ -40,6 +42,7 @@ export function AppRail({ pending, onNavigate }: { pending: number; onNavigate?:
   return (
     <PageRail
       label="Pages"
+      labeled
       logo={
         <Link
           to="/"
@@ -62,15 +65,21 @@ export function AppRail({ pending, onNavigate }: { pending: number; onNavigate?:
           >
             <Link to={to} onClick={onNavigate}>
               <Icon aria-hidden />
+              <span className="window-rail-label" aria-hidden>
+                {label}
+              </span>
               <RailCount value={count} />
             </Link>
           </RailButton>
         );
       })}
-      bottom={RAIL_FOOTER.map(({ to, label, icon: Icon }) => (
-        <RailButton key={to} asChild label={label} current={navActive(to, pathname)}>
-          <Link to={to} onClick={onNavigate}>
-            <Icon aria-hidden />
+      bottom={RAIL_FOOTER.map((page) => (
+        <RailButton key={page.to} asChild label={page.label} current={navActive(page.to, pathname)}>
+          <Link to={page.to} onClick={onNavigate}>
+            <page.icon aria-hidden />
+            <span className="window-rail-label" aria-hidden>
+              {"short" in page ? page.short : page.label}
+            </span>
           </Link>
         </RailButton>
       ))}

@@ -1,13 +1,14 @@
 /**
- * `/` is Home (Q1, ADR-0038): the setup checklist until there is a remora, then the dashboard —
- * remoras, what needs you, and one activity feed. Chat lives at `/chat`.
+ * `/` is Home (Q1, ADR-0038): what a remora is and the setup checklist until there is one (ADR-0095),
+ * then the dashboard — remoras, what needs you, and one activity feed. Chat lives at `/chat`.
  */
-import { AlertTriangle, Fish, Plus, ShieldCheck } from "lucide-react";
+import { AlertTriangle, BookOpen, Fish, Plus, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { SetupChecklist } from "@/components/app/setup-checklist";
 import { StatTile } from "@/components/app/stat-tile";
+import { WhatIsRemora } from "@/components/app/what-is-remora";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,13 +39,20 @@ function Dashboard({ owner }: { owner: string }) {
     <Page title="Home" description="Your remoras, what needs you, and what they did lately.">
       <PageHeader
         title="Home"
-        description={`${live.length} remora${live.length === 1 ? "" : "s"} on ${network}.`}
+        description={`Your remoras, what needs you, and what they did lately: ${live.length} remora${live.length === 1 ? "" : "s"} on ${network}.`}
         actions={
-          <Button asChild>
-            <Link to="/remoras/new">
-              <Plus /> New remora
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link to="/guide">
+                <BookOpen /> How it works
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/remoras/new">
+                <Plus /> New remora
+              </Link>
+            </Button>
+          </>
         }
       />
 
@@ -161,6 +169,7 @@ function EmptyHome({ signedIn }: { signedIn: boolean }) {
           </div>
         )}
       </header>
+      <WhatIsRemora />
       <SetupChecklist variant="full" />
       {list.length ? (
         <Section title="Start from a template">

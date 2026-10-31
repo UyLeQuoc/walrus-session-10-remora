@@ -1217,6 +1217,21 @@ describe("how it works", () => {
     expect(container.textContent ?? "").not.toMatch(/hippo/i);
     expect(screen.queryByRole("button", { name: /own this memory/i })).toBeNull();
   });
+
+  it("says what a remora is, how to start, and what every page is for (ADR-0095)", async () => {
+    vi.stubGlobal("fetch", stubFetch({ "/api/me": { mode: "guest", surveyUrl: null } }));
+    render(
+      <MemoryRouter>
+        <GuidePage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("what-is-remora").textContent).toMatch(/AI agent that works for you/);
+    expect(within(screen.getByTestId("guide-steps")).getAllByRole("listitem")).toHaveLength(5);
+    const pages = within(screen.getByTestId("guide-pages"));
+    for (const href of ["/", "/chat", "/approvals", "/funds", "/memory", "/verify", "/reef"])
+      expect(pages.getAllByRole("link").some((a) => a.getAttribute("href") === href)).toBe(true);
+    expect(pages.getByText("Templates")).toBeDefined();
+  });
 });
 
 describe("me page, changes", () => {

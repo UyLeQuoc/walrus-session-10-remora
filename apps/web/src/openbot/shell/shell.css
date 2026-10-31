@@ -134,6 +134,34 @@
     box-sizing: content-box;
   }
 
+  /* Remora (ADR-0095): a wider rail with each page's name under its icon. */
+  .window-rail-labeled {
+    width: 68px;
+  }
+
+  .window-rail-labeled .window-rail-group {
+    gap: 2px;
+  }
+
+  .window-rail-labeled .window-rail-button {
+    width: 60px;
+    height: 48px;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .window-rail-labeled .window-rail-count {
+    right: 10px;
+  }
+
+  .window-rail-label {
+    font-size: 10px;
+    font-weight: 550;
+    line-height: 12px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
   /* The frame: the roster, the resizer, the main pane and the side panel, as columns. */
   .app-frame {
     position: relative;
