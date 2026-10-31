@@ -257,7 +257,7 @@ describe("Tatum usage in health (ADR-0080)", () => {
   it("is ok at a month's pace and degraded past about 1,400 requests an hour", async () => {
     const at = async (n: number) =>
       (await healthReport(healthy({ tatumLastHour: () => n }))).items.find(
-        (i) => i.name === "tatum.usage",
+        (i) => i.name === "tatum usage",
       );
     expect((await at(300))?.status).toBe("ok");
     const hot = await at(15_000);

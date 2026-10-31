@@ -245,6 +245,16 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     expect(screen.getByText("Skipped as already known")).toBeDefined();
   });
 
+  it("a retired remora says so instead of offering Ask or reading its revoked Disc (ADR-0088)", async () => {
+    fakeApi(OWNER, {
+      [`GET /api/remoras/${FIXTURE_SCOUT.id}`]: { remora: { ...FIXTURE_SCOUT, status: "retired" } },
+    });
+    at(`/remoras/${FIXTURE_SCOUT.id}`, "/remoras/:id", <RemoraPage />);
+    expect((await screen.findByTestId("retired-alert")).textContent).toMatch(/Disc is revoked/);
+    expect(screen.queryByRole("button", { name: "Ask" })).toBeNull();
+    expect(screen.queryByText("Reading the Disc…")).toBeNull();
+  });
+
   it("signed-out Home offers Scout with no wallet, and a receipt to check (ADR-0088)", async () => {
     fakeApi(null);
     at("/", "/", <HomePage />);

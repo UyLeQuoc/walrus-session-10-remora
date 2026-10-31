@@ -263,17 +263,22 @@ function BudgetSection({
   reload: () => void;
   layout?: "stack" | "split";
 }) {
-  const meter = useBudget(r.id, Boolean(r.config.budget));
+  const retired = r.status === "retired";
+  const meter = useBudget(r.id, Boolean(r.config.budget) && !retired);
   const { run } = useOwnerTx();
   const b = r.config.budget;
   const [monthly, setMonthly] = useState(b ? usdc(b.windowLimit) : "1");
   const [cap, setCap] = useState(b ? usdc(b.perPaymentCap) : "0.05");
-  if (!b)
+  if (!b || retired)
     return (
       <Section
         layout={layout}
         title="Budget"
-        description="Read-only: this remora has no Disc and never pays."
+        description={
+          retired
+            ? "Retired: its Disc was revoked, so it never pays again."
+            : "Read-only: this remora has no Disc and never pays."
+        }
       >
         <p className="text-md text-ob-muted">No budget to change.</p>
       </Section>
@@ -694,6 +699,15 @@ function Remora({ id }: { id: string }) {
           </AlertDescription>
         </Alert>
       ) : null}
+      {r.status === "retired" ? (
+        // ADR-0088: a retired remora's page said "Reading the Disc…" forever and still offered Ask.
+        <Alert data-testid="retired-alert">
+          <AlertTitle>Retired</AlertTitle>
+          <AlertDescription>
+            Its Disc is revoked, so it can't act or pay. Its memory and receipts stay yours.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {r.status === "creating" ? (
         <Alert>
           <AlertTitle>Waiting for its budget transaction</AlertTitle>
@@ -716,7 +730,7 @@ function Remora({ id }: { id: string }) {
         </TabsList>
 
         <TabsContent value="overview" className="flex flex-col gap-8 pt-5">
-          {r.template === "scout" ? (
+          {r.status === "retired" ? null : r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />

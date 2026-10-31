@@ -175,12 +175,12 @@ export async function healthReport(d: HealthDeps): Promise<HealthReport> {
     const n = d.tatumLastHour();
     items.push(
       n > TATUM_HOURLY
-        ? item("tatum.usage", "degraded", `${n} Tatum requests in the last hour`, {
+        ? item("tatum usage", "degraded", `${n} Tatum requests in the last hour`, {
             value: n,
             threshold: TATUM_HOURLY,
             fix: "On pace to spend the month's credits: look for an unfiltered stream or a loop of calls (ADR-0058).",
           })
-        : item("tatum.usage", "ok", `${n} Tatum requests in the last hour`, {
+        : item("tatum usage", "ok", `${n} Tatum requests in the last hour`, {
             value: n,
             threshold: TATUM_HOURLY,
           }),

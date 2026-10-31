@@ -15,7 +15,9 @@
   - `u12.spec.ts` now recalls the matched blob when `structuredContent.alreadyKnown` is set.
   - The resumed path reads `alreadyKnown`. It used to match "Already in memory", which the tool no
     longer says.
-- **Fresh audit screenshots** are in `docs/e2e/screenshots/audit-*`.
+- **Rerun of U8 and U12:** both pass. Every flow in the suite is green; two are skipped by design.
+- **Fresh audit screenshots** are in `docs/e2e/screenshots/audit-*`. The audit now also captures
+  `/playground`, `/hatchery`, `/status` and `/reef` ([ADR-0089](../adr/0089-ux-pass-retired-remora-and-status-label.md)).
 
 ## What changed in `apps/web`
 | Where | Change |
@@ -25,10 +27,12 @@
 | `features/remoras/remora-page.tsx` | The header description uses `describeRemora` |
 | `components/app/budget-meter.tsx` | "runs out around Oct 9, 2027" (`calendarDay`, read in UTC) |
 | `features/home/home-page.tsx` | Signed-out Home has **Try Scout, no wallet** (`data-testid="home-try-scout"`) and **Check a receipt** under the hero |
+| `features/remoras/remora-page.tsx` (ADR-0089) | A retired remora gets a "Retired" alert (`data-testid="retired-alert"`), no Ask or Teach card, and a budget section saying its Disc was revoked. The meter isn't fetched |
 
 **Tests:**
 - `describe.test.ts`, which is new;
 - `remora-pages.test.tsx`, which covers the signed-out Home buttons and the new date format.
 
 ## What changed in `e2e/`
-- `tests/u12.spec.ts`: the duplicate handling above. Nothing else changed.
+- `tests/u12.spec.ts`: the duplicate handling above.
+- `tests/audit.spec.ts`: four more pages (ADR-0089).

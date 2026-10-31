@@ -24,6 +24,11 @@ const PAGES: Array<[string, string]> = [
   ["verify", "/verify"],
   ["guide", "/guide"],
   ["chat", "/chat"],
+  // ADR-0088: the pages added since U13.
+  ["playground", "/playground"],
+  ["hatchery", "/hatchery"],
+  ["status", "/status"],
+  ["reef", "/reef"],
   ["connect", "/connect/audit-preview"],
   ["not-found", "/this-page-does-not-exist"],
 ];
