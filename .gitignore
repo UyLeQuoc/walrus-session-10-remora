@@ -27,3 +27,6 @@ packages/move/**/build/
 spikes/*/.state.*.json
 spikes/*/.results.*.json
 
+
+# The showreel render: frames, audio and the MP4 (ADR-0090)
+docs/launch/showreel/out/
