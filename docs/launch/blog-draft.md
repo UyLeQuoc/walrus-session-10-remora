@@ -111,22 +111,33 @@ The answer came from the
 - who said it, and whether they had the standing to;
 - whether it helps the task in front of the model.
 
-We took the core of it and left the rest. We read only the article, not any code.
+We took the core of it and left the rest. We read the article and
+[Dewee's docs on memory](https://dewee.sh/vi/docs/concepts/memory-and-knowledge), not any code.
 - **What we took:**
   - **A facts ledger next to Walrus Memory.** Each fact records when it holds, who asserted it, and the
-    blobs it rests on.
+    blobs it rests on. As in Dewee's knowledge graph, a fact that stops holding gets its time window
+    closed. It isn't deleted.
   - **A deterministic reconciler.** It decides whether a new fact supersedes, extends or disputes the
     old one. The owner's word outranks an agent's guess.
   - **Admission before the model reads.** Stale facts and repeats are dropped, and the model gets one
     line of what's true now. If admission fails, recall goes through anyway.
-- **What we left:** Dewee's dreaming, its knowledge graph and its vault. Each costs more model calls or
-  infrastructure than our last nine days allowed, and none of them fixed something Remora got wrong.
+- **What we left:**
+  - the entity graph itself: people, projects and the links between them;
+  - the document vault;
+  - "dreaming", which turns batches of session summaries into longer-term notes;
+  - passive memory from group chats.
+
+  Each costs more model calls or infrastructure than our last nine days allowed, and none of them fixed
+  something Remora got wrong.
 
 **Building it found our worst bug.**
 - A probe for the ledger wrote three track records for one source to the real relayer. The third came
   back *"Already in memory, nothing written"*.
 - Our memory client skipped any write too similar to one already stored. A source's next score differs
   from the last only in its numbers, so every 👍 or 👎 after the first had been swallowed.
+- Dewee's own dedupe only flags near-identical pairs, for someone to merge or dismiss. Ours dropped
+  them without a word. Structured records like scores now skip dedupe, and the ledger decides which one
+  holds.
 - Scout had stopped learning about a source after its first lesson. We fixed it the same day, but the
   scores lost before then can't be recovered.
 
@@ -225,11 +236,12 @@ only allowlisted payees, within the caps.
 
 ## Ideas we borrowed
 - **The facts ledger and admission** come from the
-  [Dewee memory write-up](https://zuey.me/articles/dewee-memory-khi-ai-khong-chi-biet-nho?lang=vi).
+  [Dewee memory write-up](https://zuey.me/articles/dewee-memory-khi-ai-khong-chi-biet-nho?lang=vi) and
+  [Dewee's docs](https://dewee.sh/vi/docs/concepts/memory-and-knowledge).
 - **The memory layer** is ported from hippo, our Session 8 entry. The README lists what was reused and
   what's new.
 
-For Dewee, we read the write-up only, not any code.
+For Dewee, we read the write-up and the docs, not any code.
 
 ## Try it
 - **`/playground`** gives you a Scout with a **$1 Disc**, no wallet needed. The worst case is a dollar,

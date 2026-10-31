@@ -125,7 +125,9 @@
 
 > `remember` returns before the memory is searchable. A write is accepted in about 2 s, but recall finds
 > it only after 25–32 s, so an agent that learns something in one turn can't use it in the next. A
-> `searchable` status, or a webhook on the job, would let clients wait for it properly.
+> `searchable` status, or a webhook on the job, would let clients wait for it properly. Other memory
+> systems wait for this before they move on: Dewee marks a batch of summaries consolidated only once the
+> new document is searchable. On Walrus Memory, a client can't tell when that is.
 
 This is draft 6 in [memwal-issue-drafts.md](memwal-issue-drafts.md). Draft 1 (`/health`) is the other
 strong candidate.
