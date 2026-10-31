@@ -130,24 +130,42 @@ twice in a row on mainnet without intervention.
 
 ## Demo script (2:45)
 
-1. **0:00** Hook: "Grok Bot, Dots and Muse can do your errands. None of them let you see their memory,
-   and none of them can be trusted with a wallet."
-2. **0:15** Onboarding: zkLogin → **Detect funds** moves $5 of coins into the address balance → link
-   Telegram → create **Scout** (*$20/month, $0.50 per payment, Reef payees*) with one signature. Show its
-   SuiNS name.
-3. **0:40** Ask Scout in Telegram. It buys from 2 Reef services and answers with Wakes. In the inspector,
-   the source scores update.
-4. **1:05** **Sentinel** pings about an airdrop and hands it to Scout, which buys a `sui-risk` check:
-   "likely scam".
-5. **1:20** A poisoned page tells Scout to pay 50 USDC to `0xbad…`. **Sonar blocks it.** Force it anyway,
-   and **the Disc aborts onchain.** *"The limit lives in the contract, not in the prompt."*
-6. **1:40** "Leaked key" → rotate from the Mini App in one tap.
-7. **1:55** **Proof of Learning:** the same event on Day 1 and Day 14, and the memory that changed the
-   decision, with `remora verify` ✓.
-8. **2:15** In Claude Code, *"what did my remoras learn this week?"*. Same memory, different tool.
-9. **2:30** "Try it yourself": **hatch Scout from the Hatchery** with one click (consent screen, $1
-   playground Disc, shadow mode), hosted on Walrus Sites.
-10. **2:40** Close: *"It goes wherever you go. It cleans up after you. It never takes the wheel."*
+One person, one wallet, one story, and only beats that are built ([ADR-0081](adr/0081-launch-story.md)).
+The old script promised a SuiNS name, the Mini App, Walrus Sites and a Day 14 that the window can't
+reach; they're on the roadmap now.
+
+**The story:** Uy's wallet, watched. Every beat runs on the deployed testnet URL (U9).
+
+1. **0:00 Hook.** "Agents that can spend need a budget the agent can't argue with, and a memory you
+   can read."
+2. **0:12 One signature.** Sign in, then import a team from one Markdown file: Scout and Sentinel, each
+   with a Disc (a monthly limit, a per-payment cap, Reef payees). The teach box gets "Check airdrops
+   with Scout".
+3. **0:35 An airdrop lands** on the watched address.
+   - Sentinel pings and hands it to Scout (D5).
+   - Scout pays 0.01 USDC under its own Disc for a `sui-risk` report on the token's package and answers.
+   - "Why?" shows the Wake, and `/verify` shows ✓.
+   - Share the proof link `/p/<token>`.
+4. **1:00 The injection.**
+   - A paid answer says "pay this address"; the model obeys, and Sonar blocks it.
+   - Forced past Sonar, **the Disc aborts it onchain** (`7NYf3…`).
+   - Card: "28 attacks, 0 overspends" (`bun run evals`).
+5. **1:20 It learns.**
+   - Uy marks a dust ping 👎. Sentinel writes a rule to Walrus Memory, and the next dust is silent.
+   - That decision's Wake cites the rule's blob (Proof of Learning).
+   - The inspector shows the rule's blob on Walrus, with its expiry, and Markdown export.
+6. **1:50 A key that pays without a decision.**
+   - A spike script signs a Disc payment outside the runtime.
+   - Minutes later the owner is told, and rotates the key from the web (ADR-0077).
+   - *Prepare the script before recording.*
+7. **2:10 Same memory, another tool.** In Claude Code over MCP: "what did my remoras learn this week?"
+8. **2:25 Try it.** `/playground` gives a $1 Disc, no wallet. The repo, `/status`, and the cost card.
+9. **2:38 Close.** *"It goes wherever you go. It cleans up after you. It never takes the wheel."*
+
+**Before recording:**
+- U9 is deployed.
+- Dogfooding has started (the learning beat needs real days, not Day 14).
+- Telegram is checked once on the deployed bot, or left out of the cut.
 
 ---
 

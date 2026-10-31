@@ -11,6 +11,19 @@ All chain I/O goes through **Tatum's Sui gRPC**.
 
 > *It goes wherever you go. It cleans up after you. It never takes the wheel.*
 
+## In one minute
+1. **An unknown token lands in your wallet.** Your Sentinel pings you and asks your Scout. Scout pays 0.01
+   USDC from its Disc for a `sui-risk` report on the token's package, then answers. The receipt checks
+   out onchain.
+2. **You mark a dust ping 👎.** Sentinel writes a rule to Walrus Memory and stays quiet the next time. That
+   decision's receipt cites the rule's blob.
+3. **A paid answer says "pay this address".**
+   - Sonar blocks it.
+   - Forced past Sonar, the Disc aborts it onchain.
+   - In CI: 28 attacks, 0 overspends.
+4. **If the remora's key ever pays without a decision,** you're told within minutes, and you rotate the
+   key with one signature.
+
 ## Try it
 - **No wallet:** open `/playground`. You get your own Scout with a **$1 Disc** for a few questions ([ADR-0051](docs/adr/0051-playground.md)). The worst case is $1, enforced onchain, and the Disc is revoked when the session ends.
 - **With a wallet:** sign in, then create a Scout (it buys data to answer you) or a Sentinel (it watches your addresses and learns what matters), or hatch one from the **Hatchery**.
@@ -28,6 +41,8 @@ All chain I/O goes through **Tatum's Sui gRPC**.
 | **Proof of Learning** | A ping, 👎, a rule, then silence on the same kind of event, with the rule's memory blob as the delta | [U7 exit §5](docs/spikes/2026-10-22-u7-exit.md) | Oct 22 |
 | **Your memory** | Hide, correct, forget all, expiry, Markdown/JSON export, and Claude Code via `packages/mcp` | [U7 exit §6](docs/spikes/2026-10-22-u7-exit.md) | Oct 22 |
 | **Agents (MCP)** | Make a scoped, revocable token on the Connections page and Claude Code (or any MCP client) uses one remora: it remembers, pays Reef services through the Disc, and over the cap asks you; every call is logged and its Wakes say `via mcp:…` | [U12 handoff](docs/handoffs/2026-10-25-uy-to-huan-u12-landed.md): Claude Code over stdio and over HTTP; a paid `sui-risk` through MCP verifies (`2UGiVjrJ…`); 10 MCP attacks in CI, 0 paid | Oct 25 |
+| **Sentinel → Scout** | A rule like "check airdrops with Scout" pings and hands the event to your Scout, once, asking about the token's package. Scout's Wake cites the ping's Wake | `runtime.test.ts` (in-process, fake chain); on the deployed testnet at U9 ([ADR-0078](docs/adr/0078-sentinel-hands-off-to-scout.md)) | Oct 31 |
+| **Reality check** | A `Paid` from a remora's Disc with no Wake behind it alerts you within minutes: the sign of a leaked key | `runtime.test.ts` (in-process); [ADR-0077](docs/adr/0077-reality-check-unexplained-payments.md) | Oct 31 |
 | **Red team** | `bun run evals`: 10 agent attacks over MCP, 12 injected payments through Sonar, 6 poisoned templates through the Hatchery review. Each names the layer that stops it | [evals/](evals/README.md): **28 attacks, 0 overspends**, in CI ([ADR-0079](docs/adr/0079-red-team-evals.md)) | Oct 31 |
 | **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. Scout reads only memories that still hold | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4 | Oct 31 |
 
@@ -158,7 +173,7 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
       files. Before the window, after the import, it was about 29,800.
 
 ## Roadmap (not built yet)
-- **Mainnet pass** (U9):
+- **Mainnet pass** (U10):
   - both Move packages on mainnet, with multisig `UpgradeCap`s;
   - owned memory (a delegate per remora on the owner's own account, ADR-0030);
   - a mainnet Walrus publisher and playground.
@@ -166,7 +181,7 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 - **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b, D6, D7).
 - **Money:** budget proposals, spend analytics, the merchant kit, Reef reputation, Remora-as-merchant, the MPP adapter, a public facilitator (E5–E13).
 - **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
-- **Proof:** Merkle batch anchors, public proof links, auditor access (G4, G6, G7).
+- **Proof:** Merkle batch anchors, auditor access (G4, G7).
 - **Channels:** voice and images, the Telegram Mini App, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H3, H6, H8, H9).
 - **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge (M2, M8–M12).
 - **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).

@@ -126,14 +126,14 @@
 - Write a handoff to Huấn: the live URL, what landed from his requests, the test ids.
 
 ## Done when
-- [ ] PR #11 is merged (or sent back with reasons), and the `/status` contract PR is merged.
-- [ ] Huấn's accepted items are done, with tests, and his requests have written answers.
-- [ ] The D5 handoff and the Tatum follow-ups are done, with tests.
-- [ ] `bun run evals` reports N ≥ 20 attacks, 0 overspends, with each layer named. It's published, and its deterministic part runs in CI.
+- [ ] PR #11 is merged (or sent back with reasons), and the `/status` contract PR is merged. (PR #11 is merged; the contract PR is #17, open.)
+- [x] Huấn's accepted items are done, with tests, and his requests have written answers (ADR-0076; contract PR #17 waits on his approval).
+- [x] The D5 handoff and the Tatum follow-ups are done, with tests (ADR-0078, ADR-0080; the e2e Sentinel cleanup is handed to Huấn).
+- [x] `bun run evals` reports N ≥ 20 attacks, 0 overspends, with each layer named. It's published, and its deterministic part runs in CI (28 attacks, ADR-0079).
 - [ ] Deployed on testnet: `diagnose`, health, `e2e:main` and `/status` are green, and the playground is public.
 - [ ] The demo path ran twice in a row on the deployed URL. `bun run e2e`, typecheck, lint, test, `sui move test` and CI are green.
 - [x] `LICENSE` (MIT, ADR-0068).
-- [ ] README, blog, demo script, the ADRs and the handoff are written; everything is pushed to `main`.
+- [x] README, blog, demo script, the ADRs and the handoff are written; everything is pushed to `main` (ADR-0081). The testnet numbers come with the exit.
 
 ## Never
 - Mainnet money or a mainnet publish (that's U10, Uy's call).
