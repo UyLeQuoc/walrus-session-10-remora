@@ -232,7 +232,12 @@ describe("hatchery (ADR-0046)", () => {
       supersededBy: null,
       expiresSoon: false,
       type: null,
+      duplicateWrites: 0,
     });
+    const older = Object.fromEntries(
+      Object.entries(read("inspector.json") as object).filter(([k]) => k !== "duplicates"),
+    );
+    expect(InspectorResponse.parse(older).duplicates).toEqual([]);
   });
 });
 

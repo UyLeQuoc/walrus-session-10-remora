@@ -152,6 +152,8 @@ export const InspectorResponse = z.object({
       supersededBy: z.string().nullable().default(null),
       /** F5: expires within 30 days. */
       expiresSoon: z.boolean().default(false),
+      /** ADR-0086: later writes skipped because they matched this memory. */
+      duplicateWrites: z.number().int().nonnegative().default(0),
     }),
   ),
   counts: z.record(z.string(), z.number().int().nonnegative()),
@@ -162,6 +164,17 @@ export const InspectorResponse = z.object({
   results: z.array(
     z.object({ blobId: z.string(), namespace: z.string(), text: z.string(), distance: z.number() }),
   ),
+  /** ADR-0086: the newest writes skipped as duplicates; `blobId` is the memory each one matched. */
+  duplicates: z
+    .array(
+      z.object({
+        namespace: z.string(),
+        type: MemoryType.nullable(),
+        blobId: z.string(),
+        at: z.string(),
+      }),
+    )
+    .default([]),
 });
 
 /** E4: `POST /api/approvals/:id/pay-tx`, the owner's one-off payment to sign (ADR-0031). */

@@ -11,7 +11,8 @@
       "type": "wake",
       "hiddenAt": null,
       "supersededBy": null,
-      "expiresSoon": false
+      "expiresSoon": false,
+      "duplicateWrites": 2
     }
   ],
   "counts": {
@@ -36,6 +37,20 @@
       "namespace": "sources",
       "text": "SOURCE reef:sui-risk · 9 calls · 8 useful · 1 noise · $0.011 per useful answer · as_of 2026-11-03",
       "distance": 0.21
+    }
+  ],
+  "duplicates": [
+    {
+      "namespace": "receipts",
+      "type": "wake",
+      "blobId": "MKP2-KVpB_q1aZ0",
+      "at": "2026-11-03T02:20:41Z"
+    },
+    {
+      "namespace": "receipts",
+      "type": "wake",
+      "blobId": "MKP2-KVpB_q1aZ0",
+      "at": "2026-11-03T02:15:02Z"
     }
   ]
 }
