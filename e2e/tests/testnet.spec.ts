@@ -53,7 +53,7 @@ test("burner: sign in, detect, withdraw, move, pause all, resume", async ({ page
   const confirm = page.getByRole("alertdialog");
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: /^Pause/ }).click();
-  await expect(page.getByText(/Paused .*Disc/)).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByText(/Paused .*spending limit/)).toBeVisible({ timeout: 90_000 });
   await expect(rows.filter({ hasText: "paused" })).toHaveCount(await rows.count(), {
     timeout: 60_000,
   });

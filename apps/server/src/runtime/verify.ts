@@ -53,7 +53,7 @@ export async function verifyWake(deps: { db: Db; networks: Networks }, idOrDiges
     checks.push({
       name: "Paid.intent matches",
       ok: !!anchor,
-      detail: anchor ? "anchored onchain" : "no matching Paid event",
+      detail: anchor ? "saved onchain" : "no matching Paid event",
     });
     const credited = (tx.balanceChanges ?? [])
       .filter((b) => normalizeSuiAddress(b.address) === normalizeSuiAddress(d.payTo))
@@ -69,7 +69,7 @@ export async function verifyWake(deps: { db: Db; networks: Networks }, idOrDiges
     checks.push({
       name: "decided before paying",
       ok: paidAt === null ? null : decidedAt <= paidAt + 5_000,
-      detail: `Wake ${wake.ts}${paidAt ? `, tx ${new Date(paidAt).toISOString()}` : ""}, stored ${row.createdAt.toISOString()}`,
+      detail: `Receipt ${wake.ts}${paidAt ? `, tx ${new Date(paidAt).toISOString()}` : ""}, stored ${row.createdAt.toISOString()}`,
     });
     const sender = tx.transaction?.sender ? normalizeSuiAddress(tx.transaction.sender) : "";
     checks.push({
@@ -79,9 +79,9 @@ export async function verifyWake(deps: { db: Db; networks: Networks }, idOrDiges
     });
   } else {
     checks.push({
-      name: "onchain anchor",
+      name: "saved onchain",
       ok: null,
-      detail: `${d.action}: not anchored in the MVP`,
+      detail: `${d.action}: not saved onchain yet`,
     });
   }
   return { found: true as const, wake, receiptId: row.id, anchored: row.anchored, checks };

@@ -20,7 +20,7 @@ import { CheckList, VerifyVerdict } from "./verify-result";
 
 const CHECKS = [
   "The intent hash matches what the remora says it did.",
-  "The Paid anchor is on chain, in the transaction you pasted.",
+  "The payment record is onchain, in the transaction you pasted.",
   "The payee's balance moved by the amount in the receipt.",
   "The signer is the remora's key, not a stranger.",
 ];
@@ -58,7 +58,7 @@ export function VerifyPage() {
     <Page title="Verify a receipt" description="Check a remora receipt against Sui.">
       <PageHeader
         title="Verify a receipt"
-        description="Paste a transaction digest or a Wake id. We check it against Sui through Tatum; no sign-in needed."
+        description="Paste a transaction digest or a receipt id. We check it against Sui through Tatum; no sign-in needed."
       />
       <form
         className="flex flex-col gap-2 sm:max-w-2xl sm:flex-row"
@@ -68,9 +68,9 @@ export function VerifyPage() {
         }}
       >
         <Input
-          aria-label="Digest or Wake id"
+          aria-label="Digest or receipt id"
           className="h-10"
-          placeholder="Transaction digest or Wake id"
+          placeholder="Transaction digest or receipt id"
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />

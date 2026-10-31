@@ -194,7 +194,7 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     expect(card.textContent).not.toMatch(/Read-only: no budget/);
     const meter = await screen.findByTestId("budget-meter");
     expect(meter.textContent).toMatch(/0.97.*of.*1.00 USDC left this month/);
-    expect(await screen.findByText(/Paid 0.01 USDC to reef:sui-risk/)).toBeDefined();
+    expect(await screen.findByText(/Paid 0.01 USDC to Sui risk check/)).toBeDefined();
     expect(screen.getByText(/0x2 is the Sui framework/)).toBeDefined();
   });
 
@@ -226,7 +226,7 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     at("/approvals", "/approvals", <ApprovalsPage />);
     const card = await screen.findByTestId("approval");
     expect(card.textContent).toMatch(/2\.00 USDC/);
-    expect(card.textContent).toMatch(/reef:odds/);
+    expect(card.textContent).toMatch(/to Odds/);
     expect(screen.getByRole("button", { name: /Pay once \(2.00 USDC\)/ })).toBeDefined();
   });
 
@@ -250,9 +250,11 @@ describe("W2 pages on the live API (contract fixtures)", () => {
       [`GET /api/remoras/${FIXTURE_SCOUT.id}`]: { remora: { ...FIXTURE_SCOUT, status: "retired" } },
     });
     at(`/remoras/${FIXTURE_SCOUT.id}`, "/remoras/:id", <RemoraPage />);
-    expect((await screen.findByTestId("retired-alert")).textContent).toMatch(/Disc is revoked/);
+    expect((await screen.findByTestId("retired-alert")).textContent).toMatch(
+      /spending limit is revoked/,
+    );
     expect(screen.queryByRole("button", { name: "Ask" })).toBeNull();
-    expect(screen.queryByText("Reading the Disc…")).toBeNull();
+    expect(screen.queryByText("Reading its spending limit…")).toBeNull();
   });
 
   it("signed-out Home offers Scout with no wallet, and a receipt to check (ADR-0088)", async () => {

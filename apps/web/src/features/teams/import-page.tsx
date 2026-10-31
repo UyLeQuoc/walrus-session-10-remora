@@ -72,7 +72,7 @@ function Importer() {
       const out = await api.teamApply(markdown);
       if (!out.ok) throw new Error(out.error);
       if (out.data.transaction) {
-        setStep("Sign once in your wallet: every Disc in one transaction…");
+        setStep("Sign once in your wallet: every spending limit in one transaction…");
         const digest = await run(out.data.transaction);
         setSigned({ digest, ids: out.data.remoras, roomId: out.data.roomId });
         setStep("Confirming onchain…");
@@ -184,7 +184,7 @@ function Importer() {
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
                   {r.name} <Badge variant="outline">{r.template}</Badge>
                   {r.model ? <Badge variant="secondary">{modelById(r.model).label}</Badge> : null}
-                  <Badge variant="warning">starts in shadow mode</Badge>
+                  <Badge variant="warning">starts in practice mode</Badge>
                 </p>
                 <p className="text-ob-muted">{r.budget ?? "Read-only: no budget, never pays."}</p>
                 {r.rules.map((rule) => (

@@ -34,6 +34,7 @@ import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById, priceLabel } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
 import { LearningSection } from "@/features/learning/learning";
+import { payeeName } from "@/lib/payee";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from "@/openbot/pages";
@@ -124,7 +125,7 @@ function headerActions(r: RemoraView, reload: () => void, setTab: (t: Tab) => vo
           <DropdownMenuItem onSelect={() => setTab("settings")}>Edit</DropdownMenuItem>
           {r.status === "shadow" || r.status === "active" || r.status === "paused" ? (
             <DropdownMenuItem asChild>
-              <Link to={`/remoras/${r.id}/share`}>Share in the Hatchery</Link>
+              <Link to={`/remoras/${r.id}/share`}>Share as a template</Link>
             </DropdownMenuItem>
           ) : null}
           {r.discId ? (
@@ -281,8 +282,8 @@ function BudgetSection({
         title="Budget"
         description={
           retired
-            ? "Retired: its Disc was revoked, so it never pays again."
-            : "Read-only: this remora has no Disc and never pays."
+            ? "Retired: its spending limit was revoked, so it never pays again."
+            : "Read-only: this remora has no spending limit and never pays."
         }
       >
         <p className="text-md text-ob-muted">No budget to change.</p>
@@ -296,12 +297,12 @@ function BudgetSection({
       throw new Error("Set a monthly limit and a smaller per-payment cap.");
     const budget = { ...b, windowLimit: limit.toString(), perPaymentCap: per.toString() };
     const out = must(await api.budgetTx(r.id, budget));
-    if (!out.transaction) throw new Error("This remora has no Disc.");
+    if (!out.transaction) throw new Error("This remora has no spending limit.");
     const digest = await run(out.transaction);
     must(await api.budgetConfirm(r.id, digest, budget));
     reload();
     void meter.refresh();
-    toast.success("Budget changed: the old Disc is revoked and the new one is live.");
+    toast.success("Budget changed: the old spending limit is revoked and the new one is live.");
   };
 
   return (
@@ -338,7 +339,7 @@ function BudgetSection({
                 </Button>
               }
               title={`Change ${r.name}'s budget?`}
-              description="This revokes the old Disc and issues a new one. You'll sign one transaction."
+              description="This revokes the old spending limit and sets a new one. You'll sign one transaction."
               confirmLabel="Change budget"
               tone="default"
               onConfirm={change}
@@ -549,7 +550,7 @@ function SourcesSection({ r }: { r: RemoraView }) {
             as="li"
             key={x.payee}
             size="compact"
-            title={x.payee}
+            title={payeeName(x.payee)}
             description={`${x.calls} calls · ${x.useful} useful · ${x.noise} noise · ${usdc(x.spent)} USDC spent`}
           />
         ))}
@@ -563,11 +564,11 @@ function KeysSection({ r }: { r: RemoraView }) {
     <Section
       layout="split"
       title="Keys"
-      description="The key that acts, and the Disc that caps it."
+      description="The key that acts, and the spending limit that caps it."
     >
       <PropertyList>
         <Property term="Spending key">{r.address ? <Hash value={r.address} /> : "—"}</Property>
-        <Property term={<Term name="Disc">Disc</Term>}>
+        <Property term={<Term name="spending limit">Spending limit</Term>}>
           {r.discId ? <Hash value={r.discId} /> : "—"}
         </Property>
       </PropertyList>
@@ -612,7 +613,7 @@ function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
               </Button>
             }
             title={`Retire ${r.name}?`}
-            description="Its Disc is revoked and it stops for good. Its memory stays yours."
+            description="Its spending limit is revoked and it stops for good. Its memory stays yours."
             confirmLabel="Retire"
             onConfirm={async () => {
               const out = must(await api.retire(r.id));
@@ -697,7 +698,7 @@ function Remora({ id }: { id: string }) {
 
       {r.status === "shadow" ? (
         <Alert variant="warning">
-          <AlertTitle>Shadow mode</AlertTitle>
+          <AlertTitle>Practice mode</AlertTitle>
           <AlertDescription>
             It shows what it would pay, but pays nothing
             {r.shadowUntil ? ` until ${new Date(r.shadowUntil).toLocaleDateString()}` : ""}.
@@ -709,14 +710,17 @@ function Remora({ id }: { id: string }) {
         <Alert data-testid="retired-alert">
           <AlertTitle>Retired</AlertTitle>
           <AlertDescription>
-            Its Disc is revoked, so it can't act or pay. Its memory and receipts stay yours.
+            Its spending limit is revoked, so it can't act or pay. Its memory and receipts stay
+            yours.
           </AlertDescription>
         </Alert>
       ) : null}
       {r.status === "creating" ? (
         <Alert>
           <AlertTitle>Waiting for its budget transaction</AlertTitle>
-          <AlertDescription>This page updates itself when the Disc lands.</AlertDescription>
+          <AlertDescription>
+            This page updates itself when the spending limit lands onchain.
+          </AlertDescription>
         </Alert>
       ) : null}
       {params.get("new") && !events.some((e) => e.type === "answer" || e.type === "action") ? (

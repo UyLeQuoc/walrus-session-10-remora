@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useSignAndRun } from "@/features/funds/sign";
 import { useNetworks } from "@/features/network/use-networks";
+import { payeeName } from "@/lib/payee";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { Property, PropertyList } from "@/openbot/pages";
 import { api } from "./api";
@@ -29,12 +30,6 @@ const STEP_TEXT: Record<Step, string> = {
   creating: "Creating its key…",
   signing: "Sign the budget in your wallet…",
   confirming: "Confirming onchain…",
-};
-
-const PAYEE_NAME: Record<string, string> = {
-  "reef:sui-risk": "Sui risk check",
-  "reef:odds": "Odds",
-  "reef:brief": "Brief",
 };
 
 function Wizard({ owner }: { owner: string }) {
@@ -173,7 +168,7 @@ function Wizard({ owner }: { owner: string }) {
                       onChange={(e) => setMonthly(e.target.value)}
                     />
                     <FieldDescription>
-                      Its Disc cannot spend more than this a month.
+                      Sui won't let it spend more than this a month.
                     </FieldDescription>
                   </Field>
                   <Field>
@@ -192,15 +187,14 @@ function Wizard({ owner }: { owner: string }) {
                   <div className="flex flex-wrap gap-2">
                     {(chosen?.payees ?? []).map((payee) => (
                       <Badge key={payee} variant="outline" title={payee}>
-                        {PAYEE_NAME[payee] ?? payee}
+                        {payeeName(payee)}
                       </Badge>
                     ))}
                   </div>
                   <p className="text-md text-ob-muted">
-                    Sui enforces the budget through a Disc, not us. It pays only these sources;
-                    anything over{" "}
-                    {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"} USDC
-                    asks you first.
+                    Sui enforces this budget onchain, not us. It pays only these sources; anything
+                    over {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"}{" "}
+                    USDC asks you first.
                   </p>
                 </div>
               </>
@@ -242,7 +236,7 @@ function Wizard({ owner }: { owner: string }) {
             <p className="rounded-ob-lg bg-ob-control-hover px-3 py-2.5 text-md text-ob-secondary">
               {slug === "scout" ? (
                 <>
-                  You'll sign <strong>1 transaction</strong> to create its Disc.
+                  You'll sign <strong>1 transaction</strong> to set its spending limit.
                 </>
               ) : (
                 <>No signature needed. Sentinel only reads.</>

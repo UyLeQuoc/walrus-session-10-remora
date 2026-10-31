@@ -77,7 +77,7 @@ function Funds({ owner }: { owner: string }) {
     <Page title="Funds" description="What your remoras can spend, and what is still in coins.">
       <PageHeader
         title="Funds"
-        description="Remoras spend USDC from your address balance, only through their Disc."
+        description="Remoras spend USDC from your address balance, only within their spending limits."
         actions={
           <Button
             type="button"
@@ -97,7 +97,7 @@ function Funds({ owner }: { owner: string }) {
         <StatTile
           label="Ready to spend"
           value={`$${mine ? formatUsdc(mine.addressBalance) : "—"}`}
-          hint="Remoras spend this through their Disc."
+          hint="Remoras spend this within their spending limits."
           data-testid="ready"
         />
         <StatTile
@@ -187,8 +187,9 @@ function Funds({ owner }: { owner: string }) {
         <div className="flex items-start gap-3 rounded-ob-card bg-ob-control-hover p-4 text-md">
           <Coins className="mt-0.5 size-4 shrink-0 text-ob-accent-text" aria-hidden />
           <p className="text-ob-secondary">
-            USDC in coins → your address balance → each remora's Disc → a merchant. A Disc can only
-            spend what is already in your address balance, and only up to its cap.
+            USDC in coins → your address balance → each remora's spending limit → a merchant. A
+            spending limit can only spend what is already in your address balance, and only up to
+            its cap.
           </p>
         </div>
       </Section>

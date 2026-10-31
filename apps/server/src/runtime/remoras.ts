@@ -82,7 +82,10 @@ export function issueArgs(
       budget.payees.map((ref) => {
         const hit = reef.find((r) => r.ref === ref);
         if (!hit)
-          throw new RemoraError("reef.unknown_payee", `${ref} isn't in the Reef on this network.`);
+          throw new RemoraError(
+            "reef.unknown_payee",
+            `${ref} isn't a listed service on this network.`,
+          );
         return normalizeSuiAddress(hit.payTo);
       }),
     ),
@@ -257,9 +260,12 @@ export function createRemoraService(deps: RemoraDeps) {
         capId = id;
     }
     if (!created(/::disc::Disc$/).length)
-      throw new RemoraError("tx.not_issue", "That transaction didn't issue a Disc.");
+      throw new RemoraError("tx.not_issue", "That transaction didn't set a spending limit.");
     if (!discId || !allowanceId || !capId)
-      throw new RemoraError("tx.wrong_disc", "That transaction didn't issue this remora's Disc.");
+      throw new RemoraError(
+        "tx.wrong_disc",
+        "That transaction didn't set this remora's spending limit.",
+      );
     return { discId, allowanceId, capId };
   }
 
@@ -390,7 +396,7 @@ export function createRemoraService(deps: RemoraDeps) {
         network: input.network,
       });
       if (!needsDisc || !budget) {
-        await event(remora, "action", `${name} is ready and starts in shadow mode.`);
+        await event(remora, "action", `${name} is ready and starts in practice mode.`);
         return { remora, issue: null };
       }
       return {
@@ -418,7 +424,7 @@ export function createRemoraService(deps: RemoraDeps) {
       await event(
         updated,
         "action",
-        `${r.name} is ready. Its Disc is live; it starts in shadow mode.`,
+        `${r.name} is ready. Its spending limit is live; it starts in practice mode.`,
         { digest, discId },
       );
       return updated;
@@ -441,7 +447,7 @@ export function createRemoraService(deps: RemoraDeps) {
     /** B8: an unsigned pause/resume for the wallet; `syncStatus` reads the result back. */
     async pauseTx(id: string, owner: string, paused: boolean) {
       const r = await mine(id, owner);
-      if (!r.discId) throw new RemoraError("remora.no_disc", "This remora has no Disc.");
+      if (!r.discId) throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
       const tx = buildPause(discCfg(r.network), [r.discId], paused);
       tx.setSender(r.ownerAddress);
       return tx.toJSON();
@@ -465,7 +471,7 @@ export function createRemoraService(deps: RemoraDeps) {
     /** Pause without a Disc (read-only remoras): runtime-only. */
     async setPaused(id: string, owner: string, paused: boolean) {
       const r = await mine(id, owner);
-      if (r.discId) throw new RemoraError("remora.has_disc", "Pause its Disc instead.", 409);
+      if (r.discId) throw new RemoraError("remora.has_disc", "Pause its spending instead.", 409);
       return setRow(id, { status: paused ? "paused" : "active" });
     },
 
@@ -515,7 +521,7 @@ export function createRemoraService(deps: RemoraDeps) {
     async budgetTx(id: string, owner: string, budget: Budget) {
       const r = await mine(id, owner);
       if (!r.discId || !r.allowanceId || !r.capId || !r.discName) {
-        throw new RemoraError("remora.no_disc", "This remora has no Disc.");
+        throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
       }
       const args = issueArgs(r.discName, r.address, budget, deps.reef(r.network), now());
       const tx: Transaction = buildRevokeAndReissue(
@@ -534,7 +540,7 @@ export function createRemoraService(deps: RemoraDeps) {
       const allowanceId = createdOf(tx, /::allowance::Allowance</);
       const capId = createdOf(tx, /::allowance::AllowanceCap</);
       if (!discId || !allowanceId || !capId)
-        throw new RemoraError("tx.not_issue", "That transaction didn't reissue the Disc.");
+        throw new RemoraError("tx.not_issue", "That transaction didn't renew the spending limit.");
       const updated = await setRow(id, {
         discId,
         allowanceId,
@@ -549,7 +555,7 @@ export function createRemoraService(deps: RemoraDeps) {
     async rotateTx(id: string, owner: string) {
       const r = await mine(id, owner);
       if (!r.discId || !r.allowanceId)
-        throw new RemoraError("remora.no_disc", "This remora has no Disc.");
+        throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
       const generation = Number((r.config as { keyGeneration?: number }).keyGeneration ?? 1) + 1;
       const keyId = `${r.id}:${generation}`;
       const newSpender = await deps.signer.create(keyId, r.network);
@@ -571,7 +577,7 @@ export function createRemoraService(deps: RemoraDeps) {
       );
       const newAddress = await deps.signer.address(keyId);
       if (normalizeSuiAddress(allowance.spender ?? "") !== normalizeSuiAddress(newAddress)) {
-        throw new RemoraError("tx.not_rotate", "The Disc's spender isn't the new key.");
+        throw new RemoraError("tx.not_rotate", "The spending limit's spender isn't the new key.");
       }
       const generation = Number(keyId.split(":")[1] ?? 1);
       const updated = await setRow(id, {
@@ -710,7 +716,7 @@ export function createRemoraService(deps: RemoraDeps) {
         // Nothing for the wallet to sign: every Disc is gone already, so retire them all now.
         throw new RemoraError(
           "account.nothing_to_sign",
-          "None of your remoras has a Disc left to revoke. Confirm to retire them.",
+          "None of your remoras has a spending limit left to revoke. Confirm to retire them.",
           409,
         );
       }

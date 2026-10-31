@@ -37,7 +37,7 @@ const EXFILTRATION: [RegExp, string][] = [
   ],
   [
     /https?:\/\/(?!localhost\b)[^\s)]+/i,
-    "Links to a web address; a remora only pays Reef services.",
+    "Links to a web address; a remora only pays listed services.",
   ],
 ];
 
@@ -90,7 +90,7 @@ export async function reviewTemplate(input: SafetyInput): Promise<SafetyReport> 
       block(
         "raw_address",
         where,
-        `Names a raw address (${addr.slice(0, 8)}…); payees must be Reef services.`,
+        `Names a raw address (${addr.slice(0, 8)}…); payees must be listed services.`,
       );
   }
 
@@ -109,7 +109,7 @@ export async function reviewTemplate(input: SafetyInput): Promise<SafetyReport> 
       );
     for (const ref of kind.payees)
       if (!reef.has(ref))
-        block("unknown_payee", `remoras[${i}]`, `${ref} isn't a Reef service on this network.`);
+        block("unknown_payee", `remoras[${i}]`, `${ref} isn't a listed service on this network.`);
   });
 
   if (input.model) {

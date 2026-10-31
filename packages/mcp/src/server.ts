@@ -134,7 +134,7 @@ export function createMcpServer(o: McpOptions) {
         checks: { name: string; ok: boolean | null; detail: string }[];
       }>(`/api/verify/${encodeURIComponent(ref)}`);
       return [
-        v.anchored ? "Anchored onchain." : "Not anchored onchain.",
+        v.anchored ? "Saved onchain." : "Not saved onchain.",
         ...v.checks.map((c) => `${c.ok === null ? "–" : c.ok ? "✓" : "✗"} ${c.name}: ${c.detail}`),
       ].join("\n");
     },

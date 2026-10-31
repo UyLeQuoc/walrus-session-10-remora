@@ -208,7 +208,7 @@ describe("1-1 thread (ADR-0042)", () => {
     expect(await screen.findByText("0x2 is the Sui framework.")).toBeDefined();
     expect(screen.getByTestId("thread-owner").textContent).toContain("Is 0x2 safe?");
     expect(screen.getAllByTestId("thread-chip")[0]?.textContent).toMatch(
-      /Paid 0.01 USDC to reef:sui-risk/,
+      /Paid 0.01 USDC to Sui risk check/,
     );
     expect(screen.getByRole("button", { name: /Pay once \(0.02 USDC\)/ })).toBeDefined();
     // Only the first-run answer, not the answer to the owner's line, says what it answers.

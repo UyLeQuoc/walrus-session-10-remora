@@ -19,7 +19,7 @@ import { verifyWake } from "./verify.ts";
 /** `receipts.remora_id` is text and `remoras.id` a uuid. */
 const ownerJoin = sql`${remoras.id}::text = ${receipts.remoraId}`;
 
-const notFound = () => new RemoraError("wake.not_found", "No Wake with that id.", 404);
+const notFound = () => new RemoraError("wake.not_found", "No receipt with that id.", 404);
 
 async function ownedReceipt(db: Db, owner: string, receiptId: string) {
   const [row] = await db

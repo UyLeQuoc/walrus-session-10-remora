@@ -134,7 +134,7 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
   const payDigest = String(paid?.payload.digest ?? "");
   results.scoutPayment = payDigest;
   await page.getByRole("button", { name: "Why?" }).first().click();
-  await expect(page.getByText(/anchored onchain|not anchored/).first()).toBeVisible({
+  await expect(page.getByText(/saved onchain/).first()).toBeVisible({
     timeout: 30_000,
   });
   await page.screenshot({ path: "screenshots/w2-why.png", fullPage: true });

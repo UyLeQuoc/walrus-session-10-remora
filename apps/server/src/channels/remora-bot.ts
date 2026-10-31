@@ -82,9 +82,9 @@ export function createRemoraBot(d: RemoraBotDeps) {
         .from(hatcheryTemplates)
         .where(like(hatcheryTemplates.templateId, `0x${arg.slice(4)}%`))
         .limit(1);
-      if (!tpl) return { text: "That template isn't in the Hatchery (yet)." };
+      if (!tpl) return { text: "That template isn't shared yet." };
       return {
-        text: `${tpl.name ?? "This remora"} is in the Hatchery. Review what it can do and hatch it with your wallet: ${web(`/hatchery/${tpl.id}`)}`,
+        text: `${tpl.name ?? "This remora"} is a shared template. Review what it can do and make your copy with your wallet: ${web(`/hatchery/${tpl.id}`)}`,
       };
     }
     const known = [
@@ -160,7 +160,7 @@ export function createRemoraBot(d: RemoraBotDeps) {
           if (!r) return { text: `Which one? /${cmd} <name>` };
           if (r.discId) {
             return {
-              text: `${cmd === "pause" ? "Pausing" : "Resuming"} ${r.name}'s Disc needs your signature.`,
+              text: `${cmd === "pause" ? "Pausing" : "Resuming"} ${r.name}'s spending limit needs your signature.`,
               buttons: [{ label: "Open in dashboard", url: web(`/remoras/${r.id}`) }],
             };
           }
@@ -182,7 +182,7 @@ export function createRemoraBot(d: RemoraBotDeps) {
         }
         case "panic":
           return {
-            text: "The panic button pauses every remora and Disc with one signature.",
+            text: "The panic button pauses every remora's spending with one signature.",
             buttons: [{ label: "Pause everything", url: web("/settings?panic=1") }],
           };
       }
@@ -223,7 +223,9 @@ export function createRemoraBot(d: RemoraBotDeps) {
       return [
         `${row.r.name}: ${row.e.summary}`,
         decision?.reason ? `Why: ${decision.reason}` : null,
-        w ? `Wake ${w.intentHash.slice(0, 12)}…${w.txDigest ? ` · tx ${w.txDigest}` : ""}` : null,
+        w
+          ? `Receipt ${w.intentHash.slice(0, 12)}…${w.txDigest ? ` · tx ${w.txDigest}` : ""}`
+          : null,
       ]
         .filter(Boolean)
         .join("\n");

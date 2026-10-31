@@ -34,7 +34,7 @@ function Share({ id }: { id: string }) {
     const done = await api.publishConfirm(digest);
     if (!done.ok) throw new Error(done.error);
     setSigned(null);
-    toast.success("Published in the Hatchery.");
+    toast.success("Published as a template.");
     navigate(`/hatchery/${done.data.listing.templateId}?published=1`);
   };
   const publish = async () => {
@@ -56,10 +56,10 @@ function Share({ id }: { id: string }) {
   };
 
   return (
-    <Page title="Share in the Hatchery">
+    <Page title="Share as a template">
       <PageHeader
-        title="Share in the Hatchery"
-        description="Anyone can hatch a copy into their own account. Your memories, keys, budget and history stay with you."
+        title="Share as a template"
+        description="Anyone can make a copy in their own account. Your memories, keys, budget and history stay with you."
       />
       {error ? (
         <Alert variant="destructive">
@@ -81,10 +81,7 @@ function Share({ id }: { id: string }) {
       {!review && !error ? <Skeleton className="h-64 w-full max-w-3xl rounded-ob-card" /> : null}
       {review ? (
         <>
-          <Section
-            title="What it can do"
-            description="This is what people see before they hatch it."
-          >
+          <Section title="What it can do" description="This is what people see before they use it.">
             <div className="max-w-3xl">
               <PermissionsList permissions={review.permissions} />
             </div>
@@ -119,7 +116,7 @@ function Share({ id }: { id: string }) {
                   disabled={!!step || review.safety.verdict === "block"}
                   onClick={() => void publish()}
                 >
-                  Publish to the Hatchery (one signature)
+                  Publish as a template (one signature)
                 </Button>
                 {step ? (
                   <span className="flex items-center gap-2 text-md text-ob-muted">

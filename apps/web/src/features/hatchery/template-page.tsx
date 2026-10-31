@@ -51,7 +51,7 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
     if (!done.ok) throw new Error(done.error);
     setSigned(null);
     toast.success(
-      "Hatched. It starts in shadow mode: it shows what it would pay, and pays nothing.",
+      "Your copy is ready. It starts in practice mode: it shows what it would pay, and pays nothing.",
     );
     navigate(ids[0] ? `/remoras/${ids[0]}?hatched=1` : "/remoras");
   };
@@ -61,7 +61,7 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
       setStep("Preparing your copy…");
       const out = await api.hatchTx(id);
       if (!out.ok) throw new Error(out.error);
-      setStep("Sign once in your wallet: its Disc and the fork record together…");
+      setStep("Sign once in your wallet: its spending limit and the copy record together…");
       const digest = await run(out.data.transaction);
       setSigned({ digest, ids: out.data.remoras });
       await finish(digest, out.data.remoras);
@@ -75,8 +75,9 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
   return (
     <div className="flex flex-col gap-3" data-testid="hatch">
       <p className="text-md text-ob-muted">
-        It's created under {shortAddress(owner)} in shadow mode. You set its budget later on its
-        page; until then the template's suggestion applies, and its Disc caps every payment onchain.
+        It's created under {shortAddress(owner)} in practice mode. You set its budget later on its
+        page; until then the template's suggestion applies, and its spending limit caps every
+        payment onchain.
       </p>
       {error ? (
         <Alert variant="destructive">
@@ -101,7 +102,7 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" disabled={blocked || !!step} onClick={() => void hatch()}>
-          <GitFork /> Hatch it (one signature)
+          <GitFork /> Use it (one signature)
         </Button>
         {step ? (
           <span className="flex items-center gap-2 text-md text-ob-muted">
@@ -124,7 +125,7 @@ function Deprecate({ id, onDone }: { id: string; onDone: () => void }) {
       const digest = await run(out.data.transaction);
       const done = await api.deprecateConfirm(id, digest);
       if (!done.ok) throw new Error(done.error);
-      toast.success("Deprecated. It stays on Walrus, and new hatches are refused.");
+      toast.success("Deprecated. It stays on Walrus, and new copies are refused.");
       onDone();
     } catch (err) {
       toast.error((err as Error).message);
@@ -157,7 +158,7 @@ export function TemplatePage() {
             <span className="flex gap-1">
               {l.deprecated ? <Badge variant="outline">deprecated</Badge> : null}
               <Badge variant="secondary" data-testid="template-forks">
-                <GitFork /> {l.forks} {l.forks === 1 ? "hatch" : "hatches"}
+                <GitFork /> {l.forks} {l.forks === 1 ? "copy" : "copies"}
               </Badge>
             </span>
           ) : null
@@ -174,9 +175,7 @@ export function TemplatePage() {
       {l && params.get("published") ? (
         <Alert variant="success">
           <AlertTitle>Published</AlertTitle>
-          <AlertDescription>
-            Share the link below; anyone can hatch their own copy.
-          </AlertDescription>
+          <AlertDescription>Share the link below; anyone can make their own copy.</AlertDescription>
         </Alert>
       ) : null}
       {l ? (
@@ -207,8 +206,8 @@ export function TemplatePage() {
             ) : null}
             {l.stats ? (
               <Property term="Outcomes">
-                {l.stats.usefulAnswers} useful answers from {l.stats.hatched} hatch
-                {l.stats.hatched === 1 ? "" : "es"}
+                {l.stats.usefulAnswers} useful answers from {l.stats.hatched}{" "}
+                {l.stats.hatched === 1 ? "copy" : "copies"}
                 {l.stats.costPerUsefulUsdc ? `, ${l.stats.costPerUsefulUsdc} USDC each` : ""}
               </Property>
             ) : null}
@@ -238,7 +237,7 @@ export function TemplatePage() {
         </Section>
       ) : null}
       <Section
-        title="Before you hatch"
+        title="Before you use it"
         description="Read back from Walrus and checked again just now."
       >
         <div className="flex max-w-3xl flex-col gap-4" data-testid="consent">
@@ -260,7 +259,7 @@ export function TemplatePage() {
                           {p.priceUsdc ? `${p.priceUsdc} USDC a call` : "price unknown"}
                         </span>
                       ) : (
-                        <Badge variant="destructive">not in this network's Reef</Badge>
+                        <Badge variant="destructive">not a service on this network</Badge>
                       )}
                     </li>
                   ))}
@@ -268,7 +267,7 @@ export function TemplatePage() {
               ) : null}
               <SafetyPanel report={c.safety} />
               <Alert>
-                <AlertTitle>It starts in shadow mode</AlertTitle>
+                <AlertTitle>It starts in practice mode</AlertTitle>
                 <AlertDescription>
                   It shows what it would pay and pays nothing until you turn it on. Schedules arrive
                   paused; a Sentinel watches your own address.
@@ -276,10 +275,10 @@ export function TemplatePage() {
               </Alert>
               {l?.deprecated ? (
                 <p className="text-md text-ob-muted">
-                  Its author deprecated it, so it can't be hatched any more.
+                  Its author deprecated it, so no new copies can be made.
                 </p>
               ) : (
-                <RequireOwner what="hatching this remora" needsWallet>
+                <RequireOwner what="using this remora" needsWallet>
                   {(owner) => (
                     <>
                       <Hatch id={id} consent={c} owner={owner} />

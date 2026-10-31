@@ -111,7 +111,7 @@ test("U8 exit: playground with $1 Discs, health, diagnose, docs", async ({ brows
   await a.page.getByLabel("Your question").fill("Is package 0x2 safe to depend on?");
   await a.page.getByRole("button", { name: /Ask Scout/ }).click();
   await expect(a.page.getByTestId("playground-answer").first()).toContainText(
-    "Paid 0.01 USDC to reef:sui-risk",
+    "Paid 0.01 USDC to Sui risk check",
     {
       timeout: 180_000,
     },
@@ -169,7 +169,9 @@ test("U8 exit: playground with $1 Discs, health, diagnose, docs", async ({ brows
     "the Disc no longer exists onchain",
   ).rejects.toThrow();
   await a.page.reload();
-  await expect(a.page.getByText(/its Disc is revoked onchain/)).toBeVisible({ timeout: 30_000 });
+  await expect(a.page.getByText(/its spending limit is revoked onchain/)).toBeVisible({
+    timeout: 30_000,
+  });
   await a.page.screenshot({ path: "screenshots/u8-playground-ended.png", fullPage: true });
   await until("the second session's revoke", async () => {
     const x = (await sessionOf(b.page)).session;

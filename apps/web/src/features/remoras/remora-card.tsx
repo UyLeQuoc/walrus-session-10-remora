@@ -34,7 +34,9 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
           <BudgetMeter meter={meter.meter} window={budget.window} />
         ) : (
           <p className="text-md text-ob-muted">
-            {meter.loading ? "Reading the Disc…" : meter.error || "Budget not readable just now."}
+            {meter.loading
+              ? "Reading its spending limit…"
+              : meter.error || "Budget not readable just now."}
           </p>
         )}
       </GalleryCard>

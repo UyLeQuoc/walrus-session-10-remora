@@ -57,7 +57,10 @@ function DiscRow({
         </Button>
       </div>
       {used === null ? null : (
-        <Progress value={Math.min(100, used)} aria-label={`${used}% of this Disc spent`} />
+        <Progress
+          value={Math.min(100, used)}
+          aria-label={`${used}% of this spending limit spent`}
+        />
       )}
       <p className="text-ob-muted tabular-nums">
         {formatUsdc(d.allowance.currentSpend)}
@@ -77,12 +80,12 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
   return (
     <Section
       title="Budgets"
-      description="Each remora spends only through its Disc: a spending limit Sui enforces, not us."
+      description="Each remora spends only within its spending limit, which Sui enforces, not us."
     >
       {!cfg ? (
         <p className="text-md text-ob-muted">Remora isn't published on {network} yet.</p>
       ) : discs === null ? (
-        <p className="text-md text-ob-muted">Reading your Discs…</p>
+        <p className="text-md text-ob-muted">Reading your spending limits…</p>
       ) : error ? (
         <div className="flex flex-wrap items-center justify-between gap-2 text-md">
           <span className="text-ob-danger-text">{error}</span>
@@ -94,7 +97,7 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
         <EmptyState
           icon={<Wallet />}
           title="No budgets yet"
-          description="Creating a remora issues a Disc with a budget Sui enforces."
+          description="Creating a remora sets a spending limit that Sui enforces."
           action={
             <Button asChild>
               <Link to="/remoras/new">Create a remora</Link>
@@ -102,7 +105,7 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           }
         />
       ) : (
-        <SettingsGroup as="ul" aria-label="Discs">
+        <SettingsGroup as="ul" aria-label="Spending limits">
           {discs.map((d) => (
             <DiscRow key={d.disc.id} d={d} cfg={cfg} />
           ))}

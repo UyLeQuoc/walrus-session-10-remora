@@ -62,7 +62,7 @@ const outcomeLine = (o: PayOutcome) =>
   o.kind === "paid"
     ? `paid ${o.amount}`
     : o.kind === "shadow"
-      ? `would have paid ${o.amount} (shadow mode)`
+      ? `would have paid ${o.amount} (practice mode)`
       : o.kind === "approval"
         ? "waiting for your approval"
         : `not paid: ${o.reasons.at(-1) ?? o.code}`;
@@ -77,7 +77,9 @@ export function unpaidNote(planned: { payee: string; o: PayOutcome }[]): string 
     o.kind !== "blocked"
       ? []
       : o.code === "sonar.blocked"
-        ? [`Sonar stopped a payment to ${payee}: ${o.reasons.at(-1) ?? "against the policy"}.`]
+        ? [
+            `The safety check stopped a payment to ${payee}: ${o.reasons.at(-1) ?? "against the policy"}.`,
+          ]
         : [
             `I tried to buy ${payee} for this, but the payment didn't go through (${o.code}), so this answer doesn't use it. Ask again in a minute.`,
           ],

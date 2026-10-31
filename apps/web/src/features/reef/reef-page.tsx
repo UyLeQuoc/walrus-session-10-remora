@@ -67,7 +67,7 @@ function ServiceTable({ rows }: { rows: ReefService[] }) {
 
 function ServiceCards({ rows }: { rows: ReefService[] }) {
   return (
-    <SettingsGroup as="ul" aria-label="Reef services">
+    <SettingsGroup as="ul" aria-label="Paid services">
       {rows.map((s) => (
         <li
           key={`${s.name}:${s.payTo}`}
@@ -139,13 +139,13 @@ function Directory({ services }: { services: ReefService[] }) {
 export function ReefPage() {
   const query = useReefServices();
   return (
-    <Page title="Reef" description="The paid services your remoras can buy from.">
+    <Page title="Services" description="The paid services your remoras can buy from.">
       <PageHeader
-        title={<Term name="Reef" />}
+        title={<Term name="services">Services</Term>}
         description={
           <>
-            The <Term name="Reef" /> lists the paid services a remora may pay: what each one does,
-            what a call costs and which address gets paid.
+            This directory lists the paid services a remora may pay: what each one does, what a call
+            costs and which address gets paid.
           </>
         }
       />
@@ -157,12 +157,12 @@ export function ReefPage() {
       ) : query.isError ? (
         <p className="flex items-center gap-2 text-md text-ob-muted" data-testid="reef-error">
           <Waves className="size-4 shrink-0" aria-hidden />
-          The Reef directory isn't available yet
+          The services directory isn't available yet
         </p>
       ) : query.data.length === 0 ? (
         <EmptyState
           icon={<Waves />}
-          title="The Reef is empty"
+          title="No services yet"
           description="No paid services are listed on this network yet."
         />
       ) : (

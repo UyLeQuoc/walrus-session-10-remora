@@ -54,14 +54,14 @@ function ExportEverything() {
       const { text, data } = await fetchAccountExport();
       download(text, name);
       setNote(
-        `Downloaded ${name}: ${data.memories.length} memories and ${data.wakes.length} Wakes (receipts).`,
+        `Downloaded ${name}: ${data.memories.length} memories and ${data.wakes.length} receipts.`,
       );
     } catch {
       // The full export is missing or failed: give what F8 can already export from this browser.
       const ok = await fallback.download("json", name);
       if (ok)
         setNote(
-          `Downloaded ${name} with your memories only, read back from Walrus. Wakes (receipts) are not included; the full account export isn't available yet.`,
+          `Downloaded ${name} with your memories only, read back from Walrus. Receipts are not included; the full account export isn't available yet.`,
         );
     } finally {
       setBusy(false);
@@ -74,7 +74,7 @@ function ExportEverything() {
       title="Export everything"
       description={
         <>
-          One JSON file with your memories and your Wakes (the receipt behind each action).
+          One JSON file with your memories and your receipts (the record behind each action).
           <span className="mt-1 block" role="status" data-testid="export-note">
             {note}
           </span>

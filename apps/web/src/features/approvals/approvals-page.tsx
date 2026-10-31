@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { payeeName } from "@/lib/payee";
 import { usdc } from "@/lib/usdc";
 import { InteractionCard } from "@/openbot";
 
@@ -120,7 +121,9 @@ function ApprovalCard({
           <>
             <p className="text-2xl font-semibold text-ob-text tabular-nums">
               {usdc(p.amount)} USDC{" "}
-              <span className="text-base font-normal text-muted-foreground">to {p.payee}</span>
+              <span className="text-base font-normal text-muted-foreground">
+                to {payeeName(p.payee)}
+              </span>
             </p>
             <p className="text-sm text-muted-foreground">
               Over its per-payment cap. You pay this once from your own balance.

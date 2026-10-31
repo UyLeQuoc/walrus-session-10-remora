@@ -304,7 +304,7 @@ describe("PublicWakePage", () => {
     expect((await screen.findByTestId("verify-verdict")).textContent).toContain("Verified");
     expect(calls[0]?.url).toBe("/api/public/wakes/pw_x");
     const text = document.body.textContent ?? "";
-    expect(text).toContain("Pay 0.05 USDC to reef:sui-risk");
+    expect(text).toContain("Pay 0.05 USDC to Sui risk check");
     expect(text).toContain("scout");
     expect(within(screen.getByLabelText("Checks")).getAllByRole("listitem")).toHaveLength(
       PUBLIC_WAKE.checks.length,

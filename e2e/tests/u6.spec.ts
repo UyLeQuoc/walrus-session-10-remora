@@ -134,7 +134,9 @@ test("U6 exit: team from Markdown, 1-1 chat, room routing, inline approval, mode
   const sentinel = mine.find((r) => r.name === `Sentinel ${stamp}`);
   expect(scout?.discId, "Scout's Disc confirmed").toBeTruthy();
   expect(scout?.config.model).toBe(MODEL);
-  const ready = (await feedOf(page, scout?.id ?? "")).find((e) => /Disc is live/.test(e.summary));
+  const ready = (await feedOf(page, scout?.id ?? "")).find((e) =>
+    /spending limit is live/.test(e.summary),
+  );
   results.teamIssue = ready?.payload.digest ?? null;
   await page.screenshot({ path: "screenshots/u6-room.png", fullPage: true });
 
@@ -167,7 +169,7 @@ test("U6 exit: team from Markdown, 1-1 chat, room routing, inline approval, mode
     .first()
     .getByRole("button", { name: "Why?" })
     .click();
-  await expect(page.getByText(/anchored onchain|not anchored/).first()).toBeVisible({
+  await expect(page.getByText(/saved onchain/).first()).toBeVisible({
     timeout: 30_000,
   });
   await page.screenshot({ path: "screenshots/u6-thread.png", fullPage: true });

@@ -200,9 +200,7 @@ async function askAndTell(
 export async function firstRun(deps: RuntimeDeps, r: Remora) {
   if (r.template === "scout") {
     const pkg = deps.networks.config(r.network).packageId;
-    const question = pkg
-      ? `Is the Disc package ${pkg} safe to depend on?`
-      : "What can you do for me?";
+    const question = pkg ? `Is the package ${pkg} safe to depend on?` : "What can you do for me?";
     return askAndTell(
       deps,
       r,

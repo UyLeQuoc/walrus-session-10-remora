@@ -24,7 +24,7 @@ export function BudgetMeter({
   window: "day" | "week" | "month" | null;
 }) {
   if (!meter?.window) {
-    return <p className="text-md text-ob-muted">Reading the Disc…</p>;
+    return <p className="text-md text-ob-muted">Reading its spending limit…</p>;
   }
   const limit = BigInt(meter.window.limit);
   const spent = BigInt(meter.window.spent);

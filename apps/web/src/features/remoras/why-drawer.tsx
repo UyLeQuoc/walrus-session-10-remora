@@ -18,6 +18,7 @@ import { ProofView } from "@/features/learning/learning";
 import { ShareControl } from "@/features/verify/share-control";
 import { useOwnsWake } from "@/features/verify/use-owns-wake";
 import { useNetwork } from "@/lib/network";
+import { payeeName } from "@/lib/payee";
 import { explorerTx, formatUsdc } from "@/lib/usdc";
 import { api } from "./api";
 
@@ -38,7 +39,9 @@ export function WakeDetails({ view }: { view: WakeView }) {
   return (
     <dl className="flex flex-col gap-3 px-4 pb-6">
       <Row label="Decision">
-        {d.action === "pay" ? `Pay ${formatUsdc(d.amount)} USDC to ${d.payee}` : d.action}
+        {d.action === "pay"
+          ? `Pay ${formatUsdc(d.amount)} USDC to ${payeeName(d.payee)}`
+          : d.action}
       </Row>
       <Row label="Reason">{d.reason}</Row>
       <Row label="Trigger">
@@ -55,7 +58,7 @@ export function WakeDetails({ view }: { view: WakeView }) {
           : "none"}
       </Row>
       <Row label="Check">
-        <Term name="Sonar">Sonar</Term> said {intent.sonar.verdict}
+        The <Term name="safety check">safety check</Term> said {intent.sonar.verdict}
         {intent.sonar.reasons.length ? `: ${intent.sonar.reasons.join("; ")}` : ""}
       </Row>
       <Row label="Model">{intent.model.id}</Row>
@@ -85,9 +88,9 @@ export function WakeDetails({ view }: { view: WakeView }) {
 
 const anchoredBadge = (anchored: boolean) =>
   anchored ? (
-    <Badge variant="secondary">anchored onchain</Badge>
+    <Badge variant="secondary">saved onchain</Badge>
   ) : (
-    <Badge variant="outline">not anchored</Badge>
+    <Badge variant="outline">not saved onchain</Badge>
   );
 
 export function WhyDrawer({ view, label = "Why?" }: { view: WakeView; label?: string }) {
@@ -102,8 +105,7 @@ export function WhyDrawer({ view, label = "Why?" }: { view: WakeView; label?: st
         <SheetHeader>
           <SheetTitle>Why {view.wake.remora} did this</SheetTitle>
           <SheetDescription>
-            The receipt (<Term name="Wake">Wake</Term>) for this action.{" "}
-            {anchoredBadge(view.anchored)}
+            The <Term name="receipt">receipt</Term> for this action. {anchoredBadge(view.anchored)}
           </SheetDescription>
         </SheetHeader>
         <WakeDetails view={view} />

@@ -12,10 +12,10 @@ export async function fetchReefServices(): Promise<ReefService[]> {
   } catch {
     throw new ReefUnavailable("Can't reach the server.");
   }
-  if (!res.ok) throw new ReefUnavailable(`Reef directory answered ${res.status}.`);
+  if (!res.ok) throw new ReefUnavailable(`The services directory answered ${res.status}.`);
   const body: unknown = await res.json().catch(() => null);
   if (!Array.isArray(body))
-    throw new ReefUnavailable("The Reef directory answered in an unknown shape.");
+    throw new ReefUnavailable("The services directory answered in an unknown shape.");
   // One bad row must not blank the directory: keep the rows that parse, drop the rest.
   return body.flatMap((row) => {
     const parsed = ReefService.safeParse(row);

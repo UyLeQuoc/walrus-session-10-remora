@@ -23,7 +23,7 @@ export const PUBLIC_WAKE: PublicWake = {
       ok: true,
       detail: "8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ",
     },
-    { name: "Paid.intent matches", ok: true, detail: "anchored onchain" },
+    { name: "Paid.intent matches", ok: true, detail: "saved onchain" },
     { name: "payTo balance change", ok: true, detail: "50000 of 50000" },
     { name: "signed by the remora", ok: true, detail: `0x${"5c".repeat(32)}` },
   ],

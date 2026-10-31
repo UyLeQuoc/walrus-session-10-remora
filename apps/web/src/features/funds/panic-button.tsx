@@ -69,10 +69,10 @@ export function PanicButton() {
 
   const what =
     remoraCount || discCount
-      ? `${remoraCount} remora${remoraCount === 1 ? "" : "s"} and ${discCount} Disc${
+      ? `${remoraCount} remora${remoraCount === 1 ? "" : "s"} and ${discCount} spending limit${
           discCount === 1 ? "" : "s"
-        } stop paying until you resume each one.`
-      : "Every remora and every Disc on this network stops paying until you resume them one by one.";
+        } are paused until you resume each one.`
+      : "Every remora on this network stops paying, onchain, until you resume them one by one.";
 
   return (
     <TooltipProvider delayDuration={200}>

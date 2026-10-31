@@ -39,7 +39,7 @@ describe("budget → Disc", () => {
     expect(a.payees).toEqual([PAYTO]);
     expect(defaultBudget("sentinel", USDC)).toBeNull();
     expect(() => issueArgs("x", OWNER, { ...b, payees: ["reef:nope"] }, reef, new Date())).toThrow(
-      /isn't in the Reef/,
+      /isn't a listed service/,
     );
   });
 });

@@ -338,8 +338,8 @@ export async function exportTeam(
     ),
     "",
     opts.ids
-      ? "Hatch it in Remora's Hatchery. It starts in shadow mode, its schedules arrive paused, and a Sentinel watches your own address."
-      : "Import it in Remora under Remoras → Import. Remoras start in shadow mode and schedules arrive paused. Sentinels watch the importer's own address until they're told otherwise.",
+      ? "Use it from Remora's Templates. It starts in practice mode, its schedules arrive paused, and a Sentinel watches your own address."
+      : "Import it in Remora under Remoras → Import. Remoras start in practice mode and schedules arrive paused. Sentinels watch the importer's own address until they're told otherwise.",
   ].join("\n");
   return `---\n${stringify(team).trimEnd()}\n---\n\n${body}\n`;
 }

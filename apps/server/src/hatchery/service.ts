@@ -83,7 +83,7 @@ function hatcheryIds(h: HatcheryDeps, network: SuiNetwork) {
   if (!cfg.hatcheryPackageId || !cfg.hatcheryRegistryId)
     throw new RemoraError(
       "hatchery.unavailable",
-      `The Hatchery isn't published on ${network} yet.`,
+      `Templates aren't published on ${network} yet.`,
       409,
     );
   return { pkg: cfg.hatcheryPackageId, registry: cfg.hatcheryRegistryId };
@@ -162,7 +162,7 @@ export async function shareReview(
     { field: "keys", reason: "The remora's key and its memory delegate stay with you." },
     {
       field: "disc",
-      reason: "Disc, allowance and cap ids stay with you; the hatcher sets their own budget.",
+      reason: "Spending limit ids stay with you; whoever copies it sets their own budget.",
     },
     { field: "wakes", reason: "Receipts and history stay with you." },
     ...(watched

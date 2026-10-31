@@ -108,7 +108,9 @@ describe("Connections (F14·ui)", () => {
     const sent = fakeApi([]);
     page();
     await screen.findByText("No agent is connected yet.");
-    await userEvent.click(await screen.findByRole("checkbox", { name: "Pay through its Disc" }));
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Pay within its spending limit" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Create token" }));
     const shown = await screen.findByTestId("token-created");
     expect(within(shown).getByTestId("token-secret").textContent).toBe(CREATED.secret);

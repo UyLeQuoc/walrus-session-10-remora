@@ -696,7 +696,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     return res.found
       ? c.json(serialize(res))
       : c.json(
-          { error: { code: "wake.not_found", message: "No Wake with that id or digest." } },
+          { error: { code: "wake.not_found", message: "No receipt with that id or digest." } },
           404,
         );
   });
@@ -733,7 +733,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   // ── M1–M7: the Hatchery ────────────────────────────────────────────────────
   const hatch = (): HatcheryDeps => {
     if (!d.hatchery)
-      throw new RemoraError("hatchery.unavailable", "The Hatchery isn't set up here.", 409);
+      throw new RemoraError("hatchery.unavailable", "Templates aren't set up here.", 409);
     return { ...d.hatchery, runtime: rt, service };
   };
   const OBJECT_ID = /^0x[0-9a-fA-F]{64}$/;

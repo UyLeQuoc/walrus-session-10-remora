@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Time } from "@/components/app/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { payeeName } from "@/lib/payee";
 import { usdc } from "@/lib/usdc";
 import { SettingsGroup } from "@/openbot/pages";
 import { api } from "./api";
@@ -21,7 +22,7 @@ const LABEL: Record<FeedItem["type"], string> = {
   answer: "Answer",
   payment: "Paid",
   blocked: "Blocked",
-  shadow: "Shadow",
+  shadow: "Practice",
   approval_needed: "Needs you",
   ping: "Ping",
   episode: "Ignored",
@@ -53,9 +54,9 @@ const BADGE: Record<
 export function describeItem(e: FeedItem): string {
   const p = e.payload as { amount?: string; payee?: string; answer?: string };
   if (e.type === "payment" && p.amount && p.payee)
-    return `Paid ${usdc(p.amount)} USDC to ${p.payee}`;
+    return `Paid ${usdc(p.amount)} USDC to ${payeeName(p.payee)}`;
   if (e.type === "shadow" && p.amount && p.payee)
-    return `Would have paid ${usdc(p.amount)} USDC to ${p.payee} (shadow mode)`;
+    return `Would have paid ${usdc(p.amount)} USDC to ${payeeName(p.payee)} (practice mode)`;
   return e.summary;
 }
 

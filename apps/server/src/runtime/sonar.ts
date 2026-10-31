@@ -44,16 +44,16 @@ export function policyCheck(d: SonarDecision, p: SonarPolicy): SonarVerdict {
   const reasons: string[] = [];
   const entry = p.reef.find((r) => r.ref === d.payee);
   const payTo = normalizeSuiAddress(d.payTo);
-  if (!entry) return { verdict: "block", reasons: [`${d.payee} isn't in the Reef`] };
+  if (!entry) return { verdict: "block", reasons: [`${d.payee} isn't a listed service`] };
   if (normalizeSuiAddress(entry.payTo) !== payTo) {
     return { verdict: "block", reasons: [`${d.payee} pays ${entry.payTo}, not ${payTo}`] };
   }
   if (!p.discPayees.map((a) => normalizeSuiAddress(a)).includes(payTo)) {
-    return { verdict: "block", reasons: [`${payTo} isn't on the Disc`] };
+    return { verdict: "block", reasons: [`${payTo} isn't one of its allowed payees`] };
   }
-  reasons.push("payee on Disc and in the Reef");
+  reasons.push("payee allowed and listed");
   if (p.paused || p.status === "paused")
-    return { verdict: "block", reasons: [...reasons, "the Disc is paused"] };
+    return { verdict: "block", reasons: [...reasons, "its spending is paused"] };
   if (p.status === "retired")
     return { verdict: "block", reasons: [...reasons, "the remora is retired"] };
   if (d.amount > p.perPaymentCap) {

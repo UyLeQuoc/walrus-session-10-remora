@@ -3,17 +3,19 @@ import type * as React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const GLOSSARY = {
-  Disc: "A Disc is the on-chain spending limit for one remora. It caps what the remora can spend, and the owner can revoke it.",
-  Wake: "A Wake is the signed record of one remora action, including what it paid and why.",
+  "spending limit":
+    "What one remora may spend: a monthly limit, a cap per payment and the services it may pay. Sui enforces it onchain, and you can pause or revoke it from your wallet.",
+  receipt:
+    "The signed record of one remora action: what it read, what it paid and why. Anyone can check it.",
   "address balance":
     "Your USDC held in the Sui address balance. It is the only funds model Remora uses.",
-  Reef: "Reef is the directory of paid services that remoras can buy from.",
-  Sonar: "Sonar is the safety check that can stop a payment before it is sent.",
-  "Why?": "Why? shows the memories and the record behind a remora's answer.",
+  services: "The directory of paid services that remoras can buy from.",
+  "safety check": "An independent check that can stop a payment before it is signed.",
+  "Why?": "Why? shows the memories and the receipt behind a remora's answer.",
   "sponsored gas":
     "Gas is the network fee for a transaction on Sui. Remora pays it for you, so it never comes out of your USDC.",
-  "shadow mode":
-    "A remora in shadow mode runs but does not pay or send. It shows what it would have done.",
+  "practice mode":
+    "A remora in practice mode runs but does not pay or send. It shows what it would have done.",
 } as const;
 
 export type GlossaryTerm = keyof typeof GLOSSARY;

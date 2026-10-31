@@ -104,7 +104,8 @@ export async function requestPayment(
 
   if (r.status !== "active" && r.status !== "shadow")
     return blocked("remora.not_active", [`the remora is ${r.status}`]);
-  if (!r.discId || !r.allowanceId) return blocked("remora.no_disc", ["this remora has no Disc"]);
+  if (!r.discId || !r.allowanceId)
+    return blocked("remora.no_disc", ["this remora has no spending limit"]);
   if (!deps.limiter.take(`pay:${r.id}`, REMORA_LIMITS.payments).allowed) {
     return blocked("rate_limited", ["too many payments this hour"]);
   }
@@ -117,7 +118,7 @@ export async function requestPayment(
     if (toDiscError(err).code !== "allowance.revoked") throw err;
     // Revoked outside Remora, or not readable yet (the node lags a fresh issue): nothing is signed.
     return blocked("allowance.revoked", [
-      `${r.name}'s Disc can't be read onchain (revoked, or not visible yet), so it can't pay.`,
+      `${r.name}'s spending limit can't be read onchain (revoked, or not visible yet), so it can't pay.`,
     ]);
   }
   const budget = (r.config as { budget?: { perPaymentCap?: string } }).budget;
@@ -168,11 +169,11 @@ export async function requestPayment(
             reason: p.reason,
           };
           const v = deps.sonarOff
-            ? { verdict: "allow" as const, reasons: ["Sonar off (test)"] }
+            ? { verdict: "allow" as const, reasons: ["safety check off (test)"] }
             : await sonar(decision, policy, deps.brain.check);
           if (v.verdict === "allow" && r.status === "shadow") {
             shadow = true;
-            return { verdict: "block", reasons: [...v.reasons, "shadow mode: would have paid"] };
+            return { verdict: "block", reasons: [...v.reasons, "practice mode: would have paid"] };
           }
           return v;
         },
@@ -230,7 +231,7 @@ export async function requestPayment(
             ? "shadow"
             : err.verdict === "ask"
               ? "awaiting approval"
-              : "blocked by Sonar",
+              : "blocked by the safety check",
         },
       );
       if (shadow) {
@@ -302,7 +303,7 @@ export async function requestPayment(
       }
       const eventId = await event(
         "blocked",
-        `Sonar stopped a payment to ${p.payee}: ${err.reasons.at(-1)}`,
+        `The safety check stopped a payment to ${p.payee}: ${err.reasons.at(-1)}`,
         { code: "sonar.blocked", reasons: err.reasons, url: p.url, payTo: err.requirements.payTo },
         wake?.id,
       );

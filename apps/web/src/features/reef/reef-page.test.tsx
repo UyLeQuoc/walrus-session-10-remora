@@ -75,7 +75,7 @@ describe("Reef directory (H4)", () => {
     expect(docs.getAttribute("href")).toBe(REEF_SERVICES[0]?.docsUrl);
     expect(docs.getAttribute("target")).toBe("_blank");
     expect(docs.getAttribute("rel")).toContain("noopener");
-    expect(screen.getAllByTestId("glossary-term")[0]?.dataset.term).toBe("Reef");
+    expect(screen.getAllByTestId("glossary-term")[0]?.dataset.term).toBe("services");
   });
 
   it("shows a skeleton while loading", () => {
@@ -151,7 +151,7 @@ describe("Reef directory (H4)", () => {
     renderPage();
 
     expect((await screen.findByTestId("reef-error")).textContent).toContain(
-      "The Reef directory isn't available yet",
+      "The services directory isn't available yet",
     );
     expect(screen.queryAllByTestId("reef-row")).toHaveLength(0);
   });
@@ -185,7 +185,7 @@ describe("Reef directory (H4)", () => {
   it("says so when the Reef has no services", async () => {
     fakeReef([]);
     renderPage();
-    expect(await screen.findByText("The Reef is empty")).toBeDefined();
+    expect(await screen.findByText("No services yet")).toBeDefined();
   });
 
   it("renders cards instead of a table on a phone", async () => {

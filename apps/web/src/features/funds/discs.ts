@@ -39,7 +39,7 @@ export function useOwnerDiscs(owner: string | null, network: Network) {
       setError("");
       setDiscs(await listOwnerDiscs(client.core, cfg, owner));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read your Discs.");
+      setError(err instanceof Error ? err.message : "Couldn't read your spending limits.");
       setDiscs([]);
     }
   }, [owner, client, cfg]);

@@ -305,7 +305,7 @@ function Panic() {
       title="Danger zone"
       tone="danger"
       layout="split"
-      description="Pauses every remora and every Disc on this network with one signature. Resume each one from its page."
+      description="Pauses every remora's spending on this network with one signature. Resume each one from its page."
     >
       <ConfirmAction
         trigger={
@@ -314,9 +314,9 @@ function Panic() {
           </Button>
         }
         title="Pause all spending on testnet?"
-        description={`${remoraCount} remora${remoraCount === 1 ? "" : "s"} and ${discCount} Disc${
+        description={`${remoraCount} remora${remoraCount === 1 ? "" : "s"} and ${discCount} spending limit${
           discCount === 1 ? "" : "s"
-        } stop paying until you resume each one.`}
+        } are paused until you resume each one.`}
         confirmLabel="Pause everything"
         onConfirm={async () => {
           const message = await panic();

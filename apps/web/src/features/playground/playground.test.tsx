@@ -79,7 +79,7 @@ describe("playground (H7)", () => {
     expect((await screen.findByTestId("playground-spent")).textContent).toBe("0.00 of 1.00 USDC");
     await userEvent.click(screen.getByRole("button", { name: /Ask Scout/ }));
     expect((await screen.findByTestId("playground-answer")).textContent).toContain(
-      "Paid 0.01 USDC to reef:sui-risk",
+      "Paid 0.01 USDC to Sui risk check",
     );
     expect(screen.getByRole("link", { name: /Check its receipt/ }).getAttribute("href")).toBe(
       session.answers[0]?.verify,

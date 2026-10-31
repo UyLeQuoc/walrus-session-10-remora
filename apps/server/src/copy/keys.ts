@@ -7,14 +7,15 @@ import type { CopyKey } from "@remora/schema";
 
 export const COPY_TEXT = {
   "remora.created":
-    "{remora} is ready. It starts in shadow mode: it tells you what it would do, and spends nothing.",
+    "{remora} is ready. It starts in practice mode: it tells you what it would do, and spends nothing.",
   "remora.shadow_started":
     "{remora} is shadowing. For the next {days} days it only says what it would have done.",
   "remora.activated":
-    "{remora} is live. It can spend up to {limit} USDC per {window}, only through its Disc.",
-  "remora.paused": "{remora} is paused. Its Disc can't spend until you resume it.",
+    "{remora} is live. It can spend up to {limit} USDC per {window}, only within its spending limit.",
+  "remora.paused": "{remora} is paused. It can't spend until you resume it.",
   "remora.resumed": "{remora} is back on.",
-  "remora.retired": "{remora} is retired. Its Disc is revoked and its memory stays yours.",
+  "remora.retired":
+    "{remora} is retired. Its spending limit is revoked and its memory stays yours.",
   "remora.key_rotated":
     "{remora} has a new key. The old one can't spend anymore; the budget is unchanged.",
   "ping.chain_event": "{summary}",
@@ -25,7 +26,7 @@ export const COPY_TEXT = {
   "rule.learned": "Got it. From now on: {rule}",
   "rule.undone": "Undone. I've stopped using: {rule}",
   "handoff.sent": "Asked {to} to help: {summary}",
-  "shadow.would_have": "In shadow mode, I would have: {summary}",
+  "shadow.would_have": "In practice mode, I would have: {summary}",
   "why.title": "Why I did this",
   "button.why": "Why?",
   "button.teach": "Teach",

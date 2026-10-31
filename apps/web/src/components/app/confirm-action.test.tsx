@@ -33,7 +33,7 @@ function mount(onConfirm: () => Promise<void>) {
     <ConfirmAction
       trigger={<Button>Open</Button>}
       title="Retire Scout?"
-      description="Its Disc is revoked and it stops for good."
+      description="Its spending limit is revoked and it stops for good."
       confirmLabel="Retire"
       onConfirm={onConfirm}
     />,

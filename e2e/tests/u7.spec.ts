@@ -240,7 +240,7 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
   await page.screenshot({ path: "screenshots/u7-share.png", fullPage: true });
   const t1 = Date.now();
   const signedBefore = wallet.signed.length;
-  await page.getByRole("button", { name: /Publish to the Hatchery \(one signature\)/ }).click();
+  await page.getByRole("button", { name: /Publish as a template \(one signature\)/ }).click();
   await page.waitForURL(/\/hatchery\/0x[0-9a-f]{64}\?published=1/, { timeout: 180_000 });
   results.publishMs = ms(t1);
   results.publishSignatures = wallet.signed.length - signedBefore;
@@ -266,7 +266,7 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
 
   // 2. The gallery lists it.
   await goto(page, "/hatchery");
-  await page.getByLabel("Search the Hatchery").fill(stamp);
+  await page.getByLabel("Search templates").fill(stamp);
   await expect(
     page.getByTestId("hatchery-card").filter({ hasText: `Checker ${stamp}` }),
   ).toBeVisible({
@@ -320,9 +320,9 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
   const walletB = await installTestWallet(pageB, hatcher);
   await pageB.goto(`/hatchery/${templateId}`);
   await expect(pageB.getByTestId("consent")).toContainText("reef:sui-risk", { timeout: 60_000 });
-  await expect(pageB.getByTestId("consent")).toContainText("It starts in shadow mode");
+  await expect(pageB.getByTestId("consent")).toContainText("It starts in practice mode");
   await connectAndSignIn(pageB);
-  const hatchButton = pageB.getByRole("button", { name: /Hatch it \(one signature\)/ });
+  const hatchButton = pageB.getByRole("button", { name: /Use it \(one signature\)/ });
   await expect(hatchButton).toBeEnabled({ timeout: 60_000 });
   await pageB.screenshot({ path: "screenshots/u7-consent.png", fullPage: true });
   const t4 = Date.now();

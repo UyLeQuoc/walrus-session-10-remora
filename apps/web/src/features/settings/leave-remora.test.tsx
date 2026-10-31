@@ -114,7 +114,7 @@ describe("Export everything", () => {
     expect(downloads[0]?.name).toBe(`remora-export-${today()}.json`);
     expect(JSON.parse(await readBlob(downloads[0]?.blob))).toEqual(ACCOUNT_EXPORT_FIXTURE);
     expect((await screen.findByTestId("export-note")).textContent).toContain(
-      "1 memories and 1 Wakes",
+      "1 memories and 1 receipts",
     );
   });
 
@@ -134,7 +134,7 @@ describe("Export everything", () => {
     expect(calls.some((c) => c.url.includes("/api/me/export?format=json"))).toBe(true);
     const note = (await screen.findByTestId("export-note")).textContent ?? "";
     expect(note).toContain("memories only");
-    expect(note).toContain("Wakes (receipts) are not included");
+    expect(note).toContain("Receipts are not included");
   });
 });
 

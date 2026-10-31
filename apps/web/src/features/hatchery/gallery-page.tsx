@@ -19,7 +19,7 @@ import { shortAddress } from "./parts";
 
 const VERDICT: Record<string, { label: string; variant: "success" | "warning" | "destructive" }> = {
   pass: { label: "reviewed", variant: "success" },
-  warn: { label: "check before hatching", variant: "warning" },
+  warn: { label: "check before using", variant: "warning" },
   block: { label: "blocked", variant: "destructive" },
 };
 
@@ -33,17 +33,17 @@ export function HatcheryPage() {
   );
   const templates = list.data?.templates ?? [];
   return (
-    <Page title="Hatchery" description="Remoras people shared, to hatch into your own account.">
+    <Page title="Templates" description="Remoras people shared, to copy into your own account.">
       <PageHeader
-        title="Hatchery"
-        description="Remoras people shared. Each one is a file on Walrus with its author onchain; hatching makes your own copy, in shadow mode, with your own budget."
+        title="Templates"
+        description="Remoras people shared. Each one is a file on Walrus with its author onchain; using one makes your own copy, in practice mode, with your own budget."
       />
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-ob-muted" />
           <Input
             className="pl-8"
-            aria-label="Search the Hatchery"
+            aria-label="Search templates"
             placeholder="Search templates"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -68,7 +68,7 @@ export function HatcheryPage() {
         <EmptyState
           icon={<Egg />}
           title={q || kind ? "No template matches" : "Nothing shared yet"}
-          description="Share one of your remoras from its page (More actions → Share in the Hatchery)."
+          description="Share one of your remoras from its page (More actions → Share as a template)."
         />
       ) : null}
       <ul className="ob-card-grid" aria-label="Templates">

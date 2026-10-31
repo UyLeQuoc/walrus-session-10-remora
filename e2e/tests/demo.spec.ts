@@ -177,7 +177,7 @@ async function remoras(page: Page): Promise<R[]> {
 
 /** The testnet Disc package: Scout's sui-risk report on it is a real finding (a single-address upgrade cap). */
 const QUESTION =
-  "Is the Disc package 0xcc05642d8f85d0ba4a229677c67a2a56214888dda38f3d95e3c69e88434a5d6d safe to depend on?";
+  "Is the package 0xcc05642d8f85d0ba4a229677c67a2a56214888dda38f3d95e3c69e88434a5d6d safe to depend on?";
 
 test.describe.configure({ mode: "serial" });
 
@@ -227,7 +227,7 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await s.click(s.page.getByRole("button", { name: /Ask Scout/ }), "Ask Scout");
     s.mark("asked");
     await expect(s.page.getByTestId("playground-answer").first()).toContainText(
-      "Paid 0.01 USDC to reef:sui-risk",
+      "Paid 0.01 USDC to Sui risk check",
       {
         timeout: 180_000,
       },

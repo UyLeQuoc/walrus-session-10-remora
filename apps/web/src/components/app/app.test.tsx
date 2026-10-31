@@ -13,7 +13,7 @@ describe("StatusBadge", () => {
     const { rerender } = render(<StatusBadge status="active" />);
     expect(screen.getByText("active").getAttribute("data-variant")).toBe("success");
     rerender(<StatusBadge status="shadow" />);
-    expect(screen.getByText("shadow").getAttribute("data-variant")).toBe("warning");
+    expect(screen.getByText("practice").getAttribute("data-variant")).toBe("warning");
     rerender(<StatusBadge status="paused" />);
     expect(screen.getByText("paused").getAttribute("data-variant")).toBe("outline");
     rerender(<StatusBadge status="retired" />);
@@ -89,13 +89,13 @@ describe("ConfirmAction", () => {
       <ConfirmAction
         trigger={<button type="button">Pause all</button>}
         title="Pause all spending?"
-        description="2 Discs stop paying."
-        confirmLabel="Pause 2 Discs"
+        description="2 spending limits are paused."
+        confirmLabel="Pause 2 spending limits"
         onConfirm={onConfirm}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Pause all" }));
-    await userEvent.click(screen.getByRole("button", { name: "Pause 2 Discs" }));
+    await userEvent.click(screen.getByRole("button", { name: "Pause 2 spending limits" }));
     expect(onConfirm).toHaveBeenCalledOnce();
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });

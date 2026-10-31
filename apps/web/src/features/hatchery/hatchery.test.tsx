@@ -145,7 +145,7 @@ describe("share (M1, M3)", () => {
     expect((await screen.findByTestId("share-file")).textContent).toContain("remora.team/v1");
     expect(screen.getByTestId("safety-report").dataset.verdict).toBe("pass");
     expect(screen.getByLabelText("Removed").textContent).toContain("memories");
-    await userEvent.click(screen.getByRole("button", { name: /Publish to the Hatchery/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Publish as a template/ }));
     await waitFor(() => expect(screen.getByText("elsewhere")).toBeDefined());
     expect(run).toHaveBeenCalledTimes(1);
     expect(calls.find((c) => c.url === "/api/hatchery/publish")?.body).toEqual({
@@ -163,8 +163,7 @@ describe("share (M1, M3)", () => {
     at(`/remoras/${FIXTURE_SCOUT.id}/share`, "/remoras/:id/share", <SharePage />);
     expect((await screen.findByTestId("safety-report")).dataset.verdict).toBe("block");
     expect(
-      (screen.getByRole("button", { name: /Publish to the Hatchery/ }) as HTMLButtonElement)
-        .disabled,
+      (screen.getByRole("button", { name: /Publish as a template/ }) as HTMLButtonElement).disabled,
     ).toBe(true);
   });
 });
@@ -176,7 +175,7 @@ describe("gallery and hatch (M4, M5)", () => {
     const card = await screen.findByTestId("hatchery-card");
     expect(card.textContent).toContain("Package checker");
     expect(within(card).getByTestId("fork-count").textContent?.trim()).toBe("1");
-    await userEvent.type(screen.getByLabelText("Search the Hatchery"), "pack");
+    await userEvent.type(screen.getByLabelText("Search templates"), "pack");
     await waitFor(() => expect(calls.some((c) => c.url === "/api/hatchery?q=pack")).toBe(true));
   });
 
@@ -208,9 +207,7 @@ describe("gallery and hatch (M4, M5)", () => {
       ),
     );
     expect(screen.getByTestId("template-blob").textContent).toContain(listing?.blobId);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Hatch it \(one signature\)/ }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /Use it \(one signature\)/ }));
     await waitFor(() => expect(screen.getByText("elsewhere")).toBeDefined());
     expect(run).toHaveBeenCalledTimes(1);
     expect(calls.find((c) => c.url.endsWith("/hatch/confirm"))?.body).toEqual({
@@ -226,7 +223,7 @@ describe("gallery and hatch (M4, M5)", () => {
       [`GET /api/hatchery/${TPL}/consent`]: { consent: { ...consent, safety: blockJson } },
     });
     at(`/hatchery/${TPL}`, "/hatchery/:id", <TemplatePage />);
-    const button = await screen.findByRole("button", { name: /Hatch it/ });
+    const button = await screen.findByRole("button", { name: /Use it/ });
     expect((button as HTMLButtonElement).disabled).toBe(true);
   });
 });

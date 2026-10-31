@@ -39,17 +39,17 @@ describe("Sonar (I2)", () => {
   it("allows a Reef payee on the Disc under the limits", () => {
     expect(policyCheck(pay(), policy)).toEqual({
       verdict: "allow",
-      reasons: ["payee on Disc and in the Reef", "under per-payment cap"],
+      reasons: ["payee allowed and listed", "under per-payment cap"],
     });
   });
 
   it("blocks an injected payee, even under a real Reef label", () => {
     expect(policyCheck(pay({ payTo: ATTACKER }), policy).verdict).toBe("block");
     expect(policyCheck(pay({ payee: "reef:evil", payTo: ATTACKER }), policy).reasons[0]).toMatch(
-      /isn't in the Reef/,
+      /isn't a listed service/,
     );
     expect(policyCheck(pay(), { ...policy, discPayees: [] }).reasons[0]).toMatch(
-      /isn't on the Disc/,
+      /isn't one of its allowed payees/,
     );
   });
 

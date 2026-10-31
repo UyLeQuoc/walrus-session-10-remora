@@ -275,7 +275,7 @@ export async function learningSeries(db: Db, r: Remora): Promise<LearningSeries[
     series(
       "cost_per_useful",
       "usdc",
-      "What the remora paid from its Disc, divided by the answers you marked 👍 useful",
+      "What the remora paid, divided by the answers you marked 👍 useful",
       (es) => {
         const spent = es
           .filter((e) => e.type === "payment" && e.payload.approvedBy !== "owner")

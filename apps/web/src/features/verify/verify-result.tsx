@@ -37,7 +37,7 @@ export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored:
         {anchored ? (
           <StatusBadge status="verified" />
         ) : (
-          <Badge variant="outline">not anchored</Badge>
+          <Badge variant="outline">not saved onchain</Badge>
         )}
       </div>
       <p className="text-md text-ob-secondary">

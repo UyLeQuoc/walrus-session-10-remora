@@ -38,13 +38,13 @@ const SCOPES: { scope: McpScope; label: string; hint: string }[] = [
   },
   {
     scope: "pay",
-    label: "Pay through its Disc",
-    hint: "Buy Reef services inside the Disc's limits, and ask the remora questions.",
+    label: "Pay within its spending limit",
+    hint: "Buy paid services within its spending limit, and ask the remora questions.",
   },
   {
     scope: "approve:request",
     label: "Ask you to approve",
-    hint: "For what the Disc won't cover. You pay it once, or decline.",
+    hint: "For what its spending limit won't cover. You pay it once, or decline.",
   },
 ];
 
@@ -141,7 +141,7 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
       <EmptyState
         icon={<Cable />}
         title="No remora to connect yet"
-        description="An agent acts for one of your remoras, inside its Disc."
+        description="An agent acts for one of your remoras, within its spending limit."
         action={
           <Button asChild>
             <Link to="/remoras/new">Create a remora</Link>
@@ -166,7 +166,7 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
           onChange={(e) => setName(e.target.value)}
         />
         <FieldDescription>
-          Its Wakes say{" "}
+          Its receipts say{" "}
           <code>
             via mcp:{(name.toLowerCase().match(/[a-z0-9]+/g) ?? ["agent"]).join("-").slice(0, 40)}
           </code>
@@ -247,7 +247,7 @@ function Calls({ id }: { id: string }) {
           {c.error ? <span className="text-ob-muted">{c.error}</span> : null}
           {c.wakeId ? (
             <Link className="link" to={`/verify/${c.wakeId}`}>
-              Wake
+              Receipt
             </Link>
           ) : null}
           <Time value={c.at} className="ml-auto text-ob-muted" />
@@ -344,7 +344,7 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
               </Button>
             }
             title={`Revoke ${t.name}?`}
-            description="Its next call is refused (401). Wakes and memories it made stay."
+            description="Its next call is refused (401). The receipts and memories it made stay."
             confirmLabel="Revoke"
             tone="danger"
             onConfirm={async () => {
@@ -366,11 +366,11 @@ export function ConnectionsPage() {
   return (
     <Page
       title="Connections"
-      description="Let an agent use one of your remoras through MCP, inside its Disc."
+      description="Let an agent use one of your remoras through MCP, within its spending limit."
     >
       <PageHeader
         title="Connections"
-        description="Let an agent (Claude Code, Cursor, any MCP client) use one of your remoras. It acts inside the remora's Disc; anything over it comes back to you."
+        description="Let an agent (Claude Code, Cursor, any MCP client) use one of your remoras. It acts within the remora's spending limit; anything over it comes back to you."
       />
       <RequireOwner what="connect an agent">
         {() => (

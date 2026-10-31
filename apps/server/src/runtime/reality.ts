@@ -37,7 +37,7 @@ export function paidCheckHandler(
       deps.log.info("disc.paid_unknown_disc", { network: p.network, disc: p.discId });
       return;
     }
-    const summary = `A payment from ${r.name}'s Disc has no decision behind it: ${usdc(p.amount)} USDC to ${p.payTo.slice(0, 10)}…. If it wasn't you, rotate its key or pause it.`;
+    const summary = `A payment from ${r.name}'s spending limit has no decision behind it: ${usdc(p.amount)} USDC to ${p.payTo.slice(0, 10)}…. If it wasn't you, rotate its key or pause it.`;
     await deps.db.insert(remoraEvents).values({
       remoraId: r.id,
       network: r.network,

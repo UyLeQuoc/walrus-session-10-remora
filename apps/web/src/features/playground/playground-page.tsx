@@ -19,6 +19,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/features/chat/markdown";
 import { apiFetch, errorMessage } from "@/lib/api";
+import { payeeName } from "@/lib/payee";
 import { explorerTx } from "@/lib/usdc";
 
 const TOKEN_KEY = "remora.playground";
@@ -93,7 +94,7 @@ export function PlaygroundPage() {
 
   const start = async () => {
     setError("");
-    setBusy("Issuing your Scout's $1 Disc onchain…");
+    setBusy("Setting your Scout's $1 spending limit onchain…");
     try {
       const out = await call(
         "/api/playground/session",
@@ -133,7 +134,7 @@ export function PlaygroundPage() {
     <Page title="Try Scout" description="Try Scout with a $1 budget. No wallet needed.">
       <PageHeader
         title="Try Scout"
-        description="A Scout of your own with a $1 budget it can't go over. Its Disc enforces the limit onchain. A receipt is the onchain record of what each answer paid, and anyone can check it."
+        description="A Scout of your own with a $1 budget it can't go over. Sui enforces the limit onchain. A receipt is the onchain record of what each answer paid, and anyone can check it."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link to="/remoras/new">Get your own</Link>
@@ -153,11 +154,12 @@ export function PlaygroundPage() {
             <ul className="list-disc pl-5 text-ob-muted">
               <li>
                 Your Scout is live at once, with a <b>{open?.limits.discUsdc ?? "1.00"} USDC</b>{" "}
-                Disc on {open?.network ?? "testnet"}.
+                spending limit on {open?.network ?? "testnet"}.
               </li>
               <li>
                 Ask up to <b>{open?.limits.questionsPerSession ?? 3}</b> questions. The session ends
-                after {lasts(open?.limits.ttlMinutes ?? 1440)}, and the Disc is revoked onchain.
+                after {lasts(open?.limits.ttlMinutes ?? 1440)}, and its spending limit is revoked
+                onchain.
               </li>
               <li>Questions here are not kept in memory. Sign in for a Scout that learns.</li>
             </ul>
@@ -196,7 +198,7 @@ export function PlaygroundPage() {
             title={session.name}
             description={
               ended
-                ? "This session has ended; its Disc is revoked onchain."
+                ? "This session has ended; its spending limit is revoked onchain."
                 : `Ends ${new Date(session.expiresAt).toLocaleString()}.`
             }
           >
@@ -215,7 +217,7 @@ export function PlaygroundPage() {
                   value={Math.min(100, (spent / budget) * 100)}
                   aria-label="Spent of the budget"
                 />
-                {session.discId ? <Hash value={session.discId} label="Disc" /> : null}
+                {session.discId ? <Hash value={session.discId} label="Spending limit" /> : null}
                 {session.issueDigest ? (
                   <Hash
                     value={session.issueDigest}
@@ -259,7 +261,7 @@ export function PlaygroundPage() {
                     <div className="flex flex-wrap items-center gap-3 text-xs text-ob-muted">
                       {a.paid.map((p) => (
                         <Badge key={`${p.payee}${p.digest}`} variant="outline">
-                          Paid {p.amountUsdc} USDC to {p.payee}
+                          Paid {p.amountUsdc} USDC to {payeeName(p.payee)}
                         </Badge>
                       ))}
                       {a.verify ? (

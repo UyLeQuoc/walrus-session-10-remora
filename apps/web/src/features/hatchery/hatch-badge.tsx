@@ -16,8 +16,8 @@ const COPIED_MS = 2000;
 export function HatchBadge({ templateId, name }: { templateId: string; name: string }) {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const path = `/hatchery/${templateId}`;
-  const markdown = `[Hatch this remora](${origin}${path})`;
-  const html = `<a href="${origin}${path}">Hatch this remora</a>`;
+  const markdown = `[Use this remora](${origin}${path})`;
+  const html = `<a href="${origin}${path}">Use this remora</a>`;
 
   const [status, setStatus] = useState<Status>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,7 +60,7 @@ export function HatchBadge({ templateId, name }: { templateId: string; name: str
         >
           <GitFork className="size-5 shrink-0" aria-hidden />
           <span className="flex min-w-0 flex-col">
-            <span className="font-semibold">Hatch this remora</span>
+            <span className="font-semibold">Use this remora</span>
             <span className="truncate text-md text-ob-muted">{name}</span>
           </span>
         </Link>

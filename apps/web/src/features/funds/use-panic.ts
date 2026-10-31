@@ -38,7 +38,7 @@ export function usePanic() {
 
   const panic = async (): Promise<string> => {
     if (!owner) throw new Error("Sign in first.");
-    if (!remoraCount && !discCount) return "Nothing to pause: every Disc is already paused.";
+    if (!remoraCount && !discCount) return "Nothing to pause: all spending is already paused.";
     setBusy(true);
     try {
       let pausedRemoras = 0;
@@ -78,10 +78,11 @@ export function usePanic() {
       void remoras.refresh();
 
       const pausedDiscs = serverDiscs + rest.length;
-      if (!pausedRemoras && !pausedDiscs) return "Nothing to pause: every Disc is already paused.";
-      if (!pausedRemoras) return `Paused ${plural(pausedDiscs, "Disc")}.`;
+      if (!pausedRemoras && !pausedDiscs)
+        return "Nothing to pause: all spending is already paused.";
+      if (!pausedRemoras) return `Paused ${plural(pausedDiscs, "spending limit")}.`;
       if (!pausedDiscs) return `Paused ${plural(pausedRemoras, "remora")}.`;
-      return `Paused ${plural(pausedRemoras, "remora")} and ${plural(pausedDiscs, "Disc")}.`;
+      return `Paused ${plural(pausedRemoras, "remora")} and ${plural(pausedDiscs, "spending limit")}.`;
     } finally {
       setBusy(false);
     }

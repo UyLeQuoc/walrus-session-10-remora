@@ -17,32 +17,32 @@ beforeAll(() => {
 
 describe("Term", () => {
   it("renders its children and marks the term", () => {
-    render(<Term name="Disc">spending limit</Term>);
+    render(<Term name="spending limit">Spending limit</Term>);
     const term = screen.getByTestId("glossary-term");
-    expect(term.textContent).toBe("spending limit");
-    expect(term.getAttribute("data-term")).toBe("Disc");
+    expect(term.textContent).toBe("Spending limit");
+    expect(term.getAttribute("data-term")).toBe("spending limit");
     expect(term.tagName).toBe("BUTTON");
   });
 
   it("falls back to the term name when there are no children", () => {
-    render(<Term name="Sonar" />);
-    expect(screen.getByTestId("glossary-term").textContent).toBe("Sonar");
+    render(<Term name="safety check" />);
+    expect(screen.getByTestId("glossary-term").textContent).toBe("safety check");
   });
 
   it("shows the glossary text on hover", async () => {
     const user = userEvent.setup();
-    render(<Term name="Wake" />);
+    render(<Term name="receipt" />);
     await user.hover(screen.getByTestId("glossary-term"));
     const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip.textContent).toContain(GLOSSARY.Wake);
+    expect(tooltip.textContent).toContain(GLOSSARY.receipt);
   });
 
   it("shows the glossary text on keyboard focus", async () => {
     const user = userEvent.setup();
-    render(<Term name="shadow mode" />);
+    render(<Term name="practice mode" />);
     await user.tab();
     expect(document.activeElement).toBe(screen.getByTestId("glossary-term"));
     const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip.textContent).toContain(GLOSSARY["shadow mode"]);
+    expect(tooltip.textContent).toContain(GLOSSARY["practice mode"]);
   });
 });

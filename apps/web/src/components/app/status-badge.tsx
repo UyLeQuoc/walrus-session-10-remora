@@ -28,6 +28,9 @@ const VARIANT = {
   draft: "outline",
 } as const;
 
+/** Plain words for the statuses whose code name isn't one (ADR-0094). */
+const LABEL: Partial<Record<Status, string>> = { shadow: "practice" };
+
 export function StatusBadge({ status }: { status: Status }) {
-  return <Badge variant={VARIANT[status]}>{status}</Badge>;
+  return <Badge variant={VARIANT[status]}>{LABEL[status] ?? status}</Badge>;
 }

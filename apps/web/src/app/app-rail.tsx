@@ -26,7 +26,7 @@ export const RAIL_PAGES = [
   { to: "/funds", label: "Funds", icon: Wallet },
   { to: "/memory", label: "Memory", icon: Brain },
   { to: "/connections", label: "Connections", icon: Cable },
-  { to: "/hatchery", label: "Hatchery", icon: Egg },
+  { to: "/hatchery", label: "Templates", icon: Egg },
 ] as const;
 
 export const RAIL_FOOTER = [

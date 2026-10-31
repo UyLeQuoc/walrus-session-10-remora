@@ -33,13 +33,13 @@ describe("hatch badge (M12)", () => {
   it("renders the markdown and html snippets pointing at the template", () => {
     renderBadge();
     const origin = window.location.origin;
-    expect(screen.getByTestId("hatch-badge").textContent).toContain("Hatch this remora");
+    expect(screen.getByTestId("hatch-badge").textContent).toContain("Use this remora");
     expect(screen.getByTestId("hatch-badge").textContent).toContain("Package checker");
     expect(screen.getByTestId("hatch-badge-markdown").textContent).toBe(
-      `[Hatch this remora](${origin}/hatchery/abc123)`,
+      `[Use this remora](${origin}/hatchery/abc123)`,
     );
     expect(screen.getByTestId("hatch-badge-html").textContent).toBe(
-      `<a href="${origin}/hatchery/abc123">Hatch this remora</a>`,
+      `<a href="${origin}/hatchery/abc123">Use this remora</a>`,
     );
   });
 
@@ -48,7 +48,7 @@ describe("hatch badge (M12)", () => {
     await userEvent.click(screen.getByTestId("hatch-badge-copy-markdown"));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(writeText).toHaveBeenCalledWith(
-      `[Hatch this remora](${window.location.origin}/hatchery/abc123)`,
+      `[Use this remora](${window.location.origin}/hatchery/abc123)`,
     );
     expect(await screen.findByText("Copied")).toBeDefined();
   });

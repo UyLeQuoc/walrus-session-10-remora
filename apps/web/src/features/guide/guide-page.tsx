@@ -89,7 +89,7 @@ export function GuidePage() {
             {
               icon: Gauge,
               title: "A budget",
-              detail: "A Disc caps every payment, enforced by Sui.",
+              detail: "A spending limit caps every payment, enforced by Sui.",
             },
             {
               icon: Zap,
@@ -123,24 +123,24 @@ export function GuidePage() {
 
       <GuideSection
         title="A budget Sui enforces"
-        lead="Remoras never hold your money. They spend from your address balance, only through a Disc with a cap."
+        lead="Remoras never hold your money. They spend from your address balance, only within a spending limit with a cap."
       >
         <Tiles
           items={[
             {
               icon: Wallet,
               title: "Your address balance",
-              detail: "The only pot a Disc can spend from.",
+              detail: "The only pot a spending limit can draw from.",
             },
             {
               icon: Gauge,
-              title: "Its Disc",
+              title: "Its spending limit",
               detail: "A monthly limit and a per-payment cap, checked on chain.",
             },
             {
               icon: OctagonPause,
               title: "Pause or retire",
-              detail: "Stop one remora, or every Disc, with one signature.",
+              detail: "Stop one remora, or all of them, with one signature.",
             },
             {
               icon: KeyRound,
@@ -160,11 +160,11 @@ export function GuidePage() {
 
       <GuideSection
         title="A receipt for every action"
-        lead="Every payment and answer leaves a Wake: what was bought, what it cost, and why."
+        lead="Every payment and answer leaves a receipt: what was bought, what it cost, and why."
       >
         <ProofGrid />
         <p className="text-md text-ob-muted">
-          Paste a digest or a Wake id in{" "}
+          Paste a digest or a receipt id in{" "}
           <Link className="link" to="/verify">
             Verify a receipt
           </Link>{" "}

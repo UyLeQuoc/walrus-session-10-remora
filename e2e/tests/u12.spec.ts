@@ -138,7 +138,7 @@ async function makeToken(page: Page, name: string, scopes: string[]) {
   const labels: Record<string, string> = {
     "memory:read": "Read its memory",
     "memory:write": "Write to its memory",
-    pay: "Pay through its Disc",
+    pay: "Pay within its spending limit",
     "approve:request": "Ask you to approve",
   };
   for (const [scope, label] of Object.entries(labels)) {
@@ -718,7 +718,7 @@ async function makeTokenHere(page: Page, name: string, scopes: string[]) {
   const labels: Record<string, string> = {
     "memory:read": "Read its memory",
     "memory:write": "Write to its memory",
-    pay: "Pay through its Disc",
+    pay: "Pay within its spending limit",
     "approve:request": "Ask you to approve",
   };
   for (const [scope, label] of Object.entries(labels)) {

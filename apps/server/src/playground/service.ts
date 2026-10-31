@@ -182,7 +182,7 @@ export async function createSession(p: PlaygroundDeps, ip: string) {
     lifetimeCap: DISC_UNITS,
   });
   if (!created.transaction)
-    throw new RemoraError("playground.no_disc", "The playground Scout got no Disc.", 409);
+    throw new RemoraError("playground.no_disc", "The playground Scout got no spending limit.", 409);
   const issueDigest = await p.sign(created.transaction);
   await p.service.confirmIssue(created.remora.id, address, issueDigest);
   // The $1 Disc is the safety: no shadow period (ADR-0051).
