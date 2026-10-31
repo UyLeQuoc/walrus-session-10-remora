@@ -185,13 +185,16 @@ demo's story ([ADR-0081](adr/0081-launch-story.md)) and names x402 on Sui
 3. **What a remora is:** the Disc, Sonar, the Wake, the Reef and memory.
 4. **How it learned over time** (required):
    - Proof of Learning;
-   - the facts ledger;
+   - "Remembering is the easy part": the facts ledger after the Dewee write-up (ADR-0074), and the
+     dedupe bug that building it found;
    - **[dogfood]** charts and three real memories.
 5. **How it uses Walrus** and **how it uses Tatum.**
 6. **Agent payments:** x402 settled on Sui, and the allowance gotchas.
 7. **Red team:** 28 attacks, 0 overspends.
 8. **What's real, what isn't,** and **what went wrong.**
-9. **Try it.**
+9. **Ideas we borrowed:** Dewee (the facts ledger), Unwritten (the reality check, ADR-0077), hippo (the
+   memory layer).
+10. **Try it.**
 
 ---
 
