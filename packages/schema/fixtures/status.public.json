@@ -1,0 +1,21 @@
+{
+  "status": "degraded",
+  "items": [
+    {
+      "name": "db",
+      "status": "ok"
+    },
+    {
+      "name": "tatum.testnet",
+      "status": "ok"
+    },
+    {
+      "name": "relayer",
+      "status": "degraded"
+    },
+    {
+      "name": "gas.testnet",
+      "status": "down"
+    }
+  ]
+}

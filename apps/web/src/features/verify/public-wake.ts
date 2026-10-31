@@ -16,49 +16,6 @@
  * Wake/receipt id (`/api/wakes/:id/share` takes that id; the token is the only public handle).
  * See docs/threat-model.md (memory and prompts stay private; the chain facts are public).
  *
- * TODO: move to `packages/schema` (and the fixtures to its fixtures) at the contract PR with Uy.
+ * The shape lives in `packages/schema` (ADR-0076).
  */
-import { z } from "zod";
-
-/**
- * Free text is bounded: a check's `name` (64) and `detail` (200), and the `remora` name (64). The
- * server MUST only send fixed-format check details (a hash, a digest, an address, "50000 of
- * 50000", "anchored onchain"), never model prose or anything quoted from private context; this
- * limit is a backstop, not the filter.
- */
-const Check = z.object({
-  name: z.string().min(1).max(64),
-  ok: z.boolean().nullable(),
-  detail: z.string().max(200),
-});
-
-const Action = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("pay"),
-    payee: z
-      .string()
-      .max(64)
-      .regex(/^reef:[a-z0-9-]+$/),
-    payTo: z.string().regex(/^0x[0-9a-fA-F]{1,64}$/),
-    amount: z.string().regex(/^\d{1,20}$/),
-  }),
-  z.object({ kind: z.enum(["ping", "digest", "silent", "answer"]) }),
-]);
-
-export const PublicWake = z.object({
-  v: z.literal(1),
-  remora: z.string().min(1).max(64),
-  network: z.enum(["testnet", "mainnet"]),
-  ts: z.iso.datetime({ offset: true }),
-  action: Action,
-  tx: z.string().min(1).max(64).nullable(),
-  agent: z.string().regex(/^0x[0-9a-fA-F]{1,64}$/),
-  intentHash: z.string().regex(/^[0-9a-f]{64}$/),
-  anchored: z.boolean(),
-  checks: z.array(Check).max(20),
-});
-export type PublicWake = z.infer<typeof PublicWake>;
-
-/** `POST /api/wakes/:id/share` → `{ token, url }` (owner only). */
-export const ShareLink = z.object({ token: z.string().min(1), url: z.string().min(1) });
-export type ShareLink = z.infer<typeof ShareLink>;
+export { PublicWake, ShareLink } from "@remora/schema";

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "sui-risk",
+    "category": "Onchain risk",
+    "priceUsdc": "10000",
+    "payTo": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
+    "docsUrl": "https://github.com/UyLeQuoc/walrus-session-10-remora/tree/main/apps/merchants#readme"
+  },
+  {
+    "name": "odds",
+    "category": "Sports",
+    "priceUsdc": "20000",
+    "payTo": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
+    "docsUrl": "https://github.com/UyLeQuoc/walrus-session-10-remora/tree/main/apps/merchants#readme"
+  },
+  {
+    "name": "brief",
+    "category": "Summaries",
+    "priceUsdc": "10000",
+    "payTo": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
+    "docsUrl": "https://github.com/UyLeQuoc/walrus-session-10-remora/tree/main/apps/merchants#readme"
+  }
+]

@@ -1,34 +1,19 @@
 /**
- * H6 / A8: leaving Remora. Two endpoints Uy's U9 may add; neither exists yet, so every call here
- * treats a 404 as "not available yet", never as a crash.
+ * H6 / A8: leaving Remora, on the endpoints of U9 (ADR-0076). A server without them still answers 404,
+ * so every call here treats a 404 as "not available yet", never as a crash.
  *  - `GET  /api/account/export`          -> `AccountExport`: memories + Wakes, one JSON (owner only).
- *  - `POST /api/account/retire`          -> `AccountRetire`: one prepared transaction (base64, for the
- *                                           wallet to sign) that revokes every non-retired remora's Disc.
+ *  - `POST /api/account/retire`          -> `AccountRetire`: one prepared transaction (for the wallet to
+ *                                           sign) that revokes every non-retired remora's Disc.
  *  - `POST /api/account/retire/confirm`  `{ digest }` -> `{ retired: string[] }`: the server marks them
  *                                           retired once the digest is final (mirrors B8's per-remora
  *                                           `retire` / `retire/confirm`).
  *
- * TODO: move these types (and the fixtures) to `packages/schema` at the contract PR with Uy.
+ * The shapes live in `packages/schema` (ADR-0076).
  */
-import { z } from "zod";
+import { AccountExport, AccountRetire, AccountRetired } from "@remora/schema";
 import { apiFetch, errorMessage } from "@/lib/api";
 
-export const AccountExport = z.object({
-  v: z.literal(1),
-  exportedAt: z.iso.datetime({ offset: true }),
-  memories: z.array(z.unknown()),
-  wakes: z.array(z.unknown()),
-});
-export type AccountExport = z.infer<typeof AccountExport>;
-
-export const AccountRetire = z.object({
-  transaction: z.string().min(1),
-  /** The remoras this transaction retires, so the page can show them before and after. */
-  remoraIds: z.array(z.string()),
-});
-export type AccountRetire = z.infer<typeof AccountRetire>;
-
-export const AccountRetired = z.object({ retired: z.array(z.string()) });
+export { AccountExport, AccountRetire, AccountRetired };
 
 export const ACCOUNT_EXPORT_FIXTURE: AccountExport = {
   v: 1,

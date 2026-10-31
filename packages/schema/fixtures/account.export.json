@@ -1,0 +1,35 @@
+{
+  "v": 1,
+  "exportedAt": "2026-11-04T09:00:00Z",
+  "memories": [
+    {
+      "remora": "scout",
+      "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+      "network": "testnet",
+      "blobId": "rbQ84ahdT1xYz",
+      "namespace": "rules",
+      "type": "rule",
+      "createdAt": "2026-10-22T08:00:00Z",
+      "expiresAt": "2027-05-20T08:00:00Z",
+      "hidden": false,
+      "supersededBy": null,
+      "text": "Ignore incoming SUI under 0.002",
+      "verified": true
+    }
+  ],
+  "wakes": [
+    {
+      "id": "9a7e1c44-0f1d-4f9a-8d55-3b2a1c0d9e88",
+      "remoraId": "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10",
+      "network": "testnet",
+      "intentHash": "ecb2782e5e6a94569533182e69db241307d331cb5f07d1f6a91369cd5efb7cfb",
+      "txDigest": "8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ",
+      "anchored": true,
+      "wakeBlobId": null,
+      "createdAt": "2026-11-03T02:13:00.120Z",
+      "wake": {
+        "v": 1
+      }
+    }
+  ]
+}

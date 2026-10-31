@@ -2,9 +2,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  AccountExport,
+  AccountRetire,
   ApprovalRequest,
   BudgetMeter,
   COPY_KEYS,
+  CostResponse,
   DEPLOYMENTS,
   Deployment,
   DetectFundsResponse,
@@ -12,6 +15,7 @@ import {
   DiagnoseReport,
   ERROR_CODES,
   errorCopyKey,
+  FactsResponse,
   FeedItem,
   FundsTxResponse,
   HatchConsent,
@@ -33,6 +37,9 @@ import {
   OwnerSettings,
   PlaygroundSession,
   ProofOfLearning,
+  PublicStatus,
+  PublicWake,
+  ReefServices,
   RemoraConfig,
   RemoraEvent,
   RemoraMemoryExport,
@@ -42,6 +49,7 @@ import {
   SafetyReport,
   Schedule,
   SchedulePreview,
+  ShareLink,
   ShareReview,
   TeamFile,
   TeamPreview,
@@ -96,6 +104,14 @@ const FIXTURES: Record<string, z.ZodType> = {
   "mcp.token.json": McpToken,
   "mcp.token-created.json": McpTokenCreated,
   "mcp.calls.json": z.array(McpCall),
+  "status.public.json": PublicStatus,
+  "cost.response.json": CostResponse,
+  "reef.services.json": ReefServices,
+  "wake.public.payment.json": PublicWake,
+  "share-link.json": ShareLink,
+  "account.export.json": AccountExport,
+  "account.retire.json": AccountRetire,
+  "facts.response.json": FactsResponse,
 };
 
 describe("contract fixtures", () => {
