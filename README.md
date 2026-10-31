@@ -1,6 +1,29 @@
-# Remora
+<div align="center">
 
-**Always-on agents you actually own.**
+<img src="docs/assets/readme-banner.svg" width="100%" alt="Remora: always-on agents you actually own. A budget Sui enforces, memory you can read on Walrus, and a receipt for every decision.">
+
+<p>
+  <a href="https://github.com/UyLeQuoc/walrus-session-10-remora/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/UyLeQuoc/walrus-session-10-remora/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-6054ec"></a>
+  <a href="#for-judges"><img alt="Total Recall, Track 2" src="https://img.shields.io/badge/Total%20Recall-Track%202-6054ec"></a>
+  <a href="#how-remora-uses-walrus"><img alt="Walrus Memory on mainnet" src="https://img.shields.io/badge/Walrus%20Memory-mainnet-2bb3a6"></a>
+  <a href="#agent-payments-x402-settled-on-sui"><img alt="x402 payments on Sui" src="https://img.shields.io/badge/x402-settled%20on%20Sui-4da2ff"></a>
+  <a href="#how-remora-uses-tatum"><img alt="Tatum gRPC only" src="https://img.shields.io/badge/Tatum-gRPC%20only-1f1e1c"></a>
+  <a href="evals/README.md"><img alt="Red team: 28 attacks, 0 overspends" src="https://img.shields.io/badge/red%20team-28%20attacks%2C%200%20overspends-2fbf71"></a>
+</p>
+
+<p>
+  <a href="#for-judges"><b>For judges</b></a> ·
+  <a href="#in-one-minute">In one minute</a> ·
+  <a href="#how-it-learns">How it learns</a> ·
+  <a href="#agent-payments-x402-settled-on-sui">Agent payments</a> ·
+  <a href="#what-it-does-with-proof">Proof</a> ·
+  <a href="#quick-start-local">Quick start</a> ·
+  <a href="docs/README.md">Docs</a> ·
+  <a href="docs/adr/README.md">Decisions</a>
+</p>
+
+</div>
 
 A *remora* is an AI agent that runs errands for you: it watches your wallet, answers questions, and buys
 the data it needs. Every remora has three things most agents don't:
@@ -15,7 +38,7 @@ the data it needs. Every remora has three things most agents don't:
 > *It goes wherever you go. It cleans up after you. It never takes the wheel.*
 
 ## For judges
-| | |
+| What | Where |
 |---|---|
 | **Entry** | *Total Recall*, **Track 2: Smart Agents for Real Life**. Also **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui, [ADR-0084](docs/adr/0084-enter-best-use-of-agent-payments.md)) |
 | **Watch** | The demo video: **[video URL]** (2:45, [script](docs/remora-plan.md#demo-script-245)) |
@@ -49,6 +72,19 @@ the data it needs. Every remora has three things most agents don't:
   - create a **Scout**, which buys data to answer you;
   - create a **Sentinel**, which watches your addresses and learns what matters;
   - hatch a remora from the **Hatchery**.
+
+## Screenshots
+
+The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)).
+These are from the signed-in audit pass on Oct 31 (`AUDIT=1`, [ADR-0089](docs/adr/0089-ux-pass-retired-remora-and-status-label.md)),
+in light and dark. The full set is in [docs/e2e/screenshots](docs/e2e/screenshots): `audit-*`, plus every
+route at 1280 and 375 px as `u13-*`.
+
+| First visit: try Scout with no wallet | A remora: ask, budget, cost |
+|---|---|
+| ![Home signed out: Try Scout, no wallet, and Check a receipt](docs/e2e/screenshots/audit-light-home-signed-out.png) | ![A remora's page: what it does, its cost card and activity](docs/e2e/screenshots/audit-light-remora-overview.png) |
+| **Memory: every blob, and writes skipped as duplicates** | **The Reef: what a remora may pay over x402** |
+| ![The memory inspector with a "1 later write matched this" badge](docs/e2e/screenshots/audit-light-memory.png) | ![The Reef directory in dark mode](docs/e2e/screenshots/audit-dark-reef.png) |
 
 ## How it learns
 The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
@@ -313,19 +349,6 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
   (M2, M8–M12).
 - **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).
 
-## Screenshots
-
-The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)).
-These are from the signed-in audit pass on Oct 31 (`AUDIT=1`, [ADR-0089](docs/adr/0089-ux-pass-retired-remora-and-status-label.md)),
-in light and dark. The full set is in [docs/e2e/screenshots](docs/e2e/screenshots): `audit-*`, plus every
-route at 1280 and 375 px as `u13-*`.
-
-| First visit: try Scout with no wallet | A remora: ask, budget, cost |
-|---|---|
-| ![Home signed out: Try Scout, no wallet, and Check a receipt](docs/e2e/screenshots/audit-light-home-signed-out.png) | ![A remora's page: what it does, its cost card and activity](docs/e2e/screenshots/audit-light-remora-overview.png) |
-| **Memory: every blob, and writes skipped as duplicates** | **The Reef: what a remora may pay over x402** |
-| ![The memory inspector with a "1 later write matched this" badge](docs/e2e/screenshots/audit-light-memory.png) | ![The Reef directory in dark mode](docs/e2e/screenshots/audit-dark-reef.png) |
-
 ## License
 
 [MIT](LICENSE) ([ADR-0068](docs/adr/0068-mit-license.md)), except one folder:
@@ -336,3 +359,9 @@ route at 1280 and 375 px as `u13-*`.
 
 The vendored ASCII ocean and the Inter font keep their own notices in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+---
+
+<div align="center">
+<sub>Built by Uy and Huấn for <i>Total Recall</i>, the Walrus × Tatum hackathon. MIT, except <code>apps/web/src/openbot/</code>.</sub>
+</div>

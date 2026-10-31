@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="480" viewBox="0 0 1280 480" role="img" aria-labelledby="t d">
+  <title id="t">Remora: always-on agents you actually own</title>
+  <desc id="d">A budget Sui enforces, memory you can read on Walrus, and a receipt for every decision. Cards show a rule Sentinel learned on Walrus, a quiet decision whose receipt cites that rule, and an injected payment the Disc aborted onchain.</desc>
+  <defs>
+    <radialGradient id="glow" cx="100%" cy="0%" r="75%">
+      <stop offset="0" stop-color="#6054ec" stop-opacity="0.42"/>
+      <stop offset="0.6" stop-color="#6054ec" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0%" cy="100%" r="55%">
+      <stop offset="0" stop-color="#2bb3a6" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#2bb3a6" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#ffffff" fill-opacity="0.05"/>
+    </pattern>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2b28"/>
+      <stop offset="1" stop-color="#252421"/>
+    </linearGradient>
+    <style>
+      .sans { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="480" rx="24" fill="#1f1e1c"/>
+  <rect width="1280" height="480" rx="24" fill="url(#dots)"/>
+  <rect width="1280" height="480" rx="24" fill="url(#glow)"/>
+  <rect width="1280" height="480" rx="24" fill="url(#glow2)"/>
+
+  <!-- The water the remora rides in. -->
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M0 430 C 160 400, 320 460, 480 430 S 800 400, 960 430 S 1180 455, 1280 425" stroke-opacity="0.06" stroke-width="2"/>
+    <path d="M0 452 C 180 425, 340 478, 520 452 S 840 425, 1000 452 S 1200 472, 1280 448" stroke-opacity="0.04" stroke-width="2"/>
+  </g>
+
+  <!-- Logo tile and word. -->
+  <rect x="72" y="64" width="56" height="56" rx="14" fill="#6054ec"/>
+  <svg x="83" y="75" width="34" height="34" viewBox="276 96 348 348">
+    <path fill="#ffffff" d="M330 120H360V420H330A30 30 0 0 1 300 390V150A30 30 0 0 1 330 120ZM360 120H510A30 30 0 0 1 540 150V180H360ZM540 180H570A30 30 0 0 1 600 210V270A30 30 0 0 1 570 300H540ZM360 240H540V300H360ZM480 300H540V360H510A30 30 0 0 1 480 330ZM540 360H600V390A30 30 0 0 1 570 420H540Z"/>
+  </svg>
+  <text x="144" y="103" class="sans" font-size="30" font-weight="700" fill="#f5f4f0" letter-spacing="-0.5">remora</text>
+
+  <text x="72" y="170" class="sans" font-size="13" font-weight="600" fill="#a59cf7" letter-spacing="2">WALRUS × TATUM · TOTAL RECALL · TRACK 2</text>
+  <text x="72" y="228" class="sans" font-size="54" font-weight="700" fill="#f5f4f0" letter-spacing="-1.6">Always-on agents</text>
+  <text x="72" y="288" class="sans" font-size="54" font-weight="700" fill="#f5f4f0" letter-spacing="-1.6">you actually own.</text>
+  <text x="72" y="334" class="sans" font-size="19" fill="#b9b6ad">A budget Sui enforces. Memory you can read on Walrus.</text>
+  <text x="72" y="362" class="sans" font-size="19" fill="#b9b6ad">A receipt for every decision.</text>
+
+  <!-- What it's built on. -->
+  <g class="sans" font-size="14" fill="#d8d5cc">
+    <rect x="72" y="388" width="132" height="32" rx="16" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="138" y="409" text-anchor="middle">Walrus Memory</text>
+    <rect x="214" y="388" width="150" height="32" rx="16" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="289" y="409" text-anchor="middle">Sui Disc budgets</text>
+    <rect x="374" y="388" width="116" height="32" rx="16" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="432" y="409" text-anchor="middle">x402 on Sui</text>
+    <rect x="500" y="388" width="112" height="32" rx="16" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="556" y="409" text-anchor="middle">Tatum gRPC</text>
+  </g>
+
+  <!-- Three moments, with real ids from the testnet runs. -->
+  <g class="sans">
+    <!-- 1. A 👎 becomes a rule on Walrus. -->
+    <rect x="748" y="76" width="460" height="96" rx="16" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.09"/>
+    <circle cx="776" cy="104" r="6" fill="#6054ec"/>
+    <text x="792" y="109" font-size="15" font-weight="600" fill="#f5f4f0">Sentinel learned a rule from your 👎</text>
+    <text x="776" y="136" font-size="14" fill="#b9b6ad">“Ignore incoming SUI under 0.002”</text>
+    <text x="776" y="158" font-size="13" fill="#8f8b82">on Walrus in 25.3 s ·</text>
+    <text x="912" y="158" font-size="13" fill="#a59cf7" class="mono">blob rbQ84ahd…</text>
+
+    <!-- 2. The next dust is quiet, and its receipt says why. -->
+    <rect x="748" y="188" width="460" height="96" rx="16" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.09"/>
+    <circle cx="776" cy="216" r="6" fill="#2fbf71"/>
+    <text x="792" y="221" font-size="15" font-weight="600" fill="#f5f4f0">Next 0.001 SUI: quiet</text>
+    <text x="776" y="248" font-size="14" fill="#b9b6ad">Its Wake cites the rule’s blob</text>
+    <text x="776" y="270" font-size="13" fill="#8f8b82">receipt</text>
+    <text x="830" y="270" font-size="13" fill="#2fbf71">✓ verified onchain</text>
+
+    <!-- 3. An injected payment stops at the Disc. -->
+    <rect x="748" y="300" width="460" height="96" rx="16" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.09"/>
+    <circle cx="776" cy="328" r="6" fill="#e5674e"/>
+    <text x="792" y="333" font-size="15" font-weight="600" fill="#f5f4f0">“Pay this address”, from injected data</text>
+    <text x="776" y="360" font-size="14" fill="#b9b6ad">Sonar blocks it. Forced past Sonar, the Disc aborts:</text>
+    <text x="776" y="382" font-size="13" fill="#e5674e" class="mono">EPayeeNotAllowed · 7NYf3QGE…</text>
+  </g>
+</svg>
