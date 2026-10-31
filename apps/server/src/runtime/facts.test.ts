@@ -303,6 +303,26 @@ describe.skipIf(!local)("facts ledger + admission (F15, ADR-0074)", () => {
     expect(rows.filter(([, s]) => s === "active")).toHaveLength(1);
   });
 
+  it("the owner's memory ranks first, even when recall put it further away (ADR-0086)", async () => {
+    const runtime = await write(scout, "me", "episode", "snack=crackers");
+    const owners = await write(scout, "me", "correction", "drink=tea", { asserted: "owner" });
+    const recalled = (await memory.recall(scout, "food", ["me"])).filter((m) =>
+      [runtime, owners].includes(m.blobId),
+    );
+    // The fake relayer returns older blobs closer: the runtime's line comes back first.
+    expect(recalled.map((m) => m.blobId)).toEqual([runtime, owners]);
+    const v = await ledger.validity(
+      scout,
+      NS,
+      recalled.map((m) => m.blobId),
+    );
+    expect([...v.owner]).toEqual([owners]);
+    const a = await admitMemories({ facts: ledger, log }, scout, "what do I like?", recalled, NS);
+    expect(a.memories.map((m) => m.blobId)).toEqual([owners, runtime]);
+    // Ranking doesn't rewrite what recall measured.
+    expect(a.memories[0]?.distance).toBe(recalled[1]?.distance);
+  });
+
   it("without a ledger, admission still drops repeats and never adds anything", async () => {
     const twice: Recalled[] = [
       {

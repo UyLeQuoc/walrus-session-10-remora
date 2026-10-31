@@ -96,14 +96,15 @@ export interface FactLedger {
   observe(r: RemoraRef, w: ObservedWrite): Promise<FactOutcome[]>;
   /**
    * For admission: which recalled blobs no longer hold (every fact they asserted is out of effect),
-   * and the facts now in effect in the slots those blobs were about.
+   * the facts now in effect in the slots those blobs were about, and which blobs the owner stands
+   * behind (a live fact the owner asserted rests on them), which admission ranks first (ADR-0086).
    */
   validity(
     r: RemoraRef,
     namespaces: string[],
     blobIds: string[],
     at?: Date,
-  ): Promise<{ stale: Map<string, Staleness>; current: FactView[] }>;
+  ): Promise<{ stale: Map<string, Staleness>; current: FactView[]; owner: Set<string> }>;
   /** Every fact in the remora's namespaces except retracted ones, or only those in effect at `asOf`. */
   list(r: RemoraRef, namespaces: string[], opts?: { asOf?: Date }): Promise<FactView[]>;
   /** The owner settles a dispute: accept makes it the slot's value from now, reject retracts it. */
@@ -429,13 +430,14 @@ export function createFactLedger(
 
     async validity(r, namespaces, blobIds, at = now()) {
       const stale = new Map<string, Staleness>();
+      const owner = new Set<string>();
       const scope = scopeOf(r, namespaces);
-      if (!blobIds.length || !scope.length) return { stale, current: [] };
+      if (!blobIds.length || !scope.length) return { stale, current: [], owner };
       const mems = await db
         .select({ id: remoraMemories.id, blobId: remoraMemories.blobId })
         .from(remoraMemories)
         .where(inArray(remoraMemories.blobId, blobIds));
-      if (!mems.length) return { stale, current: [] };
+      if (!mems.length) return { stale, current: [], owner };
       const asserted = await db
         .select()
         .from(memoryFacts)
@@ -454,12 +456,13 @@ export function createFactLedger(
       const staleSlots = new Set<string>();
       for (const m of mems) {
         const mine = asserted.filter((f) => f.sourceMemoryIds.includes(m.id));
+        if (m.blobId && mine.some((f) => f.assertedBy === "owner" && live(f))) owner.add(m.blobId);
         // A blob the ledger knows nothing about, or that still asserts something live, stays.
         if (!m.blobId || !mine.length || mine.some(live)) continue;
         stale.set(m.blobId, mine.every((f) => f.status === "disputed") ? "disputed" : "superseded");
         for (const f of mine) staleSlots.add(`${f.namespace}|${f.slot}`);
       }
-      if (!staleSlots.size) return { stale, current: [] };
+      if (!staleSlots.size) return { stale, current: [], owner };
       const slotRows = await db
         .select()
         .from(memoryFacts)
@@ -479,7 +482,7 @@ export function createFactLedger(
         r,
         inSlots.filter((f) => inForce.has(f.id)),
       );
-      return { stale, current: current.filter((f) => !f.hidden) };
+      return { stale, current: current.filter((f) => !f.hidden), owner };
     },
 
     async list(r, namespaces, o = {}) {
@@ -602,9 +605,10 @@ export async function admitMemories(
 ): Promise<AdmittedMemories> {
   let stale = new Map<string, Staleness>();
   let current: FactView[] = [];
+  let owner = new Set<string>();
   if (deps.facts && recalled.length) {
     try {
-      ({ stale, current } = await deps.facts.validity(
+      ({ stale, current, owner } = await deps.facts.validity(
         r,
         namespaces,
         recalled.map((m) => m.blobId),
@@ -613,7 +617,11 @@ export async function admitMemories(
       deps.log?.warn("facts.validity_failed", { remora: r.id, error: err });
     }
   }
-  const judged = await judgeAdmitted(question, admit(recalled, stale), deps.judge);
+  const judged = await judgeAdmitted(
+    question,
+    admit(recalled, stale, undefined, owner),
+    deps.judge,
+  );
   // A current fact the admitted memories already state needs no line of its own.
   const admitted = new Set(judged.admitted.map((m) => m.blobId));
   const shown = current.filter((f) => !f.blobIds.some((b) => admitted.has(b))).slice(0, 8);

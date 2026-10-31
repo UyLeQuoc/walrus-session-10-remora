@@ -3,8 +3,9 @@
  * answers "what should the model read". Similar isn't useful: a superseded track record, the same
  * line stored twice, or ten loosely related lines are noise the model has to argue with.
  *
- * `admit` is deterministic: rank by distance, drop repeats, drop what the fact ledger says is no
- * longer true, then cap per namespace, in total and by a token budget. `judge` is an optional second
+ * `admit` is deterministic: rank by distance (the owner's memories first, ADR-0086), drop repeats,
+ * drop what the fact ledger says is no longer true, then cap per namespace, in total and by a token
+ * budget. `judge` is an optional second
  * pass by a model that can only drop candidates, and fails open: on a timeout, an error, a malformed
  * answer or low confidence, the deterministic set stands. Losing a memory that mattered costs more
  * than reading a few extra tokens.
@@ -56,6 +57,17 @@ export interface Admission<T extends AdmissionCandidate> {
 
 export const estimateTokens = (text: string) => Math.ceil(text.length / 4);
 
+/**
+ * ADR-0086, after Dewee's 1.2× for a person's own memory: a blob the owner stands behind (a live
+ * fact the owner asserted rests on it) ranks as if its similarity, 1 − distance, were 1.2× higher.
+ * It reorders only: the owner's line wins a tie with an agent's near-copy, and a cap drops the
+ * agent's line first. The distance the Wake cites is unchanged.
+ */
+export const OWNER_BOOST = 1.2;
+
+export const rankDistance = (distance: number, owner: boolean) =>
+  owner && distance < 1 ? 1 - (1 - distance) * OWNER_BOOST : distance;
+
 /** The fact itself, without our tags or the case and spacing it was typed with. */
 const body = (text: string) =>
   (parseMemoryText(text)?.text ?? text)
@@ -69,9 +81,11 @@ export function admit<T extends AdmissionCandidate>(
   candidates: readonly T[],
   stale: ReadonlyMap<string, Staleness> = new Map(),
   policy: AdmissionPolicy = ADMISSION_DEFAULTS,
+  owner: ReadonlySet<string> = new Set(),
 ): Admission<T> {
+  const rank = (c: T) => rankDistance(c.distance, owner.has(c.blobId));
   const ranked = [...candidates].sort(
-    (a, b) => a.distance - b.distance || a.blobId.localeCompare(b.blobId),
+    (a, b) => rank(a) - rank(b) || a.blobId.localeCompare(b.blobId),
   );
   const admitted: T[] = [];
   const rejected: Rejected[] = [];

@@ -7,8 +7,10 @@ export {
   estimateTokens,
   type JudgeOutcome,
   judgeAdmitted,
+  OWNER_BOOST,
   type Rejected,
   type RejectReason,
+  rankDistance,
   type Staleness,
   type UsefulnessJudge,
 } from "./admission.ts";

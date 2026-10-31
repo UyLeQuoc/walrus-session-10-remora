@@ -55,6 +55,7 @@ import {
   exportMarkdown,
   exportMemories,
   forgetNamespace,
+  recentDuplicates,
   setHidden,
 } from "./memory-controls.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
@@ -715,16 +716,18 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const ns = c.req.query("ns");
     if (ns && !namespaces.includes(ns))
       throw new RemoraError("memory.bad_namespace", `This remora has no ${ns} memories.`);
-    const [stored, found, written] = await Promise.all([
+    const [stored, found, written, duplicates] = await Promise.all([
       inspectRows(r, namespaces),
       q ? rt.memory.recall(r, q, ns ? [ns] : namespaces, 10) : Promise.resolve([]),
       d.written ? d.written(r) : Promise.resolve({} as Record<string, number>),
+      // ADR-0086: writes skipped as duplicates are shown, never silent.
+      recentDuplicates(rt.db, r),
     ]);
     // F6: our writes against what the relayer reports; a gap is a warning, never a restore().
     const mismatches = Object.entries(written)
       .filter(([n, count]) => (stored.counts[n] ?? 0) < count)
       .map(([n, count]) => ({ namespace: n, written: count, relayer: stored.counts[n] ?? 0 }));
-    return c.json({ namespaces, ...stored, written, mismatches, results: found });
+    return c.json({ namespaces, ...stored, written, mismatches, results: found, duplicates });
   });
 
   // ── M1–M7: the Hatchery ────────────────────────────────────────────────────

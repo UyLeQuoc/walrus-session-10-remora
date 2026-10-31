@@ -21,7 +21,7 @@ import {
   rooms,
   sentinelRules,
 } from "@remora/db";
-import { loadEnv } from "@remora/memory";
+import { loadEnv, type MemoryType } from "@remora/memory";
 import {
   HatchConsent,
   HatcheryListing,
@@ -46,6 +46,7 @@ import {
   enrichRows,
   exportMarkdown,
   memoryIndexFor,
+  recentDuplicates,
   setHidden,
 } from "../runtime/memory-controls.ts";
 import { createRemoraService, type Remora } from "../runtime/remoras.ts";
@@ -725,5 +726,45 @@ describe.skipIf(!local)("U7 runtime (M1–M7, G5, L1, F4/F5)", () => {
     });
     expect(res.status).toBe(409);
     await db.delete(remoraEvents).where(eq(remoraEvents.remoraId, sentinel.id));
+  });
+
+  it("shows a write skipped as a duplicate instead of dropping it silently (ADR-0086)", async () => {
+    const r = { id: sentinel.id, name: sentinel.name, ownerAddress: AUTHOR };
+    const skip = (type: MemoryType) =>
+      index.onWrite(r, "rules", {
+        scope: {} as never,
+        type,
+        blobId: "Fr3shBlobAAAA",
+        jobId: null,
+        textSha256: "cd".repeat(32),
+        channel: "remora",
+        outcome: "duplicate",
+      });
+    await skip("episode");
+    await skip("rule");
+    const [row] = await enrichRows(db, r, [
+      {
+        namespace: "rules",
+        blobId: "Fr3shBlobAAAA",
+        createdAt: "2026-10-21T00:00:00Z",
+        expiresAt: "2027-05-20T00:00:00Z",
+        status: "active",
+        size: 10,
+      },
+    ]);
+    // Counted against the memory it matched; the skipped writes' types don't stand in for its own.
+    expect(row).toMatchObject({ duplicateWrites: 2, type: null });
+    const listed = await recentDuplicates(db, r);
+    expect(listed.map((d) => [d.namespace, d.type, d.blobId])).toEqual([
+      ["rules", "rule", "Fr3shBlobAAAA"],
+      ["rules", "episode", "Fr3shBlobAAAA"],
+    ]);
+    const routes = createRemoraRoutes({ service, runtime: deps, owner: async () => AUTHOR });
+    const res = await routes.request(`/api/remoras/${sentinel.id}/memory`, {
+      headers: { "x-remora-network": "testnet" },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { duplicates: { blobId: string }[] };
+    expect(body.duplicates.map((d) => d.blobId)).toEqual(["Fr3shBlobAAAA", "Fr3shBlobAAAA"]);
   });
 });

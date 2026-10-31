@@ -128,6 +128,14 @@ export function createRemoraMemory(
             noteRelayerError(new Error(`write job failed: ${e.error ?? "no blob id"}`));
             log.warn("memory.write_failed", { remora: r.id, ns, error: e.error ?? null });
           }
+          // ADR-0086: a skipped write is said out loud; the inspector lists it too.
+          if (e.outcome === "duplicate")
+            log.info("memory.duplicate_skipped", {
+              remora: r.id,
+              ns,
+              type: e.type,
+              matched: e.blobId,
+            });
           return index
             ? index.onWrite(r, ns, e).catch((err) => {
                 log.warn("memory.index_failed", { remora: r.id, ns, error: err });

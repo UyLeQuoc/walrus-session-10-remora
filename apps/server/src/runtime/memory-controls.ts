@@ -6,6 +6,7 @@
  *   and the facts read from them are retracted (F15).
  * - **Expiry**: from the relayer's read API, flagged under 30 days.
  * - **Export**: metadata always, text when recall returns it, verified against the hash we recorded.
+ * - **Duplicates**: a write skipped because it matched a stored memory is shown, never silent (ADR-0086).
  */
 import {
   and,
@@ -185,12 +186,15 @@ export async function forgetNamespace(
 }
 
 /** F4/F5: inspector rows with the owner's controls and the expiry alert. */
+/** ADR-0086: how many later writes were skipped because they matched this memory. */
+export type InspectorRowView = InspectorResponse["rows"][number] & { duplicateWrites: number };
+
 export async function enrichRows(
   db: Db,
   r: RemoraRef,
   rows: InspectorRow[],
   now = Date.now(),
-): Promise<InspectorResponse["rows"]> {
+): Promise<InspectorRowView[]> {
   const blobIds = rows.map((x) => x.blobId);
   const local = blobIds.length
     ? await db
@@ -208,7 +212,13 @@ export async function enrichRows(
         ne(remoraMemories.status, "failed"),
       ),
     );
-  const byBlob = new Map(local.map((m) => [m.blobId, m]));
+  // A duplicate row holds the blob it matched, not one of its own: it counts against that memory
+  // and never stands in for it (its type is the skipped write's).
+  const byBlob = new Map(local.filter((m) => m.status !== "duplicate").map((m) => [m.blobId, m]));
+  const duplicateWrites = new Map<string, number>();
+  for (const m of local)
+    if (m.status === "duplicate" && m.blobId)
+      duplicateWrites.set(m.blobId, (duplicateWrites.get(m.blobId) ?? 0) + 1);
   const supersededBy = new Map(corrections.map((c) => [c.corrects, c.blobId ?? "pending"]));
   return rows.map((row) => {
     const m = byBlob.get(row.blobId);
@@ -220,8 +230,40 @@ export async function enrichRows(
       supersededBy: supersededBy.get(row.blobId) ?? null,
       expiresSoon:
         row.status === "active" && expires !== null && expires - now < EXPIRY_ALERT_DAYS * DAY_MS,
+      duplicateWrites: duplicateWrites.get(row.blobId) ?? 0,
     };
   });
+}
+
+/**
+ * ADR-0086: the newest writes skipped because they matched a stored memory. Dewee flags
+ * near-duplicates for someone to review; ours were dropped without a word, which is how Scout's newer
+ * scores were lost (ADR-0074). `blobId` is the memory each one matched.
+ */
+export async function recentDuplicates(db: Db, r: RemoraRef, limit = 20) {
+  const rows = await db
+    .select({
+      namespace: remoraMemories.namespace,
+      type: remoraMemories.type,
+      blobId: remoraMemories.blobId,
+      at: remoraMemories.createdAt,
+    })
+    .from(remoraMemories)
+    .where(and(eq(remoraMemories.remoraId, r.id), eq(remoraMemories.status, "duplicate")))
+    .orderBy(desc(remoraMemories.createdAt))
+    .limit(limit);
+  return rows.flatMap((d) =>
+    d.blobId
+      ? [
+          {
+            namespace: d.namespace,
+            type: isMemoryType(d.type) ? d.type : null,
+            blobId: d.blobId,
+            at: d.at.toISOString(),
+          },
+        ]
+      : [],
+  );
 }
 
 const isMemoryType = (t: unknown): t is MemoryType =>

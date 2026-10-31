@@ -121,6 +121,9 @@ We took the core of it and left the rest. We read the article and
     old one. The owner's word outranks an agent's guess.
   - **Admission before the model reads.** Stale facts and repeats are dropped, and the model gets one
     line of what's true now. If admission fails, recall goes through anyway.
+  - **Your own memory first.** Dewee ranks a person's own memory 1.2× above shared agent memory. We do
+    the same for memories the owner stands behind, so your word reaches the model before an agent's
+    near-copy.
 - **What we left:**
   - the entity graph itself: people, projects and the links between them;
   - the document vault;
@@ -136,8 +139,11 @@ We took the core of it and left the rest. We read the article and
 - Our memory client skipped any write too similar to one already stored. A source's next score differs
   from the last only in its numbers, so every 👍 or 👎 after the first had been swallowed.
 - Dewee's own dedupe only flags near-identical pairs, for someone to merge or dismiss. Ours dropped
-  them without a word. Structured records like scores now skip dedupe, and the ledger decides which one
-  holds.
+  them without a word.
+- **The fix:**
+  - Structured records like scores now skip dedupe, and the ledger decides which one holds.
+  - Every write that's still skipped is logged and listed next to the memory it matched. The inspector
+    says how many later writes each memory absorbed. **[deploy]**
 - Scout had stopped learning about a source after its first lesson. We fixed it the same day, but the
   scores lost before then can't be recovered.
 
