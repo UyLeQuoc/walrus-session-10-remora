@@ -5,7 +5,8 @@
 - **To:** Huấn
 - **Status:**
   - The server side is on `main`.
-  - The schema change is a contract PR, which needs your approval.
+  - The schema change is contract PR
+    [#18](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/18), which needs your approval.
   - The UI is yours, if you take it.
 
 ## What changed on the server
@@ -30,7 +31,7 @@ A row's `type`, `hiddenAt` and `supersededBy` no longer come from a duplicate ro
 3. **Copy, for you to word.** Explain that the memory already held something close enough. If the new
    one was really different, the owner can correct the old one.
 
-## Contract PR
+## Contract PR [#18](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/18)
 - It adds `duplicateWrites` to the row schema and `duplicates` to `InspectorResponse`, both with
   defaults. Older payloads still parse.
 - It updates the `inspector.json` fixture and the fixture test.

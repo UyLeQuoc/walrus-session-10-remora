@@ -43,7 +43,7 @@ What Remora did:
     - a top-level `duplicates` list: the newest 20 skipped writes, with namespace, type, matched blob
       and time.
   - Duplicate rows no longer stand in for the memory they matched.
-  - The schema change is additive with defaults, in a contract PR. Huấn renders it.
+  - The schema change is additive with defaults, in contract PR #18. Huấn renders it.
 - **Not changed:**
   - the dedupe threshold;
   - the rule that structured records skip dedupe ([ADR-0063](0063-structured-records-skip-dedupe.md),
