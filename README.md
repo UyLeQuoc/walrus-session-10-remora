@@ -316,14 +316,15 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 ## Screenshots
 
 The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)).
-The full set is in [docs/e2e/screenshots](docs/e2e/screenshots) (`u13-*`): every route at 1280 and
-375 px, in light and dark.
+These are from the signed-in audit pass on Oct 31 (`AUDIT=1`, [ADR-0089](docs/adr/0089-ux-pass-retired-remora-and-status-label.md)),
+in light and dark. The full set is in [docs/e2e/screenshots](docs/e2e/screenshots): `audit-*`, plus every
+route at 1280 and 375 px as `u13-*`.
 
-| A room of remoras | A remora |
+| First visit: try Scout with no wallet | A remora: ask, budget, cost |
 |---|---|
-| ![A room: faces, coloured names, a paid answer and a ping](docs/e2e/screenshots/u13-room-1280-dark.png) | ![A remora's page: ask, budget, recent activity](docs/e2e/screenshots/u13-remora-1280-light.png) |
-| **Home** | **Approvals on a phone** |
-| ![Home: approvals waiting, stats, your remoras](docs/e2e/screenshots/u13-home-1280-light.png) | ![Approvals at 375 px](docs/e2e/screenshots/u13-approvals-375-dark.png) |
+| ![Home signed out: Try Scout, no wallet, and Check a receipt](docs/e2e/screenshots/audit-light-home-signed-out.png) | ![A remora's page: what it does, its cost card and activity](docs/e2e/screenshots/audit-light-remora-overview.png) |
+| **Memory: every blob, and writes skipped as duplicates** | **The Reef: what a remora may pay over x402** |
+| ![The memory inspector with a "1 later write matched this" badge](docs/e2e/screenshots/audit-light-memory.png) | ![The Reef directory in dark mode](docs/e2e/screenshots/audit-dark-reef.png) |
 
 ## License
 

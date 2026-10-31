@@ -10,7 +10,7 @@
 ## The e2e run (Oct 31, `AUDIT=1 bun run e2e`, 28.5 minutes)
 - **46 passed and 2 failed.** Two more were skipped by design (`RESUME`, `HTTP_CLAUDE`).
 - **U8 (playground):** Tatum timed out on the gas station, so the paid check was refused. That's
-  infrastructure, and the rerun is in the exit note. The answer didn't say so; it does now (server).
+  infrastructure, and the rerun is in the [exit note](../spikes/2026-10-31-e2e-and-ux-pass.md). The answer didn't say so; it does now (server).
 - **U12 (MCP):** the fact was skipped as a duplicate of an earlier run's.
   - `u12.spec.ts` now recalls the matched blob when `structuredContent.alreadyKnown` is set.
   - The resumed path reads `alreadyKnown`. It used to match "Already in memory", which the tool no
