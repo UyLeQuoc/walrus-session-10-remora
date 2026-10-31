@@ -17,6 +17,7 @@
     "capacity": "tsx scripts/capacity.ts",
     "ops": "tsx scripts/ops.ts",
     "verify": "tsx scripts/verify.ts",
+    "evals": "vitest run src/mcp/attacks.test.ts src/runtime/attacks.test.ts src/hatchery/attacks.test.ts && tsx scripts/evals-summary.ts",
     "probe:facts": "tsx scripts/probe-facts.ts",
     "probe:facts:walrus": "tsx scripts/probe-facts-walrus.ts",
     "diagnose": "tsx scripts/diagnose.ts"
