@@ -192,8 +192,8 @@ demo's story ([ADR-0081](adr/0081-launch-story.md)) and names x402 on Sui
 6. **Agent payments:** x402 settled on Sui, and the allowance gotchas.
 7. **Red team:** 28 attacks, 0 overspends.
 8. **What's real, what isn't,** and **what went wrong.**
-9. **Ideas we borrowed:** Dewee (the facts ledger), Unwritten (the reality check, ADR-0077), hippo (the
-   memory layer).
+9. **Ideas we borrowed:** Dewee (the facts ledger), hippo (the memory layer). Other hackathon entries
+   aren't named.
 10. **Try it.**
 
 ---

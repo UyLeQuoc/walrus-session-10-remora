@@ -226,15 +226,10 @@ only allowlisted payees, within the caps.
 ## Ideas we borrowed
 - **The facts ledger and admission** come from the
   [Dewee memory write-up](https://zuey.me/articles/dewee-memory-khi-ai-khong-chi-biet-nho?lang=vi).
-- **The reality check** (moment 4) comes from
-  [Unwritten](https://x.com/EdCriptoFi/status/2110682940132807117), a Track 3 entry in this hackathon.
-  - Unwritten reconciles real transfers with the decisions in memory. Its write-up found two of four
-    transfers with no approval behind them.
-  - We applied the same check to a remora's Disc.
 - **The memory layer** is ported from hippo, our Session 8 entry. The README lists what was reused and
   what's new.
 
-For Dewee and Unwritten, we read the write-ups only, not any code.
+For Dewee, we read the write-up only, not any code.
 
 ## Try it
 - **`/playground`** gives you a Scout with a **$1 Disc**, no wallet needed. The worst case is a dollar,
