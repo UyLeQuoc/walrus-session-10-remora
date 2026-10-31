@@ -104,6 +104,33 @@ describe("Sentinel rules (C2, F2)", () => {
     expect(triage([], event)).toEqual({ verdict: "ping", because: null });
     expect(describeEvent(event)).toBe("Received 0.005 SUI (Dg123456…)");
   });
+
+  it("a check rule pings and hands off, for unknown coins only (D5, ADR-0078)", () => {
+    const rule = parseRule("Check airdrops with Scout") ?? never();
+    expect(rule).toEqual({ action: "check", when: { direction: "in", unknownCoin: true } });
+    expect(parseRule("have scout check new tokens over 100")).toEqual({
+      action: "check",
+      when: { unknownCoin: true, over: 100 },
+    });
+    const check = { rule, text: "check airdrops" };
+    const airdrop = {
+      address: "0x1",
+      direction: "in" as const,
+      coinType: "0xabc::fake::FAKE",
+      amount: 1_000_000_000n,
+      decimals: 9,
+      digest: "DgDrop0001",
+    };
+    expect(triage([check], airdrop)).toEqual({
+      verdict: "ping",
+      because: "check airdrops",
+      check: true,
+    });
+    expect(triage([check], { ...airdrop, coinType: "0x2::sui::SUI" })).toEqual({
+      verdict: "ping",
+      because: null,
+    });
+  });
 });
 
 describe("rate limits (I4)", () => {
