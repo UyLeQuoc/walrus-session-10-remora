@@ -165,9 +165,17 @@ describe("MCP over Streamable HTTP (F14)", () => {
     const res = await h.call(
       rpc("tools/call", { name: "remora_remember", arguments: { type: "episode", text: "x" } }),
     );
-    const result = res.json?.result as { isError?: boolean; content: { text: string }[] };
+    const result = res.json?.result as {
+      isError?: boolean;
+      content: { text: string }[];
+      structuredContent?: { matched?: string };
+    };
     expect(result.isError).toBeUndefined();
-    expect(result.content[0]?.text).toBe("Already in Scout's memory; nothing new was written.");
+    expect(result.content[0]?.text).toBe(
+      "Already in Scout's memory (blob Ex1stingBlobAAAA); nothing new was written.",
+    );
+    // ADR-0086: the agent learns which memory holds it.
+    expect(result.structuredContent?.matched).toBe("Ex1stingBlobAAAA");
     expect(h.calls[0]).toMatchObject({ ok: true, error: null });
   });
 

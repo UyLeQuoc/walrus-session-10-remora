@@ -49,7 +49,13 @@ export interface RemoraMemory {
       /** `false`: a structured record, written even when it's near an older version (ADR-0074). */
       dedupe?: boolean;
     },
-  ): Promise<{ saved: boolean; note: string; indexId?: string }>;
+  ): Promise<{
+    saved: boolean;
+    note: string;
+    indexId?: string;
+    /** ADR-0086: the stored memory a skipped duplicate matched. */
+    matched?: string;
+  }>;
 }
 
 /** The local index behind F4/F8: where writes are recorded and what recall must skip. */
@@ -194,6 +200,7 @@ export function createRemoraMemory(
         saved: res.saved,
         note: res.note,
         ...(typeof res.indexId === "string" ? { indexId: res.indexId } : {}),
+        ...(!res.saved && typeof res.blobId === "string" ? { matched: res.blobId } : {}),
       };
     },
   };

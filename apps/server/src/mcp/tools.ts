@@ -434,11 +434,13 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
           text: res.saved
             ? `Accepted into ${ns} (memory ${res.indexId ?? "pending"}); the blob lands on Walrus in about half a minute. ${res.note}`.trim()
             : known
-              ? `Already in ${r.name}'s memory; nothing new was written.`
+              ? `Already in ${r.name}'s memory${res.matched ? ` (blob ${res.matched})` : ""}; nothing new was written.`
               : `Not written: ${res.note}`,
           structured: {
             saved: res.saved,
             alreadyKnown: known,
+            // ADR-0086: which memory already holds it, so the agent can recall or correct that one.
+            matched: res.matched ?? null,
             namespace: ns,
             memoryId: res.indexId ?? null,
           },

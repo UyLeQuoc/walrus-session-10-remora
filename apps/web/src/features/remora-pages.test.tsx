@@ -13,6 +13,7 @@ import { currentNetwork, setNetwork } from "@/lib/network";
 import { formatUsdc, parseUsdc, usdc } from "@/lib/usdc";
 import { ApprovalsPage } from "./approvals/approvals-page";
 import { FundsPage } from "./funds/funds-page";
+import { HomePage } from "./home/home-page";
 import { MemoryInspectorPage } from "./memory-inspector/memory-page";
 import { OnboardingPage } from "./onboarding/onboarding-page";
 import {
@@ -201,7 +202,7 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     const calls = fakeApi(OWNER);
     at(`/remoras/${FIXTURE_SCOUT.id}`, "/remoras/:id", <RemoraPage />);
     expect((await screen.findByTestId("budget-meter")).textContent).toMatch(
-      /0.97 of 1.00 USDC left this month.*runs out around 2027-02-10/,
+      /0.97 of 1.00 USDC left this month.*runs out around Feb 10, 2027/,
     );
     await userEvent.type(screen.getByLabelText("Question"), "Is 0x2 safe?");
     await userEvent.click(screen.getByRole("button", { name: "Ask" }));
@@ -242,6 +243,16 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     );
     expect(screen.getAllByTestId("memory-duplicate")).toHaveLength(2);
     expect(screen.getByText("Skipped as already known")).toBeDefined();
+  });
+
+  it("signed-out Home offers Scout with no wallet, and a receipt to check (ADR-0088)", async () => {
+    fakeApi(null);
+    at("/", "/", <HomePage />);
+    const tryIt = await screen.findByTestId("home-try-scout");
+    expect(tryIt.getAttribute("href")).toBe("/playground");
+    expect(screen.getByRole("link", { name: /Check a receipt/ }).getAttribute("href")).toBe(
+      "/verify",
+    );
   });
 
   it("verify page checks a digest without signing in (G3)", async () => {

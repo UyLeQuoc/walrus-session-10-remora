@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { api } from "@/features/remoras/api";
+import { describeRemora, useTemplateCatalog } from "@/features/remoras/describe";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
 import {
   AgentRow,
@@ -73,6 +74,7 @@ export function SidebarTeam({
     [owner],
     60_000,
   );
+  const catalog = useTemplateCatalog();
   if (!owner)
     return (
       <SidebarSection name="Try Remora" listLabel="Try Remora">
@@ -135,9 +137,8 @@ export function SidebarTeam({
               avatar={<RemoraAvatar id={r.id} name={r.name} />}
               status={<AgentStatusDot tone={TONE[r.status] ?? "muted"} />}
               name={r.name}
-              badge={title(r.template)}
               time={rosterTime(r.updatedAt)}
-              preview={r.config.persona}
+              preview={describeRemora(r, catalog)}
               label={`${r.name}, ${title(r.template)}, ${STATE[r.status] ?? r.status}`}
             />
           </AgentRowItem>

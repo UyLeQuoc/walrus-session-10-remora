@@ -146,6 +146,8 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
   const created: string[] = [];
   const notices: Notice[] = [];
   const facCalls: { path: string; body: Record<string, unknown> }[] = [];
+  /** ADR-0088: the gas station times out, as Tatum did in the U8 e2e. */
+  let gasDown = false;
   let digestN = 0;
 
   // The fake chain: one live Disc that allows PAYTO, 0.05 per payment.
@@ -197,6 +199,8 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     const path = new URL(String(input)).pathname;
     const body = JSON.parse(String(init?.body ?? "{}"));
     facCalls.push({ path, body });
+    if (path === "/gas" && gasDown)
+      return Response.json({ error: "read ETIMEDOUT" }, { status: 503 });
     if (path === "/gas") {
       const tx = new Transaction();
       tx.setSender(body.sender);
@@ -350,6 +354,22 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     expect(feed.map((e) => e.type)).toEqual(
       expect.arrayContaining(["payment", "blocked", "answer"]),
     );
+  });
+
+  it("says in the answer when a planned purchase didn't go through (ADR-0088)", async () => {
+    gasDown = true;
+    const before = facCalls.length;
+    try {
+      const r = await scoutAsk(deps(), scout, "Is 0x2 safe to depend on?");
+      expect(r.outcomes[0]?.kind).toBe("blocked");
+      expect(r.answer).toMatch(
+        /I tried to buy reef:sui-risk for this, but the payment didn't go through \(x402\.[a-z_]+\)/,
+      );
+      // Nothing was settled.
+      expect(facCalls.slice(before).filter((c) => c.path === "/settle")).toHaveLength(0);
+    } finally {
+      gasDown = false;
+    }
   });
 
   it("with Sonar forced off, the injected payment goes to the gas station (where the Disc must stop it)", async () => {

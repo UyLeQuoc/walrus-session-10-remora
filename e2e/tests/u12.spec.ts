@@ -221,6 +221,13 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
   });
   expect(remembered.result?.isError ?? false, text(remembered)).toBe(false);
   results.remember = remembered.result?.structuredContent;
+  // Remora dedupes facts (ADR-0063 exempts only structured records): this fact differs from an
+  // earlier run's only by its stamp, so it can come back "already known" with the memory it matched
+  // (ADR-0086). Then recall must find that memory instead.
+  const known = remembered.result?.structuredContent as
+    | { alreadyKnown?: boolean; matched?: string | null }
+    | undefined;
+  const target = known?.alreadyKnown && known.matched ? known.matched : stamp;
   let recalled: Rpc | null = null;
   await expect
     .poll(
@@ -232,7 +239,7 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
             namespace: "me",
           },
         });
-        return text(recalled).includes(stamp);
+        return text(recalled).includes(target);
       },
       { timeout: 240_000, intervals: [10_000] },
     )
@@ -578,7 +585,9 @@ test("U12 exit (Remora): real Claude Code over Streamable HTTP", async ({ page }
   });
   // Remora dedupes facts (ADR-0063 exempts only structured records): a near-identical fact from an
   // earlier run is "already in memory", which is as good for the recall.
-  const already = /Already in memory/.test(text(remembered.body));
+  const already =
+    (remembered.body?.result?.structuredContent as { alreadyKnown?: boolean } | undefined)
+      ?.alreadyKnown === true;
   expect(remembered.body?.result?.isError && !already, text(remembered.body)).toBeFalsy();
   out.remember = { ...remembered.body?.result?.structuredContent, alreadyInMemory: already };
   if (!already) await page.waitForTimeout(45_000); // the blob lands on Walrus in about 20 s

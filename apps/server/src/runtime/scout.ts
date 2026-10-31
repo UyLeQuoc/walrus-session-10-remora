@@ -67,6 +67,24 @@ const outcomeLine = (o: PayOutcome) =>
         ? "waiting for your approval"
         : `not paid: ${o.reasons.at(-1) ?? o.code}`;
 
+/**
+ * ADR-0088: a planned purchase that didn't go through is said in the answer itself. The model only
+ * sees what was bought, so without this it answers "I can't tell" and the owner never learns a paid
+ * check was tried (the U8 e2e on Oct 31: the gas station timed out on Tatum).
+ */
+export function unpaidNote(planned: { payee: string; o: PayOutcome }[]): string | null {
+  const lines = planned.flatMap(({ payee, o }) =>
+    o.kind !== "blocked"
+      ? []
+      : o.code === "sonar.blocked"
+        ? [`Sonar stopped a payment to ${payee}: ${o.reasons.at(-1) ?? "against the policy"}.`]
+        : [
+            `I tried to buy ${payee} for this, but the payment didn't go through (${o.code}), so this answer doesn't use it. Ask again in a minute.`,
+          ],
+  );
+  return lines.length ? lines.join(" ") : null;
+}
+
 export async function scoutAsk(
   deps: RuntimeDeps,
   r: Remora,
@@ -130,7 +148,9 @@ export async function scoutAsk(
     }
     return o;
   };
-  for (const b of planBuys(question, deps.reef(r.network))) await buy(b.entry.ref, b.url, b.reason);
+  const planned: { payee: string; o: PayOutcome }[] = [];
+  for (const b of planBuys(question, deps.reef(r.network)))
+    planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
   lap("payMs");
 
   const persona = String((r.config as { persona?: string }).persona ?? "You are Scout.");
@@ -183,6 +203,8 @@ export async function scoutAsk(
       ? `Here's what I found:\n${data.map((d) => `• ${d.source}: ${d.content.slice(0, 400)}`).join("\n")}`
       : "I couldn't reach my model right now, and nothing needed buying.";
   }
+  const note = unpaidNote(planned);
+  if (note) answer = `${answer}\n\n_${note}_`;
   lap("modelMs");
   await addUsage(deps.db, r.id, tokens);
   const spend = outcomes.map((o) => `${outcomeLine(o)}`).join("; ");

@@ -3,6 +3,19 @@ import type { BudgetMeter as Meter } from "@remora/schema";
 import { Progress } from "@/components/ui/progress";
 import { usdc } from "@/lib/usdc";
 
+/** `2027-10-09` → "Oct 9, 2027". The forecast is a calendar day, so it's read in UTC. */
+export const calendarDay = (iso: string) => {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+};
+
 export function BudgetMeter({
   meter,
   window,
@@ -27,7 +40,9 @@ export function BudgetMeter({
           of {usdc(limit)} USDC left this {window ?? "window"}
         </p>
         {meter.forecast?.runsOutOn ? (
-          <p className="text-xs text-ob-muted">runs out around {meter.forecast.runsOutOn}</p>
+          <p className="text-xs text-ob-muted">
+            runs out around {calendarDay(meter.forecast.runsOutOn)}
+          </p>
         ) : null}
       </div>
       <Progress

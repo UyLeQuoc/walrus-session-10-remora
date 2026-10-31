@@ -39,6 +39,7 @@ import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from 
 import { api } from "./api";
 import { budgetLine } from "./budget";
 import { CostCard } from "./cost-card";
+import { describeRemora, useTemplateCatalog } from "./describe";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
 import { useBudget } from "./use-budget";
@@ -637,6 +638,7 @@ function Remora({ id }: { id: string }) {
   const tab = (params.get("tab") as Tab | null) ?? "overview";
   // N13: the first run lands within a minute; poll faster right after creation.
   const feed = useLoad(() => api.feed({ remora: id }), [id], params.get("new") ? 5_000 : 20_000);
+  const catalog = useTemplateCatalog();
   const r = remora.data?.remora;
 
   if (remora.error) {
@@ -675,11 +677,11 @@ function Remora({ id }: { id: string }) {
   const events = feed.data?.events ?? [];
 
   return (
-    <Page title={r.name} description={r.config.persona}>
+    <Page title={r.name} description={describeRemora(r, catalog)}>
       <PageHeader
         title={r.name}
         badge={<StatusBadge status={r.status} />}
-        description={r.config.persona}
+        description={describeRemora(r, catalog)}
         actions={headerActions(r, reload, setTab)}
       />
 

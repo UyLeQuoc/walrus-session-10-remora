@@ -189,7 +189,8 @@ export function harness(opts: {
         o?: { by?: string },
       ) => {
         remembered.push({ ns, type, text, ...(o?.by ? { by: o.by } : {}) });
-        if (opts.notSaved) return { saved: false, note: opts.notSaved };
+        if (opts.notSaved)
+          return { saved: false, note: opts.notSaved, matched: "Ex1stingBlobAAAA" };
         return { saved: true, note: "", indexId: "7e8f9a0b-1c2d-4e3f-8a4b-5c6d7e8f9a0b" };
       },
     },

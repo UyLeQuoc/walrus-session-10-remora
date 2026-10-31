@@ -2,7 +2,7 @@
  * `/` is Home (Q1, ADR-0038): the setup checklist until there is a remora, then the dashboard —
  * remoras, what needs you, and one activity feed. Chat lives at `/chat`.
  */
-import { AlertTriangle, Fish, Plus } from "lucide-react";
+import { AlertTriangle, Fish, Plus, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader, Section } from "@/components/app/page";
@@ -134,7 +134,7 @@ function Dashboard({ owner }: { owner: string }) {
   );
 }
 
-function EmptyHome() {
+function EmptyHome({ signedIn }: { signedIn: boolean }) {
   const templates = useLoad(() => api.templates(), []);
   const list = Object.entries(templates.data?.templates ?? {});
 
@@ -145,6 +145,21 @@ function EmptyHome() {
           {HERO}
         </h1>
         <p className="ob-page-description md:text-base">{SUB}</p>
+        {signedIn ? null : (
+          // ADR-0088: a first visit can see a remora pay and prove it before connecting anything.
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button asChild>
+              <Link to="/playground" data-testid="home-try-scout">
+                <Fish /> Try Scout, no wallet
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/verify">
+                <ShieldCheck /> Check a receipt
+              </Link>
+            </Button>
+          </div>
+        )}
       </header>
       <SetupChecklist variant="full" />
       {list.length ? (
@@ -189,5 +204,5 @@ export function HomePage() {
     // Loading still shows the dashboard shell, so the page does not jump from Home to Home.
     return <Dashboard owner={owner} />;
   }
-  return <EmptyHome />;
+  return <EmptyHome signedIn={!!owner} />;
 }
