@@ -3,11 +3,12 @@
 - **Date:** 2026-10-31
 - **From:** Uy's agent ([ADR-0086](../adr/0086-owner-memory-first-and-visible-duplicates.md))
 - **To:** Huấn
-- **Status:**
-  - The server side is on `main`.
-  - The schema change is contract PR
-    [#18](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/18), which needs your approval.
-  - The UI is yours, if you take it.
+- **Status: all on `main`. Please review it.**
+  - The server side landed first.
+  - Contract PR [#18](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/18) is merged
+    (`4f0180c`) before your review ([ADR-0087](../adr/0087-uy-merges-additive-contract-prs.md)).
+  - **Claimed by Uy's agent (ADR-0027) and done:** the UI below. Uy asked the agent to do it all. You
+    had no commit, branch or PR on the inspector. Change the copy or the layout as you like.
 
 ## What changed on the server
 `GET /api/remoras/:id/memory` returns two new fields:
@@ -21,7 +22,7 @@
 A row's `type`, `hiddenAt` and `supersededBy` no longer come from a duplicate row. Before, a skipped
 `episode` could relabel a `rule`.
 
-## The ask (`apps/web`, memory inspector)
+## The ask (`apps/web`, memory inspector): done by Uy's agent, for your review
 1. **A badge in `RowFlags`:** when `duplicateWrites > 0`, show "N later writes matched this". This is
    the case to notice: a write that differed only in its numbers was skipped.
 2. **A short "Skipped as already known" list** under the table, from `duplicates`.
@@ -30,6 +31,17 @@ A row's `type`, `hiddenAt` and `supersededBy` no longer come from a duplicate ro
    - Hide the list when it's empty.
 3. **Copy, for you to word.** Explain that the memory already held something close enough. If the new
    one was really different, the owner can correct the old one.
+
+**As built** (`memory-page.tsx`, test in `remora-pages.test.tsx`):
+- **`RowFlags` badge:** "2 later writes matched this" (`data-testid="duplicate-writes"`).
+- **A `SettingsSection` called "Skipped as already known"** under the table. Each item is
+  `data-testid="memory-duplicate"` and shows the namespace, the type, "matched" plus the blob, and the
+  time.
+  - The namespace filter applies to it.
+  - It's hidden when the list is empty.
+- **Description:** "These writes were close enough to a memory already stored that nothing new was
+  written. If one was really new, correct the memory it matched."
+- **Not done:** a link to the matched row (rows have no anchors yet) and no e2e (`e2e/` is yours).
 
 ## Contract PR [#18](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/18)
 - It adds `duplicateWrites` to the row schema and `duplicates` to `InspectorResponse`, both with

@@ -186,15 +186,12 @@ export async function forgetNamespace(
 }
 
 /** F4/F5: inspector rows with the owner's controls and the expiry alert. */
-/** ADR-0086: how many later writes were skipped because they matched this memory. */
-export type InspectorRowView = InspectorResponse["rows"][number] & { duplicateWrites: number };
-
 export async function enrichRows(
   db: Db,
   r: RemoraRef,
   rows: InspectorRow[],
   now = Date.now(),
-): Promise<InspectorRowView[]> {
+): Promise<InspectorResponse["rows"]> {
   const blobIds = rows.map((x) => x.blobId);
   const local = blobIds.length
     ? await db

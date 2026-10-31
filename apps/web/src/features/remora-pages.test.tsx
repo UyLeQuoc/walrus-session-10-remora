@@ -236,6 +236,12 @@ describe("W2 pages on the live API (contract fixtures)", () => {
       /receipts has 3 of the 4 we wrote/,
     );
     expect(screen.getByText(/SOURCE reef:sui-risk · 9 calls/)).toBeDefined();
+    // ADR-0086: writes skipped as duplicates are shown, not dropped silently.
+    expect(screen.getAllByTestId("duplicate-writes")[0]?.textContent).toBe(
+      "2 later writes matched this",
+    );
+    expect(screen.getAllByTestId("memory-duplicate")).toHaveLength(2);
+    expect(screen.getByText("Skipped as already known")).toBeDefined();
   });
 
   it("verify page checks a digest without signing in (G3)", async () => {

@@ -1,8 +1,9 @@
 /**
  * `/memory` (F3·ui + F6): one place with two tabs. Remoras lists each remora's namespaces as the
  * relayer holds them (a Walrus blob per row, real recall search, an index-check warning) with the
- * owner's controls (F4 hide/correct/forget all, F5 expiry, F8 export, F9 Claude Code); Chat is the
- * memory Remora keeps from conversations (the old `/me`).
+ * owner's controls (F4 hide/correct/forget all, F5 expiry, F8 export, F9 Claude Code), and the
+ * writes skipped as duplicates (ADR-0086); Chat is the memory Remora keeps from conversations (the
+ * old `/me`).
  */
 import type { InspectorResponse } from "@remora/schema";
 import { Brain, Fish } from "lucide-react";
@@ -30,7 +31,7 @@ import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
-import { DataTable, SettingsGroup } from "@/openbot/pages";
+import { DataTable, SettingsGroup, SettingsSection } from "@/openbot/pages";
 import {
   ClaudeCodeCard,
   CorrectDialog,
@@ -62,6 +63,7 @@ function RemorasTab() {
   const active = namespace && m?.namespaces.includes(namespace) ? namespace : null;
   const rows = (m?.rows ?? []).filter((row) => !active || row.namespace === active);
   const results = (m?.results ?? []).filter((x) => !active || x.namespace === active);
+  const duplicates = (m?.duplicates ?? []).filter((x) => !active || x.namespace === active);
 
   if (remoras.loading && !remoras.data) {
     return (
@@ -276,14 +278,55 @@ function RemorasTab() {
           </li>
         ) : null}
       </SettingsGroup>
+      {duplicates.length ? <SkippedDuplicates items={duplicates} /> : null}
       {current && m ? <ClaudeCodeCard remoraId={current.id} namespaces={m.namespaces} /> : null}
     </div>
   );
 }
 
-/** F4/F5: what the owner did to a memory, and whether it's about to expire. */
+const writes = (n: number) => `${n} later write${n === 1 ? "" : "s"}`;
+
+/**
+ * ADR-0086: writes the memory client skipped because a stored memory was close enough. Dewee flags
+ * such pairs for review; showing them is our version, since a write that differs only in its numbers
+ * (a newer score) looks like a repeat.
+ */
+function SkippedDuplicates({ items }: { items: InspectorResponse["duplicates"] }) {
+  return (
+    <SettingsSection
+      title="Skipped as already known"
+      description="These writes were close enough to a memory already stored that nothing new was written. If one was really new, correct the memory it matched."
+    >
+      <SettingsGroup as="ul" className="text-md" aria-label="Skipped as already known">
+        {items.map((x) => (
+          <li
+            key={`${x.blobId}-${x.at}`}
+            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+            data-testid="memory-duplicate"
+          >
+            <span className="flex min-w-0 flex-wrap items-center gap-1">
+              <Badge variant="outline">{x.namespace}</Badge>
+              {x.type ? <Badge variant="outline">{x.type}</Badge> : null}
+              <span className="text-ob-muted">matched</span>
+              <Hash value={x.blobId} label="blob" />
+            </span>
+            <span className="text-ob-muted">
+              <Time value={x.at} />
+            </span>
+          </li>
+        ))}
+      </SettingsGroup>
+    </SettingsSection>
+  );
+}
+
+/**
+ * F4/F5: what the owner did to a memory, and whether it's about to expire; ADR-0086: how many later
+ * writes were skipped because they matched it.
+ */
 function RowFlags({ row }: { row: InspectorResponse["rows"][number] }) {
-  if (!row.hiddenAt && !row.supersededBy && !row.expiresSoon && !row.type) return null;
+  if (!row.hiddenAt && !row.supersededBy && !row.expiresSoon && !row.type && !row.duplicateWrites)
+    return null;
   return (
     <span className="mt-1 flex flex-wrap gap-1">
       {row.type ? <Badge variant="outline">{row.type}</Badge> : null}
@@ -294,6 +337,15 @@ function RowFlags({ row }: { row: InspectorResponse["rows"][number] }) {
         </Badge>
       ) : null}
       {row.expiresSoon ? <Badge variant="outline">expires soon</Badge> : null}
+      {row.duplicateWrites ? (
+        <Badge
+          variant="outline"
+          title="Later writes skipped because they matched this memory"
+          data-testid="duplicate-writes"
+        >
+          {writes(row.duplicateWrites)} matched this
+        </Badge>
+      ) : null}
     </span>
   );
 }

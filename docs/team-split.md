@@ -135,7 +135,9 @@ waits on the backend.
 
 **Contract PR rules:**
 
-1. Use the `contract` label, and get **both approvals**.
+1. Use the `contract` label, and get **both approvals**. *Until the Nov 9 submission:* Uy may merge an
+   additive contract PR (new types, fields with defaults, new routes) once CI is green, and Huấn
+   reviews it on `main` ([ADR-0087](adr/0087-uy-merges-additive-contract-prs.md)).
 2. Merge it **before** the PRs that implement it.
 3. Prefer additive changes. A breaking change bumps the version and updates the fixtures in the same PR.
 

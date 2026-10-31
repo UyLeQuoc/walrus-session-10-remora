@@ -1,6 +1,6 @@
 # ADR-0083: Contract PR #17 merged before Huấn's review
 
-- **Status:** Accepted
+- **Status:** Accepted; its "one-off" is superseded by [ADR-0087](0087-uy-merges-additive-contract-prs.md)
 - **Date:** 2026-10-31
 - **Deciders:** Uy (written by Uy's agent)
 
