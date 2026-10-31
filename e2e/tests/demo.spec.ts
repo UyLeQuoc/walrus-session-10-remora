@@ -7,6 +7,9 @@
  * moves, clicks, captions) to `docs/launch/demo/capture/<shot>/`. The video
  * (`docs/launch/demo/demo.html`) plays those frames and draws its SVG cursor and callouts from the
  * manifest. A playground session and one Scout answer spend a few cents of testnet USDC.
+ *
+ * ADR-0096: the app is filmed in dark mode (`DEMO_THEME=light` for the light one), and the manifest
+ * records the boxes of the elements the video spotlights, so a re-capture needs no re-measuring.
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -25,16 +28,26 @@ import { installTestWallet, WALLET_NAME } from "../support/test-wallet";
 const OUT = resolve(process.cwd(), "../docs/launch/demo/capture");
 const VIEW = { width: 1440, height: 900 };
 const DPR = 1.25;
+const THEME = process.env.DEMO_THEME === "light" ? "light" : "dark";
 const freshClient = () =>
   `10.31.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
 
 type Ev = {
   t: number;
-  type: "move" | "click" | "type" | "mark";
+  type: "move" | "click" | "type" | "mark" | "box";
   x?: number;
   y?: number;
+  w?: number;
+  h?: number;
   label?: string;
 };
+
+/** Waits up to `ms` for an element; false when it never shows (instead of failing the shot). */
+const shows = (loc: Locator, ms = 8_000) =>
+  loc
+    .waitFor({ state: "visible", timeout: ms })
+    .then(() => true)
+    .catch(() => false);
 
 class Shot {
   private cdp: CDPSession | null = null;
@@ -84,6 +97,18 @@ class Shot {
   mark(label: string) {
     this.events.push({ t: this.now(), type: "mark", label });
   }
+  /** Records where elements are (their union, in CSS px), for the video's spotlight. */
+  async box(label: string, ...locs: Locator[]) {
+    const boxes = (await Promise.all(locs.map((l) => l.boundingBox().catch(() => null)))).filter(
+      (b): b is NonNullable<typeof b> => !!b,
+    );
+    if (!boxes.length) return;
+    const x = Math.min(...boxes.map((b) => b.x));
+    const y = Math.min(...boxes.map((b) => b.y));
+    const w = Math.max(...boxes.map((b) => b.x + b.width)) - x;
+    const h = Math.max(...boxes.map((b) => b.y + b.height)) - y;
+    this.events.push({ t: this.now(), type: "box", label, x, y, w, h });
+  }
   async hold(ms: number, label?: string) {
     if (label) this.mark(label);
     await this.page.waitForTimeout(ms);
@@ -95,6 +120,16 @@ class Shot {
     if (!box) return;
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
+    if (label)
+      this.events.push({
+        t: this.now(),
+        type: "box",
+        label,
+        x: box.x,
+        y: box.y,
+        w: box.width,
+        h: box.height,
+      });
     this.events.push({ t: this.now(), type: "move", x, y, ...(label ? { label } : {}) });
     await this.page.mouse.move(x, y, { steps: 24 });
     this.x = x;
@@ -129,6 +164,7 @@ class Shot {
           name: this.name,
           viewport: VIEW,
           dpr: DPR,
+          theme: THEME,
           duration: this.now(),
           frames: this.frames,
           events: this.events,
@@ -142,8 +178,13 @@ class Shot {
 
 /** A page at the demo's size, as a fresh client so the local per-address limits never show. */
 async function newPage(browser: Browser, wallet: boolean) {
-  const context = await browser.newContext({ viewport: VIEW, deviceScaleFactor: DPR });
+  const context = await browser.newContext({
+    viewport: VIEW,
+    deviceScaleFactor: DPR,
+    colorScheme: THEME,
+  });
   await context.setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+  await context.addInitScript((t) => localStorage.setItem("remora.theme", t), THEME);
   const page = await context.newPage();
   if (wallet) await installTestWallet(page, burner());
   return page;
@@ -211,7 +252,9 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
   const visitor = await newPage(browser, false);
   await visitor.goto("/");
   await shot("playground", visitor, async (s) => {
-    await s.hold(1800, "home");
+    await s.hold(1200, "home");
+    await s.box("what-is-remora", s.page.getByTestId("what-is-remora"));
+    await s.hold(3200, "what-is-remora");
     await s.click(s.page.getByTestId("home-try-scout"), "Try Scout, no wallet");
     await expect(s.page.getByTestId("playground-intro")).toBeVisible({ timeout: 30_000 });
     await s.hold(1500, "intro");
@@ -220,6 +263,11 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       timeout: 120_000,
     });
     s.mark("disc-issued");
+    await s.box(
+      "disc-issued",
+      s.page.getByTestId("playground-status"),
+      s.page.getByTestId("playground-spent"),
+    );
     await s.hold(1500);
     // The box starts with a suggestion; clear it, then type the question.
     await s.page.getByLabel("Your question").fill("");
@@ -233,6 +281,7 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       },
     );
     s.mark("answered");
+    await s.box("paid", s.page.getByText(/Paid 0.01 USDC to Sui risk check/).first());
     await s.hold(3500, "answer");
     const why = s.page.getByRole("link", { name: /Why\? Check its receipt/ }).first();
     await why.waitFor({ timeout: 60_000 });
@@ -241,6 +290,7 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       timeout: 60_000,
     });
     s.mark("verified");
+    await s.box("verified", s.page.getByTestId("verify-verdict"));
     await s.hold(4500, "verify");
   });
   await visitor.context().close();
@@ -285,6 +335,8 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await s.page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
     created = /\/remoras\/([0-9a-f-]{36})/.exec(s.page.url())?.[1] ?? "";
     s.mark("created");
+    const practice = s.page.getByRole("alert").filter({ hasText: "Practice mode" }).first();
+    if (await shows(practice)) await s.box("practice", practice);
     await s.hold(2500, "shadow");
     await s.click(s.page.getByRole("button", { name: "Go live" }), "Go live");
     await expect(s.page.getByText("active").first()).toBeVisible({ timeout: 30_000 });
@@ -310,11 +362,15 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       s.mark("asked");
       await expect(s.page.getByTestId("answer")).toBeVisible({ timeout: 180_000 });
       s.mark("answered");
+      await s.box("answer", s.page.getByTestId("answer").first());
       await s.hold(3000, "answer");
+      await s.box("cost-card", s.page.getByTestId("cost-total"), s.page.getByTestId("cost-row"));
       await s.to(s.page.getByText("Cost", { exact: true }).first(), "cost");
       await s.hold(2500, "cost");
       const why = s.page.getByRole("button", { name: /^Why\?/ }).first();
       await s.click(why, "Why?");
+      const drawer = s.page.getByRole("dialog");
+      if (await shows(drawer)) await s.box("wake", drawer);
       await s.hold(5000, "wake");
       await s.page.keyboard.press("Escape");
       await s.hold(800);
@@ -331,7 +387,14 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
         "rule",
       );
       await s.click(s.page.getByRole("button", { name: "Teach", exact: true }), "Teach");
-      await s.hold(3500, "learned");
+      const learned = s.page.getByText(/Learned: ignore incoming SUI under 0.002/).first();
+      if (await shows(learned, 15_000)) await s.box("learned", learned);
+      await s.hold(2500, "learned");
+      const ignored = s.page.getByText(/Ignored: Received/).first();
+      if (await shows(ignored, 3_000)) {
+        await s.to(ignored, "ignored");
+        await s.hold(2500, "ignored");
+      }
       await s.click(s.page.getByRole("tab", { name: "Learning" }), "Learning");
       await s.hold(5000, "learning");
     });
@@ -341,10 +404,10 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await go(s, `/memory${scout ? `?remora=${scout.id}` : ""}`);
     await s.hold(2500, "inspector");
     const dup = s.page.getByTestId("duplicate-writes").first();
-    if (await dup.isVisible().catch(() => false)) await s.to(dup, "later writes matched this");
+    if (await shows(dup, 5_000)) await s.to(dup, "later writes matched this");
     await s.hold(1800);
     const skipped = s.page.getByText("Skipped as already known").first();
-    if (await skipped.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    if (await shows(skipped, 3_000)) {
       await s.to(skipped, "skipped");
       await s.hold(2500, "skipped");
     }
@@ -358,7 +421,11 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await go(s, "/approvals");
     await s.hold(1500, "approvals");
     const pay = s.page.getByRole("button", { name: /Pay once/ }).first();
-    if (await pay.isVisible().catch(() => false)) await s.to(pay, "Pay once");
+    if (await shows(pay)) {
+      await s.box("approval", s.page.getByTestId("approval").first());
+      await s.hold(1500);
+      await s.to(pay, "Pay once");
+    }
     await s.hold(3000);
   });
 
@@ -367,7 +434,15 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await go(s, "/funds");
     await s.hold(2500, "funds");
     const pause = s.page.getByRole("button", { name: /Pause all/ }).first();
-    if (await pause.isVisible().catch(() => false)) await s.to(pause, "Pause all");
+    if (await shows(pause)) {
+      await s.box(
+        "budgets",
+        s.page.getByTestId("disc-row").first(),
+        s.page.getByTestId("disc-row").last(),
+      );
+      await s.hold(1500);
+      await s.to(pause, "Pause all");
+    }
     await s.hold(2500);
   });
 

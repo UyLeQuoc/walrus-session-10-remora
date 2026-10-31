@@ -1,6 +1,7 @@
 # The demo video (the real app, problem → fix)
 
-This video shows the real app, recorded on Sui testnet ([ADR-0091](../../adr/0091-real-app-demo-video.md)).
+This video shows the real app, recorded on Sui testnet ([ADR-0091](../../adr/0091-real-app-demo-video.md)),
+in its dark theme with the product's plain words ([ADR-0096](../../adr/0096-demo-video-dark-plain-words.md)).
 It is told and rendered the way WalForm's launch videos are
 ([ADR-0093](../../adr/0093-demo-video-v2-walform-craft.md)):
 - a hook, then *without vs with*;
@@ -13,6 +14,7 @@ Everything is drawn in the app's own design system.
 # 1. Capture: the real stack on testnet, signing with the burner (a few cents of testnet USDC)
 DEMO=1 bun run --filter @remora/e2e e2e -- --project=demo
 DEMO=1 DEMO_SHOTS=create,scout bun run --filter @remora/e2e e2e -- --project=demo   # only some shots
+DEMO=1 DEMO_THEME=light bun run --filter @remora/e2e e2e -- --project=demo           # the light theme
 
 # 2. Review: stills, a contact sheet, or watch it live
 bun docs/launch/demo/render.ts --stills 30,60,90
@@ -44,14 +46,14 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
-| Without vs with | An agent with your key pays an injected address (an illustration). A remora's `disc::pay` to it aborts onchain (testnet tx `7NYf3QGE…`) |
-| 01 · Try it, no wallet | `/playground`: a $1 Disc onchain → a paid answer over x402 → a receipt that verifies |
-| Where the money goes | Your address → the Disc → the x402 facilitator → a Reef service; the remora's key holds 0 SUI |
-| 02 · Your own remora | `/remoras/new`: 0.50 a month, ≤ 0.015 a payment, one signature, shadow mode, Go live |
+| Without vs with | An agent with your key pays an injected address (an illustration). A remora's payment to it aborts onchain (testnet tx `7NYf3QGE…`) |
+| 01 · Try it, no wallet | Home's "What's a remora?", then `/playground`: a $1 spending limit onchain → a paid answer over x402 → a receipt that verifies |
+| Where the money goes | Your address → its spending limit → the x402 facilitator → a paid service; the remora's key holds 0 SUI |
+| 02 · Your own remora | `/remoras/new`: 0.50 a month, ≤ 0.015 a payment, one signature, practice mode, Go live |
 | 03 · Ask, pay, see why | A paid answer from its own Disc, the cost card, Why? → the Wake |
 | 04 · It learns from you | Teach a Sentinel in plain words; a small transfer ignored; the Learning tab |
 | 05 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
-| The attack | Sonar, the gas station, the Disc onchain; 28 attacks in CI with 0 overspends |
+| The attack | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends |
 | 06 · Over the cap, it asks | `/approvals`: pay once from your own wallet |
 | 07 · You stay in control | `/funds`: your USDC stays in your address; Pause all |
 | Why Remora | Bounded, Accountable, Learns, Yours |
@@ -68,5 +70,7 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
   - One shows at a time, and `<b>` is highlighted.
   - A caption must say only what the screen shows.
 - **Spotlights.**
-  - They take the app's CSS pixel coordinates (1440×900).
-  - Measure them on a frame in `capture/<shot>/`.
+  - `spots: [{ at, off, len, box: "label" }]` lights the element the capture recorded under that label.
+  - `demo.spec.ts` records a box with `s.box(label, locator)`, and with every labelled `s.to` /
+    `s.click`, so a re-capture after a UI change needs no re-measuring.
+  - `r: { x, y, w, h }` in app CSS pixels (1440×900) still works for a fixed rect.
