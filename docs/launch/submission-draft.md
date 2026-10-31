@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 1 | The deployed demo URL and the playground (U9 Phase D) | "Working demo", the video, the blog's `[mainnet]` numbers | Uy |
 | 2 | **The demo video**, 2–3 minutes, from the [demo script](../remora-plan.md#demo-script-245) | A required field | Uy |
-| 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)) | A required field and requirement 5 | Uy, Nov 9 |
+| 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)), right after a clean `bun run secrets:history` (clean on Oct 31, [ADR-0085](../adr/0085-scan-history-before-public.md)) | A required field and requirement 5 | Uy, Nov 9 |
 | 4 | **The blog published** ([draft](blog-draft.md)), with the `[mainnet]` placeholders replaced | Requirement 4 | Uy |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
 | 6 | Tatum ID, read from the dashboard | A required field | Uy |

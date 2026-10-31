@@ -40,6 +40,7 @@ When writing or changing code, [`CODE_RULES.md`](#hippo-code_rulesmd) outranks t
 | `bun run smoke` | Health, identity and (with `--write`) one round trip on mainnet. |
 | `bun run restore` | Compares the relayer's index against what we wrote, and warns when restore sees nothing. |
 | `bun run hippo` | The CLI channel, talking to a running server. |
+| `bun run secrets:history` | Every added line on every branch, checked for secret-shaped strings and committed `.env` files. Run it right before the repo goes public (ADR-0085). |
 
 ### Reference clone: `memwal/`
 
