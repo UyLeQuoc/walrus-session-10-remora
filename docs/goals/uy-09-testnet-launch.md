@@ -126,8 +126,8 @@
 - Write a handoff to Huấn: the live URL, what landed from his requests, the test ids.
 
 ## Done when
-- [ ] PR #11 is merged (or sent back with reasons), and the `/status` contract PR is merged. (PR #11 is merged; the contract PR is #17, open.)
-- [x] Huấn's accepted items are done, with tests, and his requests have written answers (ADR-0076; contract PR #17 waits on his approval).
+- [x] PR #11 is merged (or sent back with reasons), and the `/status` contract PR is merged. (PR #11 is merged; the contract PR #17 is merged as `e7001fe`, before Huấn's review, ADR-0083.)
+- [x] Huấn's accepted items are done, with tests, and his requests have written answers (ADR-0076; contract PR #17 merged, ADR-0083).
 - [x] The D5 handoff and the Tatum follow-ups are done, with tests (ADR-0078, ADR-0080; the e2e Sentinel cleanup is handed to Huấn).
 - [x] `bun run evals` reports N ≥ 20 attacks, 0 overspends, with each layer named. It's published, and its deterministic part runs in CI (28 attacks, ADR-0079).
 - [ ] Deployed on testnet: `diagnose`, health, `e2e:main` and `/status` are green, and the playground is public.

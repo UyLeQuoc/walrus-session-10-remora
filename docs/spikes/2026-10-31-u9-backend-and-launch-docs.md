@@ -17,7 +17,8 @@ the list at the bottom.
 | `53cbc96` | CI was red from `389548a` on: a new OSV advisory on `follow-redirects`, which comes in through `@slack/bolt` › `axios`, blocked the install. The override goes to `>=1.16.2` | [0082](../adr/0082-follow-redirects-1-16-2.md) |
 
 The contract PR for Huấn's pages and F15's facts is
-[#17](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/17). It needs his approval.
+[#17](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/17). Uy merged it on Oct 31 as `e7001fe`,
+before Huấn's review ([ADR-0083](../adr/0083-contract-pr-17-merged-before-review.md)).
 
 ## Checks (each push)
 - **CI.** Red on GitHub from `389548a` to `bd287b5`, at the install scanner, not at the code. ADR-0082
@@ -45,12 +46,12 @@ The contract PR for Huấn's pages and F15's facts is
 - **Anything deployed.** `/status`, the cost card, proof links, export and retire-all, D5 and the
   reality check are tested in-process with a fake chain. None has run on the testnet URL; U9's exit does
   that.
-- **Huấn's pages against the real endpoints.** That waits for PR #17 and a deploy.
+- **Huấn's pages against the real endpoints.** That waits for the deploy (PR #17 is merged).
 - **The `check` rule through the model path.** The phrase parser is tested; a model-parsed `check` rule
   isn't.
 
 ## The list for Uy
-1. **Merge PR #17** once Huấn approves.
+1. ~~**Merge PR #17** once Huấn approves.~~ Merged Oct 31 (`e7001fe`), before his review (ADR-0083).
 2. **Before the deploy, push the schema by hand to the target database** (deploy.md step 2):
    - `memory_facts` (F15);
    - `receipts.share_token` and `shared_at` (ADR-0076).

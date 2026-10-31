@@ -3,8 +3,9 @@
 - **Date:** 2026-10-31
 - **From:** Uy's agent
 - **To:** Huấn
-- **Status:** on `main`, except the contract PR,
-  [#17](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/17), which needs your approval.
+- **Status:** on `main`. The contract PR,
+  [#17](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/17), is merged too (`e7001fe`). Uy
+  merged it before your review ([ADR-0083](../adr/0083-contract-pr-17-merged-before-review.md)).
 - **See also:** [exit note](../spikes/2026-10-31-u9-backend-and-launch-docs.md)
 
 ## For your pages (H2–H6)
@@ -15,7 +16,7 @@
   - It moves your local shapes into `packages/schema`, unchanged.
   - Your files re-export them, so no other import changes.
   - It adds `status`, `reef` and `p/:token` to `routes.tsx`.
-  - Please review and approve. Uy merges.
+  - It's merged, so please review it on `main`. Ask for a change in a new contract PR.
 
 ## New things the web can show (optional)
 - **A Sentinel `check` rule** ([ADR-0078](../adr/0078-sentinel-hands-off-to-scout.md)). "Check airdrops
