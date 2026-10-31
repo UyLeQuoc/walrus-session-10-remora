@@ -169,6 +169,9 @@ await ffmpeg([
   "+faststart",
   "-af",
   "loudnorm=I=-14:TP=-1.5:LRA=11",
+  // loudnorm resamples internally; keep the delivery at 48 kHz.
+  "-ar",
+  "48000",
   "-c:a",
   "aac",
   "-b:a",
@@ -177,3 +180,27 @@ await ffmpeg([
   join(OUT, name),
 ]);
 console.log(`wrote ${join(OUT, name)} in ${Math.round((Date.now() - t0) / 1000)} s`);
+
+// A lighter copy for the web (X, the blog, the form's link): ~40 MB instead of ~330 MB.
+const web = name.replace(".mp4", "-web.mp4");
+await ffmpeg([
+  "-y",
+  "-loglevel",
+  "error",
+  "-i",
+  join(OUT, name),
+  "-c:v",
+  "libx264",
+  "-preset",
+  "slow",
+  "-crf",
+  "24",
+  "-pix_fmt",
+  "yuv420p",
+  "-c:a",
+  "copy",
+  "-movflags",
+  "+faststart",
+  join(OUT, web),
+]);
+console.log(`wrote ${join(OUT, web)}`);
