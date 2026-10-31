@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remora · Always-on agents you actually own</title>
+<meta name="description" content="Remora gives each AI agent a budget Sui enforces, a memory you can read on Walrus, and a receipt for every decision. Try a Scout with a $1 Disc, no wallet.">
+<meta property="og:title" content="Remora · Always-on agents you actually own">
+<meta property="og:description" content="A budget Sui enforces. Memory you can read on Walrus. A receipt for every decision.">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="config.js"></script>
+<!--
+  ADR-0092: the landing page (H6), a static page in the app's design system (openbot tokens: canvas
+  #f5f5f6, white sheets with hairline borders, ink #141414, accent #007cf7, status colours, radii
+  14/16/20, Inter). `bun run --filter @remora/landing build` writes dist/ with the screenshots and,
+  when it has been rendered, the demo video; dist/ is what Walrus Sites publishes.
+  Every number here comes from a recorded run (docs/spikes, the Oct 31 e2e).
+-->
+<style>
+  :root {
+    --canvas: #f5f5f6; --frame: #e8e8eb; --sheet: #ffffff; --inset: #f0f0f2; --border: rgba(20,20,20,.07);
+    --border2: rgba(20,20,20,.1); --ink: #141414; --ink2: #3a3a3c; --muted: #6b6b70; --dim: #8e8e93;
+    --accent: #007cf7; --accent-soft: rgba(0,124,247,.12); --accent-text: #0064c8;
+    --ok: #1fa85a; --ok-soft: rgba(31,168,90,.12); --ok-text: #187a41;
+    --warn: #f08a00; --warn-soft: rgba(240,138,0,.14); --warn-text: #9c5200;
+    --bad: #e8222d; --bad-soft: rgba(232,34,45,.1); --bad-text: #c0141d;
+    --inverse: #1c1c1e; --brand: #6054ec;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r-card: 14px; --r-grouped: 16px; --r-xl: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--canvas); -webkit-font-smoothing: antialiased; line-height: 1.5; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  img, video { display: block; max-width: 100%; height: auto; }
+  .wrap { width: min(1180px, 100% - 32px); margin: 0 auto; }
+  .bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background: radial-gradient(900px 600px at 90% -10%, rgba(0,124,247,.08), transparent 60%),
+                    radial-gradient(800px 600px at -10% 110%, rgba(96,84,236,.08), transparent 60%),
+                    radial-gradient(rgba(20,20,20,.05) 1.2px, transparent 1.2px) 0 0 / 28px 28px; }
+  /* Nav */
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(245,245,246,.82); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--border); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; letter-spacing: -.02em; }
+  .links { display: flex; align-items: center; gap: 26px; font-size: 15px; color: var(--muted); }
+  .links a:hover { color: var(--ink); }
+  /* Buttons, pills, chips */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 999px; font-size: 16px; font-weight: 600; transition: transform .15s ease, background .15s ease; white-space: nowrap; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.dark { background: var(--inverse); color: #fff; }
+  .btn.light { background: var(--sheet); color: var(--ink); border: 1px solid var(--border2); }
+  .btn.sm { height: 38px; padding: 0 16px; font-size: 14px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+  .pill .d { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.brand { background: rgba(96,84,236,.1); color: var(--brand); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad-text); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok-text); }
+  .chip { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--sheet); border: 1px solid var(--border2); font-size: 14px; color: var(--ink2); white-space: nowrap; }
+  .sheet { background: var(--sheet); border: 1px solid var(--border2); border-radius: var(--r-xl); }
+  .mono { font-family: var(--mono); }
+  /* Hero */
+  .hero { padding: 72px 0 40px; display: grid; grid-template-columns: 1fr; gap: 48px; }
+  .hero h1 { font-size: clamp(42px, 6.4vw, 80px); line-height: 1.02; letter-spacing: -.045em; font-weight: 750; margin-top: 18px; }
+  .hero p.lead { font-size: clamp(18px, 2vw, 22px); color: var(--muted); margin-top: 18px; max-width: 640px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; align-items: center; }
+  .note { margin-top: 18px; font-size: 14px; color: var(--muted); }
+  .note .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); margin-right: 8px; vertical-align: 1px; }
+  .shot-wrap { position: relative; }
+  .window { border-radius: var(--r-xl); overflow: hidden; background: var(--frame); border: 1px solid var(--border2); box-shadow: 0 40px 100px rgba(20,20,20,.14), 0 4px 14px rgba(20,20,20,.06); }
+  .chrome { height: 36px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border-bottom: 1px solid var(--border); }
+  .chrome i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .chrome .url { margin-left: 14px; height: 22px; padding: 0 10px; border-radius: 7px; background: rgba(255,255,255,.7); border: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; align-items: center; }
+  .float { position: absolute; background: var(--inverse); color: #fff; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.35; box-shadow: 0 16px 40px rgba(20,20,20,.22); max-width: 260px; }
+  .float b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.64); margin-bottom: 3px; font-weight: 650; }
+  .float .ok { color: #6be09b; }
+  .f1 { left: -18px; top: 26%; } .f2 { right: -18px; top: 8%; } .f3 { right: 6%; bottom: -26px; }
+  /* Sections */
+  section { padding: 84px 0; }
+  .eyebrow { font-size: 13px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); }
+  h2 { font-size: clamp(32px, 4.4vw, 52px); letter-spacing: -.035em; line-height: 1.06; font-weight: 720; margin-top: 12px; }
+  .sub { font-size: 19px; color: var(--muted); margin-top: 14px; max-width: 700px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 40px; }
+  .card { background: var(--sheet); border: 1px solid var(--border2); border-radius: var(--r-xl); padding: 28px; }
+  .icon { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; }
+  .card h3 { font-size: 22px; letter-spacing: -.02em; margin-top: 18px; font-weight: 650; }
+  .card p { font-size: 16px; color: var(--muted); margin-top: 8px; }
+  .fix { margin-top: 20px; padding: 16px 18px; border-radius: var(--r-card); background: var(--ok-soft); }
+  .fix .t { display: flex; gap: 8px; align-items: center; color: var(--ok-text); font-weight: 650; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .fix p { color: var(--ink2); margin-top: 6px; font-size: 15px; }
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 40px; counter-reset: s; }
+  .step { position: relative; }
+  .step .n { font-family: var(--mono); font-size: 13px; color: var(--dim); }
+  .step h3 { font-size: 19px; margin-top: 14px; letter-spacing: -.01em; }
+  .step p { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .step .proof { margin-top: 14px; font-size: 13px; color: var(--ink2); padding: 8px 10px; border-radius: 10px; background: var(--inset); font-family: var(--mono); word-break: break-all; }
+  /* Video */
+  .video { margin-top: 36px; }
+  .video video { width: 100%; border-radius: var(--r-xl); border: 1px solid var(--border2); background: #fff; box-shadow: 0 30px 80px rgba(20,20,20,.12); }
+  /* Numbers */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+  .stat .v { font-size: clamp(40px, 5vw, 60px); font-weight: 760; letter-spacing: -.05em; line-height: 1; }
+  .stat .l { font-size: 15px; color: var(--muted); margin-top: 10px; }
+  .stat .s { font-size: 13px; color: var(--dim); margin-top: 10px; font-family: var(--mono); word-break: break-all; }
+  .stat a.s:hover { color: var(--accent-text); }
+  /* Real / not yet */
+  .real { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+  .real ul { list-style: none; margin-top: 14px; display: grid; gap: 10px; }
+  .real li { display: flex; gap: 10px; font-size: 15px; color: var(--ink2); }
+  .real li svg { flex: none; margin-top: 2px; }
+  /* Gallery */
+  .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 40px; }
+  .gallery figure { background: var(--sheet); border: 1px solid var(--border2); border-radius: var(--r-xl); overflow: hidden; }
+  .gallery img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
+  .gallery figcaption { padding: 14px 18px; font-size: 15px; color: var(--ink2); border-top: 1px solid var(--border); }
+  /* Stack */
+  .stack { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  /* Final CTA */
+  .final { text-align: center; padding: 96px 0; }
+  .final .cta { justify-content: center; }
+  footer { border-top: 1px solid var(--border); padding: 32px 0 44px; font-size: 14px; color: var(--muted); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 28px; justify-content: space-between; align-items: center; }
+  footer .links a { color: var(--muted); }
+  /* Reveal on scroll */
+  .rv { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
+  .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; transition: none; } .btn:hover { transform: none; } html { scroll-behavior: auto; } }
+  @media (max-width: 980px) {
+    .grid3, .real, .stats { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .gallery, .grid2 { grid-template-columns: 1fr; }
+    .links .hide-sm { display: none; }
+    .f1, .f2, .f3 { display: none; }
+  }
+  @media (max-width: 560px) {
+    .steps { grid-template-columns: 1fr; }
+    section { padding: 60px 0; }
+    .hero { padding-top: 40px; }
+    .links { gap: 14px; }
+    .links .hide-xs { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Remora, home">
+      <svg width="30" height="30" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#6054ec"/><svg x="20" y="20" width="60" height="60" viewBox="276 96 348 348"><path fill="#fff" d="M330 120H360V420H330A30 30 0 0 1 300 390V150A30 30 0 0 1 330 120ZM360 120H510A30 30 0 0 1 540 150V180H360ZM540 180H570A30 30 0 0 1 600 210V270A30 30 0 0 1 570 300H540ZM360 240H540V300H360ZM480 300H540V360H510A30 30 0 0 1 480 330ZM540 360H600V390A30 30 0 0 1 570 420H540Z"/></svg></svg>
+      remora
+    </a>
+    <div class="links">
+      <a class="hide-sm" href="#problem">Why</a>
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#demo">Demo</a>
+      <a class="hide-xs" href="#proof">Proof</a>
+      <a class="hide-xs" data-link="repo" href="https://github.com/UyLeQuoc/walrus-session-10-remora">GitHub</a>
+      <a class="btn dark sm" data-link="playground" href="#">Try Scout</a>
+    </div>
+  </div>
+</nav>
+
+<main id="top">
+  <div class="wrap hero">
+    <div class="rv">
+      <span class="pill brand"><span class="d"></span>Walrus × Tatum · Total Recall · Track 2</span>
+      <h1>Always-on agents<br>you actually own.</h1>
+      <p class="lead">Remora's agents run errands and pay for what they need. Each one has a budget Sui enforces, a memory you can read on Walrus, and a receipt for every decision.</p>
+      <div class="cta">
+        <a class="btn dark" data-link="playground" href="#">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.9-3.6 4.2-6 8-6 3.5 0 6 3 7.5 6-1.5 3-4 6-7.5 6-3.8 0-7.1-2.4-8-6Z"/><path d="M6.5 12 2 8v8Z"/><path d="M17 12h.01"/></svg>
+          Try Scout · $1 Disc · no wallet</a>
+        <a class="btn light" href="#demo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.6-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z"/></svg>
+          Watch the demo</a>
+      </div>
+      <div class="note"><span class="d"></span>Money on Sui testnet · memory on Walrus mainnet · every Sui call through Tatum gRPC</div>
+    </div>
+    <div class="shot-wrap rv">
+      <div class="window">
+        <div class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="url">remora · Scout · demo</span></div>
+        <img src="screens/remora-overview.jpg" alt="A Scout in the real app: a paid answer, its budget and recent activity" width="1440" height="900">
+      </div>
+      <div class="float f1"><b>x402 on Sui</b>Paid <span class="mono">0.01 USDC</span> to reef:sui-risk, inside its Disc</div>
+      <div class="float f2"><b>Learned</b>“ignore incoming SUI under 0.002” <span class="ok">→ Walrus in 25.3 s</span></div>
+      <div class="float f3"><b>The Wake</b><span class="ok">✓ Verified</span>, with no sign-in</div>
+    </div>
+  </div>
+
+  <section id="problem">
+    <div class="wrap">
+      <div class="rv"><span class="pill bad"><span class="d"></span>The problem</span>
+        <h2>Agents can run errands now.<br>Paying is where it breaks.</h2></div>
+      <div class="grid3">
+        <div class="card rv">
+          <div class="icon" style="background:var(--bad-soft);color:var(--bad)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v4h-4a2 2 0 0 0 0 4h4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/></svg></div>
+          <h3>All or nothing</h3><p>Hand an agent your wallet key, or approve every click.</p>
+          <div class="fix"><div class="t"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Remora</div><p>A <b>Disc</b>: a monthly limit, a cap per payment and the only services it may pay, on Sui's app-bound allowances. One signature.</p></div>
+        </div>
+        <div class="card rv">
+          <div class="icon" style="background:var(--bad-soft);color:var(--bad)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
+          <h3>One sentence away</h3><p>Injected text can make an obedient model pay an attacker.</p>
+          <div class="fix"><div class="t"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Remora</div><p>Sonar, the gas station and the Disc each stop it. Forced past both, <b>Sui aborts it onchain</b>. 28 attacks in CI, 0 overspends.</p></div>
+        </div>
+        <div class="card rv">
+          <div class="icon" style="background:var(--bad-soft);color:var(--bad)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.2A10.9 10.9 0 0 1 12 4c7 0 10 8 10 8a13 13 0 0 1-1.7 2.7"/><path d="M6.6 6.6A13.5 13.5 0 0 0 2 12s3 8 10 8a9.7 9.7 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></div>
+          <h3>A black box</h3><p>You can't read what it remembers, or see why it spent.</p>
+          <div class="fix"><div class="t"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Remora</div><p>Memory on <b>Walrus</b> you can read, correct and export, and a <b>Wake</b> for every decision that anyone can verify.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" style="padding-top:20px">
+    <div class="wrap">
+      <div class="rv"><span class="eyebrow">How it works</span><h2>Four moments, one wallet.</h2>
+        <p class="sub">Your Sentinel watches. Your Scout checks. You teach them with a 👎. And if a key ever pays without a decision, you hear about it.</p></div>
+      <div class="steps">
+        <div class="card step rv"><span class="n">01</span><h3>An unknown token lands</h3><p>Sentinel pings you and hands it to Scout, which pays 0.01 USDC over x402 for a risk report, from its own Disc.</p><div class="proof">402 → disc::pay → settled on Sui</div></div>
+        <div class="card step rv"><span class="n">02</span><h3>You mark a ping 👎</h3><p>It becomes a rule on Walrus Memory, and the next one is quiet. That decision's receipt cites the rule's blob.</p><div class="proof">rbQ84ahd… · 25.3 s</div></div>
+        <div class="card step rv"><span class="n">03</span><h3>A paid answer says “pay this”</h3><p>The model obeys. Sonar blocks it. Forced past Sonar, the Disc aborts it onchain.</p><div class="proof">EPayeeNotAllowed · 7NYf3QGE…</div></div>
+        <div class="card step rv"><span class="n">04</span><h3>A key pays alone</h3><p>A payment with no decision behind it alerts you within minutes. You rotate the key with one signature.</p><div class="proof">Paid · no Wake → alert</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo" style="padding-top:20px">
+    <div class="wrap">
+      <div class="rv"><span class="eyebrow">Demo</span><h2>The real app, on Sui testnet.</h2>
+        <p class="sub">No mock-ups: a $1 Disc issued onchain, a paid answer over x402, a receipt that verifies, a Scout from one signature, a rule learned, every blob on Walrus.</p></div>
+      <div class="video rv" id="video-box">
+        <video controls playsinline preload="metadata" poster="screens/demo-poster.jpg" aria-label="Remora demo video">
+          <source src="media/remora-demo.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <section id="proof" style="padding-top:20px">
+    <div class="wrap">
+      <div class="rv"><span class="eyebrow">Proof</span><h2>Numbers from recorded runs.</h2>
+        <p class="sub">Every digest opens on an explorer. Every number is in the repo, with the run that made it.</p></div>
+      <div class="stats">
+        <div class="card stat rv"><div class="v" style="color:var(--brand)">360</div><div class="l">memories on Walrus Memory, mainnet</div><div class="s">bun run diagnose:memory · Oct 31</div></div>
+        <div class="card stat rv"><div class="v" style="color:var(--ok)">0</div><div class="l">overspends in 28 attacks, in CI</div><div class="s">bun run evals</div></div>
+        <div class="card stat rv"><div class="v">12</div><div class="l">kinds of Tatum gRPC call, and no JSON-RPC</div><div class="s">generated from the code, checked in CI</div></div>
+        <div class="card stat rv"><div class="v">0.01</div><div class="l">USDC per paid answer, over x402, settled on Sui</div><div class="s">our own exact facilitator</div></div>
+        <div class="card stat rv"><div class="v" style="color:var(--brand)">25.3s</div><div class="l">from a 👎 to a rule on Walrus</div><div class="s">blob rbQ84ahd68FicrNgwK48mINczlYb6-lzncPWs9auMXw</div></div>
+        <div class="card stat rv"><div class="v" style="color:var(--bad)">abort</div><div class="l">the injected payment, onchain</div><a class="s" href="https://suiscan.xyz/testnet/tx/7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV" target="_blank" rel="noopener">7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV ↗</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:20px">
+    <div class="wrap">
+      <div class="rv"><span class="eyebrow">Screens</span><h2>Built to be read.</h2></div>
+      <div class="gallery">
+        <figure class="rv"><img src="screens/memory.jpg" alt="The memory inspector: every blob on Walrus, and writes skipped as duplicates" loading="lazy" width="1280" height="720"><figcaption>Memory: every blob on Walrus, and every skipped write</figcaption></figure>
+        <figure class="rv"><img src="screens/playground.jpg" alt="The playground: a Scout with a $1 Disc and no wallet, after a paid answer" loading="lazy" width="1440" height="900"><figcaption>Playground: a Scout with a $1 Disc, no wallet</figcaption></figure>
+        <figure class="rv"><img src="screens/reef.jpg" alt="The Reef: the paid services a remora may use over x402" loading="lazy" width="1280" height="720"><figcaption>The Reef: what a remora may pay, over x402</figcaption></figure>
+        <figure class="rv"><img src="screens/status.jpg" alt="Status: Tatum, the relayer and the facilitator, in the open" loading="lazy" width="1280" height="720"><figcaption>Status: Tatum, the relayer and the facilitator</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:20px">
+    <div class="wrap">
+      <div class="rv"><span class="eyebrow">Honest about it</span><h2>What's real, what isn't.</h2></div>
+      <div class="real">
+        <div class="card rv"><span class="pill ok"><span class="d"></span>Real</span><ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1fa85a" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Money on Sui testnet: the Disc, payments, the onchain abort</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1fa85a" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Walrus Memory on mainnet</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1fa85a" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Every server-side Sui call through Tatum gRPC</li></ul></div>
+        <div class="card rv"><span class="pill brand"><span class="d"></span>Ours, labeled</span><ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6054ec" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="3"/></svg>The three Reef services are our demo merchants</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6054ec" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="3"/></svg>The playground's $1 Discs come from our funder</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6054ec" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="3"/></svg>The money rails were built the day before the window, and the README says so</li></ul></div>
+        <div class="card rv"><span class="pill" style="background:var(--warn-soft);color:var(--warn-text)"><span class="d"></span>Not yet</span><ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f08a00" stroke-width="2.4" aria-hidden="true"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>Memory on your own Walrus account (a delegate per remora)</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f08a00" stroke-width="2.4" aria-hidden="true"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>Payments on Sui mainnet</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f08a00" stroke-width="2.4" aria-hidden="true"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>SuiNS names and the Telegram Mini App</li></ul></div>
+      </div>
+      <div class="stack rv">
+        <span class="chip">Walrus Memory</span><span class="chip">Sui app-bound allowances</span><span class="chip">x402 exact facilitator</span><span class="chip">Tatum gRPC + Data API</span><span class="chip">Move</span><span class="chip">MCP · Claude Code</span><span class="chip">Hono · React · Bun</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap final rv">
+    <h2>Give an agent a budget,<br>not your wallet.</h2>
+    <p class="sub" style="margin:14px auto 0">It goes wherever you go. It cleans up after you. It never takes the wheel.</p>
+    <div class="cta">
+      <a class="btn dark" data-link="playground" href="#">Try Scout · $1 Disc · no wallet</a>
+      <a class="btn light" data-link="repo" href="https://github.com/UyLeQuoc/walrus-session-10-remora">Read the code</a>
+      <a class="btn light" data-link="blog" href="#" hidden>Read the blog</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Built by Uy and Huấn for <i>Total Recall</i>, the Walrus × Tatum hackathon. MIT, except the ported openbot UI.</div>
+    <div class="links">
+      <a data-link="repo" href="https://github.com/UyLeQuoc/walrus-session-10-remora">GitHub</a>
+      <a data-link="app" href="#">App</a>
+      <a href="#proof">Proof</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Links come from config.js, so one file changes at deploy: the app's URL, the blog's, the repo's.
+  (() => {
+    const c = window.REMORA || {};
+    const app = (c.app || "").replace(/\/$/, "");
+    const set = (kind, href) => {
+      for (const a of document.querySelectorAll(`[data-link="${kind}"]`)) {
+        if (href) { a.href = href; a.hidden = false; } else if (kind === "blog") a.hidden = true;
+      }
+    };
+    set("repo", c.repo);
+    set("blog", c.blog);
+    // Until the app is deployed, its buttons open the repo's "Try it" section instead.
+    const fallback = `${c.repo || "https://github.com/UyLeQuoc/walrus-session-10-remora"}#try-it`;
+    set("playground", app ? `${app}/playground` : fallback);
+    set("app", app || fallback);
+    // The demo video ships only when it has been rendered; without it the section links to the repo.
+    const v = document.querySelector("#video-box video");
+    v?.addEventListener("error", () => {
+      document.getElementById("video-box").innerHTML =
+        `<div class="card" style="text-align:center;padding:48px"><p class="sub" style="margin:0 auto">The demo video is rendered from the repo: <span class="mono">bun docs/launch/demo/render.ts</span></p></div>`;
+    }, true);
+    // Reveal on scroll.
+    const io = new IntersectionObserver((es) => {
+      for (const e of es) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    }, { rootMargin: "0px 0px -8% 0px" });
+    for (const el of document.querySelectorAll(".rv")) io.observe(el);
+  })();
+</script>
+</body>
+</html>

@@ -32,6 +32,9 @@
         "vitest": "^4.1.12",
       },
     },
+    "apps/landing": {
+      "name": "@remora/landing",
+    },
     "apps/merchants": {
       "name": "@remora/merchants",
       "version": "0.0.1",
@@ -783,6 +786,8 @@
     "@remora/e2e": ["@remora/e2e@workspace:e2e"],
 
     "@remora/facilitator": ["@remora/facilitator@workspace:apps/facilitator"],
+
+    "@remora/landing": ["@remora/landing@workspace:apps/landing"],
 
     "@remora/mcp": ["@remora/mcp@workspace:packages/mcp"],
 

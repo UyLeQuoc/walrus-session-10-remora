@@ -259,11 +259,11 @@ const cScout = clip("scout", [
 ]);
 add({
   id: "scout", clip: cScout, lead: 1.2, chapter: "Why it did that", url: "remora · /remoras/scout-demo",
-  copy: PF("You can't see what an agent spent, or why.", "What it paid, from which budget, and why.", "Every payment comes out of its Disc. Why? opens the Wake: what it read and what Sonar decided."),
-  steps: [["A paid answer, from its own Disc", "answered"], ["0.49 of 0.50 USDC left this month", "cost"], ["The Wake: memories, Sonar, intent hash", "wake"]],
+  copy: PF("You can't see what an agent spent, or why.", "What it paid, from which budget, and why.", "Every payment comes out of its Disc, and the cost card adds it up. Why? opens the Wake: what it read and what Sonar decided."),
+  steps: [["A paid answer, from its own Disc", "answered"], ["What it cost: model, gas, purchases", "cost"], ["The Wake: memories, Sonar, intent hash", "wake"]],
   callouts: [
-    { at: "answered", off: .6, len: 2.6, x: 364, y: 446, w: 678, h: 102, title: "A paid answer", text: "It bought sui-risk over x402 and says what it cost: 0.01 USDC.", side: "below", dx: 300 },
-    { at: "cost", off: .2, len: 2.6, x: 365, y: 636, w: 322, h: 72, title: "Its Disc", text: "0.50 a month, at most 0.015 a payment. Sui enforces both.", side: "right" },
+    { at: "answered", off: .6, len: 2.6, x: 364, y: 400, w: 1038, h: 102, title: "A paid answer", text: "It bought sui-risk over x402 and says what it cost: 0.01 USDC.", side: "below", dx: 300 },
+    { at: "cost", off: .2, len: 2.8, x: 901, y: 633, w: 501, h: 163, title: "What it cost", text: "Model, sponsored gas and purchases. Its Disc: 0.49 of 0.50 left.", side: "left" },
     { at: "wake", off: .6, len: 4.4, x: 1080, y: 50, w: 352, h: 560, title: "Why?", text: "What it read, what Sonar decided, and its intent hash.", side: "left" },
   ],
 });

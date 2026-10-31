@@ -382,5 +382,6 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
   });
 
   console.log(`demo shots: ${done.join(", ")}`);
-  expect(done).toContain("playground");
+  // Every shot asked for was recorded (all of them, without DEMO_SHOTS).
+  expect(done).toEqual(expect.arrayContaining(only ?? ["playground", "create", "scout"]));
 });

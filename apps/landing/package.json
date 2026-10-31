@@ -1,0 +1,9 @@
+{
+  "name": "@remora/landing",
+  "private": true,
+  "type": "module",
+  "description": "The static landing page (H6, ADR-0092), built for Walrus Sites.",
+  "scripts": {
+    "build": "bun build.ts"
+  }
+}

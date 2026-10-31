@@ -143,7 +143,9 @@ export function useRemoraCost(remoraId: string, month: string) {
       return r.data;
     },
     enabled: Boolean(remoraId),
-    staleTime: 60_000,
+    staleTime: 30_000,
+    // Like the budget meter: a payment from a schedule or a handoff shows within half a minute.
+    refetchInterval: 30_000,
     refetchOnWindowFocus: false,
     retry: false,
   });

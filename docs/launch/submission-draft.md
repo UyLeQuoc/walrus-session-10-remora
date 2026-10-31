@@ -85,7 +85,7 @@
 |---|---|---|
 | Short demo video (2–3 min) | Yes | ❌ Not recorded. Use the [demo script](../remora-plan.md#demo-script-245) on the deployed URL |
 | GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora`. It's private until Nov 9 |
-| Additional documentation | No | The blog URL once it's published. Until then, the README and `docs/README.md` |
+| Additional documentation | No | The landing page on Walrus Sites once it's published ([apps/landing](../../apps/landing/README.md), ADR-0092), or the blog URL. Until then, the README and `docs/README.md` |
 
 ## Feedback
 **How was your experience building with Walrus?** (draft)

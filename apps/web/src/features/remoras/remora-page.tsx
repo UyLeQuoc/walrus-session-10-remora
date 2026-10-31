@@ -5,6 +5,7 @@
  * about one screen; destructive actions live in Settings → Danger zone behind ConfirmAction.
  */
 import type { RemoraView } from "@remora/schema";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Ellipsis, KeyRound, MessageCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
@@ -164,12 +165,16 @@ function AskCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState("");
+  const queries = useQueryClient();
   const ask = async () => {
     setBusy(true);
     const out = await api.ask(r.id, q);
     setBusy(false);
     if (!out.ok) return void toast.error(out.error);
     setAnswer(out.data.answer);
+    // ADR-0092: an answer can pay, so the budget meter and the cost card read it now, not later.
+    void queries.invalidateQueries({ queryKey: ["remora-budget"] });
+    void queries.invalidateQueries({ queryKey: ["remora-cost"] });
     onDone();
   };
   return (

@@ -190,7 +190,13 @@ export async function listOwnerDiscs(
     });
     for (const capObj of page.objects) {
       const cap = AllowanceCapBcs.parse(capObj.content);
-      const allowance = await getAllowance(client, cap.allowance);
+      // A cap can outlive its allowance (revoked and deleted, or not visible yet): skip it, as the
+      // doc above says, instead of failing the whole listing (ADR-0092, the demo capture hit it).
+      const allowance = await getAllowance(client, cap.allowance).catch((err: unknown) => {
+        if (isNotFound(err)) return null;
+        throw err;
+      });
+      if (!allowance) continue;
       if (!allowance.app || normalizeType(allowance.app) !== app) continue;
       const discId = await findDiscId(client, cfg, owner, allowance.name);
       if (!discId) continue;

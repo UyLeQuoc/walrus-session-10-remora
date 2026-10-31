@@ -9,6 +9,7 @@
       "!**/node_modules",
       "!apps/web/src/components/ui",
       "!apps/web/public",
+      "!apps/landing/public",
       "!**/*.css"
     ]
   },

@@ -227,6 +227,41 @@ describe("readers", () => {
     });
   });
 
+  it("skips a cap whose allowance is gone instead of failing the listing", async () => {
+    const GONE = `0x${"9".repeat(64)}`;
+    const withGone: ObjectReader = {
+      ...fake,
+      async getObject(input) {
+        if (input.objectId === GONE)
+          throw Object.assign(new Error(`Object ${GONE} not found`), { code: "NOT_FOUND" });
+        return fake.getObject(input);
+      },
+      async listOwnedObjects() {
+        const page = await fake.listOwnedObjects({
+          owner: OWNER,
+          type: "",
+          cursor: null,
+          include: { content: true },
+        });
+        return {
+          ...page,
+          objects: [
+            {
+              objectId: `0x${"8".repeat(64)}`,
+              content: AllowanceCapBcs.serialize({
+                id: `0x${"8".repeat(64)}`,
+                allowance: GONE,
+              }).toBytes(),
+            },
+            ...page.objects,
+          ],
+        };
+      },
+    };
+    const owned = await listOwnerDiscs(withGone, cfg, OWNER);
+    expect(owned.map((d) => d.capId)).toEqual([CAP]);
+  });
+
   it("finds a Disc by key and returns null when the key is free", async () => {
     expect(await findDiscId(fake, cfg, OWNER, "scout-usdc")).toBe(DISC);
     const empty: ObjectReader = {
