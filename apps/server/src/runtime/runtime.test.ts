@@ -15,8 +15,10 @@ import {
   and,
   approvals,
   createDb,
+  discEvents,
   eq,
   inArray,
+  indexerCursors,
   jobs,
   like,
   memoryFacts,
@@ -1294,6 +1296,72 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     ).json()) as { retired: string[] };
     expect(second.retired).toEqual([live]);
     expect((await call("/api/account/retire", "POST", LEAVER)).status).toBe(409);
+  });
+
+  it("a Paid with no Wake behind it alerts the owner after a wait; one with a Wake doesn't (ADR-0077)", async () => {
+    const { PAID_CHECK, PAID_CHECK_DELAY_MS, storeCheckpoint } = await import(
+      "../triggers/indexer.ts"
+    );
+    const known = (await db.select().from(receipts).where(eq(receipts.remoraId, scout.id))).find(
+      (x) => x.txDigest,
+    );
+    if (!known?.txDigest || !scout.discId) throw new Error("no Wake with a digest");
+    const [cursor] = await db
+      .select()
+      .from(indexerCursors)
+      .where(eq(indexerCursors.network, "testnet"));
+    const stranger = `DgLeak${process.pid}`;
+    const paid = (txDigest: string, intent: string, payee: string, amount: string) => ({
+      network: "testnet" as const,
+      checkpoint: 1n,
+      txDigest,
+      eventSeq: 0,
+      type: "Paid" as const,
+      discId: scout.discId as string,
+      payload: { disc: scout.discId, payee, amount, intent, ts_ms: "1" },
+      timestampMs: 1n,
+    });
+    try {
+      const at = Date.now();
+      await storeCheckpoint(db, "testnet", 0n, [
+        paid(known.txDigest, known.intentHash, PAYTO, "10000"),
+        paid(stranger, randomBytes(32).toString("hex"), ATTACKER, "50000"),
+      ]);
+      const queued = await db
+        .select()
+        .from(jobs)
+        .where(like(jobs.idempotencyKey, `${PAID_CHECK}:%`));
+      expect(queued.map((j) => j.idempotencyKey)).toEqual([`${PAID_CHECK}:testnet:${stranger}:0`]);
+      expect(queued[0]?.runAt.getTime()).toBeGreaterThanOrEqual(at + PAID_CHECK_DELAY_MS - 1_000);
+
+      const check = remoraJobHandlers(deps())[PAID_CHECK];
+      const before = notices.length;
+      await check?.(queued[0]?.payload, queued[0] as never);
+      expect(notices.length).toBe(before + 1);
+      expect(notices.at(-1)?.urgent).toBe(true);
+      expect(notices.at(-1)?.text).toMatch(/no decision behind it: 0\.05 USDC to 0x00000000…/);
+      const alerts = (
+        await db.select().from(remoraEvents).where(eq(remoraEvents.remoraId, scout.id))
+      ).filter((e) => (e.payload as { digest?: string }).digest === stranger);
+      expect(alerts).toHaveLength(1);
+      // A Wake that lands during the wait clears it: nothing is said.
+      await check?.(
+        {
+          network: "testnet",
+          txDigest: known.txDigest,
+          discId: scout.discId,
+          intent: known.intentHash,
+          amount: "10000",
+          payTo: PAYTO,
+        },
+        queued[0] as never,
+      );
+      expect(notices.length).toBe(before + 1);
+    } finally {
+      await db.delete(jobs).where(like(jobs.idempotencyKey, `${PAID_CHECK}:%`));
+      await db.delete(discEvents).where(inArray(discEvents.txDigest, [stranger, known.txDigest]));
+      if (!cursor) await db.delete(indexerCursors).where(eq(indexerCursors.network, "testnet"));
+    }
   });
 
   it("settings say whether Telegram is linked (A5)", async () => {
