@@ -13,12 +13,15 @@ the list at the bottom.
 | `fdda719` | D5: Sentinel's `check` rule hands an airdrop to Scout | [0078](../adr/0078-sentinel-hands-off-to-scout.md) |
 | `cb26d7d` | I3: `bun run evals`, **28 attacks, 0 overspends**, in CI | [0079](../adr/0079-red-team-evals.md) |
 | `c68c41a` | Tatum follow-ups: `tatum.usage` in health, no backfill on a watched-set re-subscribe | [0080](../adr/0080-tatum-usage-in-health-and-no-resubscribe-backfill.md) |
-| this commit | The launch story: README "In one minute", the demo script, the blog's honesty sections, MemWal issue drafts and social drafts | [0081](../adr/0081-launch-story.md) |
+| `bd287b5` | The launch story: README "In one minute", the demo script, the blog's honesty sections, MemWal issue drafts and social drafts | [0081](../adr/0081-launch-story.md) |
+| `53cbc96` | CI was red from `389548a` on: a new OSV advisory on `follow-redirects`, which comes in through `@slack/bolt` › `axios`, blocked the install. The override goes to `>=1.16.2` | [0082](../adr/0082-follow-redirects-1-16-2.md) |
 
 The contract PR for Huấn's pages and F15's facts is
 [#17](https://github.com/UyLeQuoc/walrus-session-10-remora/pull/17). It needs his approval.
 
 ## Checks (each push)
+- **CI.** Red on GitHub from `389548a` to `bd287b5`, at the install scanner, not at the code. ADR-0082
+  fixes it; see the run for `53cbc96`.
 - `git pull --rebase`, then typecheck 20/20 and lint clean.
 - Test 15/15 tasks.
 - The link check is clean.
