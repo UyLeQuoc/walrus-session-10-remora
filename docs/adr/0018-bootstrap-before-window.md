@@ -1,6 +1,6 @@
 # ADR-0018: Run the U0 bootstrap before the build window
 
-- **Status:** Accepted
+- **Status:** Accepted; its claim that no feature came before the window is superseded by ADR-0075 (W1 and W2 ran on Oct 19)
 - **Date:** 2026-10-18
 - **Deciders:** Uy Le
 

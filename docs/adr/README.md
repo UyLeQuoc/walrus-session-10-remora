@@ -34,7 +34,7 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0015](0015-tatum-for-all-chain-io.md) | Route all chain I/O through Tatum | Accepted |
 | [0016](0016-record-decisions-as-adrs.md) | Record every decision as an ADR | Accepted |
 | [0017](0017-github-repo-private-until-submission.md) | GitHub repo stays private until submission | Accepted |
-| [0018](0018-bootstrap-before-window.md) | Run the U0 bootstrap before the build window | Accepted |
+| [0018](0018-bootstrap-before-window.md) | Run the U0 bootstrap before the build window | Accepted; the claim that no feature came before the window is superseded by 0075 |
 | [0019](0019-bootstrap-structure-decisions.md) | Structure decisions made during the bootstrap | Accepted |
 | [0020](0020-allowance-spike-go.md) | Allowance spike: GO on native app-bound allowances | Accepted |
 | [0021](0021-sui-grpc-only.md) | Sui chain access is gRPC only | Accepted |
@@ -91,3 +91,4 @@ change writes it, **agents included** (see `AGENTS.md` at the repo root).
 | [0072](0072-accept-ascii-ocean-and-lucide-icons.md) | Accepts ADR-0041 (ASCII ocean behind the empty `/chat`) as built under U13; icons come only from `lucide-react` (no emoji or text glyphs) | Accepted |
 | [0073](0073-node-server-v2-and-vanilla-extract-override.md) | `@hono/node-server` 2.x and a bounded `@vanilla-extract/css` 1.21.3 override, so the install scanner passes (no in-range fix for either advisory) | Accepted |
 | [0074](0074-memory-facts-and-admission.md) | Memory facts and admission (F15, after Dewee): a facts ledger with deterministic reconcile (owner > runtime > agent > extractor; supersede, dispute, history, `asOf`), admission before the model reads recall (stale, repeats, caps; optional judge, fails open), Wakes cite only what was admitted, track records skip semantic dedupe | Accepted |
+| [0075](0075-pre-window-work-stated.md) | State what was built before the build window as it happened: W1 and W2 ran on Oct 19, the README names the cutoff commit `3f9a2a6` and when each proof was made, no history rewrite; supersedes ADR-0018's claim | Accepted |

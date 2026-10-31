@@ -16,13 +16,20 @@ The event allows existing projects **only for new progress made during the build
 Nov 10), and every submission must be original work or work you're authorized to submit. hippo is the
 owner's own work, so reuse is allowed, but it has to be **disclosed and clearly separated**:
 
-1. **One labeled import commit on Oct 20:**
+1. **One labeled import commit:**
    `chore: import shared libraries from hippo (prior work, Walrus Sessions 8, 66fb33a)`.
-   Import libraries and infrastructure only, not hippo the chatbot product (its chat UX, teams and
-   documents aren't Remora features).
-2. **A README section, "Built on prior work".** It lists what came from hippo, and states that Disc,
-   allowances, the facilitator, Reef, Sonar, Wake, Tatum integration, Scout/Sentinel and every new
-   template were built during the window.
+   - It was planned for Oct 20 and made on Oct 18 as `cd9acfd`
+     ([ADR-0018](adr/0018-bootstrap-before-window.md)).
+   - Import libraries and infrastructure only, not hippo the chatbot product: its chat UX, teams and
+     documents aren't Remora features.
+2. **A README section, "Built on prior work".** It lists:
+   - what came from hippo;
+   - what was built on Oct 18–19, before the window: the bootstrap, then W1 and W2 (the Disc, the
+     facilitator, Reef, Sonar, Wakes, Scout and Sentinel);
+   - what was built in the window, with the last commit before it, `3f9a2a6`
+     ([ADR-0075](adr/0075-pre-window-work-stated.md)).
+
+   The plan was to build every Remora feature in the window. W1 and W2 ran a day early instead.
 3. **Rename on import** (`@hippo/*` → `@remora/*`) and keep the original file history in the commit
    message. Never pass hippo's earlier evidence or memories off as Remora's.
 4. **Same judges, probably.** Walrus judged hippo, so the pitch must make Remora's new substance obvious:
