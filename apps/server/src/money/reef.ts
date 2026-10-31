@@ -60,3 +60,31 @@ export function reefFor(
 }
 
 export const reefRef = (s: string) => REEF.find((e) => e.ref === s || e.slug === s);
+
+const MERCHANT_DOCS =
+  "https://github.com/UyLeQuoc/walrus-session-10-remora/tree/main/apps/merchants#readme";
+
+/** E7 (H4): how the directory page groups and links each service. */
+const LISTING: Record<string, { category: string; docsUrl: string }> = {
+  "sui-risk": { category: "Onchain risk", docsUrl: MERCHANT_DOCS },
+  odds: { category: "Sports", docsUrl: MERCHANT_DOCS },
+  brief: { category: "Summaries", docsUrl: MERCHANT_DOCS },
+};
+
+/** E7 `GET /api/reef/services`: one row per service with its `payTo` on this network. */
+export function reefServices(resolved: ResolvedReef[]) {
+  return resolved.flatMap((e) => {
+    const l = LISTING[e.slug];
+    return l
+      ? [
+          {
+            name: e.name,
+            category: l.category,
+            priceUsdc: e.price,
+            payTo: e.payTo,
+            docsUrl: l.docsUrl,
+          },
+        ]
+      : [];
+  });
+}

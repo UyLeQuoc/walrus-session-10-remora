@@ -59,9 +59,18 @@ export const receipts = pgTable(
     /** True once the indexer saw `Paid.intent == intent_hash` (G2). */
     anchored: boolean("anchored").notNull().default(false),
     wakeBlobId: text("wake_blob_id"),
+    /**
+     * G6 (ADR-0076): the token of the public proof link, while the owner shares it. Null means not
+     * shared; revoking clears it, so the old link stops working.
+     */
+    shareToken: text("share_token"),
+    sharedAt: timestamp("shared_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    uniqueIndex("receipts_share_token_idx")
+      .on(t.shareToken)
+      .where(sql`${t.shareToken} is not null`),
     uniqueIndex("receipts_tx_digest_idx")
       .on(t.network, t.txDigest)
       .where(sql`${t.txDigest} is not null`),

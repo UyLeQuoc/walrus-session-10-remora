@@ -13,7 +13,7 @@
  */
 import { Hono } from "hono";
 import { env } from "../env/load.ts";
-import { liveHealth } from "../ops/index.ts";
+import { liveHealth, publicStatus } from "../ops/index.ts";
 
 export const healthRoutes = new Hono()
   /** Cheap, for the platform's health check. */
@@ -27,6 +27,16 @@ export const healthRoutes = new Hono()
    */
   .get("/api/health/deep", async (c) => {
     return c.json({ ...(await deepReport()), startedAt: STARTED_AT, model: env.LLM_MODEL });
+  })
+
+  /** N20 (H2, ADR-0076): the public status page, from the same cached report. */
+  .get("/api/status", async (c) => {
+    const report = await deepReport().catch(() => null);
+    return c.json(
+      report
+        ? publicStatus(report)
+        : { status: "degraded", items: [{ name: "health report", status: "degraded" }] },
+    );
   });
 
 const STARTED_AT = new Date().toISOString();

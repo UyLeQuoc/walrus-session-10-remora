@@ -1,7 +1,7 @@
 import { DiagnoseReport, HealthReport } from "@remora/schema";
 import { beforeEach, describe, expect, it } from "vitest";
 import { diagnose, tatumTrouble } from "./diagnose.ts";
-import { type HealthDeps, healthReport } from "./health.ts";
+import { type HealthDeps, healthReport, publicStatus } from "./health.ts";
 import {
   isOpsError,
   noteRelayerError,
@@ -223,5 +223,32 @@ describe("diagnose, the deploy gate (K2)", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.status).toBe("degraded");
+  });
+});
+
+describe("public status (N20, ADR-0076)", () => {
+  it("carries names and statuses only", () => {
+    const out = publicStatus({
+      status: "degraded",
+      items: [
+        {
+          name: "tatum.testnet",
+          status: "degraded",
+          detail: "slow: trace 7f3a",
+          value: "2400 ms",
+          threshold: "1500 ms",
+          fix: "Check the Tatum dashboard.",
+        },
+        { name: "db", status: "ok", detail: "ok", value: null, threshold: null, fix: null },
+      ],
+    });
+    expect(out).toEqual({
+      status: "degraded",
+      items: [
+        { name: "tatum.testnet", status: "degraded" },
+        { name: "db", status: "ok" },
+      ],
+    });
+    expect(JSON.stringify(out)).not.toMatch(/trace|2400|dashboard/);
   });
 });

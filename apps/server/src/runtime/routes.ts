@@ -39,9 +39,11 @@ import {
   shareReview,
 } from "../hatchery/service.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
+import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
+import { remoraCost } from "./cost.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
@@ -76,6 +78,7 @@ import { teach } from "./sentinel.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
 import { verifyWake } from "./verify.ts";
+import { publicWake, shareWake, unshareWake } from "./wake-share.ts";
 
 export interface RemoraRouteDeps {
   service: RemoraService;
@@ -178,6 +181,8 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/hatchery/:id/hatch/*",
     "/api/hatchery/:id/deprecate",
     "/api/hatchery/:id/deprecate/*",
+    "/api/wakes/*",
+    "/api/account/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -200,6 +205,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/events/:id/*",
     "/api/rooms/:id",
     "/api/rooms/:id/*",
+    "/api/wakes/:id/*",
   ]) {
     app.use(path, async (c, next) => {
       if (!UUID.test(c.req.param("id") ?? ""))
@@ -951,6 +957,113 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     }
     c.header("content-disposition", `attachment; filename="${stem}.json"`);
     return c.json(file);
+  });
+
+  // ── U9 (ADR-0076): cost card, Reef directory, proof links, leaving Remora ──
+  app.get("/api/remoras/:id/cost", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const month = c.req.query("month") ?? new Date().toISOString().slice(0, 7);
+    const deps = {
+      db: rt.db,
+      defaultModel: rt.brain.answerModel,
+      ...(rt.suiUsd ? { suiUsd: rt.suiUsd } : {}),
+    };
+    const model = service.config(r).model;
+    return c.json(
+      await remoraCost(deps, { id: r.id, address: r.address, network: r.network, model }, month),
+    );
+  });
+
+  // Public, like the Reef itself: what a remora may pay, and to which address on this network.
+  app.get("/api/reef/services", (c) =>
+    c.json(reefServices(rt.reef(resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER))))),
+  );
+
+  app.post("/api/wakes/:id/share", async (c) =>
+    c.json(await shareWake(rt, c.get("owner"), c.req.param("id"))),
+  );
+
+  app.delete("/api/wakes/:id/share", async (c) =>
+    c.json(await unshareWake(rt, c.get("owner"), c.req.param("id"))),
+  );
+
+  // No session: the token is the capability, and the view is allow-listed (wake-share.ts).
+  app.get("/api/public/wakes/:token", async (c) => {
+    const view = await publicWake(rt, c.req.param("token"));
+    return view
+      ? c.json(view)
+      : c.json(
+          {
+            error: { code: "wake.not_shared", message: "This link was revoked or never existed." },
+          },
+          404,
+        );
+  });
+
+  /** A8: every memory and every Wake of the owner's remoras on both networks, in one file. */
+  app.get("/api/account/export", async (c) => {
+    const owner = c.get("owner");
+    const mine = [
+      ...(await service.list(owner, "testnet")),
+      ...(await service.list(owner, "mainnet")),
+    ];
+    const memories: Record<string, unknown>[] = [];
+    if (d.operator) {
+      for (const r of mine) {
+        const { rows } = await inspectRows(r, service.config(r).namespaces);
+        const file = await exportMemories(rt.db, d.operator, r, rows);
+        for (const m of file.memories)
+          memories.push({ remora: r.name, remoraId: r.id, network: r.network, ...m });
+      }
+    }
+    const wakes = mine.length
+      ? await rt.db
+          .select()
+          .from(receipts)
+          .where(
+            inArray(
+              receipts.remoraId,
+              mine.map((r) => r.id),
+            ),
+          )
+          .orderBy(desc(receipts.createdAt))
+      : [];
+    const exportedAt = new Date().toISOString();
+    c.header(
+      "content-disposition",
+      `attachment; filename="remora-export-${exportedAt.slice(0, 10)}.json"`,
+    );
+    return c.json({
+      v: 1,
+      exportedAt,
+      memories,
+      wakes: wakes.map((w) => ({
+        id: w.id,
+        remoraId: w.remoraId,
+        network: w.network,
+        intentHash: w.intentHash,
+        txDigest: w.txDigest,
+        anchored: w.anchored,
+        wakeBlobId: w.wakeBlobId,
+        createdAt: w.createdAt.toISOString(),
+        wake: w.wake,
+      })),
+    });
+  });
+
+  app.post("/api/account/retire", async (c) =>
+    c.json(await service.retireAllTx(c.get("owner"), c.get("network"))),
+  );
+
+  app.post("/api/account/retire/confirm", async (c) => {
+    const { digest } = await body<{ digest?: string }>(c);
+    return c.json(
+      await service.confirmRetireAll(
+        c.get("owner"),
+        c.get("network"),
+        digest ? digestOf(digest) : undefined,
+      ),
+    );
   });
 
   // ── Settings (A7, H5) and Telegram linking (A5) ───────────────────────────

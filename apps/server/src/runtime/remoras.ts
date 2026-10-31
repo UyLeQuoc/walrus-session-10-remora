@@ -11,6 +11,7 @@ import { and, type Db, desc, eq, gt, remoraEvents, remoras } from "@remora/db";
 import {
   AllowanceCapBcs,
   addIssue,
+  addRevoke,
   buildIssue,
   buildPause,
   buildRevoke,
@@ -262,25 +263,27 @@ export function createRemoraService(deps: RemoraDeps) {
     return { discId, allowanceId, capId };
   }
 
+  /** The owner's remoras on a network, newest first; playground Scouts aren't theirs. */
+  function listMine(owner: string, network: SuiNetwork) {
+    return db
+      .select()
+      .from(remoras)
+      .where(
+        and(
+          eq(remoras.ownerAddress, normalizeSuiAddress(owner)),
+          eq(remoras.network, network),
+          eq(remoras.playground, false),
+        ),
+      )
+      .orderBy(desc(remoras.createdAt));
+  }
   const config = (r: Remora) =>
     RemoraConfig.parse({ ...r.config, status: r.status === "creating" ? "shadow" : r.status });
 
   return {
     templates: () => TEMPLATES,
 
-    async list(owner: string, network: SuiNetwork) {
-      return db
-        .select()
-        .from(remoras)
-        .where(
-          and(
-            eq(remoras.ownerAddress, normalizeSuiAddress(owner)),
-            eq(remoras.network, network),
-            eq(remoras.playground, false),
-          ),
-        )
-        .orderBy(desc(remoras.createdAt));
-    },
+    list: listMine,
 
     get: mine,
     config,
@@ -674,6 +677,80 @@ export function createRemoraService(deps: RemoraDeps) {
         paused.push(r.id);
       }
       return { paused };
+    },
+
+    /**
+     * A8 (ADR-0076): one owner transaction revokes every live Disc on this network. Disc-less, shadow
+     * and paused remoras are included; the confirm retires them. A Disc already revoked elsewhere is
+     * forgotten, like `retireTx` does.
+     */
+    async retireAllTx(owner: string, network: SuiNetwork) {
+      const rows = (await listMine(owner, network)).filter((r) => r.status !== "retired");
+      if (!rows.length)
+        throw new RemoraError("account.nothing_to_retire", "You have no remoras to retire.", 409);
+      const tx = new Transaction();
+      let revokes = 0;
+      for (const r of rows) {
+        if (!r.discId || !r.allowanceId || !r.capId) continue;
+        try {
+          await getDisc(deps.networks.client(r.network).core, r.discId);
+        } catch (err) {
+          if (toDiscError(err).code !== "allowance.revoked") throw err;
+          await setRow(r.id, { discId: null, allowanceId: null, capId: null });
+          continue;
+        }
+        addRevoke(tx, discCfg(network), {
+          discId: r.discId,
+          capId: r.capId,
+          allowanceId: r.allowanceId,
+        });
+        revokes++;
+      }
+      if (!revokes) {
+        // Nothing for the wallet to sign: every Disc is gone already, so retire them all now.
+        throw new RemoraError(
+          "account.nothing_to_sign",
+          "None of your remoras has a Disc left to revoke. Confirm to retire them.",
+          409,
+        );
+      }
+      tx.setSender(normalizeSuiAddress(owner));
+      return { transaction: await tx.toJSON(), remoraIds: rows.map((r) => r.id) };
+    },
+
+    /**
+     * Retires every remora whose Disc is gone (or that never had one). With a digest, it first checks
+     * the owner sent it; a remora whose Disc is still live stays as it is.
+     */
+    async confirmRetireAll(owner: string, network: SuiNetwork, digest?: string) {
+      const rows = (await listMine(owner, network)).filter((r) => r.status !== "retired");
+      const withDisc = rows.find((r) => r.discId);
+      if (withDisc && digest) await ownerTx(withDisc, digest);
+      const retired: string[] = [];
+      for (const r of rows) {
+        if (r.discId) {
+          try {
+            await getDisc(deps.networks.client(r.network).core, r.discId);
+            continue;
+          } catch (err) {
+            if (toDiscError(err).code !== "allowance.revoked") throw err;
+          }
+        }
+        const updated = await setRow(r.id, {
+          status: "retired",
+          discId: null,
+          allowanceId: null,
+          capId: null,
+        });
+        await event(
+          updated,
+          "action",
+          `${r.name} is retired. Its memory stays yours.`,
+          digest ? { digest } : {},
+        );
+        retired.push(r.id);
+      }
+      return { retired };
     },
 
     /** N5: budget meter straight from the allowance. */

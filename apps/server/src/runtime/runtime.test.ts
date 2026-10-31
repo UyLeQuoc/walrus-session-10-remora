@@ -25,9 +25,11 @@ import {
   remoraEvents,
   remoraMemories,
   remoras,
+  remoraUsage,
   rooms,
   sentinelRules,
   sourceStats,
+  sponsorLedger,
 } from "@remora/db";
 import { DiscBcs, PaidBcs } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
@@ -145,6 +147,8 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
 
   // The fake chain: one live Disc that allows PAYTO, 0.05 per payment.
   const txs = new Map<string, unknown>();
+  // Discs revoked onchain: reading one fails like the chain does.
+  const gone = new Set<string>();
   const client = {
     core: {
       getTransaction: async ({ digest }: { digest: string }) => {
@@ -152,21 +156,24 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
         if (!t) throw new Error("not found");
         return { Transaction: t };
       },
-      getObject: async ({ objectId }: { objectId: string }) => ({
-        object: {
-          objectId,
-          type: "",
-          content: DiscBcs.serialize({
-            id: objectId,
-            owner: OWNER,
-            name: "x",
-            payees: { contents: [PAYTO] },
-            per_payment_cap: 50_000n,
-            paused: false,
-            version: 1n,
-          }).toBytes(),
-        },
-      }),
+      getObject: async ({ objectId }: { objectId: string }) => {
+        if (gone.has(objectId)) throw new Error(`Object ${objectId} not found`);
+        return {
+          object: {
+            objectId,
+            type: "",
+            content: DiscBcs.serialize({
+              id: objectId,
+              owner: OWNER,
+              name: "x",
+              payees: { contents: [PAYTO] },
+              per_payment_cap: 50_000n,
+              paused: false,
+              version: 1n,
+            }).toBytes(),
+          },
+        };
+      },
     },
   } as unknown as SuiGrpcClient;
   const networks = createNetworks(
@@ -1063,6 +1070,230 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       await (await send("/api/teams/preview", "POST", { markdown: exported })).json(),
     );
     expect(new Set(again.remoras.map((r) => r.name)).size).toBe(again.remoras.length);
+  });
+
+  it("U9 backend: cost, Reef directory, proof links, export and retire all (ADR-0076)", async () => {
+    const routes = createRemoraRoutes({
+      service,
+      runtime: deps({ suiUsd: async () => 2 }),
+      owner: async (c) => c.req.header("x-test-owner") ?? null,
+    });
+    const call = (path: string, method = "GET", who = OWNER, body?: unknown) =>
+      routes.request(path, {
+        method,
+        headers: {
+          "x-test-owner": who,
+          "content-type": "application/json",
+          "x-remora-network": "testnet",
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    const STRANGER = normalizeSuiAddress("0x5a7");
+
+    // E7: public, with this network's payTo and an http(s) docs link.
+    const reefRes = await routes.request("/api/reef/services", {
+      headers: { "x-remora-network": "testnet" },
+    });
+    const services = (await reefRes.json()) as Record<string, string>[];
+    expect(services.map((x) => [x.name, x.category, x.priceUsdc, x.payTo])).toEqual([
+      ["sui-risk", "Onchain risk", "10000", PAYTO],
+      ["odds", "Sports", "20000", PAYTO],
+      ["brief", "Summaries", "10000", PAYTO],
+    ]);
+    expect(services.every((x) => /^https:\/\//.test(x.docsUrl ?? ""))).toBe(true);
+
+    // N15: a month no other test touches. 1M tokens at the $1 ceiling (the fake model has no
+    // price), 0.003 SUI of settled gas at $2, and one paid Wake; the unsettled gas, the payment
+    // without a digest and April's payment don't count.
+    const [paidWake] = (
+      await db.select().from(receipts).where(eq(receipts.remoraId, scout.id))
+    ).filter(
+      (x) =>
+        (x.wake as { intent: { decision: { action: string } } }).intent.decision.action === "pay",
+    );
+    if (!paidWake) throw new Error("no paid Wake");
+    await db
+      .insert(remoraUsage)
+      .values({ remoraId: scout.id, day: "2031-03-05", tokens: 1_000_000, calls: 3 });
+    await db.insert(sponsorLedger).values([
+      {
+        network: "testnet",
+        sender: scout.address,
+        day: "2031-03-06",
+        digest: `cost-${process.pid}-a`,
+        gasBudget: 5_000_000n,
+        gasUsed: 3_000_000n,
+        status: "settled",
+      },
+      {
+        network: "testnet",
+        sender: scout.address,
+        day: "2031-03-06",
+        digest: `cost-${process.pid}-b`,
+        gasBudget: 5_000_000n,
+        status: "reserved",
+      },
+    ]);
+    const seeded = await db
+      .insert(receipts)
+      .values([
+        {
+          ...paidWake,
+          id: undefined,
+          txDigest: `Cost${process.pid}a`,
+          createdAt: new Date("2031-03-07T10:00:00Z"),
+          shareToken: null,
+          sharedAt: null,
+        },
+        {
+          ...paidWake,
+          id: undefined,
+          txDigest: null,
+          createdAt: new Date("2031-03-08T10:00:00Z"),
+          shareToken: null,
+          sharedAt: null,
+        },
+        {
+          ...paidWake,
+          id: undefined,
+          txDigest: `Cost${process.pid}b`,
+          createdAt: new Date("2031-04-01T00:00:00Z"),
+          shareToken: null,
+          sharedAt: null,
+        },
+      ])
+      .returning();
+    const amount = (paidWake.wake as { intent: { decision: { amount: string } } }).intent.decision
+      .amount;
+    try {
+      const cost = await (await call(`/api/remoras/${scout.id}/cost?month=2031-03`)).json();
+      expect(cost).toEqual({ llmUsdc: "1000000", gasUsdc: "6000", purchasesUsdc: amount });
+      expect((await call(`/api/remoras/${scout.id}/cost?month=2031-13`)).status).toBe(400);
+      expect(
+        (await call(`/api/remoras/${scout.id}/cost?month=2031-03`, "GET", STRANGER)).status,
+      ).toBe(403);
+
+      // G6: owner-only and idempotent; the public view is allow-listed; revoking ends the link.
+      const unpaid = seeded[1];
+      if (!unpaid) throw new Error("no seeded Wake");
+      const shared = (await (await call(`/api/wakes/${unpaid.id}/share`, "POST")).json()) as {
+        token: string;
+        url: string;
+      };
+      expect(shared.url).toBe(`http://web.test/p/${shared.token}`);
+      const again = (await (await call(`/api/wakes/${unpaid.id}/share`, "POST")).json()) as {
+        token: string;
+      };
+      expect(again.token).toBe(shared.token);
+      expect((await call(`/api/wakes/${unpaid.id}/share`, "POST", STRANGER)).status).toBe(404);
+      const pub = await routes.request(`/api/public/wakes/${shared.token}`);
+      expect(pub.status).toBe(200);
+      const view = (await pub.json()) as Record<string, unknown>;
+      expect(Object.keys(view).sort()).toEqual([
+        "action",
+        "agent",
+        "anchored",
+        "checks",
+        "intentHash",
+        "network",
+        "remora",
+        "ts",
+        "tx",
+        "v",
+      ]);
+      const wake = unpaid.wake as {
+        intent: { decision: Record<string, string>; model: { promptSha256: string } };
+      };
+      expect(view.action).toEqual({
+        kind: "pay",
+        payee: wake.intent.decision.payee,
+        payTo: wake.intent.decision.payTo,
+        amount,
+      });
+      const text = JSON.stringify(view);
+      for (const secret of [
+        wake.intent.decision.reason,
+        wake.intent.model.promptSha256,
+        unpaid.id,
+        OWNER,
+      ])
+        expect(text).not.toContain(secret as string);
+      expect((view.checks as { name: string }[]).map((c) => c.name)).toContain("intent hash");
+      expect((await call(`/api/wakes/${unpaid.id}/share`, "DELETE")).status).toBe(200);
+      expect((await routes.request(`/api/public/wakes/${shared.token}`)).status).toBe(404);
+      expect((await routes.request("/api/public/wakes/nope")).status).toBe(404);
+
+      // A8: one file with every Wake (no share tokens) and the memories (none without an operator).
+      const exp = (await (await call("/api/account/export")).json()) as {
+        v: number;
+        memories: unknown[];
+        wakes: { id: string }[];
+      };
+      expect(exp.v).toBe(1);
+      expect(exp.wakes.map((w) => w.id)).toContain(unpaid.id);
+      expect(JSON.stringify(exp)).not.toContain("shareToken");
+    } finally {
+      await db.delete(receipts).where(
+        inArray(
+          receipts.id,
+          seeded.map((x) => x.id),
+        ),
+      );
+      await db
+        .delete(remoraUsage)
+        .where(and(eq(remoraUsage.remoraId, scout.id), eq(remoraUsage.day, "2031-03-05")));
+      await db.delete(sponsorLedger).where(like(sponsorLedger.digest, `cost-${process.pid}-%`));
+    }
+
+    // A8 retire all, for an owner of its own: a live Disc goes into one revoke transaction; a Disc
+    // revoked elsewhere is forgotten; the confirm retires what has no live Disc and keeps the rest.
+    const LEAVER = normalizeSuiAddress(`0x1ea${process.pid.toString(16)}`);
+    const make = async (template: "scout" | "sentinel", disc: string | null) => {
+      const m = await service.create({ owner: LEAVER, network: "testnet", template });
+      created.push(m.remora.id);
+      await db
+        .update(remoras)
+        .set({
+          status: "active",
+          discId: disc,
+          allowanceId: disc ? normalizeSuiAddress("0xa12") : null,
+          capId: disc ? normalizeSuiAddress("0xcb") : null,
+        })
+        .where(eq(remoras.id, m.remora.id));
+      return m.remora.id;
+    };
+    const live = await make("scout", normalizeSuiAddress("0xd2"));
+    const revoked = await make("scout", normalizeSuiAddress("0xd3"));
+    const discless = await make("sentinel", null);
+    gone.add(normalizeSuiAddress("0xd3"));
+    const prep = (await (await call("/api/account/retire", "POST", LEAVER)).json()) as {
+      transaction: string;
+      remoraIds: string[];
+    };
+    expect(new Set(prep.remoraIds)).toEqual(new Set([live, revoked, discless]));
+    const moves = (
+      JSON.parse(prep.transaction) as {
+        commands: { MoveCall?: { module: string; function: string } }[];
+      }
+    ).commands.flatMap((c) => (c.MoveCall ? [`${c.MoveCall.module}::${c.MoveCall.function}`] : []));
+    expect(moves).toEqual(["disc::revoke"]);
+    expect(prep.transaction).toContain(normalizeSuiAddress("0xd2"));
+    expect(prep.transaction).not.toContain(normalizeSuiAddress("0xd3"));
+    const first = (await (
+      await call("/api/account/retire/confirm", "POST", LEAVER, {})
+    ).json()) as { retired: string[] };
+    expect(new Set(first.retired)).toEqual(new Set([revoked, discless]));
+    gone.add(normalizeSuiAddress("0xd2"));
+    const nothing = await call("/api/account/retire", "POST", LEAVER);
+    expect(nothing.status).toBe(409);
+    expect(((await nothing.json()) as { error: { code: string } }).error.code).toBe(
+      "account.nothing_to_sign",
+    );
+    const second = (await (
+      await call("/api/account/retire/confirm", "POST", LEAVER, {})
+    ).json()) as { retired: string[] };
+    expect(second.retired).toEqual([live]);
+    expect((await call("/api/account/retire", "POST", LEAVER)).status).toBe(409);
   });
 
   it("settings say whether Telegram is linked (A5)", async () => {

@@ -9,6 +9,8 @@ import { networks } from "../money/index.ts";
 import { diagnose } from "./diagnose.ts";
 import { type HealthDeps, healthReport } from "./health.ts";
 
+export { publicStatus } from "./health.ts";
+
 const available = () =>
   networks
     .list()

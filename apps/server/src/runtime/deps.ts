@@ -29,6 +29,8 @@ export interface RuntimeDeps {
   dailyTokens: number;
   /** The dashboard, for "Why?" and approval links in notifications. */
   webBase: string;
+  /** N15 (ADR-0076): the SUI price in USD from Tatum's Data API, for the cost card's gas line. */
+  suiUsd?: () => Promise<number>;
   /**
    * Test flag (W2 exit, Phase C): skip Sonar so the Disc alone has to stop an injected payment.
    * Never set in production; `/api` can't change it.

@@ -255,3 +255,11 @@ export async function healthReport(d: HealthDeps): Promise<HealthReport> {
   );
   return { status, items, errors: recentErrors(), checkedAt: new Date(now()).toISOString() };
 }
+
+/**
+ * N20 (H2, ADR-0076): the public `/api/status`. Names and statuses only: the deep report's details,
+ * values, thresholds, fixes and errors name balances and trace ids, which a public page has no use for.
+ */
+export function publicStatus(r: Pick<HealthReport, "status" | "items">) {
+  return { status: r.status, items: r.items.map((i) => ({ name: i.name, status: i.status })) };
+}

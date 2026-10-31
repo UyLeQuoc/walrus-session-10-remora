@@ -26,6 +26,7 @@ import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
 import { signedInOwner } from "../identity/session.ts";
 import { log, networks } from "../money/index.ts";
+import { createSuiUsd } from "../money/rates.ts";
 import { reefFor } from "../money/reef.ts";
 import { startWatcher } from "../triggers/watch.ts";
 import { createBrain } from "./brain.ts";
@@ -97,6 +98,7 @@ export const runtime: RuntimeDeps = {
   limiter: new SlidingLimiter(),
   dailyTokens: env.REMORA_DAILY_TOKENS,
   webBase: env.WEB_BASE_URL,
+  suiUsd: createSuiUsd({ apiKey: env.TATUM_API_KEY ?? env.TATUM_API_KEY_TESTNET }),
 };
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });
