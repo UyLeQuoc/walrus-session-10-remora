@@ -11,7 +11,7 @@
 | # | Item | Blocks | Who |
 |---|---|---|---|
 | 1 | The deployed demo URL and the playground (U9 Phase D) | "Working demo", the video, the blog's `[mainnet]` numbers | Uy |
-| 2 | **The demo video**, 2–3 minutes. A [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is ready to render now. A short screen capture on the deployed URL still shows the working demo ([demo script](../remora-plan.md#demo-script-245)) | A required field | Uy |
+| 2 | **The demo video**, 2–3 minutes. The [real-app demo](demo/README.md) (≈170 s, problem → fix, ADR-0091) and a [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) are ready to render now. A short screen capture on the deployed URL still shows the working demo ([demo script](../remora-plan.md#demo-script-245)) | A required field | Uy |
 | 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)), right after a clean `bun run secrets:history` (clean on Oct 31, [ADR-0085](../adr/0085-scan-history-before-public.md)) | A required field and requirement 5 | Uy, Nov 9 |
 | 4 | **The blog published** ([draft](blog-draft.md)), with the `[deploy]` and `[dogfood]` markers replaced | Requirement 4 | Uy |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |

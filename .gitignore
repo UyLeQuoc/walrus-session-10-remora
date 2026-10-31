@@ -30,3 +30,6 @@ spikes/*/.results.*.json
 
 # The showreel render: frames, audio and the MP4 (ADR-0090)
 docs/launch/showreel/out/
+# The demo video: real-app capture and render output (ADR-0091)
+docs/launch/demo/capture/
+docs/launch/demo/out/

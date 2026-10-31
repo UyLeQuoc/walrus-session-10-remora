@@ -57,6 +57,11 @@ export default defineConfig({
     { name: "u13", testMatch: /u13\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // The signed-in light/dark screenshot pass (plan §7.3). Opt in with AUDIT=1 so the default run
     // stays fast and only spends the burner when someone asks for the pictures.
+    // The demo video's capture (ADR-0091): the real app, shot by shot. Opt in with DEMO=1; it spends
+    // a few cents of testnet USDC (a playground session and one Scout answer).
+    ...(process.env.DEMO === "1"
+      ? [{ name: "demo", testMatch: /demo\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
+      : []),
     ...(process.env.AUDIT === "1"
       ? [
           {
