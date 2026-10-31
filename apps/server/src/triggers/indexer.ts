@@ -2,7 +2,8 @@
  * D1 (chain part): the checkpoint indexer, one per network. It streams `SubscribeCheckpoints` through
  * Tatum, filtered to checkpoints where `remora::disc` (or `remora_hatchery::hatchery`) emitted, and
  * stores the Disc events in `disc_events`. It also marks a Wake anchored once its `Paid.intent` shows
- * up (G2), and hands hatchery events to the Hatchery (M4).
+ * up (G2), queues a check for a `Paid` with no Wake behind it (ADR-0077), and hands hatchery events to
+ * the Hatchery (M4).
  *
  * gRPC has no event query and the stream starts at the tip (ADR-0021). On restart, gaps up to
  * `maxBackfill` checkpoints are filled with `GetCheckpoint`; bigger gaps are logged, and payments
@@ -11,9 +12,16 @@
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { Logger, SuiNetwork } from "@remora/chain";
-import { and, type Db, discEvents, eq, indexerCursors, receipts, sql } from "@remora/db";
+import { and, type Db, discEvents, eq, indexerCursors, jobs, receipts, sql } from "@remora/db";
 import { DISC_EVENT_BCS, type DiscEventName } from "@remora/disc-sdk";
 import { decodeHatcheryEvents, type HatcheryEvent } from "../hatchery/events.ts";
+
+/**
+ * ADR-0077: a `Paid` that matched no Wake when it was indexed. The remora writes its Wake right after the
+ * payment settles, so the check waits a few minutes before it calls the payment unexplained.
+ */
+export const PAID_CHECK = "disc.paid_check";
+export const PAID_CHECK_DELAY_MS = 3 * 60_000;
 
 /** The slice of a gRPC `Checkpoint` the indexer reads. */
 export interface CheckpointLike {
@@ -103,7 +111,7 @@ export async function storeCheckpoint(
     if (rows.length) await tx.insert(discEvents).values(rows).onConflictDoNothing();
     for (const r of rows) {
       if (r.type !== "Paid") continue;
-      await tx
+      const anchored = await tx
         .update(receipts)
         .set({ anchored: true })
         .where(
@@ -112,7 +120,26 @@ export async function storeCheckpoint(
             eq(receipts.txDigest, r.txDigest),
             eq(receipts.intentHash, String(r.payload.intent)),
           ),
-        );
+        )
+        .returning({ id: receipts.id });
+      if (anchored.length) continue;
+      await tx
+        .insert(jobs)
+        .values({
+          kind: PAID_CHECK,
+          payload: {
+            network,
+            txDigest: r.txDigest,
+            discId: r.discId,
+            intent: String(r.payload.intent),
+            amount: String(r.payload.amount),
+            payTo: String(r.payload.payee),
+          },
+          idempotencyKey: `${PAID_CHECK}:${network}:${r.txDigest}:${r.eventSeq}`,
+          runAt: new Date(Date.now() + PAID_CHECK_DELAY_MS),
+          maxAttempts: 3,
+        })
+        .onConflictDoNothing({ target: jobs.idempotencyKey });
     }
     await tx
       .insert(indexerCursors)

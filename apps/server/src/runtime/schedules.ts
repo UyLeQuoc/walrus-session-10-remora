@@ -19,6 +19,8 @@ import { teach } from "./sentinel.ts";
 export { handoff, JOB, proposeSchedule } from "../tools/propose.ts";
 
 import { JOB } from "../tools/propose.ts";
+import { PAID_CHECK } from "../triggers/indexer.ts";
+import { paidCheckHandler } from "./reality.ts";
 
 export interface Schedule {
   id: string;
@@ -279,6 +281,7 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
       const r = await load(deps, (payload as { remoraId: string }).remoraId);
       if (r) await firstRun(deps, r);
     },
+    [PAID_CHECK]: paidCheckHandler(deps),
   };
 }
 

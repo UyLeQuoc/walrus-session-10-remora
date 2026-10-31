@@ -3,8 +3,20 @@
  * The owner teaches it in free text ("ignore incoming SUI under 0.01"); each rule is kept in Postgres
  * for triage and written to the remora's `rules` namespace as the owned record (F2).
  */
-import { and, desc, eq, remoraEvents, remoraMemories, sentinelRules } from "@remora/db";
+import { normalizeSuiAddress } from "@mysten/sui/utils";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  remoraEvents,
+  remoraMemories,
+  remoras,
+  sentinelRules,
+} from "@remora/db";
+import { JOB } from "../tools/propose.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { enqueue } from "./jobs.ts";
 import { addUsage } from "./limits.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { postToTeam } from "./rooms.ts";
@@ -139,10 +151,64 @@ export async function onChainEvent(
         { label: "🔕 Noise", data: `fb:${ev?.id}:n` },
       ],
     });
+    if ("check" in t && r.status === "active" && wake)
+      await handOffToScout(deps, r, e, what, wake.id).catch((err) =>
+        deps.log.warn("sentinel.handoff_failed", { remora: r.id, error: err }),
+      );
   } else {
     void deps.memory
       .remember(r, "episodes", "episode", `EVENT: ${what} → verdict=noise (${reason})`)
       .catch(() => {});
   }
   return { verdict: t.verdict, eventId: ev?.id ?? "", because: t.because };
+}
+
+/**
+ * D5 (ADR-0078): a `check` rule hands the event to the owner's newest live Scout, once per event. The
+ * question names the coin's package, so Scout can buy a `sui-risk` report on it. The handoff's trigger
+ * cites the ping's Wake, so Scout's Wake points back at what Sentinel saw.
+ */
+export async function handOffToScout(
+  deps: RuntimeDeps,
+  r: Remora,
+  e: ChainEvent,
+  what: string,
+  pingWakeId: string,
+) {
+  const [scout] = await deps.db
+    .select()
+    .from(remoras)
+    .where(
+      and(
+        eq(remoras.ownerAddress, r.ownerAddress),
+        eq(remoras.network, r.network),
+        eq(remoras.template, "scout"),
+        eq(remoras.playground, false),
+        inArray(remoras.status, ["active", "shadow"]),
+      ),
+    )
+    .orderBy(desc(remoras.createdAt))
+    .limit(1);
+  if (!scout) return null;
+  const pkg = e.coinType.split("::")[0] ?? "";
+  const framework =
+    /^0x[0-9a-f]+$/i.test(pkg) && normalizeSuiAddress(pkg) === normalizeSuiAddress("0x2");
+  const question = framework
+    ? `${r.name} saw this on a watched address: ${what}. Is anything about it risky?`
+    : `Is ${pkg} safe to depend on? ${r.name} saw this on a watched address: ${what}.`;
+  const queued = await enqueue(deps.db, {
+    kind: JOB.ask,
+    payload: { remoraId: scout.id, question, from: `wake:${pingWakeId}` },
+    idempotencyKey: `auto-handoff:${r.id}:${e.digest}`,
+    maxAttempts: 2,
+  });
+  if (!queued.created) return null;
+  await deps.db.insert(remoraEvents).values({
+    remoraId: r.id,
+    network: r.network,
+    type: "handoff",
+    summary: `Asked ${scout.name}: ${question.slice(0, 100)}`,
+    payload: { to: scout.id, question, auto: true, wake: pingWakeId },
+  });
+  return { scoutId: scout.id, question };
 }

@@ -18,6 +18,8 @@ export interface HealthDeps {
   suiBalance: (network: string, address: string) => Promise<bigint>;
   queue: () => Promise<{ due: number; oldestDueMs: number | null }>;
   watcherOn: boolean;
+  /** Tatum requests and stream frames in the last hour (ADR-0080). */
+  tatumLastHour?: () => number;
   /** The playground funder's balances; null when the playground is off. */
   playground?: () => Promise<{ usdc: bigint; sui: bigint } | null>;
   now?: () => number;
@@ -25,6 +27,8 @@ export interface HealthDeps {
 }
 
 const RANK: Record<HealthStatus, number> = { ok: 0, degraded: 1, down: 2 };
+/** 1M credits a month on the free plan, spread over the hours of a month. */
+const TATUM_HOURLY = 1_400;
 const SUI = 1_000_000_000n;
 const sui = (mist: bigint) => Number(mist) / Number(SUI);
 
@@ -164,6 +168,23 @@ export async function healthReport(d: HealthDeps): Promise<HealthReport> {
         }),
       );
     }
+  }
+
+  if (d.tatumLastHour) {
+    // The free plan is 1M credits a month, about 1,400 an hour (ADR-0058).
+    const n = d.tatumLastHour();
+    items.push(
+      n > TATUM_HOURLY
+        ? item("tatum.usage", "degraded", `${n} Tatum requests in the last hour`, {
+            value: n,
+            threshold: TATUM_HOURLY,
+            fix: "On pace to spend the month's credits: look for an unfiltered stream or a loop of calls (ADR-0058).",
+          })
+        : item("tatum.usage", "ok", `${n} Tatum requests in the last hour`, {
+            value: n,
+            threshold: TATUM_HOURLY,
+          }),
+    );
   }
 
   const relayer = await timed(t, d.relayerHealth);

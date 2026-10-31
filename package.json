@@ -21,6 +21,7 @@
     "format": "biome format --write .",
     "demo": "bun run --filter @remora/core demo",
     "evidence": "bun run --filter @remora/server evidence",
+    "evals": "bun run --filter @remora/server evals",
     "restore": "bun run --filter @remora/server restore",
     "diagnose": "bun run --filter @remora/server diagnose && bun run --filter @remora/memory diagnose",
     "diagnose:memory": "bun run --filter @remora/memory diagnose",
@@ -43,7 +44,7 @@
   "overrides": {
     "esbuild": ">=0.25.0",
     "source-map-js": ">=1.2.2",
-    "follow-redirects": ">=1.16.1",
+    "follow-redirects": ">=1.16.2",
     "vite": ">=8.3.5",
     "hono": ">=4.13.13",
     "vitest": "^4.1.12",

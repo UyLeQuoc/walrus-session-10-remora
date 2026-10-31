@@ -164,6 +164,9 @@ export function startWatcher(o: {
 
   const loop = async () => {
     let delay = o.reconnectMs ?? 1_000;
+    // ADR-0080: a re-subscribe because the watched set changed skips the backfill. Its gap is the few
+    // checkpoints of the switch, and the e2e changes the set often enough to make it add up.
+    let setChanged = false;
     while (!stopped) {
       const watched = await load().catch(() => [] as Watched[]);
       const byAddress = new Map<string, string[]>();
@@ -182,9 +185,14 @@ export function startWatcher(o: {
         const nextKey = next
           ? [...new Set(next.flatMap((w) => w.addresses))].sort().join(",")
           : key;
-        if (nextKey !== key) session.abort();
+        if (nextKey !== key) {
+          setChanged = true;
+          session.abort();
+        }
       }, o.refreshMs ?? 30_000);
       const { groups, dropped } = groupsOf([...byAddress.keys()]);
+      const skipGap = setChanged;
+      setChanged = false;
       // One stream per group; they share `last`, so the first frame after a gap backfills it once.
       const stream = async (addresses: string[]) => {
         const call = o.client.subscriptionService.subscribeCheckpoints(
@@ -199,7 +207,8 @@ export function startWatcher(o: {
             // Claim the gap before awaiting, so a sibling stream doesn't backfill it too.
             const from = last + 1n;
             last = cursor - 1n;
-            await backfill(from, cursor - 1n, byAddress);
+            if (skipGap) log.info("watcher.resubscribed", { skipped: Number(cursor - from) });
+            else await backfill(from, cursor - 1n, byAddress);
           }
           first = false;
           if (frame.checkpoint) {

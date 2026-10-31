@@ -241,4 +241,47 @@ describe("chain watcher reconnects without losing events", () => {
     expect(fetched).toEqual([11n, 12n, 13n]);
     stop();
   });
+
+  it("doesn't backfill when it re-subscribes because the watched set changed (ADR-0080)", async () => {
+    const a = normalizeSuiAddress("0xa");
+    const b = normalizeSuiAddress("0xb");
+    let subscriptions = 0;
+    const fetched: bigint[] = [];
+    let set = [a];
+    const client = {
+      subscriptionService: {
+        subscribeCheckpoints: (_req: unknown, opts: { abort: AbortSignal }) => {
+          subscriptions += 1;
+          const n = subscriptions;
+          return {
+            responses: (async function* () {
+              yield { cursor: n === 1 ? 10n : 20n, checkpoint: { transactions: [] } };
+              if (n === 1) set = [a, b]; // a new Sentinel arrives
+              await new Promise((r) => opts.abort.addEventListener("abort", r)); // open until aborted
+            })(),
+          };
+        },
+      },
+      ledgerService: {
+        getCheckpoint: async ({ checkpointId }: { checkpointId: { sequenceNumber: bigint } }) => {
+          fetched.push(checkpointId.sequenceNumber);
+          return { response: { checkpoint: { transactions: [] } } };
+        },
+      },
+    };
+    const stop = startWatcher({
+      network: "testnet",
+      client: client as never,
+      db: {} as never,
+      log: createLogger({}, () => {}),
+      watched: async () => [{ remoraId: "r1", addresses: set }],
+      onEvent: async () => {},
+      reconnectMs: 1,
+      refreshMs: 5,
+    });
+    await vi.waitFor(() => expect(subscriptions).toBe(2));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetched).toEqual([]);
+    stop();
+  });
 });
