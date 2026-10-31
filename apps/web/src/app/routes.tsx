@@ -14,13 +14,16 @@ import { HomePage } from "../features/home/home-page";
 import { LabPage } from "../features/lab/lab-page";
 import { MemoryInspectorPage } from "../features/memory-inspector/memory-page";
 import { OnboardingPage } from "../features/onboarding/onboarding-page";
+import { ReefPage } from "../features/reef/reef-page";
 import { NewRemoraPage } from "../features/remoras/new-remora-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
 import { SettingsPage } from "../features/settings/settings-page";
+import { StatusPage } from "../features/status/status-page";
 import { ImportTeamPage } from "../features/teams/import-page";
 import { RoomPage } from "../features/threads/room-page";
 import { ThreadPage } from "../features/threads/thread-page";
+import { PublicWakePage } from "../features/verify/public-wake-page";
 import { VerifyPage } from "../features/verify/verify-page";
 
 export interface AppRoute {
@@ -60,4 +63,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "hatchery", element: <HatcheryPage /> },
   { path: "hatchery/:id", element: <TemplatePage /> },
   { path: "connections", element: <ConnectionsPage /> },
+  { path: "status", element: <StatusPage /> },
+  { path: "reef", element: <ReefPage /> },
+  { path: "p/:token", element: <PublicWakePage /> },
 ];

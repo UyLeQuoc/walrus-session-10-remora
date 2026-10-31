@@ -6,25 +6,14 @@
  * (`packages/schema/src/hatchery.ts`) carries `priceUsdc` as a micro-USDC integer string. So
  * `priceUsdc` here is micro-USDC (6 decimals) as a non-negative integer string, like every other
  * money field the web app parses (`lib/usdc.ts`): `"10000"` is $0.01 per call. The server entry has
- * no `category` or `docsUrl` yet; the contract PR adds them.
+ * listing (`reefServices` in `apps/server/src/money/reef.ts`) adds `category` and `docsUrl`.
  *
- * TODO: move `ReefService` to `packages/schema` (and the fixtures to its fixtures) when Uy's U9
- * contract PR for this endpoint lands. Until then this is a local copy of the agreed shape.
+ * The shape lives in `packages/schema` (ADR-0076).
  */
-import { z } from "zod";
+import { ReefService, ReefServices } from "@remora/schema";
 import { usdc } from "@/lib/usdc";
 
-export const ReefService = z.object({
-  name: z.string().min(1),
-  category: z.string().min(1),
-  priceUsdc: z.string().regex(/^\d+$/),
-  payTo: z.string().min(1),
-  /** http(s) only: the page renders it as a link. */
-  docsUrl: z.string().regex(/^https?:\/\//i),
-});
-export type ReefService = z.infer<typeof ReefService>;
-
-export const ReefServices = z.array(ReefService);
+export { ReefService, ReefServices };
 
 /** "$0.01"; "$0.015" when the price needs more digits; "Free" for zero. */
 export function formatPrice(priceUsdc: string): string {

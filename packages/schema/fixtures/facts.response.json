@@ -1,0 +1,34 @@
+{
+  "asOf": null,
+  "facts": [
+    {
+      "id": "6c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f",
+      "namespace": "sources",
+      "slot": "reef:brief.track_record",
+      "subject": "reef:brief",
+      "predicate": "track_record",
+      "qualifier": null,
+      "value": "10 calls · 2 useful · 8 noise · $0.050 per useful answer",
+      "cardinality": "one",
+      "validFrom": "2026-10-31T09:00:00Z",
+      "validUntil": null,
+      "expiresAt": null,
+      "observedAt": "2026-10-31T09:00:00Z",
+      "assertedBy": "runtime",
+      "verification": "explicit",
+      "confidence": 1,
+      "status": "active",
+      "version": 2,
+      "writer": "scout",
+      "extractor": null,
+      "recordedAt": "2026-10-31T09:00:02Z",
+      "closedAt": null,
+      "supersedes": "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9",
+      "supersededBy": null,
+      "disputes": null,
+      "blobIds": ["mt1X1C9lQw"],
+      "hidden": false
+    }
+  ],
+  "disputes": 0
+}

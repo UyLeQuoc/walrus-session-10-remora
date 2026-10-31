@@ -6,20 +6,12 @@
  * wire, and `BigInt` sums exactly. The server's numbers are the truth; the browser only adds them
  * up for the total and the shares.
  *
- * TODO: move `CostResponse` to `packages/schema` (and the fixtures to its fixtures) when Uy's U9
- * contract PR for this endpoint lands. Until then this is a local copy of the agreed shape.
+ * The shape lives in `packages/schema` (ADR-0076).
  */
-import { z } from "zod";
+import { CostResponse } from "@remora/schema";
 import { formatUsdc } from "@/lib/usdc";
 
-const MicroUsdc = z.string().regex(/^\d+$/);
-
-export const CostResponse = z.object({
-  llmUsdc: MicroUsdc,
-  gasUsdc: MicroUsdc,
-  purchasesUsdc: MicroUsdc,
-});
-export type CostResponse = z.infer<typeof CostResponse>;
+export { CostResponse };
 
 export const COST_PARTS = [
   { key: "llmUsdc", label: "Model" },
