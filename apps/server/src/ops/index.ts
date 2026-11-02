@@ -1,5 +1,5 @@
 /** Wires health and `diagnose` (ADR-0052) to the real env. */
-import { tatumCallsLastHour } from "@remora/chain";
+import { type SuiNetwork, suiFallback, tatumCallsLastHour } from "@remora/chain";
 import { jobs, sql } from "@remora/db";
 import { createClient, RelayerExtras } from "@remora/memory";
 import { DEPLOYMENTS, type Deployment } from "@remora/schema";
@@ -62,6 +62,7 @@ export function liveHealthDeps(playground?: HealthDeps["playground"]): HealthDep
     },
     watcherOn: env.WATCHER === "on",
     tatumLastHour: () => tatumCallsLastHour(),
+    fallback: (network) => suiFallback(network as SuiNetwork),
     ...(playground ? { playground } : {}),
   };
 }

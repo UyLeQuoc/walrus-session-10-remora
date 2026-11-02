@@ -20,6 +20,8 @@ export interface HealthDeps {
   watcherOn: boolean;
   /** Tatum requests and stream frames in the last hour (ADR-0080). */
   tatumLastHour?: () => number;
+  /** Whether a network's calls go to the public fullnode because Tatum answered 402 (ADR-0097). */
+  fallback?: (network: string) => { since: number; reason: string; calls: number } | null;
   /** The playground funder's balances; null when the playground is off. */
   playground?: () => Promise<{ usdc: bigint; sui: bigint } | null>;
   now?: () => number;
@@ -88,23 +90,37 @@ export async function healthReport(d: HealthDeps): Promise<HealthReport> {
 
   for (const network of d.networks) {
     const tip = await timed(t, () => d.tip(network));
+    // The tip read works through the fallback too, so the fallback's own state says Tatum is out.
+    const fallback = tip.ok ? d.fallback?.(network) : null;
     items.push(
-      tip.ok
+      fallback
         ? item(
             `tatum (${network})`,
-            tip.ms > 2_000 ? "degraded" : "ok",
-            `latest checkpoint in ${tip.ms} ms`,
+            "degraded",
+            `Tatum answered 402 since ${new Date(fallback.since).toISOString().slice(11, 16)} UTC; ${fallback.calls} calls went to the public fullnode`,
             {
-              value: tip.ms,
-              threshold: 2_000,
-              fix: "Tatum is slow; check its status page and the key's rate limit.",
+              value: fallback.calls,
+              fix:
+                tatumTrouble(fallback.reason, network) ??
+                `Check TATUM_API_KEY for ${network}; the public fullnode serves calls meanwhile.`,
             },
           )
-        : item(`tatum (${network})`, "down", tip.error, {
-            fix:
-              tatumTrouble(tip.error, network) ??
-              `Check TATUM_API_KEY for ${network} and the gRPC URL.`,
-          }),
+        : tip.ok
+          ? item(
+              `tatum (${network})`,
+              tip.ms > 2_000 ? "degraded" : "ok",
+              `latest checkpoint in ${tip.ms} ms`,
+              {
+                value: tip.ms,
+                threshold: 2_000,
+                fix: "Tatum is slow; check its status page and the key's rate limit.",
+              },
+            )
+          : item(`tatum (${network})`, "down", tip.error, {
+              fix:
+                tatumTrouble(tip.error, network) ??
+                `Check TATUM_API_KEY for ${network} and the gRPC URL.`,
+            }),
     );
     if (d.watcherOn) {
       const w = watcherState(network);

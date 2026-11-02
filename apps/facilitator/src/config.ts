@@ -1,6 +1,6 @@
 /** Builds the facilitator from env: one entry per network that is published, keyed and sponsored. */
 
-import { createLogger, createTatumSuiClient, type Logger } from "@remora/chain";
+import { createLogger, createTatumSuiClient, type Logger, suiFallbackUrl } from "@remora/chain";
 import { createDb } from "@remora/db";
 import type { SuiNetworkName } from "@remora/disc-sdk";
 import { DEPLOYMENTS } from "@remora/schema";
@@ -31,7 +31,12 @@ export function facilitatorDepsFromEnv(
     const sponsorKey = env[`SPONSOR_PRIVATE_KEY${suffix}`];
     networks[network] = {
       network,
-      client: createTatumSuiClient({ network, apiKey, ...(url ? { url } : {}) }),
+      client: createTatumSuiClient({
+        network,
+        apiKey,
+        ...(url ? { url } : {}),
+        fallbackUrl: suiFallbackUrl(network, env),
+      }),
       sponsor: sponsorKey
         ? new Sponsor(sponsorKey, {
             allowedPackages: [d.remoraPackageId, "0x1", "0x2"],

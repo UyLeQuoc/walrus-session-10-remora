@@ -1,4 +1,8 @@
-/** @remora/chain: the typed Tatum client. Sui is gRPC only (ADR-0021); all chain I/O goes through it (ADR-0015). */
+/**
+ * @remora/chain: the typed Tatum client. Sui is gRPC only (ADR-0021); all chain I/O goes through it
+ * (ADR-0015), and through a public fullnode while Tatum answers 402 (ADR-0097).
+ */
+export * from "./fallback.ts";
 export * from "./funds.ts";
 export * from "./log.ts";
 export * from "./paced.ts";

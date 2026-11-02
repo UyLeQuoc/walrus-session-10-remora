@@ -18,7 +18,7 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
   - **web origins:** `WEB_BASE_URL`, `CORS_ORIGIN`;
   - **models:** `OPENROUTER_API_KEY`, `LLM_MODEL`, optional `LLM_SMALL_MODEL`;
   - **memory facts (F15, [ADR-0074](adr/0074-memory-facts-and-admission.md)):** `MEMORY_FACTS` (default `on`: the small model reads new memories for facts), `MEMORY_ADMISSION_JUDGE` (default `off`);
-  - **chain:** `TATUM_API_KEY` / `TATUM_API_KEY_TESTNET` (gRPC only, ADR-0021);
+  - **chain:** `TATUM_API_KEY` / `TATUM_API_KEY_TESTNET` (gRPC only, ADR-0021); optional `SUI_GRPC_FALLBACK(_TESTNET)`, where calls go while Tatum answers 402 (default: the public fullnode; `off` turns it off, [ADR-0097](adr/0097-public-fullnode-fallback-when-tatum-is-out-of-credits.md));
   - **money:** `FACILITATOR_URL(_TESTNET)`, `MERCHANTS_URL(_TESTNET)`, `MERCHANT_PAYTO(_TESTNET)`;
   - **memory:** `MEMWAL_ACCOUNT_ID`, `MEMWAL_PRIVATE_KEY` (the operator delegate), `MEMWAL_SERVER_URL`;
   - **background work:** `WORKER=on`, `WATCHER=on`, `INDEXER=on` on exactly one instance; others run `WORKER=off INDEXER=off WATCHER=off CHANNELS=off`. `WATCHER` and `INDEXER` default to off, because they stream from Tatum the whole time they're on ([ADR-0058](adr/0058-tatum-credit-budget.md));
@@ -26,7 +26,7 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
   - **Hatchery:** `WALRUS_*`; mainnet needs `WALRUS_PUBLISHER_MAINNET` (ADR-0048);
   - **playground:** `PLAYGROUND_*`; testnet only, and off without `PLAYGROUND_FUNDER_KEY` (ADR-0051).
 - **Facilitator:**
-  - `TATUM_API_KEY(_TESTNET)`, `TATUM_SUI_GRPC(_TESTNET)`;
+  - `TATUM_API_KEY(_TESTNET)`, `TATUM_SUI_GRPC(_TESTNET)`, optional `SUI_GRPC_FALLBACK(_TESTNET)`;
   - `SPONSOR_PRIVATE_KEY(_TESTNET)` (the gas station);
   - `SPONSOR_DAILY_GAS_MIST`, `SPONSOR_MAX_GAS_BUDGET`;
   - `FACILITATOR_PORT`.

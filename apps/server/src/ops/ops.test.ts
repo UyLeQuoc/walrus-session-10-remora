@@ -265,3 +265,23 @@ describe("Tatum usage in health (ADR-0080)", () => {
     expect(hot?.fix).toMatch(/unfiltered stream/);
   });
 });
+
+describe("the public fullnode fallback in health (ADR-0097)", () => {
+  it("degrades Tatum while calls go to the fallback, and says why", async () => {
+    noteWatcher("testnet", { subscriptions: 2, checkpoint: 995 });
+    const r = await healthReport(
+      healthy({
+        fallback: () => ({
+          since: Date.parse("2026-11-02T04:00:00Z"),
+          reason: "Received HTTP status code 402",
+          calls: 12,
+        }),
+      }),
+    );
+    const tatum = r.items.find((i) => i.name === "tatum (testnet)");
+    expect(tatum).toMatchObject({ status: "degraded", value: 12 });
+    expect(tatum?.detail).toMatch(/402 since 04:00 UTC; 12 calls went to the public fullnode/);
+    expect(tatum?.fix).toMatch(/out of credits/);
+    expect(r.items.find((i) => i.name === "checkpoint lag (testnet)")?.status).toBe("ok");
+  });
+});

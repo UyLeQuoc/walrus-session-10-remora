@@ -23,7 +23,7 @@
 |---|---|---|
 | Walrus Memory writing on mainnet | ✅ | `bun run diagnose:memory` on Oct 31: the mainnet relayer is healthy, and the account is active with the server's delegate key registered onchain |
 | At least 10 memories on mainnet | ✅ | The same run: **360 memories** visible on the read API, soonest expiry 197 days away |
-| Tatum RPC for onchain data | ✅ | All Sui I/O goes through Tatum's gRPC (12 kinds of call, README "How Remora uses Tatum"), plus the Data API for SUI/USD |
+| Tatum RPC for onchain data | ✅ | All Sui I/O goes through Tatum's gRPC (12 kinds of call, README "How Remora uses Tatum"), plus the Data API for SUI/USD. The free plan ran out during development, so a public fullnode stands in while Tatum answers 402 (ADR-0097) |
 | A published blog post (what it does, Tatum + Walrus, how it learned) | ❌ | The [draft](blog-draft.md) covers all three; it isn't published |
 | A working demo and a public repo | ❌ | Waits on the deploy and on Nov 9 |
 | Optional: Tatum AI Builder | Not used | Remora is hand-written |
@@ -74,6 +74,10 @@
 > - the facilitator's settlement.
 >
 > The Data API prices gas in USD.
+>
+> Our Tatum free-plan credits ran out during development. While Tatum answers `402`, the server
+> routes the same gRPC calls through the public Sui fullnode and prices gas with a public API. It
+> tries Tatum again every 10 minutes, and health shows which one is serving.
 >
 > **What's real.**
 > - Payments run on Sui testnet; memory runs on mainnet (360+ memories).

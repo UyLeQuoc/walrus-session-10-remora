@@ -48,9 +48,55 @@ export function resetTatumUsage() {
   perMinute.clear();
 }
 
+/** A unary call's four parts, once all of them have arrived. */
+export interface Settled<O extends object> {
+  headers: RpcMetadata;
+  response: O;
+  status: RpcStatus;
+  trailers: RpcMetadata;
+}
+
+export async function settle<I extends object, O extends object>(
+  call: UnaryCall<I, O>,
+): Promise<Settled<O>> {
+  const [headers, response, status, trailers] = await Promise.all([
+    call.headers,
+    call.response,
+    call.status,
+    call.trailers,
+  ]);
+  return { headers, response, status, trailers };
+}
+
+/** A `UnaryCall` whose parts come from `done`, for a transport that decides where a call goes. */
+export function unaryCall<I extends object, O extends object>(
+  method: MethodInfo<I, O>,
+  input: I,
+  options: RpcOptions,
+  done: Promise<Settled<O>>,
+): UnaryCall<I, O> {
+  // Callers usually await only `response`; the other parts mustn't surface as unhandled rejections.
+  const part = <T>(pick: (d: Settled<O>) => T): Promise<T> => {
+    const p = done.then(pick);
+    p.catch(() => {});
+    return p;
+  };
+  return new UnaryCall<I, O>(
+    method,
+    (options.meta ?? {}) as RpcMetadata,
+    input,
+    part((d) => d.headers),
+    part((d) => d.response),
+    part((d) => d.status),
+    part((d) => d.trailers),
+  );
+}
+
 export interface PacingOptions {
   /** Unary calls started per second, across the whole client. */
   maxRps: number;
+  /** Counts toward `tatumUsage` (the default). The public fallback isn't Tatum (ADR-0097). */
+  metered?: boolean;
   /** Retries after a 429. The gateway rejected the call, so even ExecuteTransaction is safe to resend. */
   rateLimitRetries?: number;
   sleep?: (ms: number) => Promise<void>;
@@ -66,6 +112,7 @@ export class PacedTransport implements RpcTransport {
   private readonly interval: number;
   private readonly retries: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly count: (key: string) => void;
 
   constructor(
     private readonly inner: RpcTransport,
@@ -74,6 +121,7 @@ export class PacedTransport implements RpcTransport {
     this.interval = 1000 / opts.maxRps;
     this.retries = opts.rateLimitRetries ?? 4;
     this.sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+    this.count = opts.metered === false ? () => {} : count;
   }
 
   mergeOptions(options?: Partial<RpcOptions>): RpcOptions {
@@ -95,37 +143,16 @@ export class PacedTransport implements RpcTransport {
     const done = (async () => {
       for (let attempt = 0; ; attempt++) {
         await this.slot();
-        count(method.name);
-        const call = this.inner.unary(method, input, options);
+        this.count(method.name);
         try {
-          const [headers, response, status, trailers] = await Promise.all([
-            call.headers,
-            call.response,
-            call.status,
-            call.trailers,
-          ]);
-          return { headers, response, status, trailers };
+          return await settle(this.inner.unary(method, input, options));
         } catch (err) {
           if (attempt >= this.retries || !isRateLimited(err)) throw err;
           await this.sleep(this.interval * 2 ** (attempt + 1));
         }
       }
     })();
-    // Callers usually await only `response`; the other parts mustn't surface as unhandled rejections.
-    const part = <T>(pick: (d: Awaited<typeof done>) => T): Promise<T> => {
-      const p = done.then(pick);
-      p.catch(() => {});
-      return p;
-    };
-    return new UnaryCall<I, O>(
-      method,
-      (options.meta ?? {}) as RpcMetadata,
-      input,
-      part((d) => d.headers),
-      part((d) => d.response),
-      part((d): RpcStatus => d.status),
-      part((d) => d.trailers),
-    );
+    return unaryCall(method, input, options, done);
   }
 
   serverStreaming<I extends object, O extends object>(
@@ -135,12 +162,12 @@ export class PacedTransport implements RpcTransport {
   ): ServerStreamingCall<I, O> {
     // A stream (checkpoints) lives until its caller aborts it; the per-call deadline is for unary
     // calls. With it, Tatum's stream was cut every 30 s and events between reconnects were lost.
-    count(`${method.name} (opened)`);
+    this.count(`${method.name} (opened)`);
     const call = this.inner.serverStreaming(method, input, {
       ...options,
       timeout: Number.POSITIVE_INFINITY,
     });
-    call.responses.onMessage(() => count(`${method.name} (frames)`));
+    call.responses.onMessage(() => this.count(`${method.name} (frames)`));
     return call;
   }
 

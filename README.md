@@ -203,6 +203,13 @@ That covers the API, the runtime, the facilitator, the gas station and the merch
 **Tatum's Data API** prices the cost card's gas in USD (`/v4/data/rate/symbol`). Health counts our Tatum
 calls over the last hour ([ADR-0080](docs/adr/0080-tatum-usage-in-health-and-no-resubscribe-backfill.md)).
 
+> **Our Tatum free-plan credits ran out during development.** On Nov 2 both keys answered `402`, as
+> they did once before on Oct 23 ([ADR-0058](docs/adr/0058-tatum-credit-budget.md)). Tatum stays the
+> primary. While it answers 402, the server sends the same gRPC calls to the public Sui fullnode
+> (`fullnode.<network>.sui.io:443`) for 10 minutes at a time, then tries Tatum again. The SUI price
+> comes from CoinGecko's public API meanwhile. Health and `/status` show the switch
+> ([ADR-0097](docs/adr/0097-public-fullnode-fallback-when-tatum-is-out-of-credits.md)).
+
 There are two exceptions to gRPC through Tatum:
 - **The browser** signs with the owner's wallet and executes over gRPC-web against a public fullnode. A
   Tatum key can't be exposed to the browser.
@@ -232,7 +239,8 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 - **Real.**
   - Money runs on **Sui testnet**: the Disc, the payments, the onchain abort, and every digest above.
   - Walrus Memory runs on **mainnet**.
-  - All server-side Sui I/O goes through Tatum.
+  - All server-side Sui I/O goes through Tatum. While our spent free plan answers `402`, it goes
+    through the public fullnode instead, and health says so (ADR-0097).
 - **Ours, and labeled as ours.**
   - The three Reef services are our demo merchants. `odds` is a cached snapshot, and it says so.
   - The playground's $1 Discs come from our funder.

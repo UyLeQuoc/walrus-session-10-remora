@@ -30,6 +30,9 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   TATUM_API_KEY_TESTNET: z.string().optional(),
   TATUM_SUI_GRPC: z.string().url().optional(),
   TATUM_SUI_GRPC_TESTNET: z.string().url().optional(),
+  /** ADR-0097: where Sui calls go while Tatum answers 402 (a gRPC URL, or `off`); unset = the public fullnode. */
+  SUI_GRPC_FALLBACK: z.union([z.literal("off"), z.string().url()]).optional(),
+  SUI_GRPC_FALLBACK_TESTNET: z.union([z.literal("off"), z.string().url()]).optional(),
   /** The x402 facilitator + gas station per network (E3, D8). */
   FACILITATOR_URL: z.string().url().optional(),
   FACILITATOR_URL_TESTNET: z.string().url().optional(),

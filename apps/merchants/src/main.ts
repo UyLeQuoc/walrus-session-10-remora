@@ -1,7 +1,7 @@
 /** Starts the demo merchants: `MERCHANTS_PORT=8799 tsx src/main.ts` (ports 8787/5173 belong to another project). */
 import { serve } from "@hono/node-server";
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
-import { createLogger, createTatumSuiClient } from "@remora/chain";
+import { createLogger, createTatumSuiClient, suiFallbackUrl } from "@remora/chain";
 import { createModel } from "@remora/core";
 import type { SuiNetworkName } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
@@ -27,7 +27,11 @@ for (const network of ["testnet", "mainnet"] as const) {
     | undefined;
   if (!payTo || !facilitatorUrl || !apiKey || !d) continue;
   networks[network] = { payTo, asset: d.usdcCoinType, facilitatorUrl };
-  clients[network] = createTatumSuiClient({ network, apiKey });
+  clients[network] = createTatumSuiClient({
+    network,
+    apiKey,
+    fallbackUrl: suiFallbackUrl(network),
+  });
 }
 // ADR-0031: any exact payment is accepted (an owner can pay once from the approval inbox); the
 // facilitator still reports the Disc intent when the payment came through a Disc.

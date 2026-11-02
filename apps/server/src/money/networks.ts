@@ -3,7 +3,12 @@
  * per network here; nothing reads one global network.
  */
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
-import { createTatumSuiClient, type SuiNetwork, type TatumSuiOptions } from "@remora/chain";
+import {
+  createTatumSuiClient,
+  type SuiNetwork,
+  suiFallbackUrl,
+  type TatumSuiOptions,
+} from "@remora/chain";
 import { DEPLOYMENTS } from "@remora/schema";
 
 export const NETWORKS = ["testnet", "mainnet"] as const satisfies readonly SuiNetwork[];
@@ -16,6 +21,9 @@ export interface NetworkEnv {
   TATUM_API_KEY_TESTNET?: string;
   TATUM_SUI_GRPC?: string;
   TATUM_SUI_GRPC_TESTNET?: string;
+  /** ADR-0097: where calls go while Tatum answers 402; `off` turns it off. */
+  SUI_GRPC_FALLBACK?: string;
+  SUI_GRPC_FALLBACK_TESTNET?: string;
   FACILITATOR_URL?: string;
   FACILITATOR_URL_TESTNET?: string;
 }
@@ -84,7 +92,10 @@ export function createNetworks(
       usdcCoinType: d?.usdcCoinType ?? "",
       facilitatorUrl,
     });
-    if (apiKey) tatum.set(network, { network, apiKey, ...(url ? { url } : {}) });
+    if (apiKey) {
+      const fallbackUrl = suiFallbackUrl(network, env as Record<string, string | undefined>);
+      tatum.set(network, { network, apiKey, ...(url ? { url } : {}), fallbackUrl });
+    }
   }
   const preferred = env.SUI_NETWORK as SuiNetwork | undefined;
   const firstAvailable = NETWORKS.find((n) => configs.get(n)?.available) ?? "testnet";

@@ -1,6 +1,6 @@
 # ADR-0015: Route all chain I/O through Tatum
 
-- **Status:** Accepted. The JSON-RPC parts are superseded by [ADR-0021](0021-sui-grpc-only.md) (gRPC only)
+- **Status:** Accepted. The JSON-RPC parts are superseded by [ADR-0021](0021-sui-grpc-only.md) (gRPC only). While Tatum answers 402, calls go to the public fullnode ([ADR-0097](0097-public-fullnode-fallback-when-tatum-is-out-of-credits.md))
 - **Date:** 2026-10-18
 - **Deciders:** Uy Le
 
