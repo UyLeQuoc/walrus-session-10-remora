@@ -35,6 +35,6 @@
 ## To check
 - **The e2e selectors are unchanged.** The face is `aria-hidden`, adds no text, and keeps
   `data-slot="remora-avatar"`.
-- **The demo video shows the old letters** until Uy re-captures it.
+- **The demo video was re-captured on Nov 3** and shows the faces.
 - **The "Needs you" row has two badges:** openbot's inbox badge and the face's "!". Tell me if one
   should go.

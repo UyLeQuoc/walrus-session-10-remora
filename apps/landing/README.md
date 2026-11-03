@@ -6,7 +6,7 @@ page in the app's design system, built for Walrus Sites.
 - **Owner:** H6 is Huấn's lane. Uy's agent built this version when Uy asked (ADR-0087). See
   `docs/team-split.md` §2.
 - **Build.** `bun run --filter @remora/landing build` writes `dist/`. It contains:
-  - the page, `public/screens/` (real screens from the Oct 31 testnet runs) and the share image;
+  - the page, `public/screens/` (real screens from the Nov 3 testnet runs, with the faces and the plain words) and the share image;
   - `ws-resources.json`;
   - the demo video and its poster, when `bun docs/launch/demo/render.ts` has rendered them.
 - **Preview.** `open apps/landing/dist/index.html`.

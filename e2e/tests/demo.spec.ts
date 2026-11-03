@@ -216,9 +216,11 @@ async function remoras(page: Page): Promise<R[]> {
   });
 }
 
-/** The testnet Disc package: Scout's sui-risk report on it is a real finding (a single-address upgrade cap). */
-const QUESTION =
-  "Is the package 0xcc05642d8f85d0ba4a229677c67a2a56214888dda38f3d95e3c69e88434a5d6d safe to depend on?";
+/**
+ * The playground's own suggestion. The Disc package's report (a single-address upgrade cap) needs the
+ * publish transaction, which the public fullnode has pruned while Tatum answers 402 (ADR-0097).
+ */
+const QUESTION = "Is package 0x2 safe to depend on?";
 
 test.describe.configure({ mode: "serial" });
 
