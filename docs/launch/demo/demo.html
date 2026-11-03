@@ -239,15 +239,15 @@ add({
     { from: "answered", to: "Why? Check its receipt", speed: 1 },
     { from: "Why? Check its receipt", to: "end", speed: 1 },
   ]),
-  steps: [["Meet", "what-is-remora"], ["Start", "Start my Researcher"], ["Ask", "question"], ["Pay", "answered"], ["Verify", "verified"]],
   caps: [
     ["what-is-remora", .1, 3.3, "A remora: an AI agent with <b>a limit Sui enforces</b>."],
     ["Try a Researcher, no wallet", 0, 2.6, "No wallet, no sign-up: <b>try a Researcher</b>."],
-    ["Start my Researcher", 0, 3.4, "Start a Researcher. It gets a <b>$1 spending limit</b>, onchain."],
+    ["Start my Researcher", 0, 3.0, "Start one. <b>No wallet</b> needed."],
+    ["disc-issued", .1, 2.6, "Its own <b>1 USDC limit</b>, set onchain."],
     ["question", 0, 3.2, "Ask about a Sui package."],
     ["Ask Researcher", 0, 3.4, "Your Researcher decides a <b>risk report</b> is worth buying…"],
     ["answered", .2, 3.6, "…and pays <b>0.01 USDC</b>, within its own limit."],
-    ["Why? Check its receipt", .1, 4.2, "Every answer has a <b>receipt</b>. Anyone can check it against Sui, no sign-in."],
+    ["Why? Check its receipt", .1, 4.2, "Every answer has a <b>receipt</b> anyone can check on Sui."],
   ],
   spots: [
     { at: "what-is-remora", off: .2, len: 3.0, box: "what-is-remora" },
@@ -266,7 +266,7 @@ add({
   ]),
   steps: [["Pick", "Researcher"], ["Limits", "monthly"], ["Sign", "Create Researcher"], ["Live", "live"]],
   caps: [
-    ["new", .1, 4.2, "Your own: <b>0.50 USDC a month</b>, <b>0.015</b> a payment."],
+    ["per payment", .3, 3.4, "Your own: <b>0.50 USDC a month</b>, <b>0.015</b> a payment."],
     ["Create Researcher", 0, 3.0, "<b>One signature</b> sets its spending limit on Sui."],
     ["created", .2, 2.6, "<b>Practice mode</b> first: it shows what it would pay."],
     ["Go live", 0, 2.4, "Go live when you're ready."],
@@ -290,7 +290,7 @@ add({
     ["question", 0, 3.0, "Ask your Researcher. It pays within <b>its limit</b>."],
     ["answered", .2, 3.2, "The answer says what it cost: <b>0.01 USDC</b>."],
     ["cost", 0, 2.9, "The cost card adds it up."],
-    ["Why?", .4, 4.8, "<b>Why?</b> opens its receipt: what it read, what the safety check decided, the intent hash."],
+    ["Why?", .4, 4.8, "<b>Why?</b> shows what it decided, and why."],
   ],
   spots: [
     { at: "answered", off: .5, len: 2.6, box: "answer" },
@@ -304,14 +304,12 @@ add({
   clip: clip("teach", [
     { from: "sentinel", to: "Teach", speed: 1.4 },
     { from: "Teach", to: "learning", speed: .9 },
-    { from: "learning", to: "end", speed: 1 },
   ]),
-  steps: [["Teach", "rule"], ["Learned", "learned"], ["Learning", "learning"]],
+  steps: [["Teach", "rule"], ["Learned", "learned"], ["Applied", "ignored"]],
   caps: [
     ["sentinel", .1, 2.4, "Teach your <b>Wallet watcher</b> in plain words."],
     ["learned", 0, 2.5, "Learned, and written to <b>Walrus Memory</b>."],
-    ["ignored", 0, 2.6, "It applies it: a 0.001 SUI transfer, <b>ignored</b>."],
-    ["learning", .1, 3.2, "<b>Learning</b> tracks the noise from your 👍 and 👎."],
+    ["ignored", 0, 2.6, "A tiny transfer it was taught to skip: <b>ignored</b>."],
   ],
   spots: [
     { at: "learned", off: .1, len: 2.3, box: "learned" },
@@ -326,7 +324,7 @@ add({
   steps: [["Inspect", "inspector"], ["Matched", "later writes matched this"], ["Search", "results"]],
   caps: [
     ["inspector", .1, 2.6, "Every memory is a <b>blob on Walrus</b>."],
-    ["later writes matched this", 0, 2.6, "A write that matched an old one is <b>shown</b>, not dropped."],
+    ["later writes matched this", 0, 2.6, "A repeat isn't stored twice, and you <b>see it</b>."],
     ["search", 0, 3.4, "Search, <b>hide, correct</b> or export what it remembers."],
   ],
   spots: [{ at: "later writes matched this", off: .2, len: 2.2, box: "later writes matched this", zoom: 1.08 }],
@@ -436,10 +434,10 @@ scene("attack", `
     <span class="chip" style="background:var(--ok-soft);border-color:transparent;color:var(--ok-text);font-weight:650">${icon("shield", "currentColor", 18)} 28 attacks in CI · 0 overspends</span></div>
 `);
 const PILLARS = [
-  ["disc", "#8379ff", "Bounded", "A budget Sui enforces. Revoke, rotate or pause from your wallet."],
+  ["disc", "#8379ff", "Bounded", "A budget Sui enforces. Pause it from your wallet."],
   ["receipt", "#ff9412", "Accountable", "A receipt for every decision. Anyone can verify it."],
   ["brain", "#31cf76", "Learns", "From your 👍 and 👎, as memories on Walrus."],
-  ["user", "#42a0ff", "Yours", "Read it, correct it, export it, use it from Claude Code."],
+  ["user", "#42a0ff", "Yours", "Read, correct and export it. Use it in Claude Code."],
 ];
 scene("why", `
   <div class="abs" style="left:0;right:0;top:180px;text-align:center"><span class="eyebrow">Why Remora</span></div>
@@ -454,16 +452,16 @@ scene("lock", `
   ${headline([{ t: "Give an agent a budget," }, { t: "not your wallet.", style: "color:var(--brand)" }], "", "position:absolute;left:0;right:0;top:410px;text-align:center;font-size:84px")}
   <div class="abs" id="lk-c" style="left:0;right:0;top:640px;display:flex;gap:14px;justify-content:center">
     <span class="chip" style="background:var(--inverse);color:#141414;border-color:var(--inverse);font-weight:650">${icon("fish", "#141414", 20)} Try a Researcher · $1 limit · no wallet</span>
-    <span class="chip mono" style="font-size:17px">/playground</span></div>
+    <span class="chip mono" style="font-size:17px">getremora.vercel.app/playground</span></div>
   <div class="abs" id="lk-f" style="left:0;right:0;top:730px;display:flex;gap:12px;justify-content:center">
     <span class="chip" style="font-size:16px;height:38px">Track 2 · Smart Agents</span><span class="chip" style="font-size:16px;height:38px">Best Walrus Memory</span><span class="chip" style="font-size:16px;height:38px">Best Use of Agent Payments</span></div>
 `);
 
 // Captions: footage scenes by their marks, the others by local time.
 const STATIC_CAPS = {
-  split: [[1.2, 5.2, "Most agents either hold your wallet key, or ask you to approve every click."], [5.4, 11.6, "One injected sentence, and an agent with your key pays an attacker. A remora <b>can't</b>."]],
-  money: [[1.6, 10, "The remora's key can only spend <b>within its limit</b>: under the caps, to its payees. Gas is sponsored."]],
-  attack: [[1.0, 5.6, "The Researcher bought data with an <b>injected instruction</b>, and the model obeyed it."], [5.8, 13, "The safety check blocks it. The gas station refuses it. Forced past both, <b>Sui aborts it</b>."]],
+  split: [[1.2, 5.2, "Agents hold your key, or ask about every click."], [5.4, 11.6, "One injected sentence pays an attacker. A remora <b>can't</b>."]],
+  money: [[1.6, 10, "Its key spends only <b>within its limit</b>, to its payees."]],
+  attack: [[1.0, 5.6, "Bought data carried an <b>injected instruction</b>. The model obeyed."], [5.8, 13, "Two checks block it. Forced past both, <b>Sui aborts</b>."]],
 };
 const CAPS = [];
 for (const s of SCENES) {

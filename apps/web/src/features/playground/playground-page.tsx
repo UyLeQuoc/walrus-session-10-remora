@@ -339,7 +339,7 @@ export function PlaygroundPage() {
                       ))}
                       {a.verify ? (
                         <Button asChild variant="outline" size="sm">
-                          <Link to={a.verify}>
+                          <Link to={a.paid[0]?.digest ? `/verify/${a.paid[0].digest}` : a.verify}>
                             <ReceiptText /> Why? Check its receipt
                           </Link>
                         </Button>

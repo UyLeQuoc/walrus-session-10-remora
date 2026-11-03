@@ -15,7 +15,7 @@ import { Empty, Meter } from "@/components/visual";
 import { api } from "@/features/remoras/api";
 import { useLoad } from "@/features/remoras/hooks";
 import type { Network } from "@/lib/network";
-import { formatUsdc } from "@/lib/usdc";
+import { formatUsdc, usdc } from "@/lib/usdc";
 import { SettingsGroup } from "@/openbot/pages";
 import { DISCS_CHANGED, useOwnerDiscs } from "./discs";
 import { useSignAndRun } from "./sign";
@@ -43,8 +43,11 @@ function DiscRow({
       setBusy(false);
     }
   };
-  const cap = d.allowance.lifetimeCap;
-  const spent = Number(formatUsdc(d.allowance.currentSpend, 6));
+  // The month's window when the Disc has one (what the wizard set), else its lifetime cap.
+  const rl = d.allowance.rateLimit;
+  const cap = rl ? rl.limit.toString() : d.allowance.lifetimeCap;
+  const spentUnits = rl ? rl.spent.toString() : d.allowance.currentSpend;
+  const spent = Number(formatUsdc(spentUnits, 6));
   const limit = cap ? Number(formatUsdc(cap, 6)) : null;
   const days = d.allowance.expiryMs
     ? Math.ceil((Number(d.allowance.expiryMs) - Date.now()) / 86_400_000)
@@ -84,16 +87,16 @@ function DiscRow({
           label={`${d.disc.name}: spent of its limit`}
           left={
             <span className="text-sm">
-              <b className="font-semibold text-ob-text">{formatUsdc(d.allowance.currentSpend)}</b> /{" "}
-              {formatUsdc(cap ?? "0")} USDC spent
+              <b className="font-semibold text-ob-text">{usdc(spentUnits)}</b> / {usdc(cap ?? "0")}{" "}
+              USDC spent{rl ? " this month" : ""}
             </span>
           }
         />
       ) : null}
       <p className="flex flex-wrap gap-1.5 text-xs text-ob-secondary tabular-nums">
-        <Badge variant="outline">≤ {formatUsdc(d.disc.perPaymentCap)} USDC a payment</Badge>
+        <Badge variant="outline">≤ {usdc(d.disc.perPaymentCap)} USDC a payment</Badge>
         <Badge variant="outline">
-          {d.disc.payees.length} payee{d.disc.payees.length === 1 ? "" : "s"}
+          pays {d.disc.payees.length} address{d.disc.payees.length === 1 ? "" : "es"}
         </Badge>
         {endsIn ? <Badge variant="outline">{endsIn}</Badge> : null}
       </p>

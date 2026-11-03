@@ -83,8 +83,10 @@ describe("playground (H7)", () => {
       "playground-paid",
     );
     expect(paid.textContent).toMatch(/Paid to.*Sui risk check.*0\.01.*USDC/);
+    // ADR-0103: the link opens the payment's receipt (its transaction), the one that moved money.
+    const digest = session.answers[0]?.paid[0]?.digest;
     expect(screen.getByRole("link", { name: /Check its receipt/ }).getAttribute("href")).toBe(
-      session.answers[0]?.verify,
+      digest ? `/verify/${digest}` : session.answers[0]?.verify,
     );
     expect(screen.getByTestId("playground-questions").textContent).toBe("2");
     expect(calls.find((c) => c.url === "/api/playground/ask")?.token).toBe("tok-1");

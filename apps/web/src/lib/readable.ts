@@ -14,11 +14,14 @@ export const readable = (text: string) =>
  */
 export function plainEvent(text: string, name: (ref: string) => string): string {
   return text
-    .replace(/\b(pay|paid|approve|Pay) (\d{4,}) to\b/g, (_m, verb: string, units: string) => {
-      const n = BigInt(units);
-      const whole = n / 1_000_000n;
-      const frac = (n % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "").padEnd(2, "0");
-      return `${verb} ${whole}.${frac} USDC to`;
-    })
+    .replace(
+      /\b(pay|paid|approve|approved|Pay|Paid) (\d{4,})\b(?! USDC)/g,
+      (_m, verb: string, units: string) => {
+        const n = BigInt(units);
+        const whole = n / 1_000_000n;
+        const frac = (n % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "").padEnd(2, "0");
+        return `${verb} ${whole}.${frac} USDC`;
+      },
+    )
     .replace(/\breef:[a-z0-9-]+/g, (ref) => name(ref));
 }
