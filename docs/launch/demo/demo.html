@@ -543,6 +543,12 @@ U.lock = (lt) => {
 const stepAt = (s, i) => mark(s.clip.shot, s.steps[i][1]) + (s.steps[i][2] || 0);
 function setSteps(s, ts) {
   const box = $("steps-box");
+  // U14: a chapter whose app shows its own stepper (the playground) has none here, only its title.
+  const steps = s.steps || [];
+  if (!steps.length) {
+    if (box.dataset.id !== s.id) { box.dataset.id = s.id; box.innerHTML = `<span class="ch">${s.chapter}</span>`; }
+    return;
+  }
   if (box.dataset.id !== s.id) {
     box.dataset.id = s.id;
     box.innerHTML = `<span class="ch">${s.chapter}</span>${s.steps.map(([l], i) => `<div class="it" id="si${i}"><div class="dot" id="sd${i}"></div><span class="lb" id="sl${i}">${l}</span></div>${i < s.steps.length - 1 ? `<div class="ln"><i id="sn${i}"></i></div>` : ""}`).join("")}`;
