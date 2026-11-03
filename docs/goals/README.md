@@ -27,6 +27,7 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 19 | [H5: public proof links (G6·ui)](huan-05-public-proof-links.md) | Huấn | ✅ **Done Oct 29 (web side)**; routes and endpoints on `main` ([answers](../handoffs/2026-10-31-uy-to-huan-h2-h6-answers.md), PR #17); live at the U9 deploy | U9 Phase A |
 | 20 | [H6: account export and exit (A8·ui), if time allows](huan-06-account-exit.md) | Huấn | ✅ **Done Oct 29 (web side)**; routes and endpoints on `main` ([answers](../handoffs/2026-10-31-uy-to-huan-h2-h6-answers.md), PR #17); live at the U9 deploy | U9 Phase A (A8) |
 | 21 | F15: memory facts and admission, after Dewee (asked directly, no goal file) | Uy's agent | ✅ **Done Oct 31** ([ADR-0074](../adr/0074-memory-facts-and-admission.md), [notes](../spikes/2026-10-31-f15-facts-admission.md), [handoff](../handoffs/2026-10-31-uy-to-huan-f15-facts.md)); found and fixed track-record updates being swallowed by dedupe; the UI is Huấn's | U13 ✅ |
+| 22 | [U14: a visual-first web (fewer words, data at a glance, three review rounds), then the video again](uy-14-visual-ui-pass.md) ([prompt](uy-14-visual-ui-pass.prompt.txt)) | Uy's agent (claims the look of `apps/web`, [claim](../handoffs/2026-11-04-uy-to-huan-u14-claim.md)) | From Nov 4; the freeze is Nov 7, 12:00 Vietnam time ([ADR-0103](../adr/0103-visual-first-ui-pass.md)) | U9 deploy ✅ |
 
 H1–H6 run without E2E while the burner wallet is empty ([ADR-0071](../adr/0071-huan-goals-without-e2e.md)).
 
@@ -34,7 +35,7 @@ H1–H6 run without E2E while the burner wallet is empty ([ADR-0071](../adr/0071
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-09-testnet-launch.prompt.txt   # next (<4000 chars each)
+pbcopy < docs/goals/uy-14-visual-ui-pass.prompt.txt   # next (<4000 chars each)
 ```
 
 Each goal has two files:

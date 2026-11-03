@@ -1,0 +1,48 @@
+Goal U14: a visual-first web (ADR-0103): fewer words, data as pictures, every page and section reviewed and fixed three times, then the demo video again. Decide, write the ADR, continue; anything for Uy goes on the final list.
+
+Source of truth: docs/goals/uy-14-visual-ui-pass.md. Read it fully, and the files it lists.
+
+Time box (Vietnam time): Nov 4 measure + kit, Nov 5 round 1, Nov 6 rounds 2-3, FREEZE Nov 7 12:00 whatever is left, then the video.
+
+Setup:
+- Claim: docs/handoffs/2026-11-04-uy-to-huan-u14-claim.md; check Huấn's state first.
+- git pull --rebase --autostash origin main. Never commit or touch Uy's uncommitted docs/README.md and docs/ideas/track-1-hunch-prd.md.
+- Tag pre-u14-ui on main, push it, work on the branch u14-visual-ui, merge via a PR when the exit is green.
+
+Part A, measure (round 0):
+- Extend audit.spec.ts behind UX=1 (read-only, never pays).
+- Shoot every route, tab, state (filled, empty, loading, error) and landing section at 1440 and Pixel 7, dark, into docs/ux/review/r<N>/ (gitignored).
+- Count the main pane's interface words into words.json (skip [data-ux-skip] content, numbers, addresses, digests).
+- Review round 0 as the baseline.
+
+Part B, the kit: Stat, Meter, Ring, Flow, Steps, Timeline, Receipt, Checks, ExpiryBar, Spark, StatusDot, Empty, Hint, Amount/Address/Digest.
+- In apps/web/src/components/visual/ (MIT, not openbot/), with a /lab/visual showcase and component tests.
+- Only motion, lucide-react, recharts, inline SVG. Animation shows change only (≤400ms; reduced motion = end state). Every visual fact has a text alternative.
+
+Part C, rounds 1-3: capture → review → triage (fix, or decline with a checkable reason) → small commits ([U14·ui] Page: what) → gates (typecheck, lint, test, build, e2e smoke+mobile) → push the branch.
+- Focus: round 1 structure and words, round 2 data and flows plus phone, round 3 polish, consistency, light theme, a11y and the landing.
+- Stop when round 3 has no blocker or major. Round 4 only if the freeze allows; else fix blockers and list the rest.
+
+The review: a NEW agent each round, given only the screenshots, the rubric in the spec and the previous round's findings, never the code or your notes.
+- Persona: a judge with 3 minutes who never heard of Disc or x402.
+- Per page: the five-second answers (purpose, first click), findings with severity, words to cut; then cross-page consistency. Into docs/ux/review/round-<N>.md.
+
+Part D:
+- Exit gates (bundle ≤ +60 KB gzip; e2e smoke/mobile/audit green; testnet specs once; audit-* shots refreshed), then merge.
+- Then the video: re-capture (DEMO=1 --project=demo), put demo.html through the rubric (captions ≤10 words, explainer scenes in the kit's look, 150-180 s), review a contact sheet and drafts, then the full render in the background.
+- Re-shoot the landing's screens, replace its video. Deploy only after Uy's yes; else leave the commands in the exit note.
+
+Hard rules:
+- No fake numbers in the app. An explanation you cut moves into a Hint or the guide.
+- Never change packages/schema, lib/api.ts, the routes, the data hooks' logic or a server API; list the data you wanted.
+- No new dependency without an ADR. No WebGL in the app.
+- E2E specs keep what they assert: a removed visible text moves to a role name or data-testid in the same commit, with the reason. demo.spec's marks and boxes keep their names.
+- No deploy without Uy's yes, no mainnet, no db:push, no force-push, no .env or keys in commits, no edits to reference/, never kill ports 8787/5173.
+- Never rewrite an accepted ADR; every decision gets an ADR in the same commit.
+- Before each push: rebase on main && bun run typecheck && bun run lint && bun run test.
+
+Finish:
+- docs/spikes/<date>-u14-exit.md (word table round 0 → end, findings per round, declines, bundle, video), ending with the list for Uy.
+- docs/ux/README (kit, rubric), demo README, submission-draft, goals README, a landed handoff to Huấn. Stop every server.
+
+Finish with a short Vietnamese summary for Uy.
