@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bun run build",
+  "buildCommand": "bun run build && mv dist/index.html dist/app.html && bun ../landing/build.ts --into dist",
   "outputDirectory": "dist",
   "rewrites": [
     {
@@ -10,8 +10,17 @@
       "destination": "https://api-production-d2c7.up.railway.app/api/:path*"
     },
     {
+      "source": "/about",
+      "destination": "/landing.html"
+    },
+    {
+      "source": "/",
+      "missing": [{ "type": "cookie", "key": "remora_session" }],
+      "destination": "/landing.html"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/app.html"
     }
   ],
   "headers": [

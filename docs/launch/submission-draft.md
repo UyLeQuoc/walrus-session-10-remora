@@ -89,7 +89,7 @@
 |---|---|---|
 | Short demo video (2–3 min) | Yes | ⏳ Rendered (169 s, `docs/launch/demo/out/remora-demo-web.mp4`), not uploaded yet. Paste the link once Uy uploads it |
 | GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora`. It's private until Nov 9 |
-| Additional documentation | No | The landing page on Walrus Sites once it's published ([apps/landing](../../apps/landing/README.md), ADR-0092), or the blog URL. Until then, the README and `docs/README.md` |
+| Additional documentation | No | The landing page, <https://getremora.vercel.app/about> ([ADR-0100](../adr/0100-landing-and-app-one-site.md)), and the blog URL once it's out |
 
 ## Feedback
 **How was your experience building with Walrus?** (draft)

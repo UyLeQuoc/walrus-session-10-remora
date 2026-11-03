@@ -4,6 +4,13 @@
  */
 import { expect, test } from "@playwright/test";
 
+/**
+ * ADR-0100: on the deployed site, "/" shows the landing page to signed-out visitors, and the app's
+ * home only once a session cookie exists. The local dev server always serves the app.
+ */
+const deployed = Boolean(process.env.E2E_BASE_URL);
+const appOnly = (path: string) => !(deployed && path === "/");
+
 const PAGES: [string, RegExp][] = [
   ["/", /Always-on agents you own/],
   ["/chat", /Teach Sentinel/],
@@ -29,7 +36,7 @@ const PAGES: [string, RegExp][] = [
   ],
 ];
 
-for (const [path, text] of PAGES) {
+for (const [path, text] of PAGES.filter(([path]) => appOnly(path))) {
   test(`renders ${path}`, async ({ page }, info) => {
     await page.goto(path);
     // The mobile header repeats the page name, so a bare text match can land on a hidden title.
@@ -54,6 +61,24 @@ for (const [path, text] of PAGES) {
     await page.screenshot({ path: `screenshots/${info.project.name}-${name}.png`, fullPage: true });
   });
 }
+
+test("the deployed / is the landing page signed out, and it links into the app", async ({
+  page,
+}) => {
+  test.skip(!deployed, "only Vercel serves the landing page at /");
+  for (const path of ["/", "/about"]) {
+    await page.goto(path);
+    await expect(page.locator("h1")).toContainText("Always-on agents");
+    await expect(page.locator('[data-link="playground"]').first()).toHaveAttribute(
+      "href",
+      /\/playground$/,
+    );
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, "no horizontal scroll").toBeLessThanOrEqual(1);
+  }
+});
 
 test("mainnet is offered but disabled until it's published", async ({ page }) => {
   await page.goto("/remoras");
@@ -85,7 +110,7 @@ const EDGE_ROUTES = [
 test("every page shares one left edge at 1440px", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const measured: Array<{ path: string; h1x: number; rightGap: number }> = [];
-  for (const path of EDGE_ROUTES) {
+  for (const path of EDGE_ROUTES.filter(appOnly)) {
     await page.goto(path);
     const h1 = page.locator("h1").first();
     await expect(h1, `${path} has an h1`).toBeVisible();

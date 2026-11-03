@@ -2,7 +2,7 @@
 
 How Remora is deployed, what each service needs, the gate it has to pass, and how to roll back. **Deploys are Uy's step** (team-split §2): an agent deploys only when Uy asks, as for the first deploy on Nov 3 ([ADR-0099](adr/0099-first-deploy-one-railway-service.md)). This page is the checklist.
 
-**Live:** <https://getremora.vercel.app> (web, Vercel project `getremora`) · `https://api-production-d2c7.up.railway.app` (API, Railway project `remora`, service `api`).
+**Live:** <https://getremora.vercel.app> (web, Vercel project `getremora`). The same site serves the landing page at `/` to signed-out visitors and at `/about` ([ADR-0100](adr/0100-landing-and-app-one-site.md)) · `https://api-production-d2c7.up.railway.app` (API, Railway project `remora`, service `api`).
 
 | Service | Code | Host | Start | Health check |
 |---|---|---|---|---|
@@ -10,6 +10,7 @@ How Remora is deployed, what each service needs, the gate it has to pass, and ho
 | Facilitator + gas station | `apps/facilitator` | the same container, `127.0.0.1:8798`, no public URL | (the start script) | the `facilitator` and `sponsor gas` items in `/api/health/deep` |
 | Demo merchants | `apps/merchants` | the same container, `127.0.0.1:8799`, no public URL | (the start script) | a paid answer in the playground |
 | Web | `apps/web` | Vercel project `getremora` (`apps/web/vercel.json`; `/api/*` rewrites to the Railway domain) | `vercel build --prod`, then `vercel deploy --prebuilt --prod`, from `apps/web` | the page loads; `/lab/health` shows the API's report |
+| Landing page | `apps/landing` | the web's Vercel project: the web build adds it next to the app (`bun ../landing/build.ts --into dist`) | (the web's build) | signed out, `/` and `/about` show it, and "Try Scout" opens the playground |
 | Database | Postgres | Railway, the same project, private network only (no public proxy) | n/a | in `/api/health/deep` |
 
 ## Environment

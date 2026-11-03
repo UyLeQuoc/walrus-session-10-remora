@@ -13,6 +13,10 @@ page in the app's design system, built for Walrus Sites.
 - **Config.** `public/config.js` holds the deployed app's URL and the blog's URL. Until they are set,
   the buttons open the repo's "Try it".
 
+## Live with the app ([ADR-0100](../../docs/adr/0100-landing-and-app-one-site.md))
+
+The web app's Vercel build runs `bun ../landing/build.ts --into dist`, so <https://getremora.vercel.app> serves this page at `/` to signed-out visitors and at `/about`. In that build `config.js` points the buttons at the same origin. Deploying the web deploys it; the demo video comes from the deploying machine, so render it first when it changes.
+
 ## Publish to Walrus Sites (Uy's step: mainnet, costs WAL)
 
 ```bash

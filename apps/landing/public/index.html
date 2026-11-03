@@ -327,7 +327,8 @@
     // Until the app is deployed, its buttons open the repo's "Try it" section instead.
     const fallback = `${c.repo || "https://github.com/UyLeQuoc/walrus-session-10-remora"}#try-it`;
     set("playground", app ? `${app}/playground` : fallback);
-    set("app", app || fallback);
+    // The app's own "/" shows this page to signed-out visitors (ADR-0100), so "App" opens the chat.
+    set("app", app ? `${app}/chat` : fallback);
     // The demo video ships only when it has been rendered; without it the section links to the repo.
     const v = document.querySelector("#video-box video");
     v?.addEventListener("error", () => {
