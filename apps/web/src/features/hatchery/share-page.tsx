@@ -6,7 +6,7 @@
 
 import type { ShareReview } from "@remora/schema";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -91,6 +91,11 @@ function Share({ id }: { id: string }) {
         <Alert variant="destructive">
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
             <span>{error}</span>
+            {!signed && !review ? (
+              <Button asChild type="button" size="sm" variant="outline">
+                <Link to={`/remoras/${id}`}>Back to the remora</Link>
+              </Button>
+            ) : null}
             {signed ? (
               <Button
                 type="button"

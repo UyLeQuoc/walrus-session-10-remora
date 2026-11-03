@@ -15,7 +15,6 @@ import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader } from "@/components/app/page";
 import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { Section } from "@/components/app/section";
-import { StatusBadge } from "@/components/app/status-badge";
 import { Time } from "@/components/app/time";
 import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
@@ -181,7 +180,7 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
         <NativeSelect id="mcp-remora" value={chosen} onChange={(e) => setRemora(e.target.value)}>
           {usable.map((r) => (
             <NativeSelectOption key={r.id} value={r.id}>
-              {r.name} ({kindName(r.template)}, {r.status === "shadow" ? "practice" : r.status})
+              {r.name} · {kindName(r.template)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -297,7 +296,8 @@ function TokenCard({
             {retired && live ? (
               <Badge variant="outline">remora retired</Badge>
             ) : live ? (
-              <StatusBadge status={statusOf(t)} />
+              // The token's own state, not the remora's (ADR-0103: "active" read as the remora's).
+              <Badge variant="secondary">token live</Badge>
             ) : (
               <Badge variant="outline">{statusLabel(t)}</Badge>
             )}

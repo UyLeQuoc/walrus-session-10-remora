@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Amount, Empty, type EventKind, Timeline } from "@/components/visual";
 import { Markdown } from "@/features/chat/markdown";
 import { payeeName } from "@/lib/payee";
+import { plainEvent } from "@/lib/readable";
 import { shortIds } from "@/lib/short-ids";
 import { explorerTx, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const KIND: Record<FeedItem["type"], EventKind> = {
 export function describeItem(e: FeedItem): string {
   const p = e.payload as { amount?: string; payee?: string; answer?: string };
   if (e.type === "blocked" && refusedBy(e) === "service") return titleOf(e);
+  if (e.type !== "payment" && e.type !== "shadow") return plainEvent(e.summary, payeeName);
   if (e.type === "payment" && p.amount && p.payee)
     return `Paid ${usdc(p.amount)} USDC to ${payeeName(p.payee)}`;
   if (e.type === "shadow" && p.amount && p.payee)
@@ -65,7 +67,7 @@ function titleOf(e: FeedItem): string {
     const payee = /^Didn't pay (.+?):/.exec(e.summary)?.[1];
     return payee ? `${payee} didn't go through, nothing paid` : e.summary;
   }
-  return firstLine(e.summary);
+  return plainEvent(firstLine(e.summary), payeeName);
 }
 
 /** A summary over several lines reads as its first line, without a dangling colon. */
