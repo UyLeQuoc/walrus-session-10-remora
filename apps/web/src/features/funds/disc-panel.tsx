@@ -3,15 +3,14 @@
  * meter (ADR-0103), its per-payment cap and payees, and pause or resume.
  */
 import { buildPause, type OwnedDisc, toDiscError } from "@remora/disc-sdk";
-import { Wallet } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/app/empty-state";
 import { Section } from "@/components/app/page";
 import { StatusBadge } from "@/components/app/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Meter } from "@/components/visual";
+import { Empty, Meter } from "@/components/visual";
 import type { Network } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
 import { SettingsGroup } from "@/openbot/pages";
@@ -41,9 +40,17 @@ function DiscRow({
   const cap = d.allowance.lifetimeCap;
   const spent = Number(formatUsdc(d.allowance.currentSpend, 6));
   const limit = cap ? Number(formatUsdc(cap, 6)) : null;
-  const until = d.allowance.expiryMs
-    ? new Date(d.allowance.expiryMs).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  const days = d.allowance.expiryMs
+    ? Math.ceil((Number(d.allowance.expiryMs) - Date.now()) / 86_400_000)
     : null;
+  const endsIn =
+    days === null
+      ? null
+      : days <= 0
+        ? "ended"
+        : days === 1
+          ? "ends tomorrow"
+          : `ends in ${days} days`;
   return (
     <li className="flex min-w-0 flex-col gap-2.5 px-4 py-3.5 text-md" data-testid="disc-row">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -65,16 +72,20 @@ function DiscRow({
           value={spent}
           max={limit}
           label={`${d.disc.name}: spent of its limit`}
-          left={`${formatUsdc(d.allowance.currentSpend)} of ${formatUsdc(cap ?? "0")} USDC spent`}
-          right={until ? `until ${until}` : undefined}
+          left={
+            <span className="text-sm">
+              <b className="font-semibold text-ob-text">{formatUsdc(d.allowance.currentSpend)}</b> /{" "}
+              {formatUsdc(cap ?? "0")} USDC spent
+            </span>
+          }
         />
       ) : null}
-      <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ob-muted tabular-nums">
-        <span>≤ {formatUsdc(d.disc.perPaymentCap)} a payment</span>
-        <span>
+      <p className="flex flex-wrap gap-1.5 text-xs text-ob-secondary tabular-nums">
+        <Badge variant="outline">≤ {formatUsdc(d.disc.perPaymentCap)} USDC a payment</Badge>
+        <Badge variant="outline">
           {d.disc.payees.length} payee{d.disc.payees.length === 1 ? "" : "s"}
-        </span>
-        {limit === null && until ? <span>until {until}</span> : null}
+        </Badge>
+        {endsIn ? <Badge variant="outline">{endsIn}</Badge> : null}
       </p>
     </li>
   );
@@ -99,10 +110,8 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           </Button>
         </div>
       ) : discs.length === 0 ? (
-        <EmptyState
-          icon={<Wallet />}
-          title="No spending limits yet"
-          description="Each new remora gets one."
+        <Empty
+          title="No spending limits yet. Each new remora gets one."
           action={
             <Button asChild>
               <Link to="/remoras/new">Create a remora</Link>

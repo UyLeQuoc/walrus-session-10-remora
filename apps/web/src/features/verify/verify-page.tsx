@@ -23,7 +23,7 @@ import { CheckList, VerifyVerdict } from "./verify-result";
 
 /** What a check confirms, shown before one runs as the same list that lights up after. */
 const CHECKS = [
-  { label: "It did what it said", detail: "The intent hash matches the receipt." },
+  { label: "It did what it said", detail: "What it said it would do matches what it did." },
   { label: "The payment is onchain", detail: "In the transaction you pasted." },
   { label: "The payee got the amount", detail: "Its balance moved by exactly that much." },
   { label: "Its own key signed", detail: "The remora's key, not a stranger's." },
@@ -40,7 +40,18 @@ function RecentReceipts() {
     [owner],
   );
   const rows = (feed.data?.events ?? []).filter((e) => e.receiptId);
-  if (!rows.length) return null;
+  // Nothing to paste yet (signed out, or no paid answer): one minute in the playground makes one.
+  if (!rows.length)
+    return feed.loading ? null : (
+      <div className="flex max-w-3xl flex-wrap items-center gap-3 rounded-xl border border-dashed border-ob-border px-4 py-3">
+        <p className="min-w-0 flex-1 text-sm text-ob-secondary">
+          No receipt yet? A Researcher makes one in a minute.
+        </p>
+        <Button asChild size="sm">
+          <Link to="/playground">Try a Researcher</Link>
+        </Button>
+      </div>
+    );
   return (
     <Section title="Your recent receipts">
       <ul className="flex max-w-3xl flex-col gap-2" aria-label="Your recent receipts">
@@ -113,7 +124,7 @@ export function VerifyPage() {
         <Input
           aria-label="Digest or receipt id"
           className="h-10"
-          placeholder="Transaction digest or receipt id"
+          placeholder="Receipt id or Sui transaction"
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />

@@ -39,12 +39,8 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
           </p>
         ) : readable ? (
           <BudgetMeter meter={meter.meter} window={budget.window} compact />
-        ) : meter.loading ? (
-          <BudgetMeter meter={null} window={budget.window} compact />
         ) : (
-          <p className="text-xs text-ob-muted">
-            {remora.status === "retired" ? "Limit revoked" : "Limit not readable now"}
-          </p>
+          <BudgetMeter meter={null} window={budget.window} compact loading={meter.loading} />
         )}
       </GalleryCard>
     </Link>

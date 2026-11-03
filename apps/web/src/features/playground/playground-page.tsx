@@ -103,7 +103,7 @@ export function PlaygroundPage() {
 
   const start = async () => {
     setError("");
-    setBusy("Setting your Researcher's $1 spending limit onchain…");
+    setBusy("Setting your Researcher's 1 USDC spending limit onchain…");
     try {
       const out = await call(
         "/api/playground/session",
@@ -145,11 +145,11 @@ export function PlaygroundPage() {
   return (
     <Page
       title="Try a Researcher"
-      description="Try a Researcher with a $1 budget. No wallet needed."
+      description="Try a Researcher with a 1 USDC limit. No wallet needed."
     >
       <PageHeader
         title="Try a Researcher"
-        description="Your own Researcher with a $1 limit. No wallet needed."
+        description="Your own Researcher with a 1 USDC limit. No wallet needed."
         hint="Sui enforces the limit onchain, so it can't spend more. Each answer that paid has a receipt: the onchain record of what it paid, which anyone can check."
         actions={
           <Button asChild variant="outline" size="sm">

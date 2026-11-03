@@ -100,6 +100,8 @@ function Dashboard({ owner }: { owner: string }) {
             <Skeleton className="h-32 w-full rounded-ob-card" />
             <Skeleton className="h-32 w-full rounded-ob-card" />
           </CardGrid>
+        ) : remoras.error && !live.length ? (
+          <p className="text-md text-ob-muted">Your remoras show once Remora is back.</p>
         ) : live.length ? (
           <CardGrid>
             {live.slice(0, SHOWN).map((r) => (
@@ -126,6 +128,8 @@ function Dashboard({ owner }: { owner: string }) {
             <Skeleton className="h-16 w-full rounded-ob-card" />
             <Skeleton className="h-16 w-full rounded-ob-card" />
           </div>
+        ) : feed.error && !feed.data ? (
+          <p className="text-md text-ob-muted">The activity shows once Remora is back.</p>
         ) : (
           <FeedList items={(feed.data?.events ?? []).slice(0, 8)} showRemora />
         )}

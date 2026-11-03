@@ -3,7 +3,6 @@
  * meter of what this window has spent, with what's left and when it runs out under it.
  */
 import type { BudgetMeter as Meter } from "@remora/schema";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Meter as Bar } from "@/components/visual";
 import { usdc } from "@/lib/usdc";
 
@@ -34,10 +33,16 @@ export function BudgetMeter({
   loading?: boolean;
 }) {
   if (!meter?.window) {
-    return loading ? (
-      <Skeleton className="h-8 w-full" aria-label="Reading its spending limit" />
-    ) : (
-      <p className="text-xs text-ob-muted">Its spending limit can't be read right now.</p>
+    // ADR-0103: the same bar in every state: loading pulses, unreadable is an empty track that says so.
+    return (
+      <div className="flex flex-col gap-1.5" data-testid="budget-meter-unknown">
+        <div
+          className={`h-2.5 w-full rounded-full bg-ob-border-strong/50 ${loading ? "animate-pulse motion-reduce:animate-none" : ""}`}
+        />
+        <p className="text-xs text-ob-muted">
+          {loading ? "Reading its spending limit" : "Spending limit can't be read right now"}
+        </p>
+      </div>
     );
   }
   const limit = BigInt(meter.window.limit);

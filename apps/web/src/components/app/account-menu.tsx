@@ -79,7 +79,13 @@ export function AccountMenu() {
   if (!address) {
     return (
       <div className="flex w-full items-center gap-1">
-        <WalletPicker className="flex-1" label="Sign in" signIn onSignedIn={load} />
+        <WalletPicker
+          className="flex-1"
+          variant="outline"
+          label="Sign in"
+          signIn
+          onSignedIn={load}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

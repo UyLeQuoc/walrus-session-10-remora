@@ -106,7 +106,7 @@ const MORE_PAGES = [
     to: "/playground",
     label: "Try a Researcher",
     icon: Fish,
-    help: "A Researcher with a $1 limit on testnet, no wallet needed.",
+    help: "A Researcher with a 1 USDC limit on testnet, no wallet needed.",
   },
   {
     to: "/reef",
