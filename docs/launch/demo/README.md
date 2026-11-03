@@ -42,16 +42,16 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 
 `capture/` and `out/` are gitignored.
 
-## Scenes (~162 s)
+## Scenes (161 s, re-captured Nov 4 from the visual-first app, [ADR-0103](../../adr/0103-visual-first-ui-pass.md))
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
 | Without vs with | An agent with your key pays an injected address (an illustration). A remora's payment to it aborts onchain (testnet tx `7NYf3QGE…`) |
-| 01 · Try it, no wallet | Home's "What's a remora?", then `/playground`: a $1 spending limit onchain → a paid answer over x402 → a receipt that verifies |
+| 01 · Try it, no wallet | Home's "What's a remora?" (a money Flow), then `/playground`: a 1 USDC limit onchain → a paid answer as a receipt card → the payment's receipt, verified |
 | Where the money goes | Your address → its spending limit → the x402 facilitator → a paid service; the remora's key holds 0 SUI |
 | 02 · Your own remora | `/remoras/new`: 0.50 a month, ≤ 0.015 a payment, one signature, practice mode, Go live |
 | 03 · Ask, pay, see why | A paid answer from its own Disc, the cost card, Why? → the Wake |
-| 04 · It learns from you | Teach a Sentinel in plain words; a small transfer ignored; the Learning tab |
+| 04 · It learns from you | Teach a Wallet watcher in plain words; a small transfer it was taught to skip, ignored |
 | 05 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
 | The attack | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends |
 | 06 · Over the cap, it asks | `/approvals`: pay once from your own wallet |
@@ -69,6 +69,7 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
   - `caps: [[mark, offset, seconds, html]]`.
   - One shows at a time, and `<b>` is highlighted.
   - A caption must say only what the screen shows.
+  - Ten words or fewer (ADR-0103), and a chapter whose app has its own stepper has no `steps`.
 - **Spotlights.**
   - `spots: [{ at, off, len, box: "label" }]` lights the element the capture recorded under that label.
   - `demo.spec.ts` records a box with `s.box(label, locator)`, and with every labelled `s.to` /

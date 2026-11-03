@@ -35,4 +35,4 @@ docs/launch/demo/capture/
 docs/launch/demo/out/
 
 # U14 (ADR-0103): the review capture's screenshots; only the notes are committed.
-docs/ux/review/r*/
+docs/ux/review/r[0-9]*/

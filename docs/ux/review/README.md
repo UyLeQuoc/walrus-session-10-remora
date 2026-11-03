@@ -70,3 +70,4 @@ vocabulary".
 | 2 | Data and flows: numbers, meters, timelines, receipts; new remora, playground, approval, verify; phone | [round-2.md](round-2.md) |
 | 3 | Polish and consistency: spacing, alignment, motion, the light theme, accessibility, the landing | [round-3.md](round-3.md) |
 | 4 | The check before the freeze: round 3's fixes, blockers and majors | [round-4.md](round-4.md) |
+| Freeze | Blockers and majors only, every page; and the demo video's frames | [freeze.md](freeze.md) |
