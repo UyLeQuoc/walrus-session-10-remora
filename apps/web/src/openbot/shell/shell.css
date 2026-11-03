@@ -127,7 +127,7 @@
     border-radius: var(--openbot-radius-pill);
     background: var(--openbot-warning);
     padding: 0 3px;
-    color: var(--openbot-bg-sidebar);
+    color: #1c1405; /* Remora (U14): dark ink on amber in both themes, ≥4.5:1 */
     font-size: 10px;
     font-weight: 650;
     line-height: 1;
@@ -517,7 +517,7 @@
     border-radius: var(--openbot-radius-pill);
     background: var(--openbot-warning);
     padding: 0 4px;
-    color: var(--openbot-bg-sidebar);
+    color: #1c1405; /* Remora (U14): dark ink on amber in both themes, ≥4.5:1 */
     font-size: var(--openbot-text-sm);
     font-weight: 650;
   }
@@ -684,7 +684,7 @@
     height: 18px;
     border-radius: var(--openbot-radius-pill);
     background: var(--openbot-warning);
-    color: var(--openbot-bg-sidebar);
+    color: #1c1405; /* Remora (U14): dark ink on amber in both themes, ≥4.5:1 */
   }
 
   .agent-row-agent-status-waiting svg {

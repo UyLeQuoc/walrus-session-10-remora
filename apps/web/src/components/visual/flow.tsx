@@ -121,7 +121,17 @@ export function Flow({
               ) : null}
               <span className="flex min-w-0 flex-col">
                 <span className="text-sm font-medium leading-tight">{n.label}</span>
-                {n.sub ? <span className="text-xs text-ob-muted tabular-nums">{n.sub}</span> : null}
+                {n.sub ? (
+                  // On a tinted node the subtitle takes the node's own ink, for contrast in light.
+                  <span
+                    className={cn(
+                      "text-xs tabular-nums",
+                      (n.tone ?? "default") === "default" ? "text-ob-muted" : "opacity-85",
+                    )}
+                  >
+                    {n.sub}
+                  </span>
+                ) : null}
               </span>
             </div>
             {i < nodes.length - 1 ? (
