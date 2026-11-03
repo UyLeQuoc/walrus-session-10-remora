@@ -43,6 +43,8 @@ import {
 } from "./memory-controls";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—");
+const shortDay = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const daysLeft = (iso: string) =>
   Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000));
 const size = (bytes: number) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);
@@ -224,9 +226,7 @@ function RemorasTab() {
             <th>Namespace</th>
             <th>Status</th>
             <th>Stored</th>
-            <th title="Walrus keeps a memory about 210 days from when it was written">
-              Days left of 210
-            </th>
+            <th>Expires</th>
             <th data-align="right">Size</th>
             <th data-align="right">
               <span className="sr-only">Actions</span>
@@ -258,7 +258,10 @@ function RemorasTab() {
                 className={cn(row.expiresSoon && "font-medium text-ob-warning-text")}
               >
                 {row.expiresAt ? (
-                  <span title={day(row.expiresAt)}>
+                  // ADR-0103: the real end date and the days to it; the term isn't counted from
+                  // "Stored" (Walrus extends a blob by epochs), so no "of 210" claim.
+                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                    <span>{shortDay(row.expiresAt)}</span>
                     <ExpiryBar days={daysLeft(row.expiresAt)} />
                   </span>
                 ) : (
