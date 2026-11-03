@@ -96,6 +96,21 @@ describe("sui-risk (E9)", () => {
     expect(r.flags).toEqual(["younger than 7 days"]);
   });
 
+  it("reports pruned history as unknown instead of failing after the buyer paid", async () => {
+    const pruned = {
+      core: {
+        ...client.core,
+        getTransaction: async () => {
+          throw new Error("Transaction Tx1 not found");
+        },
+      },
+    } as unknown as Parameters<typeof riskOf>[0];
+    const r = await riskOf(pruned, "testnet", `0x${"ab".repeat(32)}`, now);
+    expect(r.historyAvailable).toBe(false);
+    expect(r.ageDays).toBeNull();
+    expect(r.flags).toEqual(["history unavailable: its age and upgrade authority are unknown"]);
+  });
+
   it("doesn't call Sui's own packages young: the network upgrades them in place", async () => {
     for (const id of ["0x2", `0x${"0".repeat(63)}1`, "0x3"]) {
       const r = await riskOf(client, "testnet", id, now);

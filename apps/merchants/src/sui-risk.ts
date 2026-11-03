@@ -15,6 +15,11 @@ export interface RiskReport {
   version: string;
   owner: unknown;
   lastChange: { digest: string | null; timestampMs: number | null };
+  /**
+   * False when the node no longer has the last change's transaction (a public fullnode prunes old
+   * history), so the age and the upgrade authority are unknown rather than absent.
+   */
+  historyAvailable: boolean;
   ageDays: number | null;
   upgradeCap: { id: string; owner: unknown } | null;
   /** One of Sui's own packages (std, sui, sui_system), part of the protocol. */
@@ -41,11 +46,15 @@ export async function riskOf(
   const digest = object.previousTransaction ?? null;
   let timestampMs: number | null = null;
   let upgradeCap: RiskReport["upgradeCap"] = null;
-  if (digest) {
-    const res = await client.core.getTransaction({
-      digest,
-      include: { effects: true, objectTypes: true },
-    });
+  let historyAvailable = true;
+  // The buyer has paid by the time this runs, so a missing transaction is reported, not thrown.
+  const res = digest
+    ? await client.core
+        .getTransaction({ digest, include: { effects: true, objectTypes: true } })
+        .catch(() => null)
+    : null;
+  if (digest && !res) historyAvailable = false;
+  if (res) {
     const tx = res.Transaction ?? res.FailedTransaction;
     timestampMs = tx.timestampMs;
     const capId = tx.effects?.changedObjects.find((o) =>
@@ -60,6 +69,8 @@ export async function riskOf(
   const ageDays = timestampMs ? Math.floor((now - timestampMs) / 86_400_000) : null;
   const flags: string[] = [];
   if (!systemPackage && ageDays !== null && ageDays < 7) flags.push("younger than 7 days");
+  if (!historyAvailable)
+    flags.push("history unavailable: its age and upgrade authority are unknown");
   if (
     upgradeCap &&
     typeof upgradeCap.owner === "object" &&
@@ -78,6 +89,7 @@ export async function riskOf(
     ageDays,
     upgradeCap,
     systemPackage,
+    historyAvailable,
     flags,
   };
 }
