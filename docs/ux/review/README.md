@@ -66,6 +66,6 @@ vocabulary".
 | Round | Focus | Notes |
 |---|---|---|
 | 0 | The baseline | [round-0.md](round-0.md) |
-| 1 | Structure and words: purpose, one action, cut and move words, data sentences into the kit, empty states | (to come) |
-| 2 | Data and flows: numbers, meters, timelines, receipts; new remora, playground, approval, verify; phone | (to come) |
-| 3 | Polish and consistency: spacing, alignment, motion, the light theme, accessibility, the landing | (to come) |
+| 1 | Structure and words: purpose, one action, cut and move words, data sentences into the kit, empty states | [round-1.md](round-1.md) |
+| 2 | Data and flows: numbers, meters, timelines, receipts; new remora, playground, approval, verify; phone | [round-2.md](round-2.md) |
+| 3 | Polish and consistency: spacing, alignment, motion, the light theme, accessibility, the landing | [round-3.md](round-3.md) |
