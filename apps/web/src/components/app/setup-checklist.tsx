@@ -70,7 +70,12 @@ function useSteps() {
   const required = steps.filter((s) => !s.optional);
   const done = required.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done) ?? null;
-  return { steps, done, total: required.length, next, ownerLoading, reload };
+  // ADR-0103: while the balance or the remoras are unknown (loading, or the server failing), the
+  // checklist can't say what's done, so it doesn't show; an unknown is never a "to do".
+  const known =
+    !ownerLoading &&
+    (!owner || (Boolean(funds.data) && Boolean(remoras.data) && !funds.error && !remoras.error));
+  return { steps, done, total: required.length, next, ownerLoading, reload, known };
 }
 
 function Circle({ done, current, index }: { done: boolean; current: boolean; index: number }) {
@@ -86,9 +91,10 @@ function Circle({ done, current, index }: { done: boolean; current: boolean; ind
 }
 
 export function SetupChecklist({ variant = "full" }: { variant?: "full" | "compact" }) {
-  const { steps, done, total, next, ownerLoading, reload } = useSteps();
+  const { steps, done, total, next, ownerLoading, reload, known } = useSteps();
   const [dismissed, setDismissed] = useState(() => readStored("local", DISMISSED) === "1");
 
+  if (!known) return null;
   if (variant === "compact") {
     if (done === total || dismissed) return null;
     return (
@@ -144,7 +150,15 @@ export function SetupChecklist({ variant = "full" }: { variant?: "full" | "compa
               size="compact"
               stack
               className={cn(!step.done && !current && !step.optional && "opacity-60")}
-              media={<Circle done={step.done} current={current} index={i + 1} />}
+              media={
+                step.optional ? (
+                  <span aria-hidden className="ob-step">
+                    ·
+                  </span>
+                ) : (
+                  <Circle done={step.done} current={current} index={i + 1} />
+                )
+              }
               title={
                 <span className={cn(step.done && "text-ob-muted")}>
                   {step.title}
@@ -156,7 +170,7 @@ export function SetupChecklist({ variant = "full" }: { variant?: "full" | "compa
               actions={
                 step.done ? null : step.connect ? (
                   <WalletPicker
-                    label={ownerLoading ? "Loading…" : "Connect wallet"}
+                    label={ownerLoading ? "Loading…" : "Sign in"}
                     size="sm"
                     signIn
                     onSignedIn={reload}

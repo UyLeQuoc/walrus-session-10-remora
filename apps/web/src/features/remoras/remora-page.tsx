@@ -6,7 +6,7 @@
  */
 import type { RemoraView } from "@remora/schema";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Ellipsis, KeyRound, MessageCircle, Trash2 } from "lucide-react";
+import { Ellipsis, Eye, KeyRound, MessageCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Hash } from "@/components/hash";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Address, Problem } from "@/components/visual";
 import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById, priceLabel } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
@@ -211,6 +213,30 @@ function AskCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
   );
 }
 
+/** A Wallet watcher's overview leads with what it watches (ADR-0103: the reviewers couldn't see it). */
+function WatchingCard({ r }: { r: RemoraView }) {
+  const addresses = r.config.triggers.flatMap((t) => (t.kind === "chain" ? t.addresses : []));
+  return (
+    <Section title="Watching" badge={<Badge variant="secondary">never pays</Badge>}>
+      {addresses.length ? (
+        <ul className="flex flex-wrap gap-2" aria-label="Watched wallets">
+          {addresses.map((a) => (
+            <li
+              key={a}
+              className="flex max-w-72 min-w-0 items-center gap-2 rounded-lg border border-ob-border bg-ob-raised px-3 py-1.5"
+            >
+              <Eye className="size-3.5 shrink-0 text-ob-muted" aria-hidden />
+              <Address value={a} href={`https://suiscan.xyz/${r.network}/account/${a}`} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-md text-ob-muted">No wallets yet. Add one in Settings.</p>
+      )}
+    </Section>
+  );
+}
+
 function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
   const rules = useLoad(() => api.rules(r.id), [r.id]);
   const [text, setText] = useState("");
@@ -225,7 +251,7 @@ function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
   return (
     <Section
       title={`Teach ${r.name}`}
-      description="Plain words: “ignore incoming SUI under 0.01”, “always ping me for anything over 1 SUI”."
+      hint="Plain words: “ignore incoming SUI under 0.01”, “always ping me for anything over 1 SUI”."
     >
       <div className="flex gap-2">
         <Input aria-label="Rule" value={text} onChange={(e) => setText(e.target.value)} />
@@ -309,7 +335,7 @@ function BudgetSection({
   return (
     <Section layout={layout} title="Budget" description={budgetLine(r)}>
       <SurfaceCard>
-        <BudgetMeter meter={meter.meter} window={b.window} />
+        <BudgetMeter meter={meter.meter} window={b.window} loading={meter.loading} />
         {meter.error ? <p className="text-md text-ob-danger-text">{meter.error}</p> : null}
         {r.discId ? (
           <div className="flex flex-wrap items-end gap-2 border-t border-ob-border-grouped pt-3">
@@ -656,25 +682,28 @@ function Remora({ id }: { id: string }) {
   if (remora.error) {
     return (
       <Page title="Remora">
-        <Alert variant="destructive">
-          <AlertTriangle />
-          <AlertTitle>Couldn't read this remora</AlertTitle>
-          <AlertDescription className="flex items-center justify-between gap-2">
-            {remora.error}
-            <Button variant="outline" size="sm" onClick={() => void remora.refresh()}>
-              Try again
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <Problem
+          title="Can't reach Remora right now. Your remora is safe onchain."
+          detail={remora.error}
+          onRetry={() => void remora.refresh()}
+        />
       </Page>
     );
   }
   if (!r) {
+    // The shape of the page it becomes: face and name, tabs, the Ask box, two cards (ADR-0103).
     return (
       <Page title="Remora">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-40 w-full rounded-ob-card" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-10 rounded-full" />
+          <Skeleton className="h-7 w-48" />
+        </div>
+        <Skeleton className="h-8 w-80 rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-ob-card" />
+        <div className="grid gap-8 lg:grid-cols-2">
+          <Skeleton className="h-40 w-full rounded-ob-card" />
+          <Skeleton className="h-40 w-full rounded-ob-card" />
+        </div>
       </Page>
     );
   }
@@ -745,13 +774,14 @@ function Remora({ id }: { id: string }) {
         </TabsList>
 
         <TabsContent value="overview" className="flex flex-col gap-8 pt-5">
+          {r.template === "sentinel" ? <WatchingCard r={r} /> : null}
           {r.status === "retired" ? null : r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}
           <div className="grid items-start gap-8 lg:grid-cols-2">
-            <BudgetSection r={r} reload={reload} />
+            {r.config.budget ? <BudgetSection r={r} reload={reload} /> : null}
             <CostCard remoraId={r.id} />
           </div>
           <Section

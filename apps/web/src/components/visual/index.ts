@@ -12,6 +12,7 @@ export {
   ExpiryBar,
   Hint,
   MEMORY_DAYS,
+  Problem,
   Spark,
   StatusDot,
 } from "./small";

@@ -1,6 +1,10 @@
-/** A Disc's remaining budget, drawn the same way on the remora page and on Home (N5). */
+/**
+ * A Disc's remaining budget, drawn the same way on the remora page and on Home (N5). ADR-0103: a
+ * meter of what this window has spent, with what's left and when it runs out under it.
+ */
 import type { BudgetMeter as Meter } from "@remora/schema";
-import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Meter as Bar } from "@/components/visual";
 import { usdc } from "@/lib/usdc";
 
 /** `2027-10-09` → "Oct 9, 2027". The forecast is a calendar day, so it's read in UTC. */
@@ -19,39 +23,52 @@ export const calendarDay = (iso: string) => {
 export function BudgetMeter({
   meter,
   window,
+  compact = false,
+  loading = true,
 }: {
   meter: Meter | null;
   window: "day" | "week" | "month" | null;
+  /** A card: the bar and one line, no forecast or total. */
+  compact?: boolean;
+  /** False once the read is done: a missing limit then says so instead of loading forever. */
+  loading?: boolean;
 }) {
   if (!meter?.window) {
-    return <p className="text-md text-ob-muted">Reading its spending limit…</p>;
+    return loading ? (
+      <Skeleton className="h-8 w-full" aria-label="Reading its spending limit" />
+    ) : (
+      <p className="text-xs text-ob-muted">Its spending limit can't be read right now.</p>
+    );
   }
   const limit = BigInt(meter.window.limit);
   const spent = BigInt(meter.window.spent);
   const left = limit > spent ? limit - spent : 0n;
-  const used = limit > 0n ? Number((spent * 100n) / limit) : 0;
+  const per = window ?? "window";
   return (
-    <div className="flex flex-col gap-2" data-testid="budget-meter">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-md text-ob-secondary">
-          <span className="text-base font-semibold tracking-tight text-ob-text tabular-nums">
-            {usdc(left)}
-          </span>{" "}
-          of {usdc(limit)} USDC left this {window ?? "window"}
-        </p>
-        {meter.forecast?.runsOutOn ? (
-          <p className="text-xs text-ob-muted">
-            runs out around {calendarDay(meter.forecast.runsOutOn)}
-          </p>
-        ) : null}
-      </div>
-      <Progress
-        value={Math.min(100, Math.max(0, used))}
-        aria-label={`${used}% of this ${window ?? "window"}'s budget spent`}
+    <div className="flex flex-col gap-1.5" data-testid="budget-meter">
+      <Bar
+        value={Number(spent)}
+        max={Number(limit)}
+        label={`Spent this ${per}`}
+        size={compact ? "sm" : "md"}
+        left={
+          <>
+            <span className="font-semibold text-ob-text">{usdc(left)}</span> of {usdc(limit)} USDC
+            left
+          </>
+        }
+        right={`this ${per}`}
       />
-      <p className="text-xs text-ob-muted tabular-nums">
-        {usdc(spent)} spent in total{meter.paused ? " · paused" : ""}
-      </p>
+      {compact ? null : (
+        <p className="flex flex-wrap justify-between gap-x-3 text-xs text-ob-muted tabular-nums">
+          <span>
+            {usdc(spent)} spent in total{meter.paused ? " · paused" : ""}
+          </span>
+          {meter.forecast?.runsOutOn ? (
+            <span>runs out around {calendarDay(meter.forecast.runsOutOn)}</span>
+          ) : null}
+        </p>
+      )}
     </div>
   );
 }

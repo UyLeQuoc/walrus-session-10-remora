@@ -5,7 +5,7 @@
  */
 import type { ApprovalRequest } from "@remora/schema";
 import { Inbox, MessageSquare, SquarePen, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useLocation } from "react-router";
 import { AccountMenu } from "@/components/app/account-menu";
 import { NetworkSelect } from "@/components/app/network-select";
@@ -68,7 +68,10 @@ export function AppSidebar({
   onOpenChat,
   onNavigate,
   activeChatId,
+  pages,
 }: {
+  /** On a phone: the pages the bottom bar doesn't hold, above the roster. */
+  pages?: ReactNode;
   compact: boolean;
   onExpand: () => void;
   /** Whether the network and panic controls sit here (else the main pane's top row has them). */
@@ -106,6 +109,7 @@ export function AppSidebar({
         onExpand={onExpand}
       />
       <SidebarBody>
+        {pages}
         {waits.length ? (
           <SidebarWaitingGroup name="Needs you" count={approvals.length}>
             {waits.map((w) => (

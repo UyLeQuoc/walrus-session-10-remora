@@ -5,7 +5,7 @@
 import { HealthReport, PlaygroundSession } from "@remora/schema";
 import healthJson from "@remora/schema/fixtures/health.report.json";
 import sessionJson from "@remora/schema/fixtures/playground.session.json";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -78,9 +78,11 @@ describe("playground (H7)", () => {
     await userEvent.click(screen.getByRole("button", { name: /Start my Researcher/ }));
     expect((await screen.findByTestId("playground-spent")).textContent).toBe("0.00 of 1.00 USDC");
     await userEvent.click(screen.getByRole("button", { name: /Ask Researcher/ }));
-    expect((await screen.findByTestId("playground-answer")).textContent).toContain(
-      "Paid 0.01 USDC to Sui risk check",
+    // ADR-0103: the payment is a receipt (amount, payee), not a sentence.
+    const paid = within(await screen.findByTestId("playground-answer")).getByTestId(
+      "playground-paid",
     );
+    expect(paid.textContent).toMatch(/Paid to.*Sui risk check.*0\.01.*USDC/);
     expect(screen.getByRole("link", { name: /Check its receipt/ }).getAttribute("href")).toBe(
       session.answers[0]?.verify,
     );

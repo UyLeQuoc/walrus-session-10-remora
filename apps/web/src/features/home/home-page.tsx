@@ -2,16 +2,14 @@
  * `/` is Home (Q1, ADR-0038): what a remora is and the setup checklist until there is one (ADR-0095),
  * then the dashboard — remoras, what needs you, and one activity feed. Chat lives at `/chat`.
  */
-import { AlertTriangle, BookOpen, Fish, Plus, ShieldCheck } from "lucide-react";
+import { BellRing, Bot, Fish, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { Link } from "react-router";
-import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { SetupChecklist } from "@/components/app/setup-checklist";
-import { StatTile } from "@/components/app/stat-tile";
 import { WhatIsRemora } from "@/components/app/what-is-remora";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, Problem, Stat, StatRow } from "@/components/visual";
 import { useFunds } from "@/features/funds/use-funds";
 import { api } from "@/features/remoras/api";
 import { FeedList } from "@/features/remoras/feed-list";
@@ -20,6 +18,10 @@ import { RemoraCard } from "@/features/remoras/remora-card";
 import { TemplateCard } from "@/features/remoras/template-card";
 import { useNetwork } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
+
+/** Home shows a handful; the rest are one click away on Remoras. */
+const SHOWN = 6;
+
 import { CardGrid } from "@/openbot/pages";
 
 const HERO = "Always-on agents you own.";
@@ -33,71 +35,61 @@ function Dashboard({ owner }: { owner: string }) {
   const funds = useFunds(owner, network);
   const live = (remoras.data?.remoras ?? []).filter((r) => r.status !== "retired");
   const pending = inbox.data?.approvals.length ?? 0;
-  const ready = funds.data?.splits.find((s) => s.role === "owner")?.addressBalance ?? "0";
+  const ready = funds.data?.splits.find((s) => s.role === "owner")?.addressBalance;
 
   return (
     <Page title="Home" description="Your remoras, what needs you, and what they did lately.">
       <PageHeader
         title="Home"
-        description={`Your remoras, what needs you, and what they did lately: ${live.length} remora${live.length === 1 ? "" : "s"} on ${network}.`}
+        description="Your remoras at a glance."
         actions={
-          <>
-            <Button asChild variant="outline">
-              <Link to="/guide">
-                <BookOpen /> How it works
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/remoras/new">
-                <Plus /> New remora
-              </Link>
-            </Button>
-          </>
+          <Button asChild>
+            <Link to="/remoras/new">
+              <Plus /> New remora
+            </Link>
+          </Button>
         }
       />
 
       {remoras.error ? (
-        <Alert variant="destructive">
-          <AlertTriangle />
-          <AlertTitle>Couldn't read your remoras</AlertTitle>
-          <AlertDescription>{remoras.error}</AlertDescription>
-        </Alert>
+        <Problem
+          title="Can't reach Remora right now. Your limits still hold."
+          detail={remoras.error}
+          onRetry={() => void remoras.refresh()}
+        />
       ) : null}
 
-      {pending > 0 ? (
-        <Alert variant="warning">
-          <AlertTitle>
-            {pending} approval{pending === 1 ? "" : "s"} waiting
-          </AlertTitle>
-          <AlertDescription className="flex items-center justify-between gap-2">
-            A payment is over its per-payment cap.
-            <Button asChild variant="outline" size="sm">
-              <Link to="/approvals">Review</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Remoras" value={live.length} hint="on this network" />
-        <StatTile
-          label="Waiting for you"
-          value={pending}
-          tone={pending ? "warning" : "default"}
-          hint={pending ? "approvals need a yes" : "nothing needs you"}
+      <StatRow className="md:grid-cols-3">
+        <Stat
+          label="Remoras"
+          icon={<Bot />}
+          value={remoras.data ? live.length : <Skeleton className="h-7 w-10" />}
+          of={remoras.data ? `on ${network}` : undefined}
         />
-        <StatTile
-          label="Ready to spend"
-          value={`$${formatUsdc(ready)}`}
-          hint="in your address balance"
-        />
-      </div>
+        <Link to="/approvals" className="block transition-colors hover:border-ob-border-strong">
+          <Stat
+            label="Waiting for you"
+            icon={<BellRing />}
+            value={inbox.data ? pending : <Skeleton className="h-7 w-10" />}
+            tone={pending ? "warning" : "default"}
+            of={inbox.data ? (pending ? "Review →" : "all clear") : undefined}
+          />
+        </Link>
+        <Link to="/funds" className="block transition-colors hover:border-ob-border-strong">
+          <Stat
+            label="Ready to spend"
+            icon={<Wallet />}
+            value={ready === undefined ? <Skeleton className="h-7 w-20" /> : formatUsdc(ready)}
+            unit={ready === undefined ? undefined : "USDC"}
+          />
+        </Link>
+      </StatRow>
 
       <Section
         title="Your remoras"
         actions={
           <Button asChild variant="ghost" size="sm" className="-mr-3">
-            <Link to="/remoras">See all</Link>
+            <Link to="/remoras">See all{live.length > SHOWN ? ` ${live.length}` : ""}</Link>
           </Button>
         }
       >
@@ -108,15 +100,13 @@ function Dashboard({ owner }: { owner: string }) {
           </CardGrid>
         ) : live.length ? (
           <CardGrid>
-            {live.map((r) => (
+            {live.slice(0, SHOWN).map((r) => (
               <RemoraCard key={r.id} remora={r} />
             ))}
           </CardGrid>
         ) : (
-          <EmptyState
-            icon={<Fish />}
-            title="No remoras yet"
-            description="Start from a template. A Researcher buys answers; a Wallet watcher watches wallets and learns what matters."
+          <Empty
+            title="No remoras yet."
             action={
               <Button asChild>
                 <Link to="/remoras/new">
@@ -135,7 +125,7 @@ function Dashboard({ owner }: { owner: string }) {
             <Skeleton className="h-16 w-full rounded-ob-card" />
           </div>
         ) : (
-          <FeedList items={feed.data?.events ?? []} showRemora />
+          <FeedList items={(feed.data?.events ?? []).slice(0, 8)} showRemora />
         )}
       </Section>
     </Page>
@@ -209,8 +199,9 @@ export function HomePage() {
       </Page>
     );
   }
-  if (owner && (remoras.loading || (remoras.data?.remoras.length ?? 0) > 0)) {
-    // Loading still shows the dashboard shell, so the page does not jump from Home to Home.
+  if (owner && (remoras.loading || remoras.error || (remoras.data?.remoras.length ?? 0) > 0)) {
+    // Loading still shows the dashboard shell, so the page does not jump from Home to Home; a
+    // failing server shows it too, with the error, never the new-account page (ADR-0103).
     return <Dashboard owner={owner} />;
   }
   return <EmptyHome signedIn={!!owner} />;

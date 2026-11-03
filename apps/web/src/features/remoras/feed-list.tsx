@@ -1,53 +1,36 @@
 /**
- * N1 + N4 + N19: the activity feed, one bordered list with a divider per row (§5.4). Each item says
- * what happened in a sentence, links to its Wake ("Why?"), and answers and pings take 👍/👎 so the
- * remora learns which sources and pings matter.
+ * N1 + N4 + N19: the activity feed, drawn as a timeline (ADR-0103): an icon per kind of event, a
+ * short title, the amount as a chip, the time, then Why? and 👍/👎 so the remora learns which
+ * sources and pings matter. An answer's text shows two lines under it; a click shows the rest.
  */
 import type { FeedItem } from "@remora/schema";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
-import { Time } from "@/components/app/time";
-import { Badge } from "@/components/ui/badge";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { Button } from "@/components/ui/button";
+import { Amount, Empty, type EventKind, Timeline } from "@/components/visual";
+import { Markdown } from "@/features/chat/markdown";
 import { payeeName } from "@/lib/payee";
 import { usdc } from "@/lib/usdc";
-import { SettingsGroup } from "@/openbot/pages";
+import { cn } from "@/lib/utils";
 import { api } from "./api";
 import { WhyButton } from "./why-drawer";
 
-const LABEL: Record<FeedItem["type"], string> = {
-  action: "Action",
-  message: "You",
-  answer: "Answer",
-  payment: "Paid",
-  blocked: "Blocked",
-  shadow: "Practice",
-  approval_needed: "Needs you",
-  ping: "Ping",
-  episode: "Ignored",
-  rule_learned: "Learned",
-  handoff: "Handoff",
-  config_changed: "Edited",
-};
-
-/** openbot's soft tints: money and answers read as success, a block as danger, the rest neutral. */
-const BADGE: Record<
-  FeedItem["type"],
-  "secondary" | "success" | "warning" | "destructive" | "accent"
-> = {
-  action: "secondary",
-  message: "secondary",
-  answer: "accent",
-  payment: "success",
-  blocked: "destructive",
-  shadow: "warning",
-  approval_needed: "warning",
-  ping: "accent",
-  episode: "secondary",
-  rule_learned: "success",
-  handoff: "secondary",
-  config_changed: "secondary",
+const KIND: Record<FeedItem["type"], EventKind> = {
+  action: "acted",
+  message: "asked",
+  answer: "answered",
+  payment: "paid",
+  blocked: "blocked",
+  shadow: "practice",
+  approval_needed: "waiting",
+  ping: "pinged",
+  episode: "ignored",
+  rule_learned: "learned",
+  handoff: "handoff",
+  config_changed: "edited",
 };
 
 /** A sentence for the item; amounts in USDC where the payload has one. */
@@ -60,6 +43,33 @@ export function describeItem(e: FeedItem): string {
   return e.summary;
 }
 
+/**
+ * A refused payment is "Blocked" only when a guard stopped it: the safety check, the per-payment cap,
+ * the remora's state, or the Disc onchain (a Move abort, `E…`). A service that took no money or
+ * didn't answer "didn't go through" (ADR-0103: the reviewers read every red "Blocked" as the limit).
+ */
+const GUARDS = /^(sonar\.|over_limit|remora\.|disc\.|E[A-Z])/;
+export function refusedBy(e: FeedItem): "guard" | "service" {
+  const code = String((e.payload as { code?: string }).code ?? "");
+  return GUARDS.test(code) ? "guard" : "service";
+}
+
+/** The row's title: who was paid when there's an amount (the chip carries it), else the summary. */
+function titleOf(e: FeedItem): string {
+  const p = e.payload as { amount?: string; payee?: string };
+  if (e.type === "payment" && p.payee) return payeeName(p.payee);
+  if (e.type === "shadow" && p.payee) return `Would pay ${payeeName(p.payee)}`;
+  if (e.type === "blocked" && refusedBy(e) === "service") {
+    const payee = /^Didn't pay (.+?):/.exec(e.summary)?.[1];
+    return payee ? `${payee} didn't go through, nothing paid` : e.summary;
+  }
+  return firstLine(e.summary);
+}
+
+/** A summary over several lines reads as its first line, without a dangling colon. */
+const firstLine = (text: string) => (text.split("\n")[0] ?? text).replace(/:\s*$/, "");
+const restLines = (text: string) => text.split("\n").slice(1).join("\n").trim();
+
 function Feedback({ e }: { e: FeedItem }) {
   const [given, setGiven] = useState(e.feedback);
   const send = async (verdict: "useful" | "noise") => {
@@ -69,7 +79,7 @@ function Feedback({ e }: { e: FeedItem }) {
     if (r.data.learned !== "noted") toast.success(`Learned: ${r.data.learned}`);
   };
   return (
-    <span className="flex gap-1">
+    <span className="flex gap-0.5">
       <Button
         type="button"
         size="icon-sm"
@@ -94,6 +104,28 @@ function Feedback({ e }: { e: FeedItem }) {
   );
 }
 
+function AnswerText({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col items-start gap-0.5">
+      <div
+        data-ux-skip
+        className={cn("w-full text-ob-secondary", !open && "line-clamp-2 [&_p]:inline")}
+      >
+        <Markdown>{text}</Markdown>
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="text-xs text-ob-muted hover:text-ob-text"
+      >
+        {open ? "Less" : "More"}
+      </button>
+    </div>
+  );
+}
+
 export function FeedList({
   items,
   showRemora = false,
@@ -101,36 +133,48 @@ export function FeedList({
   items: FeedItem[];
   showRemora?: boolean;
 }) {
-  if (!items.length) return <p className="text-md text-ob-muted">Nothing yet.</p>;
+  if (!items.length) return <Empty title="Nothing yet. Its work shows up here." mood="asleep" />;
   return (
-    <SettingsGroup as="ol" aria-label="Activity">
-      {items.map((e) => {
-        const answer =
-          e.type === "answer" ? String((e.payload as { answer?: string }).answer ?? "") : "";
-        return (
-          <li
-            key={e.id}
-            className="flex min-w-0 flex-col gap-1.5 px-4 py-3 text-md"
-            data-testid="feed-item"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <span className="min-w-0">
-                <Badge variant={BADGE[e.type]}>{LABEL[e.type]}</Badge>{" "}
-                <span className="text-ob-muted">
-                  {showRemora ? `${e.remora} · ` : ""}
-                  <Time value={e.createdAt} /> ·{" "}
-                </span>
-                {describeItem(e)}
-              </span>
-              <span className="flex items-center gap-1">
+    <div className="rounded-xl border border-ob-border bg-ob-raised px-4 py-3">
+      <Timeline
+        label="Activity"
+        items={items.map((e) => {
+          const p = e.payload as { amount?: string; answer?: string };
+          const answer = e.type === "answer" ? String(p.answer ?? "") : "";
+          return {
+            id: e.id,
+            kind: e.type === "blocked" && refusedBy(e) === "service" ? "failed" : KIND[e.type],
+            title: titleOf(e),
+            amount:
+              (e.type === "payment" || e.type === "shadow") && p.amount ? (
+                <Amount value={p.amount} />
+              ) : undefined,
+            at: e.createdAt,
+            who: showRemora ? (
+              <Link
+                to={`/remoras/${e.remoraId}`}
+                className="flex items-center gap-1.5 text-xs font-medium text-ob-secondary hover:text-ob-text"
+                data-ux-skip
+              >
+                <RemoraAvatar id={e.remoraId} size={18} still />
+                <span className="max-w-32 truncate">{e.remora}</span>
+              </Link>
+            ) : undefined,
+            actions: (
+              <>
                 {e.type === "answer" || e.type === "ping" ? <Feedback e={e} /> : null}
                 {e.receiptId ? <WhyButton eventId={e.id} /> : null}
-              </span>
-            </div>
-            {answer ? <p className="whitespace-pre-wrap text-ob-secondary">{answer}</p> : null}
-          </li>
-        );
-      })}
-    </SettingsGroup>
+              </>
+            ),
+            detail: answer ? (
+              <AnswerText text={answer} />
+            ) : restLines(e.summary) ? (
+              <p className="whitespace-pre-wrap text-xs text-ob-muted">{restLines(e.summary)}</p>
+            ) : undefined,
+            testId: "feed-item",
+          };
+        })}
+      />
+    </div>
   );
 }

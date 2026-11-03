@@ -16,12 +16,15 @@ export function Section({
   tone = "default",
   layout = "stack",
   hint,
+  badge,
   children,
 }: {
   title: ReactNode;
   description?: ReactNode;
   /** The longer explanation, behind a `?` beside the heading (ADR-0103). */
   hint?: ReactNode;
+  /** A status chip beside the heading. */
+  badge?: ReactNode;
   actions?: ReactNode;
   tone?: "default" | "danger";
   layout?: "stack" | "split";
@@ -32,7 +35,14 @@ export function Section({
       title={title}
       description={description}
       actions={actions}
-      badge={hint ? <Hint>{hint}</Hint> : undefined}
+      badge={
+        hint || badge ? (
+          <>
+            {badge}
+            {hint ? <Hint>{hint}</Hint> : null}
+          </>
+        ) : undefined
+      }
       tone={tone}
       layout={layout}
     >

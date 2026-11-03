@@ -8,6 +8,7 @@ import { Fish, Plus, Upload } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/features/remoras/api";
 import { describeRemora, useTemplateCatalog } from "@/features/remoras/describe";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
@@ -129,6 +130,26 @@ export function SidebarTeam({
           </SidebarIconButton>
         }
       >
+        {/* ADR-0103: while the list is unknown it shows its shape, never an empty account. */}
+        {!remoras.data && !remoras.error
+          ? [0, 1, 2, 3, 4].map((i) => (
+              <li key={`skeleton-${i}`} className="flex items-center gap-2.5 px-2 py-2" aria-hidden>
+                <Skeleton className="size-9 shrink-0 rounded-full" />
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-2.5 w-36" />
+                </span>
+              </li>
+            ))
+          : null}
+        {!remoras.data && remoras.error ? (
+          <li className="flex items-center justify-between gap-2 px-2 py-2 text-xs text-ob-muted">
+            Can't load your remoras.
+            <button type="button" className="link text-xs" onClick={() => void remoras.refresh()}>
+              Retry
+            </button>
+          </li>
+        ) : null}
         {shown.map((r) => (
           <AgentRowItem key={r.id}>
             <AgentRow

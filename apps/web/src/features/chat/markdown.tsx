@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { CopyButton } from "@/components/copy-button";
 import { fencedBlock } from "@/features/chat/fenced-block";
 import { messageActionClass } from "@/features/chat/message-action";
+import { readable } from "@/lib/readable";
 import { cn } from "@/lib/utils";
 
 const components: Components = {
@@ -93,7 +94,7 @@ export const Markdown = memo(function Markdown({
   className?: string;
 }) {
   const blockId = useId();
-  const blocks = useMemo(() => blocksOf(children), [children]);
+  const blocks = useMemo(() => blocksOf(readable(children)), [children]);
   return (
     <div className={cn("message-markdown max-w-none text-sm leading-relaxed", className)}>
       {blocks.map((block, index) => (

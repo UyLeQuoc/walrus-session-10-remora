@@ -3,6 +3,7 @@
  * the memory that changed the outcome, both verifiable) and learning charts drawn from this
  * remora's own Wakes and your feedback. Days without data have no point; nothing is smoothed.
  */
+
 import type { DecisionRef, LearningSeries, ProofOfLearning } from "@remora/schema";
 import { Link } from "react-router";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
@@ -16,8 +17,10 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Empty } from "@/components/visual";
 import { api } from "@/features/remoras/api";
 import { useLoad } from "@/features/remoras/hooks";
+import { cn } from "@/lib/utils";
 
 const ACTION: Record<DecisionRef["action"], string> = {
   pay: "Paid",
@@ -67,10 +70,29 @@ export function ProofView({ proof }: { proof: ProofOfLearning }) {
   );
 }
 
-const CHART: Record<LearningSeries["metric"], { title: string; format: (v: number) => string }> = {
-  noise_rate: { title: "Noise rate", format: (v) => `${Math.round(v * 100)}%` },
-  cost_per_useful: { title: "Cost per useful answer", format: (v) => `${v.toFixed(3)} USDC` },
-  memory_hit_rate: { title: "Answered from memory", format: (v) => `${Math.round(v * 100)}%` },
+/** Under this many data points a rate is shown muted, with its count (ADR-0103). */
+const FEW = 5;
+const ofN = (v: number, n: number, what: string) => `${Math.round(v * n)} of ${n} ${what}`;
+
+const CHART: Record<
+  LearningSeries["metric"],
+  { title: string; format: (v: number) => string; of: (v: number, n: number) => string }
+> = {
+  noise_rate: {
+    title: "Noise rate",
+    format: (v) => `${Math.round(v * 100)}%`,
+    of: (v, n) => ofN(v, n, n === 1 ? "ping marked noise" : "pings marked noise"),
+  },
+  cost_per_useful: {
+    title: "Cost per useful answer",
+    format: (v) => `${v.toFixed(3)} USDC`,
+    of: (_v, n) => `${n} useful answer${n === 1 ? "" : "s"}`,
+  },
+  memory_hit_rate: {
+    title: "Answered from memory",
+    format: (v) => `${Math.round(v * 100)}%`,
+    of: (v, n) => ofN(v, n, n === 1 ? "answer" : "answers"),
+  },
 };
 const config = { value: { label: "Value", color: "var(--chart-1)" } } satisfies ChartConfig;
 const dataPoints = (n: number) => `${n} data point${n === 1 ? "" : "s"}`;
@@ -83,11 +105,22 @@ function SeriesChart({ s }: { s: LearningSeries }) {
     <div className="ob-card min-w-0 gap-2" data-testid="learning-series" data-metric={s.metric}>
       <div className="flex flex-col gap-0.5">
         <span className="text-md text-ob-muted">{meta.title}</span>
-        <span
-          className="text-2xl leading-8 font-semibold tracking-tight text-ob-text tabular-nums"
-          data-testid="learning-latest"
-        >
-          {last?.value != null ? meta.format(last.value) : "—"}
+        <span className="flex flex-wrap items-baseline gap-x-2">
+          <span
+            className={cn(
+              "text-2xl leading-8 font-semibold tracking-tight tabular-nums",
+              last && last.n < FEW ? "text-ob-muted" : "text-ob-text",
+            )}
+            data-testid="learning-latest"
+          >
+            {last?.value != null ? meta.format(last.value) : "—"}
+          </span>
+          {last?.value != null ? (
+            <span className="text-xs text-ob-muted tabular-nums" data-testid="learning-of">
+              {meta.of(last.value, last.n)}
+              {last.n < FEW ? " · too few to tell yet" : ""}
+            </span>
+          ) : null}
         </span>
       </div>
       {points.length ? (
@@ -146,7 +179,7 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
     <>
       <Section
         title="How it's learning"
-        description="From its own receipts and your thumbs up and down. A day without data has no point."
+        hint="From its own receipts and your thumbs up and down. A day without data has no point."
       >
         {learning.error ? <p className="text-md text-ob-danger-text">{learning.error}</p> : null}
         {!learning.data && !learning.error ? (
@@ -160,14 +193,15 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
       </Section>
       <Section
         title="Proof of Learning"
-        description="The same kind of input, a different decision, and the memory that made the difference."
+        hint="The same kind of input, a different decision, and the memory that made the difference. A proof appears once it decides differently after learning something."
       >
         {proofs.error ? <p className="text-md text-ob-danger-text">{proofs.error}</p> : null}
         {proofs.data && !proofs.data.proofs.length ? (
-          <p className="max-w-3xl text-md text-ob-muted">
-            Nothing to show yet: a proof appears once it decides differently on the same kind of
-            input after learning something (for a Wallet watcher, thumbs-down a ping as noise).
-          </p>
+          <Empty
+            className="max-w-3xl"
+            mood="thinking"
+            title="No proof yet. Rate its answers or pings with 👍/👎 to teach it."
+          />
         ) : null}
         <ul className="flex max-w-3xl flex-col gap-4">
           {(proofs.data?.proofs ?? []).map((p) => (

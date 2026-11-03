@@ -165,6 +165,45 @@ export function Empty({
   );
 }
 
+/**
+ * The one error state (ADR-0103): a worried face, what happened in a few words, and Retry. The
+ * server's own message goes in the `title` attribute for whoever needs it.
+ */
+export function Problem({
+  title = "Can't reach Remora right now.",
+  detail,
+  onRetry,
+  className,
+}: {
+  title?: string;
+  detail?: string;
+  onRetry?: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="alert"
+      title={detail}
+      className={cn(
+        "flex flex-wrap items-center gap-3 rounded-xl border border-ob-danger/30 bg-ob-danger-soft px-4 py-3",
+        className,
+      )}
+    >
+      <RemoraAvatar id="problem" mood="error" size={32} still />
+      <p className="min-w-0 flex-1 text-sm text-ob-text">{title}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-md border border-ob-border bg-ob-raised px-3 py-1.5 text-sm font-medium text-ob-text hover:bg-ob-control-hover"
+        >
+          Retry
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function Hint({
   children,
   to = "/guide",

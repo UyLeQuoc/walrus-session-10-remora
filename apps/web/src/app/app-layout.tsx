@@ -7,10 +7,19 @@
  * (a phone), they move to the main pane's top row so the network is always in view.
  */
 
-import { MessageCircle, PanelLeft, PanelRight, Users } from "lucide-react";
+import {
+  Activity,
+  Fish,
+  Inbox,
+  Menu,
+  MessageCircle,
+  PanelLeft,
+  PanelRight,
+  Wallet,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router";
-import { AppRail } from "@/app/app-rail";
+import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { AppRail, RAIL_FOOTER, RAIL_PAGES } from "@/app/app-rail";
 import { AppSidebar, ROSTER_ID } from "@/app/app-sidebar";
 import type { SidePanelMeta } from "@/app/shell";
 import { ShellContext, useShellState } from "@/app/shell";
@@ -38,6 +47,22 @@ import {
   SidebarIconButton,
   SidePanel,
 } from "@/openbot";
+
+/**
+ * ADR-0103: a phone's bottom bar goes to the four pages people use most; More opens the rest and the
+ * roster. It was Remoras and Page, which left Funds, Memory and Settings out of reach.
+ */
+const PHONE_TABS = [
+  { id: "home", to: "/", label: "Home", icon: Fish },
+  { id: "chat", to: "/chat", label: "Chat", icon: MessageCircle },
+  { id: "approvals", to: "/approvals", label: "Approvals", icon: Inbox },
+  { id: "funds", to: "/funds", label: "Funds", icon: Wallet },
+] as const;
+const MORE_PAGES = [
+  ...RAIL_PAGES.filter((p) => !PHONE_TABS.some((t) => t.to === p.to)),
+  ...RAIL_FOOTER,
+  { to: "/status", label: "Status", icon: Activity },
+];
 
 const LEFT = { key: "remora.roster.width", def: 280, min: 128, max: 400, compact: 88 } as const;
 const LEFT_COMPACT_KEY = "remora.roster.compact";
@@ -206,21 +231,32 @@ export function AppLayout() {
             phone ? (
               <MobileNavigation
                 label="Panes"
-                active={mobilePane}
-                onChange={setMobilePane}
+                active={
+                  mobilePane === "workspace"
+                    ? "more"
+                    : mobilePane === "panel"
+                      ? "panel"
+                      : (PHONE_TABS.find((t) => t.to === pathname)?.id ?? "more")
+                }
+                onChange={(id) => {
+                  if (id === "more") return setMobilePane("workspace");
+                  if (id === "panel") return setMobilePane("panel");
+                  const tab = PHONE_TABS.find((t) => t.id === id);
+                  setMobilePane("main");
+                  if (tab) navigate(tab.to);
+                }}
                 items={[
-                  {
-                    id: "workspace",
-                    label: "Remoras",
-                    icon: <Users aria-hidden />,
-                    count: approvals.length,
-                  },
-                  // A fixed name: the page title here would repeat page controls ("Verify").
-                  { id: "main", label: "Page", icon: <MessageCircle aria-hidden /> },
+                  ...PHONE_TABS.map((t) => ({
+                    id: t.id,
+                    label: t.label,
+                    icon: <t.icon aria-hidden />,
+                    count: t.id === "approvals" ? approvals.length : undefined,
+                  })),
+                  { id: "more", label: "More", icon: <Menu aria-hidden /> },
                   ...(sidePanel
                     ? [
                         {
-                          id: "panel" as const,
+                          id: "panel",
                           label: sidePanel.title,
                           icon: <PanelRight aria-hidden />,
                         },
@@ -238,6 +274,23 @@ export function AppLayout() {
             {/* On a phone the roster mounts only in its own pane, so nothing hidden repeats the page. */}
             {phone && mobilePane !== "workspace" ? null : (
               <AppSidebar
+                pages={
+                  phone ? (
+                    <nav aria-label="More pages" className="grid grid-cols-4 gap-1 px-2 pb-3">
+                      {MORE_PAGES.map((p) => (
+                        <Link
+                          key={p.to}
+                          to={p.to}
+                          onClick={() => setMobilePane("main")}
+                          className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg text-[11px] text-ob-secondary hover:bg-ob-control-hover"
+                        >
+                          <p.icon className="size-4" aria-hidden />
+                          {"short" in p && p.short ? p.short : p.label}
+                        </Link>
+                      ))}
+                    </nav>
+                  ) : null
+                }
                 compact={compact && !phone}
                 onExpand={() => setRosterCompact(false)}
                 networkHere={!networkInHeader}

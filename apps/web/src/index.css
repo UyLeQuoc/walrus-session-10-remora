@@ -294,3 +294,12 @@
     background-position: -150% 0;
   }
 }
+
+/*
+ * U14 (ADR-0103): a long token (a 66-character package id, a digest) breaks inside agent text and
+ * timeline rows instead of running off a phone's screen.
+ */
+.message-markdown,
+[data-slot="bubble-content"] {
+  overflow-wrap: anywhere;
+}

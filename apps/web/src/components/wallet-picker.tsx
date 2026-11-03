@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,9 +70,24 @@ export function WalletPicker({
             </DialogDescription>
           </DialogHeader>
           {wallets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No wallet found. Install Slush or another Sui wallet, then reload this page.
-            </p>
+            // ADR-0103: no wallet was a dead end; it now offers the wallet and the no-wallet path.
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                No Sui wallet in this browser. On a phone, open this page in the Slush app.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <a href="https://slush.app" target="_blank" rel="noreferrer">
+                    Get Slush ↗
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/playground" onClick={() => setShown(false)}>
+                    Try without a wallet
+                  </Link>
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col gap-2">
               {wallets.map((wallet) => (

@@ -3,9 +3,10 @@
  * verdict banner and the list of checks. Drawn once so a shared proof can never look more (or less)
  * verified than the page the owner sees.
  */
-import { CheckCircle2, CircleMinus, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Checks } from "@/components/visual";
 import { cn } from "@/lib/utils";
 
 export type Check = { name: string; ok: boolean | null; detail: string };
@@ -49,24 +50,16 @@ export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored:
   );
 }
 
+/** Each check lights up in turn (ADR-0103); `ok: null` reads as skipped, not failed. */
 export function CheckList({ checks }: { checks: Check[] }) {
   return (
-    <ul className="ob-group" aria-label="Checks">
-      {checks.map((c) => (
-        <li key={c.name} className="flex items-start gap-3 px-4 py-3 text-md">
-          {c.ok === null ? (
-            <CircleMinus className="mt-0.5 size-4 shrink-0 text-ob-dim" aria-hidden />
-          ) : c.ok ? (
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ob-success" aria-hidden />
-          ) : (
-            <XCircle className="mt-0.5 size-4 shrink-0 text-ob-danger" aria-hidden />
-          )}
-          <span className="min-w-0">
-            <span className="font-medium text-ob-text">{c.name}</span>{" "}
-            <span className="break-all text-ob-muted">{c.detail}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
+    <Checks
+      label="Checks"
+      items={checks.map((c) => ({
+        label: c.name,
+        state: c.ok === null ? "skip" : c.ok ? "pass" : "fail",
+        detail: <span className="break-all">{c.detail}</span>,
+      }))}
+    />
   );
 }

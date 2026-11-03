@@ -286,7 +286,8 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       },
     );
     s.mark("answered");
-    await s.box("paid", s.page.getByText(/Paid 0.01 USDC to Sui risk check/).first());
+    // U14 (ADR-0103): the payment is a receipt card now; the box keeps its name.
+    await s.box("paid", s.page.getByTestId("playground-paid").first());
     await s.hold(3500, "answer");
     const why = s.page.getByRole("link", { name: /Why\? Check its receipt/ }).first();
     await why.waitFor({ timeout: 60_000 });

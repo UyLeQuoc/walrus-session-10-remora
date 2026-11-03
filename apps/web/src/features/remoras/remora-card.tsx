@@ -1,5 +1,9 @@
-/** A remora as an object: name, status, template and how much of its budget is left (D1). */
+/**
+ * A remora as an object: its face, name, kind, status and how much of its budget is left (D1).
+ * ADR-0103: the budget is a meter, and a remora that never pays says so in two words.
+ */
 import type { RemoraView } from "@remora/schema";
+import { EyeOff } from "lucide-react";
 import { Link } from "react-router";
 import { BudgetMeter } from "@/components/app/budget-meter";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
@@ -30,14 +34,16 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
         clamp={false}
       >
         {!budget ? (
-          <p className="text-md text-ob-muted">Read-only: no budget to spend.</p>
+          <p className="flex items-center gap-1.5 text-xs text-ob-muted">
+            <EyeOff className="size-3.5" aria-hidden /> Never pays
+          </p>
         ) : readable ? (
-          <BudgetMeter meter={meter.meter} window={budget.window} />
+          <BudgetMeter meter={meter.meter} window={budget.window} compact />
+        ) : meter.loading ? (
+          <BudgetMeter meter={null} window={budget.window} compact />
         ) : (
-          <p className="text-md text-ob-muted">
-            {meter.loading
-              ? "Reading its spending limit…"
-              : meter.error || "Budget not readable just now."}
+          <p className="text-xs text-ob-muted">
+            {remora.status === "retired" ? "Limit revoked" : "Limit not readable now"}
           </p>
         )}
       </GalleryCard>

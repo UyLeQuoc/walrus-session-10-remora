@@ -4,7 +4,16 @@
  * case onchain; every answer has its receipt (Why?/verify). "Get your own" leads to sign-in.
  */
 import { type PlaygroundSession, PlaygroundSession as SessionSchema } from "@remora/schema";
-import { Fish, Send } from "lucide-react";
+import {
+  Bot,
+  Clock,
+  Fish,
+  MessageCircleQuestion,
+  ReceiptText,
+  Send,
+  Shield,
+  Store,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { z } from "zod";
@@ -13,10 +22,10 @@ import { Hash } from "@/components/hash";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { Flow, Meter, Receipt, Stat, Steps } from "@/components/visual";
 import { Markdown } from "@/features/chat/markdown";
 import { apiFetch, errorMessage } from "@/lib/api";
 import { payeeName } from "@/lib/payee";
@@ -129,6 +138,9 @@ export function PlaygroundPage() {
   const spent = session ? Number(session.spentUsdc) : 0;
   const budget = session ? Number(session.budgetUsdc) : 1;
   const ended = session && session.status !== "live";
+  const answered = (session?.answers.length ?? 0) > 0;
+  const step = !session ? 0 : !answered ? 1 : 3;
+  const limitUsdc = open?.limits.discUsdc ?? "1.00";
 
   return (
     <Page
@@ -137,12 +149,24 @@ export function PlaygroundPage() {
     >
       <PageHeader
         title="Try a Researcher"
-        description="A Researcher of your own with a $1 budget it can't go over. Sui enforces the limit onchain. A receipt is the onchain record of what each answer paid, and anyone can check it."
+        description="Your own Researcher with a $1 limit. No wallet needed."
+        hint="Sui enforces the limit onchain, so it can't spend more. Each answer that paid has a receipt: the onchain record of what it paid, which anyone can check."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link to="/remoras/new">Get your own</Link>
           </Button>
         }
+      />
+      <Steps
+        label="Try a Researcher"
+        current={step}
+        className="max-w-3xl"
+        steps={[
+          { label: "Start" },
+          { label: "Ask" },
+          { label: "It pays" },
+          { label: "Check the receipt" },
+        ]}
       />
       {error ? (
         <Alert variant="destructive">
@@ -152,75 +176,114 @@ export function PlaygroundPage() {
       {loading ? <Skeleton className="h-40 w-full max-w-3xl" /> : null}
 
       {!loading && !session ? (
-        <Section title="How it works">
-          <div className="flex max-w-3xl flex-col gap-3 text-md" data-testid="playground-intro">
-            <ul className="list-disc pl-5 text-ob-muted">
-              <li>
-                Your Researcher is live at once, with a{" "}
-                <b>{open?.limits.discUsdc ?? "1.00"} USDC</b> spending limit on{" "}
-                {open?.network ?? "testnet"}.
-              </li>
-              <li>
-                Ask up to <b>{open?.limits.questionsPerSession ?? 3}</b> questions. The session ends
-                after {lasts(open?.limits.ttlMinutes ?? 1440)}, and its spending limit is revoked
-                onchain.
-              </li>
-              <li>Questions here are not kept in memory. Sign in for a Researcher that learns.</li>
-            </ul>
-            {open && !open.open ? (
-              <Alert variant="warning">
-                <AlertTitle>Not right now</AlertTitle>
-                <AlertDescription>
-                  {open.reason}{" "}
-                  <span className="text-ob-muted">
-                    Try again later, or{" "}
-                    <Link className="link" to="/remoras/new">
-                      get your own Researcher
-                    </Link>
-                    .
-                  </span>
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="flex items-center gap-3">
-              <Button type="button" disabled={!!busy || !open?.open} onClick={() => void start()}>
-                <Fish /> Start my Researcher
-              </Button>
-              {busy ? (
-                <span className="flex items-center gap-2 text-ob-muted">
-                  <Spinner /> {busy}
-                </span>
-              ) : null}
-            </div>
+        <div className="flex max-w-3xl flex-col gap-5" data-testid="playground-intro">
+          <Flow
+            label="What happens"
+            nodes={[
+              {
+                id: "limit",
+                label: "Spending limit",
+                icon: <Shield />,
+                sub: `${limitUsdc} USDC, onchain`,
+                tone: "accent",
+              },
+              { id: "remora", label: "Your Researcher", icon: <Bot />, sub: "answers" },
+              { id: "svc", label: "Paid service", icon: <Store />, sub: "e.g. 0.01 USDC" },
+              {
+                id: "receipt",
+                label: "Receipt",
+                icon: <ReceiptText />,
+                sub: "anyone can check",
+                tone: "success",
+              },
+            ]}
+            active={1}
+          />
+          <div className="grid grid-cols-3 gap-3 rounded-xl border border-ob-border bg-ob-raised p-4">
+            <Stat size="sm" label="Limit" icon={<Shield />} value={limitUsdc} unit="USDC" />
+            <Stat
+              size="sm"
+              label="Questions"
+              icon={<MessageCircleQuestion />}
+              value={open?.limits.questionsPerSession ?? 3}
+            />
+            <Stat
+              size="sm"
+              label="Lasts"
+              icon={<Clock />}
+              value={lasts(open?.limits.ttlMinutes ?? 1440)}
+            />
           </div>
-        </Section>
+          {open && !open.open ? (
+            <Alert variant="warning">
+              <AlertTitle>Not right now</AlertTitle>
+              <AlertDescription>
+                {open.reason}{" "}
+                <span className="text-ob-muted">
+                  Try again later, or{" "}
+                  <Link className="link" to="/remoras/new">
+                    get your own Researcher
+                  </Link>
+                  .
+                </span>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              size="lg"
+              disabled={!!busy || !open?.open}
+              onClick={() => void start()}
+            >
+              <Fish /> Start my Researcher
+            </Button>
+            {busy ? (
+              <span className="flex items-center gap-2 text-ob-muted">
+                <Spinner /> {busy}
+              </span>
+            ) : (
+              <span className="text-xs text-ob-muted">
+                Not kept in memory. Its limit is revoked at the end.
+              </span>
+            )}
+          </div>
+        </div>
       ) : null}
 
       {session ? (
         <>
           <Section
             title={session.name}
-            description={
-              ended
-                ? "This session has ended; its spending limit is revoked onchain."
-                : `Ends ${new Date(session.expiresAt).toLocaleString()}.`
+            badge={
+              <Badge variant={ended ? "outline" : "success"}>{ended ? "ended" : "live"}</Badge>
             }
           >
             <div
-              className="grid max-w-3xl gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4 text-md sm:grid-cols-2"
+              className="grid max-w-3xl gap-4 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4 sm:grid-cols-[1fr_auto]"
               data-testid="playground-status"
             >
-              <div className="flex flex-col gap-3">
-                <span className="flex items-baseline justify-between">
-                  <span className="text-ob-muted">Budget</span>
-                  <span className="tabular-nums" data-testid="playground-spent">
+              <Meter
+                value={spent}
+                max={budget}
+                label="Spent of the budget"
+                left={
+                  <span data-testid="playground-spent">
                     {session.spentUsdc} of {session.budgetUsdc} USDC
                   </span>
-                </span>
-                <Progress
-                  value={Math.min(100, (spent / budget) * 100)}
-                  aria-label="Spent of the budget"
-                />
+                }
+                right={
+                  ended
+                    ? "limit revoked"
+                    : `ends ${new Date(session.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                }
+              />
+              <Stat
+                size="sm"
+                label="Questions left"
+                value={<span data-testid="playground-questions">{session.questionsLeft}</span>}
+              />
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ob-muted sm:col-span-2">
                 {session.discId ? <Hash value={session.discId} label="Spending limit" /> : null}
                 {session.issueDigest ? (
                   <Hash
@@ -229,24 +292,13 @@ export function PlaygroundPage() {
                     label="issued in"
                   />
                 ) : null}
-              </div>
-              <div className="flex flex-col gap-3">
-                <span className="flex items-baseline justify-between">
-                  <span className="text-ob-muted">Questions left</span>
-                  <span className="tabular-nums" data-testid="playground-questions">
-                    {session.questionsLeft}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <Badge variant={ended ? "outline" : "secondary"}>{session.status}</Badge>
-                  {session.revokeDigest ? (
-                    <Hash
-                      value={session.revokeDigest}
-                      href={explorerTx(session.network, session.revokeDigest)}
-                      label="revoked in"
-                    />
-                  ) : null}
-                </span>
+                {session.revokeDigest ? (
+                  <Hash
+                    value={session.revokeDigest}
+                    href={explorerTx(session.network, session.revokeDigest)}
+                    label="revoked in"
+                  />
+                ) : null}
               </div>
             </div>
           </Section>
@@ -260,18 +312,36 @@ export function PlaygroundPage() {
                     className="flex flex-col gap-3 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4 text-md"
                     data-testid="playground-answer"
                   >
-                    <p className="font-medium">{a.question}</p>
+                    <p className="font-medium" data-ux-skip>
+                      {a.question}
+                    </p>
                     <Markdown>{a.answer}</Markdown>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-ob-muted">
+                    <div className="flex flex-wrap items-end gap-3">
                       {a.paid.map((p) => (
-                        <Badge key={`${p.payee}${p.digest}`} variant="outline">
-                          Paid {p.amountUsdc} USDC to {payeeName(p.payee)}
-                        </Badge>
+                        <Receipt
+                          key={`${p.payee}${p.digest}`}
+                          compact
+                          amount={p.amountUsdc}
+                          payee={payeeName(p.payee)}
+                          verified={undefined}
+                          data-testid="playground-paid"
+                          proof={
+                            p.digest ? (
+                              <Hash
+                                value={p.digest}
+                                href={explorerTx(session.network, p.digest)}
+                                label="paid in"
+                              />
+                            ) : undefined
+                          }
+                        />
                       ))}
                       {a.verify ? (
-                        <Link className="link" to={a.verify}>
-                          Why? Check its receipt
-                        </Link>
+                        <Button asChild variant="outline" size="sm">
+                          <Link to={a.verify}>
+                            <ReceiptText /> Why? Check its receipt
+                          </Link>
+                        </Button>
                       ) : null}
                     </div>
                   </li>
@@ -315,8 +385,7 @@ export function PlaygroundPage() {
                 <Alert>
                   <AlertTitle>{ended ? "Session over" : "That was your last question"}</AlertTitle>
                   <AlertDescription>
-                    Sign in with a wallet for a Researcher of your own. It remembers, learns from
-                    your feedback, and spends only within the budget you set.{" "}
+                    Want one that remembers and learns?{" "}
                     <Link className="link" to="/remoras/new">
                       Get your own
                     </Link>

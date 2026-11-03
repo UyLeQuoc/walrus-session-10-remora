@@ -16,6 +16,7 @@ import {
   Pencil,
   Send,
   Sparkles,
+  Unplug,
   Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 export type EventKind =
   | "paid"
   | "blocked"
+  | "failed"
   | "learned"
   | "pinged"
   | "approved"
@@ -41,6 +43,7 @@ export type EventKind =
 const KIND: Record<EventKind, { icon: ReactNode; tone: string; name: string }> = {
   paid: { icon: <CircleDollarSign />, tone: "bg-ob-accent-soft text-ob-accent-text", name: "Paid" },
   blocked: { icon: <Ban />, tone: "bg-ob-danger-soft text-ob-danger-text", name: "Blocked" },
+  failed: { icon: <Unplug />, tone: "bg-ob-control text-ob-muted", name: "Didn't go through" },
   learned: { icon: <Sparkles />, tone: "bg-ob-success-soft text-ob-success-text", name: "Learned" },
   pinged: { icon: <Bell />, tone: "bg-ob-warning-soft text-ob-warning-text", name: "Pinged you" },
   approved: {

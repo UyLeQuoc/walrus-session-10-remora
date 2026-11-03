@@ -6,7 +6,7 @@
  * exactly what a judge clicking the live URL would hit. Each test mounts a page
  * with the network stubbed and asserts something a user would actually see.
  */
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -1048,7 +1048,8 @@ describe("chat page", () => {
     );
     const { container } = mountChat();
     const panes = screen.getByRole("navigation", { name: "Panes" });
-    await user.click(within(panes).getByRole("button", { name: /Remoras/ }));
+    // ADR-0103: the bottom bar holds Home, Chat, Approvals, Funds and More; More opens the roster.
+    await user.click(within(panes).getByRole("button", { name: /More/ }));
     const window = container.querySelector(".app-window");
     expect(window?.getAttribute("data-mobile-pane")).toBe("workspace");
     const roster = screen.getByRole("complementary", { name: "Roster" });
@@ -1225,7 +1226,16 @@ describe("how it works", () => {
         <GuidePage />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("what-is-remora").textContent).toMatch(/AI agent that works for you/);
+    // ADR-0103: one line and the money flow show; the full sentence is one click away, in the hint.
+    const what = screen.getByTestId("what-is-remora");
+    expect(what.textContent).toMatch(/a budget it can't break/);
+    expect(within(what).getByRole("list", { name: "Where the money goes" }).textContent).toMatch(
+      /Your wallet.*Spending limit.*Remora.*Paid service.*Receipt/,
+    );
+    fireEvent.click(within(what).getByRole("button", { name: "More about remoras" }));
+    expect((await screen.findByText(/AI agent that works for you/)).textContent).toMatch(
+      /never holds your wallet/,
+    );
     expect(within(screen.getByTestId("guide-steps")).getAllByRole("listitem")).toHaveLength(5);
     const pages = within(screen.getByTestId("guide-pages"));
     for (const href of ["/", "/chat", "/approvals", "/funds", "/memory", "/verify", "/reef"])

@@ -1,4 +1,7 @@
-/** The owner's Discs (budgets) on this network: limits, spend, pause and resume, one per row. */
+/**
+ * The owner's Discs (spending limits) on this network: one row each, spent against its cap as a
+ * meter (ADR-0103), its per-payment cap and payees, and pause or resume.
+ */
 import { buildPause, type OwnedDisc, toDiscError } from "@remora/disc-sdk";
 import { Wallet } from "lucide-react";
 import { useState } from "react";
@@ -8,7 +11,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { Section } from "@/components/app/page";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Meter } from "@/components/visual";
 import type { Network } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
 import { SettingsGroup } from "@/openbot/pages";
@@ -36,10 +39,11 @@ function DiscRow({
     }
   };
   const cap = d.allowance.lifetimeCap;
-  const used =
-    cap && BigInt(cap) > 0n
-      ? Number((BigInt(d.allowance.currentSpend) * 100n) / BigInt(cap))
-      : null;
+  const spent = Number(formatUsdc(d.allowance.currentSpend, 6));
+  const limit = cap ? Number(formatUsdc(cap, 6)) : null;
+  const until = d.allowance.expiryMs
+    ? new Date(d.allowance.expiryMs).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
   return (
     <li className="flex min-w-0 flex-col gap-2.5 px-4 py-3.5 text-md" data-testid="disc-row">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -56,20 +60,21 @@ function DiscRow({
           {d.disc.paused ? "Resume" : "Pause"}
         </Button>
       </div>
-      {used === null ? null : (
-        <Progress
-          value={Math.min(100, used)}
-          aria-label={`${used}% of this spending limit spent`}
+      {limit !== null && limit > 0 ? (
+        <Meter
+          value={spent}
+          max={limit}
+          label={`${d.disc.name}: spent of its limit`}
+          left={`${formatUsdc(d.allowance.currentSpend)} of ${formatUsdc(cap ?? "0")} USDC spent`}
+          right={until ? `until ${until}` : undefined}
         />
-      )}
-      <p className="text-ob-muted tabular-nums">
-        {formatUsdc(d.allowance.currentSpend)}
-        {cap !== null ? ` of ${formatUsdc(cap)}` : ""} USDC spent · up to{" "}
-        {formatUsdc(d.disc.perPaymentCap)} a payment · {d.disc.payees.length} payee
-        {d.disc.payees.length === 1 ? "" : "s"}
-        {d.allowance.expiryMs
-          ? ` · until ${new Date(d.allowance.expiryMs).toLocaleDateString()}`
-          : ""}
+      ) : null}
+      <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ob-muted tabular-nums">
+        <span>≤ {formatUsdc(d.disc.perPaymentCap)} a payment</span>
+        <span>
+          {d.disc.payees.length} payee{d.disc.payees.length === 1 ? "" : "s"}
+        </span>
+        {limit === null && until ? <span>until {until}</span> : null}
       </p>
     </li>
   );
@@ -79,8 +84,8 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
   const { discs, error, cfg, reload } = useOwnerDiscs(owner, network);
   return (
     <Section
-      title="Budgets"
-      description="Each remora spends only within its spending limit, which Sui enforces, not us."
+      title="Spending limits"
+      hint="Each remora spends only within its spending limit. Sui enforces it, not us: the remora's key can't pay past it."
     >
       {!cfg ? (
         <p className="text-md text-ob-muted">Remora isn't published on {network} yet.</p>
@@ -96,8 +101,8 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
       ) : discs.length === 0 ? (
         <EmptyState
           icon={<Wallet />}
-          title="No budgets yet"
-          description="Creating a remora sets a spending limit that Sui enforces."
+          title="No spending limits yet"
+          description="Each new remora gets one."
           action={
             <Button asChild>
               <Link to="/remoras/new">Create a remora</Link>
