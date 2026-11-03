@@ -7,7 +7,7 @@ import type { Room } from "@remora/schema";
 import { Fish, Plus, Upload } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { RemoraAvatar } from "@/components/app/remora-avatar";
+import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { api } from "@/features/remoras/api";
 import { describeRemora, useTemplateCatalog } from "@/features/remoras/describe";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
@@ -59,9 +59,12 @@ function title(template: string): string {
 export function SidebarTeam({
   onNavigate,
   query = "",
+  waiting = [],
 }: {
   onNavigate: () => void;
   query?: string;
+  /** The remoras with approvals waiting, so their faces ask for you too. */
+  waiting?: ReadonlyArray<{ id: string; count: number }>;
 }) {
   const { owner } = useOwner();
   const { pathname } = useLocation();
@@ -75,6 +78,7 @@ export function SidebarTeam({
     60_000,
   );
   const catalog = useTemplateCatalog();
+  const waits = new Map(waiting.map((w) => [w.id, w.count]));
   if (!owner)
     return (
       <SidebarSection name="Try Remora" listLabel="Try Remora">
@@ -134,7 +138,7 @@ export function SidebarTeam({
               to={`/chat/r/${r.id}`}
               onClick={onNavigate}
               active={pathname === `/chat/r/${r.id}`}
-              avatar={<RemoraAvatar id={r.id} name={r.name} />}
+              avatar={<RemoraAvatar id={r.id} mood={remoraMood(r, waits.get(r.id))} />}
               status={<AgentStatusDot tone={TONE[r.status] ?? "muted"} />}
               name={r.name}
               time={rosterTime(r.updatedAt)}
@@ -182,8 +186,9 @@ export function SidebarTeam({
                       <RemoraAvatar
                         key={m.id}
                         id={m.id}
-                        name={m.name}
+                        mood={remoraMood(m)}
                         size={members.length === 1 ? 36 : 17}
+                        still
                       />
                     ))}
                   </ChannelAvatar>

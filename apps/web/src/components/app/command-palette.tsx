@@ -205,7 +205,7 @@ export function CommandPalette() {
                     >
                       <span className="global-search-icon">
                         {result.avatar ? (
-                          <RemoraAvatar id={result.avatar.id} name={result.avatar.name} size={20} />
+                          <RemoraAvatar id={result.avatar.id} size={20} still />
                         ) : result.icon ? (
                           <result.icon aria-hidden />
                         ) : null}

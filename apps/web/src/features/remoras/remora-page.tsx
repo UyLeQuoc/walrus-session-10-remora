@@ -14,6 +14,7 @@ import { BudgetMeter } from "@/components/app/budget-meter";
 import { ConfirmAction } from "@/components/app/confirm-action";
 import { Term } from "@/components/app/glossary";
 import { Page, PageHeader, Section } from "@/components/app/page";
+import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Hash } from "@/components/hash";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -690,7 +691,12 @@ function Remora({ id }: { id: string }) {
   return (
     <Page title={r.name} description={describeRemora(r, catalog)}>
       <PageHeader
-        title={r.name}
+        title={
+          <span className="inline-flex min-w-0 items-center gap-3">
+            <RemoraAvatar id={r.id} mood={remoraMood(r)} size={40} />
+            {r.name}
+          </span>
+        }
         badge={<StatusBadge status={r.status} />}
         description={describeRemora(r, catalog)}
         actions={headerActions(r, reload, setTab)}

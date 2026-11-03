@@ -306,7 +306,7 @@ limits always apply.
 | N13 | **First-run instant win** | Right after creation, Sentinel explains your last 5 transactions and Scout answers a sample question, so the user sees value within 60 seconds | W2 |
 | N14 | Guide & glossary | An in-app guide (diagrams, ported from hippo's guide) and tooltips for the product's plain words: spending limit, receipt, address balance, services, safety check, practice mode ([ADR-0094](adr/0094-plain-words-in-the-product.md): Disc, Wake, Reef and Sonar stay the names in code and docs) | W3 |
 | N15 | Cost card | Per remora: LLM + gas + purchases this month (the UI for K4) | W3 |
-| N16 | Personalization | Avatar or emoji, tone and language per remora | W3 |
+| N16 | Personalization | Avatar or emoji, tone and language per remora. The avatar is a face whose eyes show its state ([ADR-0098](adr/0098-remora-faces-with-moods.md)) | W3 |
 | N17 | Shared remoras | Invite teammates as viewers or approvers (hippo's team model) | W4 |
 | N18 | Accessibility pass | Keyboard navigation, contrast, ARIA labels, reduced motion | W3 |
 | N19 | **Feedback everywhere** | "Was this purchase worth it?" and 👍/👎 on answers feed `sources` and rules: the learning loop's raw input | W2 |

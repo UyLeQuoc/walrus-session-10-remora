@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useParams } from "react-router";
 import { toast } from "sonner";
 import { ShellHeaderEnd, ShellHeaderStart, useShellTitle } from "@/app/shell";
-import { RemoraAvatar } from "@/components/app/remora-avatar";
+import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
@@ -90,8 +90,9 @@ function RoomChat({ id }: { id: string }) {
             <RemoraAvatar
               key={m.id}
               id={m.id}
-              name={m.name}
+              mood={remoraMood(m)}
               size={members.length === 1 ? 22 : 10}
+              still
             />
           ))}
         </ChannelAvatar>

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 import { ShellHeaderEnd, ShellHeaderStart, useShellTitle } from "@/app/shell";
-import { RemoraAvatar } from "@/components/app/remora-avatar";
+import { RemoraAvatar, type RemoraMood, remoraMood } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { ModelPicker } from "@/features/chat/model-picker";
@@ -18,6 +18,24 @@ import { AgentChatEmpty, ConversationScroll } from "@/openbot";
 import { type Line, lineFromFeed, withContext } from "./lines";
 import { ThreadComposer } from "./thread-composer";
 import { ThreadView } from "./thread-view";
+
+/** How long the header's face shows what just happened: a payment, a block or an approval. */
+const RECENT_MS = 60_000;
+
+/** The header's face: thinking while it answers, then what just happened, then where it stands. */
+export function threadMood(
+  r: { status: string; template?: string },
+  waiting: boolean,
+  last: Line | undefined,
+  now = Date.now(),
+): RemoraMood {
+  if (waiting) return "thinking";
+  const fresh = last && now - new Date(last.createdAt).getTime() < RECENT_MS;
+  if (fresh && last.type === "blocked") return "error";
+  if (fresh && last.type === "approval_needed") return "alert";
+  if (fresh && last.type === "payment") return "success";
+  return remoraMood(r);
+}
 
 function Thread({ id }: { id: string }) {
   const remora = useLoad(() => api.remora(id), [id]);
@@ -71,7 +89,9 @@ function Thread({ id }: { id: string }) {
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
       <ShellHeaderStart>
-        {r ? <RemoraAvatar id={r.id} name={r.name} size={20} /> : null}
+        {r ? (
+          <RemoraAvatar id={r.id} mood={threadMood(r, waiting, shown.at(-1))} size={22} />
+        ) : null}
         <h1 className="conversation-title m-0 shrink-0 font-medium">{r?.name ?? "…"}</h1>
         {r ? <StatusBadge status={r.status} /> : null}
         <span className="hidden text-xs text-ob-muted sm:inline">{r?.template}</span>
@@ -92,7 +112,7 @@ function Thread({ id }: { id: string }) {
       <ConversationScroll>
         {shown.length === 0 && !feed.loading && r ? (
           <AgentChatEmpty
-            avatar={<RemoraAvatar id={r.id} name={r.name} size={64} />}
+            avatar={<RemoraAvatar id={r.id} mood={remoraMood(r)} size={64} />}
             ready={`${r.name} is ready.`}
             title={r.template === "sentinel" ? "Tell it what matters." : "Ask it anything onchain."}
             description={

@@ -9,6 +9,7 @@
 @import "./openbot/shell/global-search.css";
 @import "./openbot/pages/pages.css";
 @import "./openbot/conversation/conversation.css";
+@import "./components/app/remora-face.css";
 
 @custom-variant dark (&:is(.dark *));
 

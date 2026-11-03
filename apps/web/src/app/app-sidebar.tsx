@@ -36,11 +36,27 @@ import {
 
 export const ROSTER_ID = "remora-roster";
 
-/** The remoras that wait for the owner, one row each, with how many approvals they hold. */
-function waiting(approvals: ApprovalRequest[]): Array<{ remora: string; count: number }> {
-  const counts = new Map<string, number>();
-  for (const a of approvals) counts.set(a.remora, (counts.get(a.remora) ?? 0) + 1);
-  return [...counts].map(([remora, count]) => ({ remora, count }));
+/**
+ * The remoras that wait for the owner, one row each, with how many approvals they hold. `remora` is
+ * its name; the route also sends `remoraId`, which keeps its face the same as in the roster.
+ */
+function waiting(
+  approvals: ApprovalRequest[],
+): Array<{ remora: string; id: string; count: number }> {
+  const rows = new Map<string, { remora: string; id: string; count: number }>();
+  for (const a of approvals) {
+    const row = rows.get(a.remora);
+    if (row) row.count++;
+    else {
+      const id = (a as { remoraId?: unknown }).remoraId;
+      rows.set(a.remora, {
+        remora: a.remora,
+        id: typeof id === "string" ? id : a.remora,
+        count: 1,
+      });
+    }
+  }
+  return [...rows.values()];
 }
 
 export function AppSidebar({
@@ -97,7 +113,7 @@ export function AppSidebar({
                 <AgentRow
                   to="/approvals"
                   onClick={onNavigate}
-                  avatar={<RemoraAvatar id={w.remora} name={w.remora} />}
+                  avatar={<RemoraAvatar id={w.id} mood="alert" />}
                   status={
                     <AgentStatusWaiting>
                       <Inbox aria-hidden />
@@ -112,7 +128,7 @@ export function AppSidebar({
             ))}
           </SidebarWaitingGroup>
         ) : null}
-        <SidebarTeam onNavigate={onNavigate} query={query} />
+        <SidebarTeam onNavigate={onNavigate} query={query} waiting={waits} />
         {items.length > 0 ? (
           <SidebarSection name="Chats" listLabel="Chats" storageKey="remora.roster.chats">
             {chats.length === 0 ? (

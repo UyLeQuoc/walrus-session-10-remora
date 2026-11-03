@@ -32,8 +32,10 @@ own `LICENSE` and a file map in its README. Remora's pages, data, copy, logo and
   action row), `ChatActionMarker` (payments, learned rules), `AgentSteps` (what a turn did),
   `InteractionCard` (approvals), `AgentActivity` (typing dots) and `Composer`. Bubbles are the kit's
   `Bubble`: `secondary` for the owner, `muted` for a remora, `tinted` for a ping.
-- **Faces** are Remora's own `RemoraAvatar` (an initial on a tint picked from the id). openbot's blob
-  faces, logo and artwork are its brand and are not ported.
+- **Faces** are Remora's own `RemoraAvatar` ([ADR-0098](../adr/0098-remora-faces-with-moods.md)): a
+  shape and tint picked from the id, and eyes that show its mood (`remoraMood`, `threadMood`). Pass
+  `still` where faces repeat down a list. openbot's blob faces, logo and artwork are its brand and are
+  not ported.
 - **Anything new derived from openbot code** goes in `apps/web/src/openbot/` with the header
   `Ported from nightly-labs/openbot <path> @ aa3c498. PolyForm Noncommercial 1.0.0, see ./LICENSE.`
   and a row in its README.

@@ -1,0 +1,239 @@
+/*
+ * A remora's face (ADR-0098, remora-avatar.tsx). Brighter tints than the text tokens, white eyes in
+ * light mode and dark eyes on the lighter tints of dark mode. Motion is small, each face blinks on its
+ * own beat, and nothing moves under reduced motion or on a `still` face.
+ */
+:root {
+  --rf-blue: #3d8bfd;
+  --rf-teal: #149db3;
+  --rf-green: #23a35a;
+  --rf-orange: #ef7629;
+  --rf-pink: #cf55a3;
+  --rf-yellow: #e08a00;
+  --rf-default: #7466ff;
+  --rf-eye: #fff;
+  --rf-alert: #f5a524;
+  --rf-alert-ink: #2b1b00;
+}
+
+.dark {
+  --rf-blue: #74b9ff;
+  --rf-teal: #6bc7d9;
+  --rf-green: #4fd88a;
+  --rf-orange: #f6a46e;
+  --rf-pink: #e08fd0;
+  --rf-yellow: #ffb547;
+  --rf-default: #8f84ff;
+  --rf-eye: #111216;
+}
+
+.remora-face {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  user-select: none;
+}
+
+.remora-face svg {
+  display: block;
+  overflow: visible;
+}
+
+.rf-body {
+  fill: var(--rf-body);
+}
+
+.remora-face[data-mood="off"] .rf-body {
+  opacity: 0.45;
+}
+
+.rf-eye {
+  fill: var(--rf-eye);
+}
+
+.rf-line {
+  fill: none;
+  stroke: var(--rf-eye);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rf-puff {
+  fill: var(--rf-eye);
+  stroke: var(--rf-body);
+  stroke-width: 3;
+}
+
+.rf-badge {
+  fill: var(--rf-alert);
+}
+
+.rf-badge-ink {
+  fill: var(--rf-alert-ink);
+}
+
+.rf-z-under,
+.rf-z {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rf-z-under {
+  stroke: var(--rf-body);
+  stroke-width: 6;
+}
+
+.rf-z {
+  stroke: var(--rf-eye);
+  stroke-width: 2.5;
+}
+
+.rf-blink,
+.rf-glance,
+.rf-puff,
+.rf-badge-group,
+.rf-zz,
+.rf-hop,
+.rf-shake {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rf-blink {
+  animation: rf-blink 5s var(--rf-delay, 0s) infinite;
+}
+
+.rf-glance {
+  animation: rf-glance 6s var(--rf-delay, 0s) ease-in-out infinite;
+}
+
+.rf-puff {
+  animation: rf-puff 1.6s ease-in-out infinite;
+}
+
+.rf-puff + .rf-puff {
+  animation-delay: 0.3s;
+}
+
+.rf-badge-group {
+  animation: rf-pulse 1.8s ease-in-out infinite;
+}
+
+.rf-zz {
+  animation: rf-zz 3s ease-in-out infinite;
+}
+
+.rf-zz + .rf-zz {
+  animation-delay: 1.5s;
+}
+
+.rf-hop {
+  animation: rf-hop 0.7s ease-out 1;
+}
+
+.rf-shake {
+  animation: rf-shake 0.5s ease-in-out 1;
+}
+
+@keyframes rf-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes rf-glance {
+  0%,
+  25%,
+  100% {
+    transform: translateX(0);
+  }
+  35%,
+  55% {
+    transform: translateX(-3px);
+  }
+  65%,
+  85% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes rf-puff {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes rf-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes rf-zz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 4px);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(3px, -4px);
+  }
+}
+
+@keyframes rf-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-8px);
+  }
+  75% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes rf-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.remora-face-still * {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remora-face * {
+    animation: none !important;
+  }
+}

@@ -123,7 +123,14 @@ function RemoraLine({
       author={showName && line.remora ? line.remora : undefined}
       authorColor={showName && line.remora ? remoraTintText(id) : undefined}
       avatar={
-        showName && line.remora ? <RemoraAvatar id={id} name={line.remora} size={24} /> : undefined
+        showName && line.remora ? (
+          <RemoraAvatar
+            id={id}
+            mood={line.type === "approval_needed" ? "alert" : "idle"}
+            size={24}
+            still
+          />
+        ) : undefined
       }
       reply={
         line.context ? <span data-testid="thread-context">Re: {line.context}</span> : undefined

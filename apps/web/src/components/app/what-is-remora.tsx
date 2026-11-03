@@ -1,27 +1,39 @@
 /**
  * ADR-0095: what Remora is, in three lines and two kinds, wherever a newcomer lands first (signed-out
- * Home, the first Home with no remora, the guide). Plain words only (ADR-0094).
+ * Home, the first Home with no remora, the guide). Plain words only (ADR-0094). ADR-0098: each kind
+ * shows its face, and a row says what the faces mean.
  */
-import { ArrowRight, Radar, Search } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router";
+import { RemoraAvatar, type RemoraMood } from "@/components/app/remora-avatar";
 
 export const WHAT_IS_REMORA =
   "A remora is an AI agent that works for you around the clock. It has its own key, a spending limit Sui enforces, memory you can read on Walrus, and a receipt for everything it does. It never holds your wallet.";
 
 export const KINDS = [
   {
-    icon: Search,
+    mood: "idle",
     name: "Scout",
     detail:
       "Answers your questions. It buys the data it needs from paid services, like a 0.01 USDC risk report on a Sui package, and learns which sources are worth it.",
   },
   {
-    icon: Radar,
+    mood: "listening",
     name: "Sentinel",
     detail:
       "Watches your wallets and tells you only what matters. Teach it in plain words, like “ignore incoming SUI under 0.002”. It never pays.",
   },
-] as const;
+] as const satisfies ReadonlyArray<{ mood: RemoraMood; name: string; detail: string }>;
+
+/** What a remora's face says, in the order you meet them. */
+export const FACES: ReadonlyArray<{ mood: RemoraMood; label: string }> = [
+  { mood: "listening", label: "watching" },
+  { mood: "thinking", label: "thinking" },
+  { mood: "success", label: "paid" },
+  { mood: "alert", label: "needs you" },
+  { mood: "error", label: "blocked a payment" },
+  { mood: "asleep", label: "paused" },
+];
 
 export function WhatIsRemora({ guideLink = true }: { guideLink?: boolean }) {
   return (
@@ -39,14 +51,23 @@ export function WhatIsRemora({ guideLink = true }: { guideLink?: boolean }) {
       <div className="grid gap-3 md:grid-cols-2">
         {KINDS.map((k) => (
           <div key={k.name} className="flex items-start gap-3">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ob-accent-soft text-ob-accent-text">
-              <k.icon className="size-4" aria-hidden />
-            </span>
+            <RemoraAvatar id={k.name} mood={k.mood} size={32} />
             <p className="text-md text-ob-muted">
               <b className="font-medium text-ob-text">{k.name}</b> {k.detail}
             </p>
           </div>
         ))}
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-md text-ob-muted">Its face tells you what it's doing:</p>
+        <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label="What a remora's face means">
+          {FACES.map((f) => (
+            <li key={f.mood} className="flex items-center gap-1.5 text-md text-ob-secondary">
+              <RemoraAvatar id="Scout" mood={f.mood} size={28} />
+              {f.label}
+            </li>
+          ))}
+        </ul>
       </div>
       {guideLink ? (
         <Link className="link inline-flex w-fit items-center gap-1 text-md" to="/guide">

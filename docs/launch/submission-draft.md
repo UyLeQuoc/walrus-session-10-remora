@@ -11,7 +11,7 @@
 | # | Item | Blocks | Who |
 |---|---|---|---|
 | 1 | The deployed demo URL and the playground (U9 Phase D) | "Working demo", the video, the blog's `[mainnet]` numbers | Uy |
-| 2 | **The demo video**, 2–3 minutes. The [real-app demo](demo/README.md) (≈162 s, problem → fix, ADR-0091 and ADR-0093) and a [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) are ready to render now. A short screen capture on the deployed URL still shows the working demo ([demo script](../remora-plan.md#demo-script-245)) | A required field | Uy |
+| 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is rendered: 169 s, dark theme, plain words (ADR-0096), at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored). It still shows the letter avatars from before [ADR-0098](../adr/0098-remora-faces-with-moods.md); a new capture shows the faces. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
 | 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)), right after a clean `bun run secrets:history` (clean on Oct 31, [ADR-0085](../adr/0085-scan-history-before-public.md)) | A required field and requirement 5 | Uy, Nov 9 |
 | 4 | **The blog published** ([draft](blog-draft.md)), with the `[deploy]` and `[dogfood]` markers replaced | Requirement 4 | Uy |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
@@ -87,7 +87,7 @@
 
 | Field | Required | Answer |
 |---|---|---|
-| Short demo video (2–3 min) | Yes | ❌ Not recorded. Use the [demo script](../remora-plan.md#demo-script-245) on the deployed URL |
+| Short demo video (2–3 min) | Yes | ⏳ Rendered (169 s, `docs/launch/demo/out/remora-demo-web.mp4`), not uploaded yet. Paste the link once Uy uploads it |
 | GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora`. It's private until Nov 9 |
 | Additional documentation | No | The landing page on Walrus Sites once it's published ([apps/landing](../../apps/landing/README.md), ADR-0092), or the blog URL. Until then, the README and `docs/README.md` |
 
