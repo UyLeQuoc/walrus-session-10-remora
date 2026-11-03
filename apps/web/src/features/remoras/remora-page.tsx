@@ -382,7 +382,8 @@ function BudgetSection({
           error={meter.error}
         />
         {meter.error ? <p className="text-md text-ob-danger-text">{meter.error}</p> : null}
-        {r.discId ? (
+        {/* A limit gone onchain can't be changed: the change revokes the old Disc and reissues. */}
+        {r.discId && (meter.loading || meter.error || meter.meter) ? (
           <div className="flex flex-wrap items-end gap-2 border-t border-ob-border-grouped pt-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="budget-monthly">Monthly limit</Label>

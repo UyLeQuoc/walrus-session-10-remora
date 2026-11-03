@@ -46,11 +46,18 @@ export function BudgetMeter({
           className={`h-2.5 w-full rounded-full bg-ob-border-strong/50 ${loading ? "animate-pulse motion-reduce:animate-none" : ""}`}
         />
         <p className="text-xs text-ob-muted">
+          {/* A card says it in a few words; its chip already says "can't spend". */}
           {loading
-            ? "Reading its spending limit"
+            ? compact
+              ? "Reading limit"
+              : "Reading its spending limit"
             : error
-              ? "Spending limit can't be read right now"
-              : "No spending limit onchain: it can't spend"}
+              ? compact
+                ? "Limit unreadable"
+                : "Spending limit can't be read right now"
+              : compact
+                ? "No limit onchain"
+                : "No spending limit onchain: it can't spend"}
         </p>
       </div>
     );
