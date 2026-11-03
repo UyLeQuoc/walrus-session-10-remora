@@ -175,7 +175,9 @@ function RemorasTab() {
             >
               <span className="min-w-0 flex-1">
                 <Badge variant="outline">{x.namespace}</Badge>{" "}
-                <span className="whitespace-pre-wrap">{x.text}</span>
+                <span className="whitespace-pre-wrap" data-ux-skip>
+                  {x.text}
+                </span>
               </span>
               <span className="flex gap-1">
                 <HideButton remoraId={id} m={x} hidden={false} onDone={refresh} />

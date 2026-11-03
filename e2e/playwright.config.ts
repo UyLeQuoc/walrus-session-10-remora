@@ -62,6 +62,22 @@ export default defineConfig({
     ...(process.env.DEMO === "1"
       ? [{ name: "demo", testMatch: /demo\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // U14 (ADR-0103): the review capture, every route and state on a desktop and a phone, into
+    // docs/ux/review/r<UX_ROUND>/. Opt in with UX=1; it reads and never pays.
+    ...(process.env.UX === "1"
+      ? [
+          {
+            name: "ux-desktop",
+            testMatch: /audit\.spec\.ts/,
+            use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+          },
+          {
+            name: "ux-phone",
+            testMatch: /audit\.spec\.ts/,
+            use: { ...devices["Pixel 7"], deviceScaleFactor: 2 },
+          },
+        ]
+      : []),
     ...(process.env.AUDIT === "1"
       ? [
           {

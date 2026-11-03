@@ -16,12 +16,16 @@ export function ChangesPanel() {
           <li key={change.blobId} className="flex flex-col gap-1 text-md">
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-ob-muted">{change.date.slice(0, 10)}</span>
-              <span className="min-w-0 flex-1 break-words">{change.text}</span>
+              <span className="min-w-0 flex-1 break-words" data-ux-skip>
+                {change.text}
+              </span>
             </div>
             {change.replaced ? (
               <div className="flex flex-wrap items-baseline gap-2 text-ob-muted">
                 <span>{change.replaced.date.slice(0, 10)}</span>
-                <s className="min-w-0 flex-1 break-words">{change.replaced.text}</s>
+                <s className="min-w-0 flex-1 break-words" data-ux-skip>
+                  {change.replaced.text}
+                </s>
                 {change.replaced.certain ? null : <Badge variant="outline">probably</Badge>}
               </div>
             ) : null}

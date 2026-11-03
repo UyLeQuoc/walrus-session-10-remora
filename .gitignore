@@ -33,3 +33,6 @@ docs/launch/showreel/out/
 # The demo video: real-app capture and render output (ADR-0091)
 docs/launch/demo/capture/
 docs/launch/demo/out/
+
+# U14 (ADR-0103): the review capture's screenshots; only the notes are committed.
+docs/ux/review/r*/
