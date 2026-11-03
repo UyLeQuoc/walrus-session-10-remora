@@ -73,7 +73,14 @@ export function MoneyFlow({ className }: { className?: string }) {
   );
 }
 
-export function WhatIsRemora({ guideLink = true }: { guideLink?: boolean }) {
+export function WhatIsRemora({
+  guideLink = true,
+  faces = true,
+}: {
+  guideLink?: boolean;
+  /** The face legend; Home leaves it to the guide (ADR-0103). */
+  faces?: boolean;
+}) {
   return (
     <section
       aria-labelledby="what-is-remora"
@@ -105,14 +112,16 @@ export function WhatIsRemora({ guideLink = true }: { guideLink?: boolean }) {
           </div>
         ))}
       </div>
-      <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label="What a remora's face means">
-        {FACES.map((f) => (
-          <li key={f.mood} className="flex items-center gap-1.5 text-xs text-ob-muted">
-            <RemoraAvatar id="Researcher" mood={f.mood} size={24} />
-            {f.label}
-          </li>
-        ))}
-      </ul>
+      {faces ? (
+        <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label="What a remora's face means">
+          {FACES.map((f) => (
+            <li key={f.mood} className="flex items-center gap-1.5 text-xs text-ob-muted">
+              <RemoraAvatar id="Researcher" mood={f.mood} size={24} />
+              {f.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {guideLink ? (
         <Link className="link inline-flex w-fit items-center gap-1 text-md" to="/guide">
           How it works <ArrowRight className="size-3.5" aria-hidden />

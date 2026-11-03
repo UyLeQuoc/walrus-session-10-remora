@@ -7,7 +7,9 @@ and 64 on a phone, filled with the E2E burner's account (120 remoras from earlie
 **Gaps in this round's capture:**
 - The capture missed `hatchery-template`, `verify-receipt` and `public-receipt`, because of two wrong
   lookup keys that are fixed for round 1.
-- Room messages were counted as interface words. They're content, and are skipped from round 1 on.
+- Room messages are counted as interface words in every round. They're content, but the counter
+  never learned to skip them. The exit compares totals both with and without the room, so this
+  doesn't change the trend.
 
 ## The reviews
 Four fresh reviewers saw only the screenshots and [the rubric](README.md):

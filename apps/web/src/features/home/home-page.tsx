@@ -167,7 +167,7 @@ function EmptyHome({ signedIn }: { signedIn: boolean }) {
       </header>
       {/* ADR-0103: signed in, the next step comes first; signed out, what a remora is. */}
       {signedIn ? <SetupChecklist variant="full" /> : null}
-      <WhatIsRemora />
+      <WhatIsRemora faces={false} />
       {signedIn ? null : <SetupChecklist variant="full" />}
       {list.length ? (
         <Section title="Start from a template">
