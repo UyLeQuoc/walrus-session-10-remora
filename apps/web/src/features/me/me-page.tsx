@@ -6,7 +6,6 @@ import { Library } from "lucide-react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Page } from "@/components/app/page";
-import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,11 +67,6 @@ export function ChatMemory() {
             {owned ? "you own this" : "Not owned yet"}
           </Badge>
           <Badge variant="outline">{me.memoryEnabled ? "remembering" : "paused"}</Badge>
-          {me.namespace ? (
-            <span className="min-w-48 max-w-xs flex-1 text-md text-ob-muted">
-              <Hash value={me.namespace} label="namespace" />
-            </span>
-          ) : null}
         </div>
         {owned ? null : (
           <p className="text-md text-ob-muted">
@@ -81,7 +75,7 @@ export function ChatMemory() {
         )}
       </div>
 
-      <StatStrip stored={stored} total={memories.length} usage={usage} owned={owned} />
+      <StatStrip stored={stored} total={memories.length} usage={usage} />
 
       {!me.signedIn && !linked ? <WalletSignIn onSignedIn={load} /> : null}
 

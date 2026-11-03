@@ -2,12 +2,15 @@
  * `/hatchery` (M4, ADR-0046): every template published on this network, from the onchain events and
  * their Walrus blobs. Anyone can browse; hatching asks for a wallet on the template's page.
  */
+
 import { Egg, GitFork, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader } from "@/components/app/page";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -32,12 +35,18 @@ export function HatcheryPage() {
     () => api.hatchery({ ...(query ? { q: query } : {}), ...(kind ? { kind } : {}) }),
     [query, kind],
   );
-  const templates = list.data?.templates ?? [];
+  const [showBlocked, setShowBlocked] = useState(false);
+  const all = list.data?.templates ?? [];
+  // ADR-0103: templates the safety review blocked are hidden until asked for, so the gallery isn't
+  // half red; the count stays visible.
+  const blocked = all.filter((t) => t.safety === "block").length;
+  const templates = showBlocked ? all : all.filter((t) => t.safety !== "block");
   return (
     <Page title="Templates" description="Remoras people shared, to copy into your own account.">
       <PageHeader
         title="Templates"
-        description="Remoras people shared. Each one is a file on Walrus with its author onchain; using one makes your own copy, in practice mode, with your own budget."
+        description="Remoras people shared, to copy into your own."
+        hint="Each one is a file on Walrus with its author onchain. Using one makes your own copy, in practice mode, with your own budget."
       />
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
@@ -62,6 +71,17 @@ export function HatcheryPage() {
           <ToggleGroupItem value="scout">Researcher</ToggleGroupItem>
           <ToggleGroupItem value="sentinel">Wallet watcher</ToggleGroupItem>
         </ToggleGroup>
+        {blocked ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={showBlocked}
+            onClick={() => setShowBlocked((v) => !v)}
+          >
+            {showBlocked ? "Hide blocked" : `Show blocked (${blocked})`}
+          </Button>
+        ) : null}
       </div>
       {list.error ? <p className="text-md text-ob-danger-text">{list.error}</p> : null}
       {list.loading && !list.data ? <Skeleton className="h-40 w-full rounded-ob-card" /> : null}
@@ -83,7 +103,14 @@ export function HatcheryPage() {
                 as="div"
                 interactive
                 className="flex flex-col"
-                media={<Egg />}
+                media={
+                  <RemoraAvatar
+                    id={t.templateId}
+                    mood={t.safety === "block" ? "error" : "idle"}
+                    size={32}
+                    still
+                  />
+                }
                 title={
                   <>
                     {t.name}
@@ -97,8 +124,13 @@ export function HatcheryPage() {
                       {VERDICT[t.safety]?.label ?? t.safety}
                     </Badge>
                     <span>{t.permissions.map((p) => kindName(p.template)).join(" + ") || "—"}</span>
-                    <span className="flex items-center gap-1" data-testid="fork-count">
-                      <GitFork className="size-3" /> {t.forks}
+                    <span
+                      className="flex items-center gap-1"
+                      title={`${t.forks} cop${t.forks === 1 ? "y" : "ies"} made`}
+                    >
+                      <GitFork className="size-3" aria-hidden />
+                      <span data-testid="fork-count">{t.forks}</span>
+                      <span className="sr-only">{t.forks === 1 ? "copy" : "copies"}</span>
                     </span>
                   </>
                 }

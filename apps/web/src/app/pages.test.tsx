@@ -2398,9 +2398,8 @@ describe("connect page", () => {
         </Routes>
       </MemoryRouter>,
     );
-    await waitFor(() =>
-      expect(container.textContent ?? "").toMatch(/expired or was already used/i),
-    );
+    // ADR-0103: the dead link says so in a few words, with the command to run.
+    await waitFor(() => expect(container.textContent ?? "").toMatch(/link expired/i));
     expect(container.textContent ?? "").toMatch(/Run \/disconnect again/);
     expect(screen.queryByRole("button", { name: /connect your sui wallet/i })).toBeNull();
   });

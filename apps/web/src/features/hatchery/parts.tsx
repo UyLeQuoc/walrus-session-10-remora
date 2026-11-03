@@ -2,12 +2,14 @@
  * Pieces the Hatchery pages share (ADR-0046): what a shared remora may do, and what the safety review
  * found. Both show before anything is published, and again on the consent screen before a hatch.
  */
+
 import type { SafetyReport, TemplatePermissions } from "@remora/schema";
 import { ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { modelById } from "@/features/chat/models";
 import { kindName } from "@/lib/kind";
+import { payeeName } from "@/lib/payee";
 
 const TRIGGER: Record<string, string> = {
   message: "when you message it",
@@ -34,22 +36,26 @@ export function PermissionsList({ permissions }: { permissions: TemplatePermissi
           <p className="text-ob-secondary">
             {p.payees.length ? (
               <>
-                May pay only{" "}
-                {p.payees.map((ref, i) => (
-                  <span key={ref}>
-                    {i ? ", " : ""}
-                    <code className="rounded-ob-xs bg-ob-control-hover px-1 font-mono text-xs">
-                      {ref}
-                    </code>
-                  </span>
-                ))}
-                {p.budget ? `, ${p.budget}` : ""}.
+                {/* ADR-0103: the services by their names, as chips; the budget on its own line. */}
+                <span className="flex flex-wrap items-center gap-1.5">
+                  May pay only
+                  {p.payees.map((ref) => (
+                    <Badge key={ref} variant="outline" title={ref}>
+                      {payeeName(ref)}
+                    </Badge>
+                  ))}
+                </span>
+                {p.budget ? (
+                  <span className="mt-1 block text-xs text-ob-muted">{p.budget}</span>
+                ) : null}
               </>
             ) : (
               "Never pays."
             )}
           </p>
-          <p className="text-xs text-ob-muted">Tools: {p.tools.join(", ")}</p>
+          <p className="text-xs text-ob-muted" title={p.tools.join(", ")}>
+            Uses {p.tools.length} tool{p.tools.length === 1 ? "" : "s"}
+          </p>
         </li>
       ))}
     </ul>
