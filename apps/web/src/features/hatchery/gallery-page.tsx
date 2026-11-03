@@ -135,7 +135,8 @@ export function HatcheryPage() {
                   </>
                 }
               >
-                {t.description}
+                {/* The author's own words: content, not interface (ADR-0103). */}
+                <span data-ux-skip>{t.description}</span>
               </GalleryCard>
             </Link>
           </li>

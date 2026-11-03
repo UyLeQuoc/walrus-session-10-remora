@@ -110,10 +110,7 @@ function Wizard({ owner }: { owner: string }) {
 
   return (
     <Page title="New remora" description="Start from a template and set its leash.">
-      <PageHeader
-        title="New remora"
-        description="Pick what it does. You can change the details later."
-      />
+      <PageHeader title="New remora" description="Pick what it does. You can change it later." />
 
       <div className="flex w-full flex-col gap-6">
         <RadioGroup
@@ -161,7 +158,6 @@ function Wizard({ owner }: { owner: string }) {
                 maxLength={40}
                 onChange={(e) => setName(e.target.value)}
               />
-              <FieldDescription>What you will call it in the feed.</FieldDescription>
             </Field>
 
             {slug === "scout" ? (
@@ -216,9 +212,7 @@ function Wizard({ owner }: { owner: string }) {
                   value={watch}
                   onChange={(e) => setWatch(e.target.value)}
                 />
-                <FieldDescription>
-                  One per line. Read-only: a Wallet watcher has no budget.
-                </FieldDescription>
+                <FieldDescription>One per line. It only reads; it never pays.</FieldDescription>
               </Field>
             )}
           </div>

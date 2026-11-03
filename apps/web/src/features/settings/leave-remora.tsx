@@ -76,7 +76,7 @@ function ExportEverything() {
       title="Export everything"
       description={
         <>
-          One JSON file with your memories and your receipts (the record behind each action).
+          Your memories and receipts, in one JSON file.
           <span className="mt-1 block" role="status" data-testid="export-note">
             {note}
           </span>
@@ -138,9 +138,8 @@ function RetireAll({ remoras, onDone }: { remoras: RemoraView[] | null; onDone: 
             </span>
           )}
           <span className="mt-1 block">
-            Retiring stops all spending and revokes every remora's key, with one signature. Your
-            memories stay on Walrus until they expire; Remora can't delete them. Export first if you
-            want a copy.
+            One signature stops all spending and revokes every key. Memories stay on Walrus until
+            they expire; Remora can't delete them.
           </span>
           {unavailable ? (
             <span className="mt-1 block text-ob-muted" role="status">
