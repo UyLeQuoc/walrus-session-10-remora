@@ -27,6 +27,7 @@ import { Markdown } from "@/features/chat/markdown";
 import { api } from "@/features/remoras/api";
 import { refusedBy } from "@/features/remoras/feed-list";
 import { WhyButton } from "@/features/remoras/why-drawer";
+import { shortIds } from "@/lib/short-ids";
 import {
   AgentActivity,
   ChatActionMarker,
@@ -140,7 +141,7 @@ function RemoraLine({
       reply={
         line.context ? (
           <span data-testid="thread-context" className="[overflow-wrap:anywhere]">
-            Re: {line.context}
+            Re: {shortIds(line.context)}
           </span>
         ) : undefined
       }

@@ -38,7 +38,7 @@ const TONE: Record<string, "success" | "warning" | "accent" | "muted"> = {
 };
 
 const PREVIEW_STATE: Record<string, string> = {
-  active: "live",
+  active: "active",
   shadow: "practice",
   paused: "paused",
   creating: "starting",

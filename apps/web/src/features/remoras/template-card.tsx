@@ -20,7 +20,7 @@ export function TemplateCard({ slug, template }: { slug: string; template: Templ
           <>
             {template.name}
             <Badge variant={spends ? "accent" : "secondary"}>
-              {spends ? "Spends USDC" : "Read-only"}
+              {spends ? "Spends USDC" : "Never pays"}
             </Badge>
           </>
         }

@@ -138,7 +138,7 @@ function Wizard({ owner }: { owner: string }) {
                       <Shield aria-hidden className="size-4 text-ob-muted" />
                     )}
                     <Badge variant={spends ? "accent" : "secondary"}>
-                      {spends ? "Spends USDC" : "Read-only"}
+                      {spends ? "Spends USDC" : "Never pays"}
                     </Badge>
                   </div>
                   <p className="text-md text-ob-secondary">{t.summary}</p>

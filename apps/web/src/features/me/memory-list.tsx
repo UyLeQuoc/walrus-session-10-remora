@@ -60,7 +60,7 @@ export function MemoryList({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Read them back: what do you know about me?"
+            placeholder="Search memories"
             aria-label="Search your memory"
             className="min-w-0 flex-1"
           />

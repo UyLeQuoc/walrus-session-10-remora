@@ -132,15 +132,18 @@ export function Timeline({
               <span className="line-clamp-2 min-w-0 flex-1 basis-[60%] text-sm text-ob-text [overflow-wrap:anywhere] sm:basis-auto sm:truncate">
                 {item.title}
               </span>
-              {item.amount ? (
-                <span className="shrink-0 rounded-full bg-ob-control px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums text-ob-secondary">
-                  {item.amount}
+              {/* The amount, the time and the actions keep fixed columns, so they line up row to row. */}
+              <span className="ml-auto flex shrink-0 items-center gap-2">
+                {item.amount ? (
+                  <span className="shrink-0 rounded-full bg-ob-control px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums text-ob-secondary">
+                    {item.amount}
+                  </span>
+                ) : null}
+                <Time value={item.at} className="w-14 shrink-0 text-right text-ob-muted" />
+                <span className="flex shrink-0 items-center justify-end gap-1 sm:w-36">
+                  {item.actions}
                 </span>
-              ) : null}
-              <Time value={item.at} className="shrink-0 text-ob-muted" />
-              {item.actions ? (
-                <span className="flex shrink-0 items-center gap-1">{item.actions}</span>
-              ) : null}
+              </span>
             </div>
             {item.detail}
           </div>

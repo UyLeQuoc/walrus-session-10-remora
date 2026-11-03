@@ -63,7 +63,7 @@ export function Meter({
         aria-valuetext={`${Math.round(ratio * 100)}%`}
         data-tone={tone}
         className={cn(
-          "relative w-full overflow-hidden rounded-full bg-ob-border-strong/50",
+          "relative w-full overflow-hidden rounded-full bg-ob-border-strong",
           size === "sm" ? "h-1.5" : "h-2.5",
         )}
       >

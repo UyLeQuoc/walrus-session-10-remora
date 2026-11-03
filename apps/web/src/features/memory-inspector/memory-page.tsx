@@ -224,7 +224,9 @@ function RemorasTab() {
             <th>Namespace</th>
             <th>Status</th>
             <th>Stored</th>
-            <th>Days left</th>
+            <th title="Walrus keeps a memory about 210 days from when it was written">
+              Days left of 210
+            </th>
             <th data-align="right">Size</th>
             <th data-align="right">
               <span className="sr-only">Actions</span>

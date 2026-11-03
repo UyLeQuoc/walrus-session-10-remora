@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Amount, Empty, type EventKind, Timeline } from "@/components/visual";
 import { Markdown } from "@/features/chat/markdown";
 import { payeeName } from "@/lib/payee";
+import { shortIds } from "@/lib/short-ids";
 import { explorerTx, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 import { api } from "./api";
@@ -138,7 +139,7 @@ export function FeedList({
     return {
       id: e.id,
       kind: e.type === "blocked" && refusedBy(e) === "service" ? ("failed" as const) : KIND[e.type],
-      title: titleOf(e),
+      title: <span title={e.summary}>{shortIds(titleOf(e))}</span>,
       amount:
         (e.type === "payment" || e.type === "shadow") && p.amount ? (
           <Amount value={p.amount} />

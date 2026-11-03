@@ -143,7 +143,7 @@ function EmptyHome({ signedIn }: { signedIn: boolean }) {
   const list = Object.entries(templates.data?.templates ?? {});
 
   return (
-    <Page title="Remora" description="Always-on agents you own.">
+    <Page title="Home" description="Always-on agents you own.">
       <header className="ob-page-header-copy gap-2 pt-2">
         <h1 className="ob-page-title text-balance md:text-[32px] md:leading-[38px] md:tracking-[-0.03em]">
           {HERO}
@@ -201,7 +201,7 @@ export function HomePage() {
 
   if (loading) {
     return (
-      <Page title="Remora">
+      <Page title="Home">
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="h-24 w-full rounded-ob-card" />
       </Page>

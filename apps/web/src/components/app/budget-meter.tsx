@@ -43,7 +43,7 @@ export function BudgetMeter({
     return (
       <div className="flex flex-col gap-1.5" data-testid="budget-meter-unknown">
         <div
-          className={`h-2.5 w-full rounded-full bg-ob-border-strong/50 ${loading ? "animate-pulse motion-reduce:animate-none" : ""}`}
+          className={`h-2.5 w-full rounded-full bg-ob-border-strong ${loading ? "animate-pulse motion-reduce:animate-none" : ""}`}
         />
         <p className="text-xs text-ob-muted">
           {/* A card says it in a few words; its chip already says "can't spend". */}
