@@ -3,6 +3,7 @@
  * last change, the age, and who can upgrade it (the `UpgradeCap` holder).
  */
 import type { SuiGrpcClient } from "@mysten/sui/grpc";
+import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { SuiNetworkName } from "@remora/disc-sdk";
 import { type PaidContext, type X402Options, x402 } from "@remora/merchant";
 import { Hono } from "hono";
@@ -16,8 +17,16 @@ export interface RiskReport {
   lastChange: { digest: string | null; timestampMs: number | null };
   ageDays: number | null;
   upgradeCap: { id: string; owner: unknown } | null;
+  /** One of Sui's own packages (std, sui, sui_system), part of the protocol. */
+  systemPackage: boolean;
   flags: string[];
 }
+
+/**
+ * Sui's own packages: the network upgrades them in place at epoch changes, so their last change is
+ * recent on any network and says nothing about how old or trusted they are.
+ */
+const SYSTEM_PACKAGES = new Set(["0x1", "0x2", "0x3"].map((id) => normalizeSuiAddress(id)));
 
 export async function riskOf(
   client: SuiGrpcClient,
@@ -47,9 +56,10 @@ export async function riskOf(
       upgradeCap = { id: capId, owner: cap?.object.owner ?? "deleted (immutable)" };
     }
   }
+  const systemPackage = SYSTEM_PACKAGES.has(normalizeSuiAddress(id));
   const ageDays = timestampMs ? Math.floor((now - timestampMs) / 86_400_000) : null;
   const flags: string[] = [];
-  if (ageDays !== null && ageDays < 7) flags.push("younger than 7 days");
+  if (!systemPackage && ageDays !== null && ageDays < 7) flags.push("younger than 7 days");
   if (
     upgradeCap &&
     typeof upgradeCap.owner === "object" &&
@@ -67,6 +77,7 @@ export async function riskOf(
     lastChange: { digest, timestampMs },
     ageDays,
     upgradeCap,
+    systemPackage,
     flags,
   };
 }

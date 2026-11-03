@@ -2,7 +2,8 @@ import type { PaidContext, X402Options } from "@remora/merchant";
 import { fetchPage, isPrivateAddress, textOf } from "@remora/merchant";
 import { describe, expect, it } from "vitest";
 import { createBriefApp, firstSentences } from "./brief.ts";
-import { createOddsApp, oddsFor, SNAPSHOT } from "./odds.ts";
+import { createOddsApp, oddsFor, snapshot } from "./odds.ts";
+import { riskOf } from "./sui-risk.ts";
 
 const USDC = "0xa1ec::usdc::USDC";
 const settled: string[] = [];
@@ -37,7 +38,21 @@ describe("odds (E9)", () => {
   it("returns the fixtures a query names, or the whole snapshot", () => {
     expect(oddsFor("odds for Arsenal tonight?").map((f) => f.home)).toEqual(["Arsenal"]);
     expect(oddsFor("anything on Barcelona").map((f) => f.away)).toEqual(["Barcelona"]);
-    expect(oddsFor("hello")).toHaveLength(SNAPSHOT.fixtures.length);
+    expect(oddsFor("hello")).toHaveLength(snapshot().fixtures.length);
+  });
+
+  it("dates the snapshot from the request, so tonight always has a match", () => {
+    const afternoon = snapshot(Date.parse("2026-11-03T13:10:00Z"));
+    expect(afternoon.now).toBe("2026-11-03T13:10:00.000Z");
+    expect(afternoon.fixtures.map((f) => f.kickoff).slice(0, 2)).toEqual([
+      "2026-11-03T19:00:00.000Z",
+      "2026-11-03T21:00:00.000Z",
+    ]);
+    // Late in the evening, "tonight" is the next one.
+    const late = Date.parse("2026-11-03T20:00:00Z");
+    const next = snapshot(late).fixtures.map((f) => Date.parse(f.kickoff));
+    expect(new Date(Math.min(...next)).toISOString()).toBe("2026-11-04T19:00:00.000Z");
+    expect(Math.max(...next) - late).toBeLessThan(3 * 24 * 3_600_000);
   });
 
   it("asks for payment, then answers with the labelled snapshot", async () => {
@@ -48,6 +63,45 @@ describe("odds (E9)", () => {
     expect(body.note).toMatch(/not live/);
     expect(body.fixtures).toHaveLength(1);
     expect(body.paid.transaction).toBe("Dg1");
+  });
+});
+
+describe("sui-risk (E9)", () => {
+  const now = Date.parse("2026-11-03T12:00:00Z");
+  /** A package whose last change was a day ago. */
+  const client = {
+    core: {
+      getObject: async ({ objectId }: { objectId: string }) => ({
+        object: {
+          objectId,
+          type: "package",
+          version: "40",
+          owner: "Immutable",
+          previousTransaction: "Tx1",
+        },
+      }),
+      getTransaction: async () => ({
+        Transaction: {
+          timestampMs: now - 86_400_000,
+          effects: { changedObjects: [] },
+          objectTypes: {},
+        },
+      }),
+    },
+  } as unknown as Parameters<typeof riskOf>[0];
+
+  it("flags a package changed in the last week", async () => {
+    const r = await riskOf(client, "testnet", `0x${"ab".repeat(32)}`, now);
+    expect(r.systemPackage).toBe(false);
+    expect(r.flags).toEqual(["younger than 7 days"]);
+  });
+
+  it("doesn't call Sui's own packages young: the network upgrades them in place", async () => {
+    for (const id of ["0x2", `0x${"0".repeat(63)}1`, "0x3"]) {
+      const r = await riskOf(client, "testnet", id, now);
+      expect(r.systemPackage, id).toBe(true);
+      expect(r.flags, id).toEqual([]);
+    }
   });
 });
 
