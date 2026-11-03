@@ -1,5 +1,6 @@
-# Remora's API and runtime: the Hono API plus the Telegram, Discord and Slack adapters in
-# one long-running process. The web app is a separate static build.
+# Remora's backend in one container (ADR-0099): the Hono API with the Telegram, Discord and Slack
+# adapters, the x402 facilitator and gas station, and the demo merchants, as three processes that
+# reach each other on localhost (scripts/railway-start.mts). The web app is a separate static build.
 #
 # Deliberately not a multi-stage build with a compile step: the server runs
 # TypeScript through tsx, so there is no artefact to copy out. Deliberately no
@@ -27,6 +28,9 @@ RUN bun install --frozen-lockfile
 
 COPY packages packages
 COPY apps/server apps/server
+COPY apps/facilitator apps/facilitator
+COPY apps/merchants apps/merchants
+COPY scripts/railway-start.mts scripts/railway-start.mts
 
 ENV NODE_ENV=production PORT=8787
 EXPOSE 8787
@@ -35,4 +39,4 @@ EXPOSE 8787
 # which is the failure this image can actually have.
 RUN node --experimental-strip-types --version >/dev/null 2>&1 || true
 
-CMD ["bun", "run", "--filter", "@remora/server", "start"]
+CMD ["node", "scripts/railway-start.mts"]

@@ -1,6 +1,6 @@
 # ADR-0009: Backend on Railway, frontend on Vercel, one environment: main
 
-- **Status:** Accepted
+- **Status:** Accepted; the **service layout**, **Neon** and **auto-deploy** are superseded by [ADR-0099](0099-first-deploy-one-railway-service.md)
 - **Date:** 2026-10-18
 - **Deciders:** Uy Le
 

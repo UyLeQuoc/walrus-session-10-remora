@@ -1,14 +1,16 @@
 # Deploy runbook
 
-How Remora is deployed, what each service needs, the gate it has to pass, and how to roll back. **Deploys are Uy's step** (team-split §2). Agents never deploy; this page is the checklist Uy follows.
+How Remora is deployed, what each service needs, the gate it has to pass, and how to roll back. **Deploys are Uy's step** (team-split §2): an agent deploys only when Uy asks, as for the first deploy on Nov 3 ([ADR-0099](adr/0099-first-deploy-one-railway-service.md)). This page is the checklist.
+
+**Live:** <https://getremora.vercel.app> (web, Vercel project `getremora`) · `https://api-production-d2c7.up.railway.app` (API, Railway project `remora`, service `api`).
 
 | Service | Code | Host | Start | Health check |
 |---|---|---|---|---|
-| API + runtime | `apps/server` | Railway | `bun run --filter @remora/server start` (`tsx src/index.ts`) | `GET /api/health` (cheap; for the platform), `GET /api/health/deep` (the full report, [ADR-0052](adr/0052-health-diagnose-observability.md)) |
-| Facilitator + gas station | `apps/facilitator` | Railway | `bun run --filter @remora/facilitator start` | `GET /health`, `GET /supported` |
-| Demo merchants (Reef) | `apps/merchants` | Railway | `bun run --filter @remora/merchants start` | `GET /health` |
-| Web | `apps/web` | Vercel (`apps/web/vercel.json`) | `bun run --filter @remora/web build` (static) | the page loads; `/lab/health` shows the API's report |
-| Database | Postgres | Railway | n/a | in `/api/health/deep` |
+| API + runtime | `apps/server` | Railway service `api` | `node scripts/railway-start.mts` starts all three backend processes in one container ([ADR-0099](adr/0099-first-deploy-one-railway-service.md)) | `GET /api/health` (cheap; for the platform), `GET /api/health/deep` (the full report, [ADR-0052](adr/0052-health-diagnose-observability.md)) |
+| Facilitator + gas station | `apps/facilitator` | the same container, `127.0.0.1:8798`, no public URL | (the start script) | the `facilitator` and `sponsor gas` items in `/api/health/deep` |
+| Demo merchants | `apps/merchants` | the same container, `127.0.0.1:8799`, no public URL | (the start script) | a paid answer in the playground |
+| Web | `apps/web` | Vercel project `getremora` (`apps/web/vercel.json`; `/api/*` rewrites to the Railway domain) | `vercel build --prod`, then `vercel deploy --prebuilt --prod`, from `apps/web` | the page loads; `/lab/health` shows the API's report |
+| Database | Postgres | Railway, the same project, private network only (no public proxy) | n/a | in `/api/health/deep` |
 
 ## Environment
 Values never go in the repo. `.env.example` lists every variable with a comment.
@@ -31,6 +33,8 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
   - `SPONSOR_DAILY_GAS_MIST`, `SPONSOR_MAX_GAS_BUDGET`;
   - `FACILITATOR_PORT`.
 - **Merchants:** `MERCHANTS_PORT`, `FACILITATOR_URL(_TESTNET)`, `MERCHANT_PAYTO(_TESTNET)`, prices (`SUI_RISK_PRICE`, `ODDS_PRICE`, `BRIEF_PRICE`), `MERCHANT_REQUIRE_DISC`.
+- **Set by `scripts/railway-start.mts`, not in Railway:** `FACILITATOR_PORT`, `MERCHANTS_PORT`, `FACILITATOR_URL_TESTNET`, `MERCHANTS_URL_TESTNET` (all on `127.0.0.1`). The facilitator and the merchants read the same variables as the API, so the service has one set.
+- **Production secrets:** `SESSION_SECRET` and `KEY_ENCRYPTION_KEY` are not the local ones. They're in `.env.production` (gitignored) on Uy's machine, and the KEK has an offline copy.
 - **Web:** `VITE_API_URL` when the API is on another origin (otherwise it's same-origin).
 
 ## The gate: `bun run diagnose`
@@ -43,9 +47,14 @@ Run it with the deploy's env **before** promoting a build, and don't ship while 
 
 ## Steps
 1. `main` is green: CI (typecheck, lint, test, link check, Tatum call list, `sui move test`) and `bun run e2e` on testnet.
-2. Schema changes: review `packages/db` changes, then run `bun run db:push` against the target database by hand. It's a deliberate step, never automatic, and agents never run it on shared databases.
+2. Schema changes: review `packages/db` changes, then push them by hand. It's a deliberate step, never automatic, and agents never run it on shared databases unless Uy says so for that push. The database has no public URL, so `plan-push` runs inside the `api` container (the SSH key has to be registered once with `railway ssh keys add`). It prints the plan, and with `--apply` applies it only if every statement is additive:
+   ```sh
+   railway ssh --service api -- sh -c 'cd /app/packages/db && umask 077 && printf "DATABASE_URL=%s\n" "$DATABASE_URL" > /tmp/prod.env && node_modules/.bin/tsx scripts/plan-push.ts /tmp/prod.env [--apply]; rm -f /tmp/prod.env'
+   ```
 3. Run `bun run diagnose` with the target env. Stop here if it fails.
-4. Deploy the facilitator and merchants, then the API, then the web.
+4. Deploy the backend, then the web:
+   - `railway up --service api --ci` from the repo root (it uploads the working tree minus `.gitignore`; deploy from a clean checkout of `main`);
+   - `vercel build --prod && vercel deploy --prebuilt --prod` from `apps/web`.
 5. Check `GET /api/health/deep` (or `/lab/health`). Every item should be `ok`; `degraded` needs a reason.
 6. Smoke the demo path on the deployment: `E2E_BASE_URL=<url> bun run e2e:main`.
 

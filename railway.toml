@@ -8,7 +8,8 @@ dockerfilePath = "Dockerfile"
 # can drop a column to reach the target schema, and this database will hold
 # real users' delegate keys and memory index.
 #   bun run --filter @remora/db plan-push ../../.env.production [--apply]
-startCommand = "bun run --filter @remora/server start"
+# The API, the facilitator and the merchants in one container (ADR-0099).
+startCommand = "node scripts/railway-start.mts"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"

@@ -9,6 +9,7 @@ memwal
 reference
 docs
 scripts
+!scripts/railway-start.mts
 apps/web/*
 !apps/web/package.json
 e2e/*

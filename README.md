@@ -42,7 +42,7 @@ the data it needs. Every remora has three things most agents don't:
 |---|---|
 | **Entry** | *Total Recall*, **Track 2: Smart Agents for Real Life**. Also **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui, [ADR-0084](docs/adr/0084-enter-best-use-of-agent-payments.md)) |
 | **Watch** | The demo video: **[video URL]** (2:45, [script](docs/remora-plan.md#demo-script-245)) |
-| **Try** | **[app URL]**`/playground`: a Scout with a $1 Disc, no wallet needed |
+| **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Scout with a $1 Disc, no wallet needed (testnet) |
 | **Read** | The blog post, **[blog URL]** ([draft](docs/launch/blog-draft.md)), then [the docs](docs/README.md) |
 | **Walrus Memory on mainnet** | **360 memories** on Oct 31 (`bun run diagnose:memory` reads the account) |
 | **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas |

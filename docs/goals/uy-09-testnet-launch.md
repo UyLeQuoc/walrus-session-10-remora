@@ -130,7 +130,7 @@
 - [x] Huấn's accepted items are done, with tests, and his requests have written answers (ADR-0076; contract PR #17 merged, ADR-0083).
 - [x] The D5 handoff and the Tatum follow-ups are done, with tests (ADR-0078, ADR-0080; the e2e Sentinel cleanup is handed to Huấn).
 - [x] `bun run evals` reports N ≥ 20 attacks, 0 overspends, with each layer named. It's published, and its deterministic part runs in CI (28 attacks, ADR-0079).
-- [ ] Deployed on testnet: `diagnose`, health, `e2e:main` and `/status` are green, and the playground is public.
+- [x] Deployed on testnet: `diagnose`, health, `e2e:main` and `/status` are green, and the playground is public. (Nov 3, <https://getremora.vercel.app>, [ADR-0099](../adr/0099-first-deploy-one-railway-service.md): `diagnose` ok to deploy; every health item `ok` except Tatum, `degraded` on 402 with the fallback; `e2e:main` 19/19; a playground Scout paid 0.01 USDC and its receipt verifies.)
 - [ ] The demo path ran twice in a row on the deployed URL. `bun run e2e`, typecheck, lint, test, `sui move test` and CI are green.
 - [x] `LICENSE` (MIT, ADR-0068).
 - [x] README, blog, demo script, the ADRs and the handoff are written; everything is pushed to `main` (ADR-0081). The testnet numbers come with the exit.

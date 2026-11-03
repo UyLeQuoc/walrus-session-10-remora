@@ -10,7 +10,7 @@
 ## What's still missing
 | # | Item | Blocks | Who |
 |---|---|---|---|
-| 1 | The deployed demo URL and the playground (U9 Phase D) | "Working demo", the video, the blog's `[mainnet]` numbers | Uy |
+| 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). Left: the demo path twice on it (U9 exit) | "Working demo", the blog's `[deploy]` markers | Uy |
 | 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is rendered: 169 s, dark theme, plain words (ADR-0096), at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored). It still shows the letter avatars from before [ADR-0098](../adr/0098-remora-faces-with-moods.md); a new capture shows the faces. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
 | 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)), right after a clean `bun run secrets:history` (clean on Oct 31, [ADR-0085](../adr/0085-scan-history-before-public.md)) | A required field and requirement 5 | Uy, Nov 9 |
 | 4 | **The blog published** ([draft](blog-draft.md)), with the `[deploy]` and `[dogfood]` markers replaced | Requirement 4 | Uy |
@@ -25,7 +25,7 @@
 | At least 10 memories on mainnet | ✅ | The same run: **360 memories** visible on the read API, soonest expiry 197 days away |
 | Tatum RPC for onchain data | ✅ | All Sui I/O goes through Tatum's gRPC (12 kinds of call, README "How Remora uses Tatum"), plus the Data API for SUI/USD. The free plan ran out during development, so a public fullnode stands in while Tatum answers 402 (ADR-0097) |
 | A published blog post (what it does, Tatum + Walrus, how it learned) | ❌ | The [draft](blog-draft.md) covers all three; it isn't published |
-| A working demo and a public repo | ❌ | Waits on the deploy and on Nov 9 |
+| A working demo and a public repo | Half | The demo is live at <https://getremora.vercel.app> (testnet money, mainnet memory). The repo goes public on Nov 9 |
 | Optional: Tatum AI Builder | Not used | Remora is hand-written |
 
 ## Contact (Uy)
