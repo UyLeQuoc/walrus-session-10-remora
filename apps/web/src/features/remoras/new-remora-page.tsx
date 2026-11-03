@@ -102,7 +102,8 @@ function Wizard({ owner }: { owner: string }) {
     navigate(`/remoras/${id}?new=1`);
   };
 
-  // ADR-0103: the two limits as one number you can picture, from what you typed.
+  // ADR-0103: the two limits as one number you can picture, from what you typed: how many payments
+  // of the largest size the month holds (smaller ones fit more).
   const limitUnits = parseUsdc(monthly);
   const perUnits = parseUsdc(perPayment);
   const payments =
@@ -230,7 +231,7 @@ function Wizard({ owner }: { owner: string }) {
                 <>
                   <Property term="Monthly limit">{monthly || "—"} USDC</Property>
                   <Property term="Most at once">{perPayment || "—"} USDC</Property>
-                  <Property term="At most">
+                  <Property term="At the cap">
                     {payments === null ? "—" : `${payments} payments a month`}
                   </Property>
                   <Property term="Can pay">{(chosen?.payees ?? []).length} sources</Property>

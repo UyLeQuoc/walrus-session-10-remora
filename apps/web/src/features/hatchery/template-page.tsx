@@ -169,12 +169,16 @@ export function TemplatePage() {
             <Button asChild variant="ghost" size="sm">
               <Link to="/hatchery">All templates</Link>
             </Button>
-            {/* ADR-0103: the main action is reachable from the top; it sits with its consent. */}
-            <Button asChild size="sm">
-              <a href="#use">
-                <GitFork /> Use it
-              </a>
-            </Button>
+            {/* ADR-0103: the main action is reachable from the top, only when it can be used. */}
+            {c && c.safety.verdict !== "block" && !c.listing.deprecated ? (
+              <Button asChild size="sm">
+                <a href="#use">
+                  <GitFork /> Use it
+                </a>
+              </Button>
+            ) : c ? (
+              <Badge variant="destructive">blocked</Badge>
+            ) : null}
           </>
         }
       />

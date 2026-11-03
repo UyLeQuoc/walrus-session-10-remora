@@ -250,7 +250,16 @@ function WatchingCard({ r }: { r: RemoraView }) {
   );
 }
 
-function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
+function TeachCard({
+  r,
+  onDone,
+  readOnly = false,
+}: {
+  r: RemoraView;
+  onDone: () => void;
+  /** Retired: the rules it learned, nothing to teach or forget. */
+  readOnly?: boolean;
+}) {
   const rules = useLoad(() => api.rules(r.id), [r.id]);
   const [text, setText] = useState("");
   const teach = async () => {
@@ -263,15 +272,25 @@ function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
   };
   return (
     <Section
-      title={`Teach ${r.name}`}
-      hint="Plain words: “ignore incoming SUI under 0.01”, “always ping me for anything over 1 SUI”."
+      title={readOnly ? "Rules it learned" : `Teach ${r.name}`}
+      hint={
+        readOnly
+          ? undefined
+          : "Plain words: “ignore incoming SUI under 0.01”, “always ping me for anything over 1 SUI”."
+      }
     >
-      <div className="flex gap-2">
-        <Input aria-label="Rule" value={text} onChange={(e) => setText(e.target.value)} />
-        <Button type="button" disabled={!text.trim()} onClick={() => void teach()}>
-          Teach
-        </Button>
-      </div>
+      {readOnly ? (
+        (rules.data?.rules ?? []).length ? null : (
+          <p className="text-md text-ob-muted">It learned no rules.</p>
+        )
+      ) : (
+        <div className="flex gap-2">
+          <Input aria-label="Rule" value={text} onChange={(e) => setText(e.target.value)} />
+          <Button type="button" disabled={!text.trim()} onClick={() => void teach()}>
+            Teach
+          </Button>
+        </div>
+      )}
       <SettingsGroup
         as="ul"
         aria-label="Rules"
@@ -284,14 +303,16 @@ function TeachCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
             size="compact"
             title={<span className="font-normal">{x.text}</span>}
             actions={
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void api.deleteRule(r.id, x.id).then(() => rules.refresh())}
-              >
-                Forget
-              </Button>
+              readOnly ? null : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void api.deleteRule(r.id, x.id).then(() => rules.refresh())}
+                >
+                  Forget
+                </Button>
+              )
             }
           />
         ))}
@@ -346,7 +367,13 @@ function BudgetSection({
   };
 
   return (
-    <Section layout={layout} title="Budget" description={budgetLine(r)}>
+    <Section
+      layout={layout}
+      title="Budget"
+      description={
+        !meter.loading && !meter.error && !meter.meter ? `Was: ${budgetLine(r)}` : budgetLine(r)
+      }
+    >
       <SurfaceCard>
         <BudgetMeter
           meter={meter.meter}
@@ -610,6 +637,9 @@ function SourcesSection({ r }: { r: RemoraView }) {
 }
 
 function KeysSection({ r }: { r: RemoraView }) {
+  const limit = useBudget(r.id, Boolean(r.discId) && r.status !== "retired");
+  const limitGone =
+    r.status === "retired" || (!limit.loading && !limit.error && !limit.meter && Boolean(r.discId));
   return (
     <Section
       layout="split"
@@ -619,7 +649,14 @@ function KeysSection({ r }: { r: RemoraView }) {
       <PropertyList>
         <Property term="Spending key">{r.address ? <Hash value={r.address} /> : "—"}</Property>
         <Property term={<Term name="spending limit">Spending limit</Term>}>
-          {r.discId ? <Hash value={r.discId} /> : "—"}
+          {r.discId ? (
+            <span className="flex min-w-0 items-center gap-2">
+              <Hash value={r.discId} />
+              {limitGone ? <Badge variant="outline">revoked</Badge> : null}
+            </span>
+          ) : (
+            "—"
+          )}
         </Property>
       </PropertyList>
     </Section>
@@ -680,6 +717,18 @@ function DangerSection({ r, reload }: { r: RemoraView; reload: () => void }) {
 }
 
 function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
+  // ADR-0103: a retired remora can't act, so its settings are read-only: no name or brain to edit,
+  // no empty danger zone.
+  if (r.status === "retired")
+    return (
+      <div className="flex flex-col gap-8 lg:gap-10">
+        <p className="text-md text-ob-muted">
+          Retired: it can't act or pay. Its memory and receipts stay yours.
+        </p>
+        {r.template === "scout" ? <SourcesSection r={r} /> : null}
+        <KeysSection r={r} />
+      </div>
+    );
   return (
     <div className="flex flex-col gap-8 lg:gap-10">
       <IdentitySection r={r} reload={reload} />
@@ -701,6 +750,15 @@ function Remora({ id }: { id: string }) {
   const feed = useLoad(() => api.feed({ remora: id }), [id], params.get("new") ? 5_000 : 20_000);
   const catalog = useTemplateCatalog();
   const r = remora.data?.remora;
+  const headerLimit = useBudget(
+    id,
+    Boolean(r?.discId && r.config.budget && r.status !== "retired"),
+  );
+  const headerGone =
+    Boolean(r?.discId && r.config.budget) &&
+    !headerLimit.loading &&
+    !headerLimit.error &&
+    !headerLimit.meter;
 
   if (remora.error) {
     return (
@@ -739,6 +797,7 @@ function Remora({ id }: { id: string }) {
     setParams(params);
   };
   const events = feed.data?.events ?? [];
+  // The server read its Disc and it's gone onchain: the header says so instead of "active".
 
   return (
     <Page title={r.name} description={describeRemora(r, catalog)}>
@@ -749,7 +808,13 @@ function Remora({ id }: { id: string }) {
             {r.name}
           </span>
         }
-        badge={<StatusBadge status={r.status} />}
+        badge={
+          headerGone && r.status !== "retired" ? (
+            <Badge variant="outline">can't spend</Badge>
+          ) : (
+            <StatusBadge status={r.status} />
+          )
+        }
         description={describeRemora(r, catalog)}
         actions={headerActions(r, reload, setTab)}
       />
@@ -815,7 +880,11 @@ function Remora({ id }: { id: string }) {
               />
             </StatRow>
           ) : null}
-          {r.status === "retired" ? null : r.template === "scout" ? (
+          {r.status === "retired" ? (
+            r.template === "sentinel" ? (
+              <TeachCard r={r} onDone={refreshFeed} readOnly />
+            ) : null
+          ) : r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
