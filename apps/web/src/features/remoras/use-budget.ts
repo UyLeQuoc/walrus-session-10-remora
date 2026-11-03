@@ -31,3 +31,22 @@ export function useBudget(remoraId: string, enabled = true) {
     refresh: () => void query.refetch(),
   };
 }
+
+/**
+ * One status for a remora, wherever its name shows (ADR-0103): its row's status, unless its spending
+ * limit is still being read ("checking") or is gone onchain ("can't spend"). The reviewers saw a
+ * green "active" turn into "can't spend" once the limit was read.
+ */
+export function useSpendStatus(r: {
+  id: string;
+  status: string;
+  discId?: string | null;
+  config: { budget?: unknown };
+}): { state: "checking" | "gone" | "row"; budget: ReturnType<typeof useBudget> } {
+  const spends = Boolean(r.config.budget && r.discId) && r.status !== "retired";
+  const budget = useBudget(r.id, spends);
+  if (!spends) return { state: "row", budget };
+  if (budget.loading) return { state: "checking", budget };
+  if (!budget.error && !budget.meter) return { state: "gone", budget };
+  return { state: "row", budget };
+}

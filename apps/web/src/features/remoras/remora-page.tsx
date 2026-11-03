@@ -24,7 +24,7 @@ import { ConfirmAction } from "@/components/app/confirm-action";
 import { Term } from "@/components/app/glossary";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
-import { StatusBadge } from "@/components/app/status-badge";
+import { SpendBadge } from "@/components/app/spend-badge";
 import { Hash } from "@/components/hash";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -755,11 +755,14 @@ function Remora({ id }: { id: string }) {
     id,
     Boolean(r?.discId && r.config.budget && r.status !== "retired"),
   );
-  const headerGone =
-    Boolean(r?.discId && r.config.budget) &&
-    !headerLimit.loading &&
-    !headerLimit.error &&
-    !headerLimit.meter;
+  const headerState: "checking" | "gone" | "row" =
+    !r?.discId || !r.config.budget || r.status === "retired"
+      ? "row"
+      : headerLimit.loading
+        ? "checking"
+        : !headerLimit.error && !headerLimit.meter
+          ? "gone"
+          : "row";
 
   if (remora.error) {
     return (
@@ -809,13 +812,7 @@ function Remora({ id }: { id: string }) {
             {r.name}
           </span>
         }
-        badge={
-          headerGone && r.status !== "retired" ? (
-            <Badge variant="outline">can't spend</Badge>
-          ) : (
-            <StatusBadge status={r.status} />
-          )
-        }
+        badge={<SpendBadge status={r.status} state={headerState} />}
         description={describeRemora(r, catalog)}
         actions={headerActions(r, reload, setTab)}
       />

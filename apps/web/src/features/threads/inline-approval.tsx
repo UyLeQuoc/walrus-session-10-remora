@@ -62,11 +62,15 @@ export function InlineApproval({
   };
 
   const question =
-    kind === "over_limit_payment" && amount && payee
-      ? `Pay ${usdc(amount)} USDC to ${payeeName(payee)}? It's over its per-payment cap; you pay it once, from your wallet.`
-      : kind === "schedule"
-        ? `Ask “${String(payload.question ?? "")}” ${String(payload.human ?? "on a schedule")}?`
-        : "This needs your decision.";
+    kind === "over_limit_payment" && amount && payee && status === "approved"
+      ? `You paid ${usdc(amount)} USDC to ${payeeName(payee)}, once, from your wallet.`
+      : kind === "over_limit_payment" && amount && payee && status !== "pending"
+        ? `Not paid: ${usdc(amount)} USDC to ${payeeName(payee)}.`
+        : kind === "over_limit_payment" && amount && payee
+          ? `Pay ${usdc(amount)} USDC to ${payeeName(payee)}? It's over its per-payment cap; you pay it once, from your wallet.`
+          : kind === "schedule"
+            ? `Ask “${String(payload.question ?? "")}” ${String(payload.human ?? "on a schedule")}?`
+            : "This needs your decision.";
   // openbot's approval card (ADR-0069): a title, its status, the question, then the actions.
   return (
     <InteractionCard

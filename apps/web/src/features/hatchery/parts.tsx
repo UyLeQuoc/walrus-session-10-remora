@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { modelById } from "@/features/chat/models";
 import { kindName } from "@/lib/kind";
 import { payeeName } from "@/lib/payee";
+import { shortIds } from "@/lib/short-ids";
 
 const TRIGGER: Record<string, string> = {
   message: "when you message it",
@@ -62,6 +63,16 @@ export function PermissionsList({ permissions }: { permissions: TemplatePermissi
   );
 }
 
+const FINDING: Record<string, string> = {
+  injection: "Tells the model to ignore its instructions",
+  exfiltration: "Tries to send data out",
+  raw_address: "Pays a raw address",
+  unknown_payee: "Pays a service that isn't listed",
+  unknown_template: "Uses a kind Remora doesn't know",
+  secret: "Holds a secret",
+  model_flag: "The review model flagged it",
+};
+
 export function SafetyPanel({ report }: { report: SafetyReport }) {
   const tone =
     report.verdict === "block" ? "destructive" : report.verdict === "warn" ? "warning" : "success";
@@ -79,10 +90,19 @@ export function SafetyPanel({ report }: { report: SafetyReport }) {
       </AlertTitle>
       <AlertDescription className="flex flex-col gap-1">
         {report.findings.length ? (
-          <ul className="list-disc pl-4">
+          // ADR-0103: one plain line per finding; the field and the full reason behind its tooltip.
+          <ul className="flex flex-col gap-1">
             {report.findings.map((f) => (
-              <li key={`${f.where}:${f.code}:${f.detail}`}>
-                <span className="font-medium">{f.where}</span>: {f.detail}
+              <li
+                key={`${f.where}:${f.code}:${f.detail}`}
+                className="flex items-start gap-1.5"
+                title={`${f.where}: ${f.detail}`}
+              >
+                <span aria-hidden>{f.severity === "block" ? "✗" : "!"}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  {FINDING[f.code] ?? f.code}
+                  <span className="text-xs opacity-80"> · {shortIds(f.detail).slice(0, 90)}</span>
+                </span>
               </li>
             ))}
           </ul>
