@@ -3,6 +3,7 @@
  * watches, sign one transaction for the Disc (Scout) or none (Sentinel), and land on its page while
  * its first run (N13) comes in. Each wait says what it is waiting for (N6).
  */
+
 import type { Template } from "@remora/schema";
 import { Package, Shield } from "lucide-react";
 import { useState } from "react";
@@ -16,10 +17,11 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { Hint } from "@/components/visual";
 import { useSignAndRun } from "@/features/funds/sign";
 import { useNetworks } from "@/features/network/use-networks";
 import { payeeName } from "@/lib/payee";
-import { parseUsdc, usdc } from "@/lib/usdc";
+import { parseUsdc } from "@/lib/usdc";
 import { Property, PropertyList } from "@/openbot/pages";
 import { api } from "./api";
 import { RequireOwner, useLoad } from "./hooks";
@@ -99,6 +101,12 @@ function Wizard({ owner }: { owner: string }) {
     }
     navigate(`/remoras/${id}?new=1`);
   };
+
+  // ADR-0103: the two limits as one number you can picture, from what you typed.
+  const limitUnits = parseUsdc(monthly);
+  const perUnits = parseUsdc(perPayment);
+  const payments =
+    limitUnits && perUnits && perUnits <= limitUnits ? Number(limitUnits / perUnits) : null;
 
   return (
     <Page title="New remora" description="Start from a template and set its leash.">
@@ -183,7 +191,13 @@ function Wizard({ owner }: { owner: string }) {
                   </Field>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <p className="text-md font-medium">It can pay</p>
+                  <p className="flex items-center gap-1 text-md font-medium">
+                    It can pay only these
+                    <Hint label="About what it can pay">
+                      Sui enforces this budget onchain, not us. It pays only these services;
+                      anything over the per-payment cap asks you first.
+                    </Hint>
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {(chosen?.payees ?? []).map((payee) => (
                       <Badge key={payee} variant="outline" title={payee}>
@@ -191,11 +205,6 @@ function Wizard({ owner }: { owner: string }) {
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-md text-ob-muted">
-                    Sui enforces this budget onchain, not us. It pays only these sources; anything
-                    over {parseUsdc(perPayment) ? usdc(parseUsdc(perPayment) as bigint) : "the cap"}{" "}
-                    USDC asks you first.
-                  </p>
                 </div>
               </>
             ) : (
@@ -227,12 +236,16 @@ function Wizard({ owner }: { owner: string }) {
                 <>
                   <Property term="Monthly limit">{monthly || "—"} USDC</Property>
                   <Property term="Most at once">{perPayment || "—"} USDC</Property>
+                  <Property term="At most">
+                    {payments === null ? "—" : `${payments} payments a month`}
+                  </Property>
                   <Property term="Can pay">{(chosen?.payees ?? []).length} sources</Property>
                 </>
               ) : (
                 <Property term="Budget">None, read-only</Property>
               )}
             </PropertyList>
+            {slug === "scout" ? <Badge variant="secondary">Enforced on Sui</Badge> : null}
             <p className="rounded-ob-lg bg-ob-control-hover px-3 py-2.5 text-md text-ob-secondary">
               {slug === "scout" ? (
                 <>

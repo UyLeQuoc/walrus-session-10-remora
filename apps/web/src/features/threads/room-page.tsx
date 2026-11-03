@@ -23,12 +23,13 @@ const RESPONDER: Record<RoomResponder, string> = {
   lead: "Lead answers",
   mentions: "Only when @named",
 };
+/** Why that remora answered, in plain words (ADR-0103: "matched" and "named" read as jargon). */
 const ROUTE: Record<string, string> = {
-  mention: "named",
+  mention: "you named it",
   everyone: "everyone",
-  signal: "matched",
+  signal: "best fit",
   auto: "picked",
-  lead: "lead",
+  lead: "the lead",
 };
 
 function RoomChat({ id }: { id: string }) {
