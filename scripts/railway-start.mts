@@ -33,7 +33,8 @@ function stop(exitCode: number) {
 
 for (const app of apps) {
   const cwd = join(ROOT, "apps", app.name);
-  const kid = spawn(join(cwd, "node_modules/.bin/tsx"), [app.entry], {
+  // `node --import tsx`, not the tsx CLI, which wraps each app in a second node process (~55 MB).
+  const kid = spawn(process.execPath, ["--import", "tsx", app.entry], {
     cwd,
     env: { ...process.env, ...app.env },
     stdio: "inherit",
