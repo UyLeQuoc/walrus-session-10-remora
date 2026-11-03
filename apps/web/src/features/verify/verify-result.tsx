@@ -112,14 +112,6 @@ const PLAIN: Record<string, string> = {
   "saved onchain": "The decision is saved onchain",
 };
 
-const clock = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-
 /**
  * Details as people read them: "10000 of 10000" (USDC's smallest unit) as "0.01 of 0.01 USDC", and
  * the timing check's ISO stamps as three clock times (the server allows the decision 5 s of skew).
@@ -128,14 +120,22 @@ function plainDetail(detail: string): string {
   const amount = /^(\d+) of (\d+)$/.exec(detail);
   if (amount) return `${usdc(amount[1] ?? "0")} of ${usdc(amount[2] ?? "0")} USDC`;
   const times = /^Receipt (\S+?)(?:, tx (\S+?))?, stored (\S+)$/.exec(detail);
-  if (times?.[1] && times[3])
-    return [
-      `decided ${clock(times[1])}`,
-      times[2] ? `paid ${clock(times[2])}` : null,
-      `stored ${clock(times[3])}`,
-    ]
-      .filter(Boolean)
-      .join(" · ");
+  if (times?.[1] && times[3]) {
+    // Two machines' clocks (the server's and the chain's), so it says how close they are, not
+    // which came first to the second.
+    const decided = Date.parse(times[1]);
+    const paid = times[2] ? Date.parse(times[2]) : null;
+    const when = new Date(paid ?? decided).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return paid === null
+      ? `decided ${when}`
+      : `decided and paid within ${Math.max(1, Math.ceil(Math.abs(decided - paid) / 1000))} s · ${when}`;
+  }
   return detail;
 }
 

@@ -82,7 +82,7 @@ function Funds({ owner }: { owner: string }) {
     <Page title="Funds" description="What your remoras can spend, and what is still in coins.">
       <PageHeader
         title="Funds"
-        description="What your remoras can spend."
+        description="Your USDC, and the limits on it."
         hint={
           <>
             Remoras spend USDC from your <Term name="address balance">address balance</Term>, only
@@ -137,7 +137,7 @@ function Funds({ owner }: { owner: string }) {
 
       <StatRow className="md:grid-cols-2">
         <Stat
-          label="Ready to spend"
+          label="Your balance"
           icon={<Wallet />}
           value={number(mine?.addressBalance)}
           unit={mine ? "USDC" : undefined}

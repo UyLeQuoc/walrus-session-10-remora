@@ -6,7 +6,7 @@
  */
 import { Link2Off } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { Time } from "@/components/app/time";
@@ -49,6 +49,16 @@ export function PublicWakeView({ wake }: { wake: PublicWake }) {
         tx={wake.tx}
         network={wake.network}
       />
+      <div className="flex flex-wrap items-center gap-3">
+        {wake.tx ? (
+          <Button asChild size="sm">
+            <Link to={`/verify/${wake.tx}`}>Check it yourself</Link>
+          </Button>
+        ) : null}
+        <Link className="link text-sm" to="/about">
+          What's Remora?
+        </Link>
+      </div>
       <VerifyVerdict checks={wake.checks} anchored={wake.anchored} />
       <Section title="What happened">
         <dl className="ob-group" aria-label="Receipt">

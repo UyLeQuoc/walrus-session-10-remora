@@ -209,6 +209,10 @@
   .rv.in { opacity: 1; transform: none; }
   /* U14 (ADR-0103): a phone shows sections as they are; a reveal there left screens of black. */
   @media (max-width: 720px) { .rv { opacity: 1; transform: none; transition: none; } }
+  /* U14: on a phone a desktop screenshot is cropped to the part that reads, not shrunk to 4 px text. */
+  @media (max-width: 720px) {
+    .gallery figure img { height: 240px; width: 100%; object-fit: cover; object-position: var(--pos, 50% 30%); }
+  }
 
   @media (max-width: 980px) {
     .grid3, .real { grid-template-columns: 1fr; }
@@ -386,10 +390,10 @@
     <div class="wrap">
       <div class="head rv"><span class="eyebrow">// screens</span><h2>Built to be read.</h2></div>
       <div class="gallery">
-        <figure class="rv"><img src="screens/memory.jpg" alt="The memory inspector: every blob on Walrus, and writes skipped as duplicates" loading="lazy" width="1280" height="720"><figcaption>Memory: every blob on Walrus, and every skipped write</figcaption></figure>
-        <figure class="rv"><img src="screens/playground.jpg" alt="The playground: a Researcher with a $1 spending limit and no wallet, after a paid answer" loading="lazy" width="1440" height="900"><figcaption>Playground: a Researcher with a $1 spending limit, no wallet</figcaption></figure>
-        <figure class="rv"><img src="screens/reef.jpg" alt="Services: the paid services a remora may use over x402" loading="lazy" width="1280" height="720"><figcaption>Services: what a remora may pay, over x402</figcaption></figure>
-        <figure class="rv"><img src="screens/status.jpg" alt="Status: Tatum, the relayer and the facilitator, in the open" loading="lazy" width="1280" height="720"><figcaption>Status: Tatum, the relayer and the facilitator</figcaption></figure>
+        <figure class="rv" style="--pos:62% 32%"><img src="screens/memory.jpg" alt="The memory inspector: every blob on Walrus, and writes skipped as duplicates" loading="lazy" width="1280" height="720"><figcaption>Memory: every blob on Walrus, and every skipped write</figcaption></figure>
+        <figure class="rv" style="--pos:58% 30%"><img src="screens/playground.jpg" alt="The playground: a Researcher with a 1 USDC spending limit and no wallet, after a paid answer" loading="lazy" width="1440" height="900"><figcaption>Playground: a Researcher with a 1 USDC limit, no wallet</figcaption></figure>
+        <figure class="rv" style="--pos:60% 28%"><img src="screens/reef.jpg" alt="Services: the paid services a remora may use, with their prices" loading="lazy" width="1280" height="720"><figcaption>Services: what a remora may pay, and the price</figcaption></figure>
+        <figure class="rv" style="--pos:58% 30%"><img src="screens/status.jpg" alt="Status: Tatum, the relayer and the facilitator, in the open" loading="lazy" width="1280" height="720"><figcaption>Status: Tatum, the relayer and the facilitator</figcaption></figure>
       </div>
     </div>
   </section>

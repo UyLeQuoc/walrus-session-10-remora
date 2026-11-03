@@ -3,7 +3,7 @@
  * against the chain: the intent hash, the `Paid` anchor, the payee's balance change, and who signed.
  * No sign-in needed: it only reads public chain data and the stored Wake.
  */
-import type { FeedItem, VerifyResult } from "@remora/schema";
+import type { FeedItem, RemoraView, VerifyResult } from "@remora/schema";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Page, PageHeader, Section } from "@/components/app/page";
@@ -106,6 +106,16 @@ export function VerifyPage() {
       );
   }, [ref]);
   const r = state.result;
+  // The Wake names its remora by id; your own remoras read by name (a stranger sees "A remora").
+  const { owner } = useOwner();
+  const mine = useLoad(
+    () =>
+      owner
+        ? api.remoras()
+        : Promise.resolve({ ok: true as const, data: { remoras: [] as RemoraView[] } }),
+    [owner],
+  );
+  const names = new Map((mine.data?.remoras ?? []).map((x) => [x.id, x.name]));
   const owns = useOwnsWake(r?.wake.agent);
 
   return (
@@ -155,7 +165,7 @@ export function VerifyPage() {
       {r ? (
         <>
           <ReceiptSummary
-            remora={r.wake.remora}
+            remora={names.get(r.wake.remora) ?? "A remora"}
             agent={r.wake.agent}
             action={
               r.wake.intent.decision.action === "pay"

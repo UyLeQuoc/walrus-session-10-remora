@@ -204,10 +204,13 @@ export function ChatPage() {
           </div>
         ) : messages.length === 0 ? (
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <AsciiOcean
-              sharks={OCEAN_SHARKS}
-              className="absolute inset-0 size-full opacity-70 [mask-image:radial-gradient(ellipse_34%_42%_at_50%_50%,rgb(0_0_0/0.15)_55%,black)] dark:opacity-85"
-            />
+            {/* ADR-0103: the art stays out of the way of text: not on a phone, not behind a state. */}
+            {roster.error || noRemora ? null : (
+              <AsciiOcean
+                sharks={OCEAN_SHARKS}
+                className="absolute inset-0 hidden size-full opacity-70 [mask-image:radial-gradient(ellipse_34%_42%_at_50%_50%,rgb(0_0_0/0.15)_55%,black)] sm:block dark:opacity-85"
+              />
+            )}
             <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-4 py-6">
               <div data-slot="empty-cluster" className="flex w-full max-w-xl flex-col gap-10">
                 <div data-slot="greeting" className="flex flex-col gap-6 text-center">

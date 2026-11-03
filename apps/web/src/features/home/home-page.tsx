@@ -77,7 +77,7 @@ function Dashboard({ owner }: { owner: string }) {
         </Link>
         <Link to="/funds" className="block transition-colors hover:border-ob-border-strong">
           <Stat
-            label="Ready to spend"
+            label="Your balance"
             icon={<Wallet />}
             value={
               ready !== undefined ? formatUsdc(ready) : funds.error ? "—" : <StatPending wide />
