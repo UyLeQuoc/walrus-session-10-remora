@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Amount, Empty, type EventKind, Timeline } from "@/components/visual";
 import { Markdown } from "@/features/chat/markdown";
 import { payeeName } from "@/lib/payee";
-import { usdc } from "@/lib/usdc";
+import { explorerTx, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 import { api } from "./api";
 import { WhyButton } from "./why-drawer";
@@ -36,6 +36,7 @@ const KIND: Record<FeedItem["type"], EventKind> = {
 /** A sentence for the item; amounts in USDC where the payload has one. */
 export function describeItem(e: FeedItem): string {
   const p = e.payload as { amount?: string; payee?: string; answer?: string };
+  if (e.type === "blocked" && refusedBy(e) === "service") return titleOf(e);
   if (e.type === "payment" && p.amount && p.payee)
     return `Paid ${usdc(p.amount)} USDC to ${payeeName(p.payee)}`;
   if (e.type === "shadow" && p.amount && p.payee)
@@ -49,7 +50,7 @@ export function describeItem(e: FeedItem): string {
  * didn't answer "didn't go through" (ADR-0103: the reviewers read every red "Blocked" as the limit).
  */
 const GUARDS = /^(sonar\.|over_limit|remora\.|disc\.|E[A-Z])/;
-export function refusedBy(e: FeedItem): "guard" | "service" {
+export function refusedBy(e: Pick<FeedItem, "payload">): "guard" | "service" {
   const code = String((e.payload as { code?: string }).code ?? "");
   return GUARDS.test(code) ? "guard" : "service";
 }
@@ -132,7 +133,7 @@ export function FeedList({
 }) {
   if (!items.length) return <Empty title="Nothing yet. Its work shows up here." mood="asleep" />;
   const row = (e: FeedItem) => {
-    const p = e.payload as { amount?: string; answer?: string };
+    const p = e.payload as { amount?: string; answer?: string; digest?: unknown };
     const answer = e.type === "answer" ? String(p.answer ?? "") : "";
     return {
       id: e.id,
@@ -155,6 +156,17 @@ export function FeedList({
       ) : undefined,
       actions: (
         <>
+          {e.type === "payment" && typeof p.digest === "string" ? (
+            <a
+              className="link text-xs"
+              href={explorerTx(e.network, p.digest)}
+              target="_blank"
+              rel="noreferrer"
+              title={p.digest}
+            >
+              tx ↗
+            </a>
+          ) : null}
           {e.type === "answer" || e.type === "ping" ? <Feedback e={e} /> : null}
           {e.receiptId ? <WhyButton eventId={e.id} /> : null}
         </>

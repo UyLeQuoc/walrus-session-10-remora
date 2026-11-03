@@ -24,6 +24,7 @@ export function BudgetMeter({
   window,
   compact = false,
   loading = true,
+  error,
 }: {
   meter: Meter | null;
   window: "day" | "week" | "month" | null;
@@ -31,6 +32,11 @@ export function BudgetMeter({
   compact?: boolean;
   /** False once the read is done: a missing limit then says so instead of loading forever. */
   loading?: boolean;
+  /**
+   * The read failed. Without an error, a finished read with no meter means the Disc is gone
+   * onchain (revoked or replaced), which the server reports as `meter: null`.
+   */
+  error?: string;
 }) {
   if (!meter?.window) {
     // ADR-0103: the same bar in every state: loading pulses, unreadable is an empty track that says so.
@@ -40,7 +46,11 @@ export function BudgetMeter({
           className={`h-2.5 w-full rounded-full bg-ob-border-strong/50 ${loading ? "animate-pulse motion-reduce:animate-none" : ""}`}
         />
         <p className="text-xs text-ob-muted">
-          {loading ? "Reading its spending limit" : "Spending limit can't be read right now"}
+          {loading
+            ? "Reading its spending limit"
+            : error
+              ? "Spending limit can't be read right now"
+              : "No spending limit onchain: it can't spend"}
         </p>
       </div>
     );

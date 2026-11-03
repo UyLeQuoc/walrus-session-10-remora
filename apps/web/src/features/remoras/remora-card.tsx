@@ -40,7 +40,13 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
         ) : readable ? (
           <BudgetMeter meter={meter.meter} window={budget.window} compact />
         ) : (
-          <BudgetMeter meter={null} window={budget.window} compact loading={meter.loading} />
+          <BudgetMeter
+            meter={null}
+            window={budget.window}
+            compact
+            loading={meter.loading}
+            error={meter.error}
+          />
         )}
       </GalleryCard>
     </Link>

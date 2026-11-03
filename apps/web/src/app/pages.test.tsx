@@ -1546,8 +1546,9 @@ describe("me page", () => {
     // The explorer link is now the blob id itself rather than the word "blob",
     // so the link names the thing it points at.
     expect(screen.getByRole("link", { name: /blob123/ }).getAttribute("href")).toContain("blob123");
-    // Guests are told the memory is not theirs yet, which is the whole pitch.
-    expect(seen).toMatch(/under its own account/i);
+    // Guests are told the memory is not theirs yet, which is the whole pitch. ADR-0103: as the
+    // "Not owned yet" chip; who holds it is drawn in the Account card.
+    expect(seen).toMatch(/Not owned yet/);
   });
 
   it("offers the memory as a file once something has reached Walrus, and says what it holds", async () => {
@@ -1619,7 +1620,8 @@ describe("me page", () => {
         <MePage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(container.textContent ?? "").toMatch(/Right now Remora keeps/));
+    // ADR-0103: the page has loaded once it says who owns the memory (a chip, not a sentence).
+    await waitFor(() => expect(container.textContent ?? "").toMatch(/Not owned yet/));
     expect(screen.queryByRole("button", { name: /full record/i })).toBeNull();
   });
 

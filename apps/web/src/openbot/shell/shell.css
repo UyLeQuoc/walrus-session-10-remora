@@ -1198,9 +1198,11 @@
       backdrop-filter: blur(18px);
     }
 
+    /* Remora (U14, ADR-0103): five or six tabs, each an icon over a short label, so the bar holds
+       Home, Chat, Approvals, Funds and More; a count sits on its icon's corner. */
     .web-mobile-navigation-list {
       display: grid;
-      width: min(100%, 360px);
+      width: min(100%, 480px);
       grid-template-columns: repeat(var(--web-mobile-navigation-items, 2), minmax(0, 1fr));
       gap: var(--openbot-space-1);
     }
@@ -1208,17 +1210,35 @@
     .web-mobile-navigation-button {
       position: relative;
       display: flex;
-      min-height: 44px;
+      min-height: 48px;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: var(--openbot-space-2);
+      gap: 2px;
+      min-width: 0;
       border: 1px solid transparent;
       border-radius: var(--openbot-radius-lg);
       background: transparent;
       color: var(--openbot-text-muted);
-      font-size: var(--openbot-text-sm);
+      font-size: 11px;
+      line-height: 14px;
       font-weight: var(--openbot-weight-semibold);
       cursor: pointer;
+    }
+
+    .web-mobile-navigation-button > span:not(.window-rail-count) {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .web-mobile-navigation-button > .window-rail-count,
+    .web-mobile-navigation-button > .window-rail-count.static {
+      position: absolute;
+      top: 2px;
+      right: auto;
+      left: calc(50% + 4px);
     }
 
     .web-mobile-navigation-button[data-active="true"] {

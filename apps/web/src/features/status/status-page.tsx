@@ -7,6 +7,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CircleHelp } from "lucide-react";
 import { Page, PageHeader, Section } from "@/components/app/page";
+import { Time } from "@/components/app/time";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusDot } from "@/components/visual";
@@ -53,6 +54,13 @@ function friendly(name: string): string {
   return net(name) ? `${hit[1]} · ${net(name)}` : hit[1];
 }
 const groupOf = (name: string) => PLAIN.find(([re]) => re.test(name))?.[2] ?? "app";
+const RANK = { ok: 0, degraded: 1, down: 2 } as const;
+const IMPACT: Record<(typeof GROUPS)[number]["id"], string> = {
+  pay: "Payments may fail or wait. Your spending limits still hold.",
+  chain: "Reading Sui is slower; Remora falls back to a public node. Payments still settle.",
+  memory: "New memories may take longer to show. Nothing already stored is lost.",
+  app: "Some pages may load slowly.",
+};
 
 async function fetchStatus(): Promise<PublicStatus> {
   const res = await apiFetch("/api/status");
@@ -70,6 +78,14 @@ export function StatusPage() {
     retry: false,
   });
   const report = query.data;
+  // ADR-0103: what a degraded part means for you, one line each.
+  const impacts = [
+    ...new Set(
+      (report?.items ?? [])
+        .filter((item) => item.status !== "ok")
+        .map((item) => IMPACT[groupOf(item.name)]),
+    ),
+  ];
   const unknown = query.isError && !report;
 
   return (
@@ -98,10 +114,28 @@ export function StatusPage() {
             data-status={report.status}
           >
             <StatusDot state={report.status} label={OVERALL[report.status]} className="size-3" />
-            <p className="text-lg font-medium">{OVERALL[report.status]}</p>
+            <p className="min-w-0 flex-1 text-lg font-medium">{OVERALL[report.status]}</p>
+            {query.dataUpdatedAt ? (
+              <span className="text-xs text-ob-muted">
+                checked <Time value={new Date(query.dataUpdatedAt)} />
+              </span>
+            ) : null}
           </div>
+          {impacts.length ? (
+            <ul
+              className="flex flex-col gap-1 text-sm text-ob-secondary"
+              aria-label="What it means"
+            >
+              {impacts.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : null}
           {GROUPS.map((g) => {
-            const items = report.items.filter((item) => groupOf(item.name) === g.id);
+            // A problem first, then the rest.
+            const items = report.items
+              .filter((item) => groupOf(item.name) === g.id)
+              .sort((x, y) => RANK[y.status] - RANK[x.status]);
             if (!items.length) return null;
             return (
               <Section key={g.id} title={g.title}>

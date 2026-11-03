@@ -165,9 +165,17 @@ export function TemplatePage() {
         }
         description={l?.description ?? undefined}
         actions={
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/hatchery">All templates</Link>
-          </Button>
+          <>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/hatchery">All templates</Link>
+            </Button>
+            {/* ADR-0103: the main action is reachable from the top; it sits with its consent. */}
+            <Button asChild size="sm">
+              <a href="#use">
+                <GitFork /> Use it
+              </a>
+            </Button>
+          </>
         }
       />
       {tpl.error ? <p className="text-md text-ob-danger-text">{tpl.error}</p> : null}
@@ -178,69 +186,8 @@ export function TemplatePage() {
           <AlertDescription>Share the link below; anyone can make their own copy.</AlertDescription>
         </Alert>
       ) : null}
-      {l ? (
-        <Section title="Provenance" description="The file on Walrus and its author onchain.">
-          <PropertyList className="max-w-3xl">
-            <Property term="Author">
-              <Hash value={l.author} label="author" />
-            </Property>
-            <Property term="Walrus blob" data-testid="template-blob">
-              <Hash value={l.blobId} href={aggregator(network, l.blobId)} label="blob" />
-            </Property>
-            <Property term="Published in">
-              <Hash
-                value={l.publishDigest}
-                href={explorerTx(network, l.publishDigest)}
-                label="transaction"
-              />
-            </Property>
-            <Property term="Template object">
-              <Hash value={l.templateId} label="template" />
-            </Property>
-            {l.parent ? (
-              <Property term="Derived from">
-                <Link className="link" to={`/hatchery/${l.parent}`}>
-                  {shortAddress(l.parent)}
-                </Link>
-              </Property>
-            ) : null}
-            {l.stats ? (
-              <Property term="Outcomes">
-                {l.stats.usefulAnswers} useful answers from {l.stats.hatched}{" "}
-                {l.stats.hatched === 1 ? "copy" : "copies"}
-                {l.stats.costPerUsefulUsdc ? `, ${l.stats.costPerUsefulUsdc} USDC each` : ""}
-              </Property>
-            ) : null}
-          </PropertyList>
-          {tpl.data ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => copy(tpl.data?.links.url ?? "", "Link")}
-              >
-                <Copy /> Copy link
-              </Button>
-              {tpl.data.links.telegram ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copy(tpl.data?.links.telegram ?? "", "Telegram link")}
-                >
-                  <Copy /> Copy Telegram link
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </Section>
-      ) : null}
-      <Section
-        title="Before you use it"
-        description="Read back from Walrus and checked again just now."
-      >
-        <div className="flex max-w-3xl flex-col gap-4" data-testid="consent">
+      <Section title="Before you use it" hint="Read back from Walrus and checked again just now.">
+        <div className="flex max-w-3xl scroll-mt-6 flex-col gap-4" data-testid="consent" id="use">
           {consent.error ? <p className="text-md text-ob-danger-text">{consent.error}</p> : null}
           {!c && !consent.error ? <Skeleton className="h-40 w-full rounded-ob-card" /> : null}
           {c ? (
@@ -302,6 +249,64 @@ export function TemplatePage() {
           ) : null}
         </div>
       </Section>
+      {l ? (
+        <Section title="Provenance" hint="The file on Walrus and its author onchain.">
+          <PropertyList className="max-w-3xl">
+            <Property term="Author">
+              <Hash value={l.author} label="author" />
+            </Property>
+            <Property term="Walrus blob" data-testid="template-blob">
+              <Hash value={l.blobId} href={aggregator(network, l.blobId)} label="blob" />
+            </Property>
+            <Property term="Published in">
+              <Hash
+                value={l.publishDigest}
+                href={explorerTx(network, l.publishDigest)}
+                label="transaction"
+              />
+            </Property>
+            <Property term="Template object">
+              <Hash value={l.templateId} label="template" />
+            </Property>
+            {l.parent ? (
+              <Property term="Derived from">
+                <Link className="link" to={`/hatchery/${l.parent}`}>
+                  {shortAddress(l.parent)}
+                </Link>
+              </Property>
+            ) : null}
+            {l.stats ? (
+              <Property term="Outcomes">
+                {l.stats.usefulAnswers} useful answers from {l.stats.hatched}{" "}
+                {l.stats.hatched === 1 ? "copy" : "copies"}
+                {l.stats.costPerUsefulUsdc ? `, ${l.stats.costPerUsefulUsdc} USDC each` : ""}
+              </Property>
+            ) : null}
+          </PropertyList>
+          {tpl.data ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => copy(tpl.data?.links.url ?? "", "Link")}
+              >
+                <Copy /> Copy link
+              </Button>
+              {tpl.data.links.telegram ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copy(tpl.data?.links.telegram ?? "", "Telegram link")}
+                >
+                  <Copy /> Copy Telegram link
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </Section>
+      ) : null}
       {l ? (
         <Section
           title="Share"

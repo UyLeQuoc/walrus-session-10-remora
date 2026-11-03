@@ -181,6 +181,7 @@ export function ChatPage() {
   const noRemora =
     Boolean(owner) &&
     Boolean(roster.data) &&
+    !roster.loading &&
     !(roster.data?.remoras ?? []).some((r) => r.status !== "retired");
 
   const reloadAndAsk = (value: string) => {

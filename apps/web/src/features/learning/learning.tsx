@@ -11,6 +11,7 @@ import { Section } from "@/components/app/page";
 import { Time } from "@/components/app/time";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   type ChartConfig,
   ChartContainer,
@@ -202,6 +203,11 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
             className="max-w-3xl"
             mood="thinking"
             title="No proof yet. Rate its answers or pings with 👍/👎 to teach it."
+            action={
+              <Button asChild size="sm">
+                <Link to="?tab=activity">Rate recent ones</Link>
+              </Button>
+            }
           />
         ) : null}
         <ul className="flex max-w-3xl flex-col gap-4">

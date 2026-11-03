@@ -8,11 +8,13 @@
  * been easier and would have proved nothing.
  */
 
+import { Server, Wallet } from "lucide-react";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Flow } from "@/components/visual";
 import { useAccount } from "@/features/me/use-account";
 
 export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: string) => void }) {
@@ -38,9 +40,20 @@ export function ChainPanel({ owned, onError }: { owned: boolean; onError: (m: st
     <Card>
       <CardHeader>
         <CardTitle>Account</CardTitle>
-        {owned ? null : <CardDescription>Still Remora's own account.</CardDescription>}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {owned ? null : (
+          // ADR-0103: who holds it, as the same picture the connect page uses.
+          <Flow
+            label="Who holds this memory"
+            nodes={[
+              { id: "remora", label: "Remora's own account", icon: <Server />, sub: "now" },
+              { id: "you", label: "Your wallet", icon: <Wallet />, sub: "after", tone: "success" },
+            ]}
+            edges={["one signature"]}
+            active={0}
+          />
+        )}
         {owned ? null : (
           <Button disabled={busy} onClick={() => void start("connect")}>
             {busy ? "Opening…" : "Own this memory"}

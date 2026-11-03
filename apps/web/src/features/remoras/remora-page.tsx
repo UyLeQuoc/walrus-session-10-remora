@@ -4,9 +4,18 @@
  * sources (F2), and its activity (N1) with Why? (N4) and 👍/👎 (N19). Three tabs keep Overview to
  * about one screen; destructive actions live in Settings → Danger zone behind ConfirmAction.
  */
-import type { RemoraView } from "@remora/schema";
+import type { FeedItem, RemoraView } from "@remora/schema";
 import { useQueryClient } from "@tanstack/react-query";
-import { Ellipsis, Eye, KeyRound, MessageCircle, Trash2 } from "lucide-react";
+import {
+  Bell,
+  Ellipsis,
+  Eye,
+  EyeOff,
+  KeyRound,
+  MessageCircle,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -32,7 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Address, Problem } from "@/components/visual";
+import { Address, Problem, Stat, StatRow } from "@/components/visual";
 import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById, priceLabel } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
@@ -215,6 +224,9 @@ function AskCard({ r, onDone }: { r: RemoraView; onDone: () => void }) {
 }
 
 /** A Wallet watcher's overview leads with what it watches (ADR-0103: the reviewers couldn't see it). */
+const count = (events: FeedItem[], type: FeedItem["type"]) =>
+  events.filter((e) => e.type === type).length;
+
 function WatchingCard({ r }: { r: RemoraView }) {
   const addresses = r.config.triggers.flatMap((t) => (t.kind === "chain" ? t.addresses : []));
   return (
@@ -336,7 +348,12 @@ function BudgetSection({
   return (
     <Section layout={layout} title="Budget" description={budgetLine(r)}>
       <SurfaceCard>
-        <BudgetMeter meter={meter.meter} window={b.window} loading={meter.loading} />
+        <BudgetMeter
+          meter={meter.meter}
+          window={b.window}
+          loading={meter.loading}
+          error={meter.error}
+        />
         {meter.error ? <p className="text-md text-ob-danger-text">{meter.error}</p> : null}
         {r.discId ? (
           <div className="flex flex-wrap items-end gap-2 border-t border-ob-border-grouped pt-3">
@@ -781,6 +798,23 @@ function Remora({ id }: { id: string }) {
 
         <TabsContent value="overview" className="flex flex-col gap-8 pt-5">
           {r.template === "sentinel" ? <WatchingCard r={r} /> : null}
+          {r.template === "sentinel" && events.length ? (
+            <StatRow className="md:grid-cols-3">
+              <Stat label="Pings" icon={<Bell />} value={count(events, "ping")} of="recently" />
+              <Stat
+                label="Ignored"
+                icon={<EyeOff />}
+                value={count(events, "episode")}
+                of="recently"
+              />
+              <Stat
+                label="Rules learned"
+                icon={<Sparkles />}
+                value={count(events, "rule_learned")}
+                of="recently"
+              />
+            </StatRow>
+          ) : null}
           {r.status === "retired" ? null : r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
           ) : (

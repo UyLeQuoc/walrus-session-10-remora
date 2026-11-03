@@ -125,10 +125,15 @@ export function Timeline({
           <KindIcon kind={item.kind} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pt-1">
-              {item.who ? <span className="shrink-0">{item.who}</span> : null}
-              <span className="min-w-0 flex-1 truncate text-sm text-ob-text">{item.title}</span>
+              {/* On a phone: who on its own line, the title on two lines (never an amount cut). */}
+              {item.who ? (
+                <span className="basis-full sm:basis-auto sm:shrink-0">{item.who}</span>
+              ) : null}
+              <span className="line-clamp-2 min-w-0 flex-1 basis-[60%] text-sm text-ob-text [overflow-wrap:anywhere] sm:basis-auto sm:truncate">
+                {item.title}
+              </span>
               {item.amount ? (
-                <span className="shrink-0 rounded-full bg-ob-control px-2 py-0.5 text-xs font-medium tabular-nums text-ob-secondary">
+                <span className="shrink-0 rounded-full bg-ob-control px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums text-ob-secondary">
                   {item.amount}
                 </span>
               ) : null}

@@ -68,11 +68,6 @@ export function ChatMemory() {
           </Badge>
           <Badge variant="outline">{me.memoryEnabled ? "remembering" : "paused"}</Badge>
         </div>
-        {owned ? null : (
-          <p className="text-md text-ob-muted">
-            Right now Remora keeps it under its own account. Own it with a wallet below.
-          </p>
-        )}
       </div>
 
       <StatStrip stored={stored} total={memories.length} usage={usage} />
