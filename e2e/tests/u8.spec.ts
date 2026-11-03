@@ -110,12 +110,10 @@ test("U8 exit: playground with $1 Discs, health, diagnose, docs", async ({ brows
   const t2 = Date.now();
   await a.page.getByLabel("Your question").fill("Is package 0x2 safe to depend on?");
   await a.page.getByRole("button", { name: /Ask Researcher/ }).click();
-  await expect(a.page.getByTestId("playground-answer").first()).toContainText(
-    "Paid 0.01 USDC to Sui risk check",
-    {
-      timeout: 180_000,
-    },
-  );
+  // U14 (ADR-0103): the payment is a receipt card ("Paid to · Sui risk check · 0.01 USDC").
+  await expect(
+    a.page.getByTestId("playground-answer").first().getByTestId("playground-paid").first(),
+  ).toContainText(/Paid to.*Sui risk check.*0\.01.*USDC/, { timeout: 180_000 });
   results.answerMs = ms(t2);
   s = await until("the paid answer's receipt", async () => {
     const x = (await sessionOf(a.page)).session;

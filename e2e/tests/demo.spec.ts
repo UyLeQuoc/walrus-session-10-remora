@@ -279,12 +279,10 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await s.type(s.page.getByLabel("Your question"), QUESTION, "question");
     await s.click(s.page.getByRole("button", { name: /Ask Researcher/ }), "Ask Researcher");
     s.mark("asked");
-    await expect(s.page.getByTestId("playground-answer").first()).toContainText(
-      "Paid 0.01 USDC to Sui risk check",
-      {
-        timeout: 180_000,
-      },
-    );
+    // U14 (ADR-0103): the payment is a receipt card ("Paid to · Sui risk check · 0.01 USDC").
+    await expect(
+      s.page.getByTestId("playground-answer").first().getByTestId("playground-paid").first(),
+    ).toContainText(/Paid to.*Sui risk check.*0\.01.*USDC/, { timeout: 180_000 });
     s.mark("answered");
     // U14 (ADR-0103): the payment is a receipt card now; the box keeps its name.
     await s.box("paid", s.page.getByTestId("playground-paid").first());
