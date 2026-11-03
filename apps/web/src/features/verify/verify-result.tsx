@@ -4,9 +4,11 @@
  * verified than the page the owner sees.
  */
 import { CheckCircle2, XCircle } from "lucide-react";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Checks } from "@/components/visual";
+import { Checks, Digest, Receipt } from "@/components/visual";
+import { payeeName } from "@/lib/payee";
 import { usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +16,51 @@ export type Check = { name: string; ok: boolean | null; detail: string };
 
 /** `ok: null` means "doesn't apply", which doesn't fail the receipt. */
 export const allChecksOk = (checks: Check[]) => checks.every((c) => c.ok !== false);
+
+/**
+ * Who paid what, to whom, and when, as a receipt card on top of the checks (ADR-0103: the reviewers
+ * found the payment only as a table cell below the fold).
+ */
+export function ReceiptSummary({
+  remora,
+  agent,
+  action,
+  ts,
+  verified,
+  tx,
+  network,
+}: {
+  remora: string;
+  agent: string;
+  action: { kind: string; amount?: string; payee?: string };
+  ts: string;
+  verified: boolean;
+  tx: string | null;
+  network: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-4" data-testid="receipt-summary">
+      <span className="flex items-center gap-2.5">
+        <RemoraAvatar id={agent} mood={verified ? "success" : "error"} size={40} still />
+        <span className="flex flex-col">
+          <span className="text-sm font-medium text-ob-text">{remora}</span>
+          <span className="text-xs text-ob-muted">
+            {action.kind === "pay" ? "paid" : action.kind}
+          </span>
+        </span>
+      </span>
+      {action.kind === "pay" && action.amount ? (
+        <Receipt
+          amount={usdc(action.amount)}
+          payee={action.payee ? payeeName(action.payee) : "a service"}
+          at={ts}
+          verified={verified}
+          proof={tx ? <Digest value={tx} network={network} /> : undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
 
 export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored: boolean }) {
   const allOk = allChecksOk(checks);
@@ -57,18 +104,39 @@ export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored:
  */
 const PLAIN: Record<string, string> = {
   "intent hash": "It did what it said",
-  "transaction succeeded": "The payment went through",
+  "transaction succeeded": "The payment is onchain",
   "Paid.intent matches": "The payment carries its decision",
   "payTo balance change": "The payee got the amount",
-  "decided before paying": "It decided before paying",
+  "decided before paying": "It decided as it paid",
   "signed by the remora": "Its own key signed",
   "saved onchain": "The decision is saved onchain",
 };
 
-/** "10000 of 10000" (USDC's smallest unit) reads as "0.01 of 0.01 USDC". */
+const clock = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+/**
+ * Details as people read them: "10000 of 10000" (USDC's smallest unit) as "0.01 of 0.01 USDC", and
+ * the timing check's ISO stamps as three clock times (the server allows the decision 5 s of skew).
+ */
 function plainDetail(detail: string): string {
-  const m = /^(\d+) of (\d+)$/.exec(detail);
-  return m ? `${usdc(m[1] ?? "0")} of ${usdc(m[2] ?? "0")} USDC` : detail;
+  const amount = /^(\d+) of (\d+)$/.exec(detail);
+  if (amount) return `${usdc(amount[1] ?? "0")} of ${usdc(amount[2] ?? "0")} USDC`;
+  const times = /^Receipt (\S+?)(?:, tx (\S+?))?, stored (\S+)$/.exec(detail);
+  if (times?.[1] && times[3])
+    return [
+      `decided ${clock(times[1])}`,
+      times[2] ? `paid ${clock(times[2])}` : null,
+      `stored ${clock(times[3])}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  return detail;
 }
 
 /** Each check lights up in turn (ADR-0103); `ok: null` reads as skipped, not failed. */

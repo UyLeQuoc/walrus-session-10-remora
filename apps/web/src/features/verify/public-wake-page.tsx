@@ -18,7 +18,7 @@ import { payeeName } from "@/lib/payee";
 import { explorerTx, formatUsdc } from "@/lib/usdc";
 import type { PublicWake } from "./public-wake";
 import { fetchPublicWake, type PublicWakeResult } from "./share-api";
-import { CheckList, VerifyVerdict } from "./verify-result";
+import { allChecksOk, CheckList, ReceiptSummary, VerifyVerdict } from "./verify-result";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -36,6 +36,19 @@ export function actionLine(a: PublicWake["action"]): string {
 export function PublicWakeView({ wake }: { wake: PublicWake }) {
   return (
     <>
+      <ReceiptSummary
+        remora={wake.remora}
+        agent={wake.agent}
+        action={
+          wake.action.kind === "pay"
+            ? { kind: "pay", amount: wake.action.amount, payee: wake.action.payee }
+            : { kind: wake.action.kind }
+        }
+        ts={wake.ts}
+        verified={allChecksOk(wake.checks)}
+        tx={wake.tx}
+        network={wake.network}
+      />
       <VerifyVerdict checks={wake.checks} anchored={wake.anchored} />
       <Section title="What happened">
         <dl className="ob-group" aria-label="Receipt">

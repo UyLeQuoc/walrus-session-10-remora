@@ -7,10 +7,13 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Section } from "@/components/app/page";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, Meter } from "@/components/visual";
+import { api } from "@/features/remoras/api";
+import { useLoad } from "@/features/remoras/hooks";
 import type { Network } from "@/lib/network";
 import { formatUsdc } from "@/lib/usdc";
 import { SettingsGroup } from "@/openbot/pages";
@@ -20,9 +23,12 @@ import { useSignAndRun } from "./sign";
 function DiscRow({
   d,
   cfg,
+  owner,
 }: {
   d: OwnedDisc;
   cfg: NonNullable<ReturnType<typeof useOwnerDiscs>["cfg"]>;
+  /** The remora this limit belongs to, matched by its Disc id (ADR-0103). */
+  owner?: { id: string; name: string };
 }) {
   const run = useSignAndRun();
   const [busy, setBusy] = useState(false);
@@ -55,7 +61,11 @@ function DiscRow({
     <li className="flex min-w-0 flex-col gap-2.5 px-4 py-3.5 text-md" data-testid="disc-row">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
-          {d.disc.name} <StatusBadge status={d.disc.paused ? "paused" : "live"} />
+          {owner ? <RemoraAvatar id={owner.id} size={22} still /> : null}
+          <span className="min-w-0 truncate" title={d.disc.name}>
+            {owner?.name ?? d.disc.name}
+          </span>
+          <StatusBadge status={d.disc.paused ? "paused" : "live"} />
         </p>
         <Button
           type="button"
@@ -93,6 +103,12 @@ function DiscRow({
 
 export function DiscPanel({ owner, network }: { owner: string; network: Network }) {
   const { discs, error, cfg, reload } = useOwnerDiscs(owner, network);
+  const remoras = useLoad(() => api.remoras(), [network]);
+  const byDisc = new Map(
+    (remoras.data?.remoras ?? [])
+      .filter((r) => r.discId)
+      .map((r) => [r.discId as string, { id: r.id, name: r.name }]),
+  );
   return (
     <Section
       title="Spending limits"
@@ -130,7 +146,7 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           ) : null}
           <SettingsGroup as="ul" aria-label="Spending limits">
             {discs.map((d) => (
-              <DiscRow key={d.disc.id} d={d} cfg={cfg} />
+              <DiscRow key={d.disc.id} d={d} cfg={cfg} owner={byDisc.get(d.disc.id)} />
             ))}
           </SettingsGroup>
         </>

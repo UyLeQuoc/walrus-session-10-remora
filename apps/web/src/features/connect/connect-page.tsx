@@ -77,7 +77,7 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
         }
       />
       <div className="flex w-full flex-col gap-6">
-        {kind === "connect" ? (
+        {linkDead ? null : kind === "connect" ? (
           <>
             <Flow
               className="max-w-2xl"
@@ -140,13 +140,9 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
         {step === "working" ? <p className="text-md">{status}</p> : null}
 
         {linkDead ? (
+          // ADR-0103: the fix the error names (run it again in the chat) is the main action.
           <div className="flex flex-wrap gap-2">
-            {kind === "connect" ? (
-              <Button asChild>
-                <Link to="/memory?tab=chat">Own this memory</Link>
-              </Button>
-            ) : null}
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link to="/chat">Open chat</Link>
             </Button>
           </div>

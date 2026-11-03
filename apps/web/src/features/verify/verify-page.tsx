@@ -16,10 +16,11 @@ import { Amount, Checks } from "@/components/visual";
 import { api } from "@/features/remoras/api";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { WakeDetails } from "@/features/remoras/why-drawer";
+import { currentNetwork } from "@/lib/network";
 import { payeeName } from "@/lib/payee";
 import { ShareControl } from "./share-control";
 import { useOwnsWake } from "./use-owns-wake";
-import { CheckList, VerifyVerdict } from "./verify-result";
+import { allChecksOk, CheckList, ReceiptSummary, VerifyVerdict } from "./verify-result";
 
 /** What a check confirms, shown before one runs as the same list that lights up after. */
 const CHECKS = [
@@ -153,6 +154,23 @@ export function VerifyPage() {
 
       {r ? (
         <>
+          <ReceiptSummary
+            remora={r.wake.remora}
+            agent={r.wake.agent}
+            action={
+              r.wake.intent.decision.action === "pay"
+                ? {
+                    kind: "pay",
+                    amount: r.wake.intent.decision.amount,
+                    payee: r.wake.intent.decision.payee,
+                  }
+                : { kind: r.wake.intent.decision.action }
+            }
+            ts={r.wake.ts}
+            verified={allChecksOk(r.checks)}
+            tx={r.wake.result.tx ?? null}
+            network={currentNetwork()}
+          />
           <VerifyVerdict checks={r.checks} anchored={r.anchored} />
 
           <Section title="What we checked">
