@@ -3,6 +3,7 @@
  * every page is for; then how it works in four blocks (an agent, memory, a budget, a receipt), each
  * with a picture, a sentence and a link to the page that does it. The Claude Code recipe stays.
  */
+
 import {
   Activity,
   ArrowRight,
@@ -20,6 +21,7 @@ import { RAIL_FOOTER, RAIL_PAGES } from "@/app/app-rail";
 import { Page, PageHeader } from "@/components/app/page";
 import { WhatIsRemora } from "@/components/app/what-is-remora";
 import { Button } from "@/components/ui/button";
+import { WalletPicker } from "@/components/wallet-picker";
 import {
   ClaudeCodeSteps,
   CommandGroups,
@@ -28,6 +30,7 @@ import {
   ProofGrid,
 } from "@/features/guide/guide-visuals";
 import { useMe } from "@/features/me/use-me";
+import { useOwner } from "@/features/remoras/hooks";
 
 function Tiles({
   items,
@@ -122,6 +125,7 @@ const EVERY_PAGE = [
 
 export function GuidePage() {
   const { me } = useMe();
+  const { owner } = useOwner();
 
   return (
     <Page
@@ -133,16 +137,28 @@ export function GuidePage() {
         title="How Remora works"
         description="What it is, how to start, how it works."
         actions={
-          <>
-            <Button asChild>
-              <Link to="/chat">
-                Open chat <ArrowRight />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/remoras/new">Create a remora</Link>
-            </Button>
-          </>
+          // ADR-0103: one first step. Signed out, it's step 1 (try one, no wallet); signed in, chat.
+          owner ? (
+            <>
+              <Button asChild>
+                <Link to="/chat">
+                  Open chat <ArrowRight />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/remoras/new">Create a remora</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button asChild>
+                <Link to="/playground">
+                  <Fish /> Try a Researcher, no wallet
+                </Link>
+              </Button>
+              <WalletPicker label="Sign in" variant="outline" signIn />
+            </>
+          )
         }
       />
 

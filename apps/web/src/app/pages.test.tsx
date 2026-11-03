@@ -1212,7 +1212,10 @@ describe("how it works", () => {
     expect(container.textContent ?? "").toMatch(/seven months/);
     expect(container.textContent ?? "").toMatch(/\/connect/);
     expect(container.textContent ?? "").toMatch(/\/compare/);
-    expect(screen.getByRole("link", { name: /Open chat/ }).getAttribute("href")).toBe("/chat");
+    // ADR-0103: signed out, the guide's first step is step 1, trying one with no wallet.
+    const first = screen.getAllByRole("link", { name: /Try a Researcher, no wallet/ });
+    expect(first.length).toBeGreaterThan(0);
+    for (const link of first) expect(link.getAttribute("href")).toBe("/playground");
     expect(container.textContent ?? "").toMatch(/A receipt for every action/);
     expect(container.textContent ?? "").toMatch(/A budget Sui enforces/);
     expect(container.textContent ?? "").not.toMatch(/hippo/i);
