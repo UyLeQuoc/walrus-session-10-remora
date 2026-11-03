@@ -16,7 +16,6 @@ import { Section } from "@/components/app/section";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Time } from "@/components/app/time";
 import { CopyButton } from "@/components/copy-button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Empty, Problem } from "@/components/visual";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { kindName } from "@/lib/kind";
@@ -371,39 +371,59 @@ export function ConnectionsPage() {
     >
       <PageHeader
         title="Connections"
-        description="Let an agent (Claude Code, Cursor, any MCP client) use one of your remoras. It acts within the remora's spending limit; anything over it comes back to you."
+        description="Let an agent like Claude Code use one of your remoras."
+        hint="Any MCP client (Claude Code, Cursor) can use a remora through a token. It acts within the remora's spending limit; anything over it comes back to you. One token per agent, for one remora, and you can revoke it any time."
       />
       <RequireOwner what="connect an agent">
-        {() => (
-          <>
-            {created ? (
-              <Created c={created} onDone={() => setCreated(null)} />
-            ) : (
-              <Section
-                title="New connection"
-                description="One token per agent, for one remora. You can revoke it any time."
-              >
-                <NewConnection onCreated={setCreated} />
-              </Section>
-            )}
-            <Section title="Your connections">
-              {list.error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Can't load your connections</AlertTitle>
-                  <AlertDescription>{list.error}</AlertDescription>
-                </Alert>
-              ) : list.data && !list.data.tokens.length ? (
-                <p className="text-md text-ob-muted">No agent is connected yet.</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {(list.data?.tokens ?? []).map((t) => (
-                    <TokenCard key={t.id} t={t} onChange={() => void list.refresh()} />
-                  ))}
-                </div>
-              )}
+        {() => {
+          const tokens = list.data?.tokens ?? [];
+          // ADR-0103: the live ones first; revoked and expired fold away (they were a third of a
+          // 6,000 px page on a phone).
+          const live = tokens.filter((t) => statusOf(t) === "active");
+          const done = tokens.filter((t) => statusOf(t) !== "active");
+          const form = created ? (
+            <Created c={created} onDone={() => setCreated(null)} />
+          ) : (
+            <Section title="New connection">
+              <NewConnection onCreated={setCreated} />
             </Section>
-          </>
-        )}
+          );
+          return (
+            <>
+              {tokens.length ? null : form}
+              <Section title="Your connections">
+                {list.error ? (
+                  <Problem
+                    title="Can't load your connections."
+                    detail={list.error}
+                    onRetry={() => void list.refresh()}
+                  />
+                ) : list.data && !tokens.length ? (
+                  <Empty title="No agent is connected yet." mood="asleep" />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {live.map((t) => (
+                      <TokenCard key={t.id} t={t} onChange={() => void list.refresh()} />
+                    ))}
+                    {done.length ? (
+                      <details className="group">
+                        <summary className="cursor-pointer text-sm text-ob-muted hover:text-ob-text">
+                          Revoked or expired ({done.length})
+                        </summary>
+                        <div className="mt-3 flex flex-col gap-3">
+                          {done.map((t) => (
+                            <TokenCard key={t.id} t={t} onChange={() => void list.refresh()} />
+                          ))}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                )}
+              </Section>
+              {tokens.length ? form : null}
+            </>
+          );
+        }}
       </RequireOwner>
     </Page>
   );

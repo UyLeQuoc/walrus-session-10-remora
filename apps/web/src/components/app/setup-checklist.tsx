@@ -171,6 +171,7 @@ export function SetupChecklist({ variant = "full" }: { variant?: "full" | "compa
                 step.done ? null : step.connect ? (
                   <WalletPicker
                     label={ownerLoading ? "Loading…" : "Sign in"}
+                    variant="outline"
                     size="sm"
                     signIn
                     onSignedIn={reload}

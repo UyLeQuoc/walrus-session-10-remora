@@ -3,27 +3,69 @@
  * against the chain: the intent hash, the `Paid` anchor, the payee's balance change, and who signed.
  * No sign-in needed: it only reads public chain data and the stored Wake.
  */
-import type { VerifyResult } from "@remora/schema";
-import { ShieldCheck } from "lucide-react";
+import type { FeedItem, VerifyResult } from "@remora/schema";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { Page, PageHeader, Section } from "@/components/app/page";
+import { Time } from "@/components/app/time";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Amount, Checks } from "@/components/visual";
 import { api } from "@/features/remoras/api";
+import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { WakeDetails } from "@/features/remoras/why-drawer";
+import { payeeName } from "@/lib/payee";
 import { ShareControl } from "./share-control";
 import { useOwnsWake } from "./use-owns-wake";
 import { CheckList, VerifyVerdict } from "./verify-result";
 
+/** What a check confirms, shown before one runs as the same list that lights up after. */
 const CHECKS = [
-  "The intent hash matches what the remora says it did.",
-  "The payment record is onchain, in the transaction you pasted.",
-  "The payee's balance moved by the amount in the receipt.",
-  "The signer is the remora's key, not a stranger.",
+  { label: "It did what it said", detail: "The intent hash matches the receipt." },
+  { label: "The payment is onchain", detail: "In the transaction you pasted." },
+  { label: "The payee got the amount", detail: "Its balance moved by exactly that much." },
+  { label: "Its own key signed", detail: "The remora's key, not a stranger's." },
 ];
+
+/** Signed in: your latest paid answers, one click from their check (ADR-0103). */
+function RecentReceipts() {
+  const { owner } = useOwner();
+  const feed = useLoad(
+    () =>
+      owner
+        ? api.feed({ type: "payment", limit: "5" })
+        : Promise.resolve({ ok: true as const, data: { events: [] as FeedItem[] } }),
+    [owner],
+  );
+  const rows = (feed.data?.events ?? []).filter((e) => e.receiptId);
+  if (!rows.length) return null;
+  return (
+    <Section title="Your recent receipts">
+      <ul className="flex max-w-3xl flex-col gap-2" aria-label="Your recent receipts">
+        {rows.map((e) => {
+          const p = e.payload as { amount?: string; payee?: string };
+          return (
+            <li
+              key={e.id}
+              className="flex items-center gap-3 rounded-lg border border-ob-border bg-ob-raised px-3 py-2"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {p.payee ? payeeName(p.payee) : e.summary}
+              </span>
+              {p.amount ? <Amount value={p.amount} className="text-sm" /> : null}
+              <Time value={e.createdAt} className="text-ob-muted" />
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/verify/${e.receiptId}`}>Verify</Link>
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
 
 export function VerifyPage() {
   const { ref = "" } = useParams();
@@ -58,7 +100,8 @@ export function VerifyPage() {
     <Page title="Verify a receipt" description="Check a remora receipt against Sui.">
       <PageHeader
         title="Verify a receipt"
-        description="Paste a transaction digest or a receipt id. We check it against Sui through Tatum; no sign-in needed."
+        description="Check any receipt against Sui. No sign-in needed."
+        hint="Paste a Sui transaction digest or a receipt id. Remora reads the chain and compares; nothing here asks you to take its word."
       />
       <form
         className="flex flex-col gap-2 sm:max-w-2xl sm:flex-row"
@@ -125,19 +168,16 @@ export function VerifyPage() {
       ) : null}
 
       {!r && !state.loading && !state.error ? (
-        <Section title="What we check" description="Nothing here asks you to take Remora's word.">
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {CHECKS.map((line) => (
-              <li
-                key={line}
-                className="ob-card flex-row items-start gap-3 text-md text-ob-secondary"
-              >
-                <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ob-accent-text" />
-                {line}
-              </li>
-            ))}
-          </ul>
-        </Section>
+        <>
+          <RecentReceipts />
+          <Section title="What we check">
+            <Checks
+              className="max-w-3xl"
+              label="What we check"
+              items={CHECKS.map((c) => ({ ...c, state: "pending" as const }))}
+            />
+          </Section>
+        </>
       ) : null}
     </Page>
   );

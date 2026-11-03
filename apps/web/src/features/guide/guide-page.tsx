@@ -64,7 +64,7 @@ const STEPS: Array<{ title: string; to?: string; detail: string }> = [
     to: "/playground",
     detail: "Ask a Researcher with a $1 spending limit on testnet, and watch it pay for an answer.",
   },
-  { title: "Sign in", detail: "Connect a Sui wallet with Sign in, at the bottom left." },
+  { title: "Sign in", detail: "Connect a Sui wallet with the Sign in button." },
   {
     title: "Create a remora",
     to: "/remoras/new",
@@ -183,7 +183,7 @@ export function GuidePage() {
         </ol>
       </GuideSection>
 
-      <GuideSection title="Every page" lead="The pages in the left rail, then three more.">
+      <GuideSection title="Every page" lead="Every page in the menu, then three more.">
         <ul className="grid gap-2 md:grid-cols-2" data-testid="guide-pages">
           {EVERY_PAGE.map((p) => (
             <li key={p.to}>

@@ -100,9 +100,12 @@ function ModelRow({ model }: { model: ChatModel }) {
 export function ModelPicker({
   value,
   onChange,
+  labelled = false,
 }: {
   value: string;
   onChange: (id: string) => void;
+  /** Always show the model's name (a settings row); the composer hides it on a phone. */
+  labelled?: boolean;
 }) {
   const selected = modelById(value);
   return (
@@ -110,12 +113,12 @@ export function ModelPicker({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="ghost"
+          variant={labelled ? "outline" : "ghost"}
           size="sm"
           aria-label={`Model: ${selected.label}`}
-          className="gap-1.5 px-2 text-muted-foreground"
+          className={labelled ? "gap-1.5" : "gap-1.5 px-2 text-muted-foreground"}
         >
-          <span className="hidden sm:inline">{selected.shortLabel}</span>
+          <span className={labelled ? "inline" : "hidden sm:inline"}>{selected.shortLabel}</span>
           <ChevronDown data-icon="inline-end" />
         </Button>
       </DropdownMenuTrigger>

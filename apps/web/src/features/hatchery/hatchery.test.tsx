@@ -266,7 +266,10 @@ describe("memory controls (F4, F5, F8)", () => {
     expect((await screen.findByTestId("expiry-alert")).textContent).toContain(
       "expires within 30 days",
     );
-    expect(screen.getByRole("button", { name: /Export Markdown/ })).toBeDefined();
+    // ADR-0103: both formats sit in one Export menu.
+    await userEvent.click(screen.getByRole("button", { name: /Export/ }));
+    expect(await screen.findByRole("menuitem", { name: /Export Markdown/ })).toBeDefined();
+    await userEvent.keyboard("{Escape}");
     const row = (await screen.findAllByTestId("memory-row"))[0];
     if (!row) throw new Error("no row");
     await userEvent.click(within(row).getByRole("button", { name: /^Hide / }));

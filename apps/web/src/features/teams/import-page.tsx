@@ -107,18 +107,16 @@ function Importer() {
     <Page title="Import a team">
       <PageHeader
         title="Import a team"
-        description="One Markdown file sets up a whole team: remoras, budgets, models, rules, schedules and the room they share."
+        description="One Markdown file sets up a whole team."
+        hint="The file holds the remoras, their budgets, models, rules and schedules, and the room they share. Nothing is created until you confirm."
       />
-      <Section
-        title="The file"
-        description="Paste it, or open a .md file. Nothing is created until you confirm below."
-      >
+      <Section title="The file">
         <div className="flex max-w-3xl flex-col gap-3">
           <Textarea
             aria-label="Team file"
             rows={14}
-            className="rounded-ob-lg bg-ob-grouped font-mono text-xs leading-5"
-            placeholder={EXAMPLE}
+            className="rounded-ob-lg bg-ob-grouped font-mono text-xs leading-5 placeholder:text-ob-dim"
+            placeholder="Paste a team file here, or use the example below."
             value={markdown}
             onChange={(e) => setMarkdown(e.target.value)}
           />
@@ -126,9 +124,14 @@ function Importer() {
             <Button
               type="button"
               variant="outline"
-              disabled={!markdown.trim()}
-              onClick={() => void check()}
+              onClick={() => {
+                setMarkdown(EXAMPLE);
+                void check(EXAMPLE);
+              }}
             >
+              Use the example
+            </Button>
+            <Button type="button" disabled={!markdown.trim()} onClick={() => void check()}>
               Preview
             </Button>
             <Button asChild type="button" variant="ghost">
@@ -142,16 +145,6 @@ function Importer() {
                   onChange={(e) => void open(e.target.files?.[0])}
                 />
               </label>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setMarkdown(EXAMPLE);
-                void check(EXAMPLE);
-              }}
-            >
-              Use the example
             </Button>
           </div>
           {error ? (

@@ -1,8 +1,12 @@
+import type { RemoraView } from "@remora/schema";
 import type { UIMessage } from "ai";
+import { Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { useNewChatTick, useOpenTick, useShellTitle } from "@/app/shell";
 import { AsciiOcean, type SharkSpec } from "@/components/ascii-ocean";
+import { Button } from "@/components/ui/button";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -14,6 +18,7 @@ import {
 } from "@/components/ui/message-scroller";
 import { Popover, PopoverAnchor } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, Problem } from "@/components/visual";
 import { clearActiveChat, readActiveChat } from "@/features/chat/active-chat";
 import { ChatTurn } from "@/features/chat/chat-turn";
 import { CitationNote } from "@/features/chat/citation-note";
@@ -46,6 +51,8 @@ import { useSelectionRemember } from "@/features/chat/use-selection-remember";
 import { useSlashMenu } from "@/features/chat/use-slash-menu";
 import { useTranscript } from "@/features/chat/use-transcript";
 import { useMe } from "@/features/me/use-me";
+import { api } from "@/features/remoras/api";
+import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { usePageMeta } from "@/hooks/use-page-meta";
 
 // The empty chat's showcase backdrop; gone once the first message lands.
@@ -161,6 +168,20 @@ export function ChatPage() {
     index: false,
   });
   const greeting = useGreeting(newChatTick, messages.length === 0);
+  // ADR-0103: a signed-in account with no remora gets one button, not examples for remoras it
+  // doesn't have; a failing server says so above the composer.
+  const { owner } = useOwner();
+  const roster = useLoad(
+    () =>
+      owner
+        ? api.remoras()
+        : Promise.resolve({ ok: true as const, data: { remoras: [] as RemoraView[] } }),
+    [owner],
+  );
+  const noRemora =
+    Boolean(owner) &&
+    Boolean(roster.data) &&
+    !(roster.data?.remoras ?? []).some((r) => r.status !== "retired");
 
   const reloadAndAsk = (value: string) => {
     clearActiveChat();
@@ -205,9 +226,28 @@ export function ChatPage() {
                     onTogglePanel={panel.open ? panel.close : panel.show}
                   />
                 </div>
-                <div className="flex flex-col items-start gap-3">
-                  <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
-                </div>
+                {roster.error ? (
+                  <Problem
+                    title="Can't reach your remoras right now."
+                    detail={roster.error}
+                    onRetry={() => void roster.refresh()}
+                  />
+                ) : noRemora ? (
+                  <Empty
+                    title="You have no remora yet. Make one to chat with."
+                    action={
+                      <Button asChild>
+                        <Link to="/remoras/new">
+                          <Plus /> Create a remora
+                        </Link>
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="flex flex-col items-start gap-3">
+                    <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
+                  </div>
+                )}
               </div>
             </div>
           </div>

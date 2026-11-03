@@ -453,7 +453,8 @@ function BrainSection({ r, reload }: { r: RemoraView; reload: () => void }) {
     <Section
       layout="split"
       title="Brain"
-      description="The model it answers with. Every choice can call tools and costs at most $1 per 1M tokens."
+      description="The model it answers with."
+      hint="Every choice can call tools and costs at most $1 per 1M tokens."
     >
       <SettingsGroup>
         <SettingsRow
@@ -465,6 +466,7 @@ function BrainSection({ r, reload }: { r: RemoraView; reload: () => void }) {
           actions={
             <div className="flex items-center gap-2" data-testid="remora-model">
               <ModelPicker
+                labelled
                 value={r.config.model ?? DEFAULT_MODEL_ID}
                 onChange={(id) => void choose(id)}
               />
