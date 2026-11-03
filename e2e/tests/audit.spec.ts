@@ -79,7 +79,9 @@ test("signed-in audit: light and dark", async ({ page }, info) => {
 
   await page.goto("/");
   await connectAndSignIn(page);
-  await expect(page.getByRole("button", { name: "Sign in" })).toBeHidden();
+  // U14 (ADR-0103): the setup checklist's step says Sign in too (one name for one act), so every
+  // Sign in button is gone once the session exists.
+  await expect(page.getByRole("button", { name: "Sign in" })).toHaveCount(0);
 
   const pages = [...PAGES];
   const remora = await findRemora(page);
@@ -180,7 +182,9 @@ test.describe("U14 review capture", () => {
     await installTestWallet(page, burner());
     await page.goto("/");
     await connectAndSignIn(page);
-    await expect(page.getByRole("button", { name: "Sign in" })).toBeHidden();
+    // U14 (ADR-0103): the setup checklist's step says Sign in too (one name for one act), so every
+    // Sign in button is gone once the session exists.
+    await expect(page.getByRole("button", { name: "Sign in" })).toHaveCount(0);
 
     const list: Array<[string, string]> = [
       ...PAGES,
