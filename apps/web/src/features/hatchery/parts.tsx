@@ -7,6 +7,7 @@ import { ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { modelById } from "@/features/chat/models";
+import { kindName } from "@/lib/kind";
 
 const TRIGGER: Record<string, string> = {
   message: "when you message it",
@@ -24,7 +25,7 @@ export function PermissionsList({ permissions }: { permissions: TemplatePermissi
           data-testid="template-permissions"
         >
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
-            {p.remora} <Badge variant="outline">{p.template}</Badge>
+            {p.remora} <Badge variant="outline">{kindName(p.template)}</Badge>
             {p.model ? <Badge variant="secondary">{modelById(p.model).label}</Badge> : null}
           </p>
           <p className="text-ob-muted">

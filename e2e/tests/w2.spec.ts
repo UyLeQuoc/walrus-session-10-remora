@@ -77,7 +77,7 @@ async function goto(page: Page, path: string) {
 
 async function createRemora(
   page: Page,
-  template: "Scout" | "Sentinel",
+  template: "Researcher" | "Wallet watcher",
   fill: (p: Page) => Promise<void>,
 ) {
   await goto(page, "/remoras/new");
@@ -100,15 +100,17 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
   const t0 = Date.now();
   await page.goto("/remoras/new");
   await connectAndSignIn(page);
-  await expect(page.getByRole("radio", { name: /^Scout/ })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("radio", { name: /^Researcher/ })).toBeVisible({ timeout: 60_000 });
   const stamp = Date.now().toString(36);
-  const scoutId = await createRemora(page, "Scout", async (p) => {
-    await p.getByLabel("Name").fill(`Scout ${stamp}`);
+  const scoutId = await createRemora(page, "Researcher", async (p) => {
+    await p.getByLabel("Name").fill(`Researcher ${stamp}`);
     await p.getByLabel("Monthly limit (USDC)").fill("0.5");
     // 0.015 a payment: sui-risk (0.01) passes, odds (0.02) has to ask the owner (E4).
     await p.getByLabel("Most it pays at once (USDC)").fill("0.015");
   });
-  await expect(page.getByRole("heading", { name: `Scout ${stamp}`, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: `Researcher ${stamp}`, exact: true }),
+  ).toBeVisible();
   results.firstRemoraMs = ms(t0);
   expect(results.firstRemoraMs as number, "sign-in to first remora under 3 minutes").toBeLessThan(
     180_000,
@@ -168,7 +170,7 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
   await goto(page, "/approvals");
   await page
     .getByTestId("approval")
-    .filter({ hasText: `Scout ${stamp}` })
+    .filter({ hasText: `Researcher ${stamp}` })
     .getByRole("button", { name: /Pay once \(0\.02 USDC\)/ })
     .click();
   await expect(page.getByTestId("approval-answer")).toBeVisible({ timeout: 180_000 });
@@ -183,8 +185,8 @@ test("W2 exit: first remora < 3 min, Scout pays and answers, E4 approval, Sentin
   // 4. Sentinel watches a fresh address, learns a rule in plain words, and applies it.
   const watched = new Ed25519Keypair().toSuiAddress();
   results.watched = watched;
-  const sentinelId = await createRemora(page, "Sentinel", async (p) => {
-    await p.getByLabel("Name").fill(`Sentinel ${stamp}`);
+  const sentinelId = await createRemora(page, "Wallet watcher", async (p) => {
+    await p.getByLabel("Name").fill(`Wallet watcher ${stamp}`);
     await p.getByLabel("Addresses to watch").fill(watched);
   });
   results.sentinelId = sentinelId;

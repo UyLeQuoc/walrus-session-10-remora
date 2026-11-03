@@ -13,8 +13,8 @@ import type { ChannelAdapter } from "./types.ts";
 /** H1 commands shown in Telegram's menu beside the hippo ones. */
 const REMORA_COMMANDS = [
   { command: "remoras", description: "Your remoras and their status" },
-  { command: "scout", description: "Ask your Scout a question" },
-  { command: "teach", description: "Teach your Sentinel a rule" },
+  { command: "ask", description: "Ask your Researcher a question" },
+  { command: "teach", description: "Teach your Wallet watcher a rule" },
   { command: "budget", description: "Budgets left and the burn rate" },
   { command: "approvals", description: "What's waiting for you" },
   { command: "pause", description: "Pause a remora" },

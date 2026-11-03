@@ -35,12 +35,23 @@ export function useOwnerDiscs(owner: string | null, network: Network) {
       setDiscs([]);
       return;
     }
-    try {
-      setError("");
-      setDiscs(await listOwnerDiscs(client.core, cfg, owner));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read your spending limits.");
-      setDiscs([]);
+    setError("");
+    for (let attempt = 1; ; attempt++) {
+      try {
+        setDiscs(await listOwnerDiscs(client.core, cfg, owner));
+        return;
+      } catch {
+        // The public fullnode drops a burst of reads now and then ("Failed to fetch"), often right
+        // after a pause or resume: try twice more before saying so.
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 1_500 * attempt));
+          continue;
+        }
+        setError("Couldn't read your spending limits from Sui just now.");
+        // A failed refresh keeps the list it had, so the limits you just saw don't vanish.
+        setDiscs((prev) => prev ?? []);
+        return;
+      }
     }
   }, [owner, client, cfg]);
 

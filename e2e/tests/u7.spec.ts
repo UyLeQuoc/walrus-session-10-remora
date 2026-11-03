@@ -182,7 +182,7 @@ name: U7 desk ${stamp}
 remoras:
   - template: scout
     name: Checker ${stamp}
-    persona: You are Scout. You check Sui packages before people depend on them, and you say what each source cost.
+    persona: You are a Researcher. You check Sui packages before people depend on them, and you say what each source cost.
     budget:
       monthlyUsd: 0.5
       perPaymentUsd: 0.015

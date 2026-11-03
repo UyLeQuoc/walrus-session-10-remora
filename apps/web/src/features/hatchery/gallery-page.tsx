@@ -14,6 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { api } from "@/features/remoras/api";
 import { useLoad } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { kindName } from "@/lib/kind";
 import { GalleryCard } from "@/openbot/pages";
 import { shortAddress } from "./parts";
 
@@ -58,8 +59,8 @@ export function HatcheryPage() {
           aria-label="Kind"
         >
           <ToggleGroupItem value="all">All</ToggleGroupItem>
-          <ToggleGroupItem value="scout">Scout</ToggleGroupItem>
-          <ToggleGroupItem value="sentinel">Sentinel</ToggleGroupItem>
+          <ToggleGroupItem value="scout">Researcher</ToggleGroupItem>
+          <ToggleGroupItem value="sentinel">Wallet watcher</ToggleGroupItem>
         </ToggleGroup>
       </div>
       {list.error ? <p className="text-md text-ob-danger-text">{list.error}</p> : null}
@@ -95,7 +96,7 @@ export function HatcheryPage() {
                     <Badge variant={VERDICT[t.safety]?.variant ?? "outline"}>
                       {VERDICT[t.safety]?.label ?? t.safety}
                     </Badge>
-                    <span>{t.permissions.map((p) => p.template).join(" + ") || "—"}</span>
+                    <span>{t.permissions.map((p) => kindName(p.template)).join(" + ") || "—"}</span>
                     <span className="flex items-center gap-1" data-testid="fork-count">
                       <GitFork className="size-3" /> {t.forks}
                     </span>

@@ -22,6 +22,11 @@ import { type Remora, RemoraError, type RemoraService } from "../runtime/remoras
 import { answerButtons } from "../runtime/schedules.ts";
 import { scoutAsk } from "../runtime/scout.ts";
 import { teach } from "../runtime/sentinel.ts";
+import { isTemplateSlug, TEMPLATES } from "../templates/index.ts";
+
+/** ADR-0101: a remora's kind in plain words ("Researcher", "Wallet watcher"). */
+const kindOf = (template: string) =>
+  isTemplateSlug(template) ? TEMPLATES[template].name : template;
 
 export interface BotReply {
   text: string;
@@ -118,20 +123,24 @@ export function createRemoraBot(d: RemoraBotDeps) {
           if (!rows.length)
             return { text: `No remoras on ${network()} yet. Create one: ${web("/remoras/new")}` };
           return {
-            text: rows.map((r) => `• ${r.name} (${r.template}) is ${r.status}`).join("\n"),
+            text: rows
+              .map((r) => {
+                const kind = kindOf(r.template);
+                return `• ${r.name}${r.name === kind ? "" : ` (${kind})`} is ${r.status}`;
+              })
+              .join("\n"),
           };
         }
         case "scout":
         case "ask": {
           const r = rows.find((x) => x.template === "scout" && live(x));
-          if (!r) return { text: "You have no active Scout." };
-          if (!arg)
-            return { text: `Ask ${r.name} something, e.g. /scout is 0x2 safe to depend on?` };
+          if (!r) return { text: "You have no active Researcher." };
+          if (!arg) return { text: `Ask ${r.name} something, e.g. /ask is 0x2 safe to depend on?` };
           return ask(r, arg);
         }
         case "teach": {
           const r = rows.find((x) => x.template === "sentinel" && live(x));
-          if (!r) return { text: "You have no active Sentinel." };
+          if (!r) return { text: "You have no active Wallet watcher." };
           if (!arg)
             return {
               text: "Teach a rule in plain words, e.g. /teach ignore incoming SUI under 0.01",

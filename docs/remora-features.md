@@ -304,7 +304,7 @@ limits always apply.
 | N11 | Config history & rollback | Versioned remora configs with a diff and one-tap restore | W3 |
 | N12 | Human schedules | "Weekdays at 8am", "every Sunday evening" → cron, with a preview of the next runs | W2 |
 | N13 | **First-run instant win** | Right after creation, Sentinel explains your last 5 transactions and Scout answers a sample question, so the user sees value within 60 seconds | W2 |
-| N14 | Guide & glossary | An in-app guide (diagrams, ported from hippo's guide) and tooltips for the product's plain words: spending limit, receipt, address balance, services, safety check, practice mode ([ADR-0094](adr/0094-plain-words-in-the-product.md): Disc, Wake, Reef and Sonar stay the names in code and docs) | W3 |
+| N14 | Guide & glossary | An in-app guide (diagrams, ported from hippo's guide) and tooltips for the product's plain words: spending limit, receipt, address balance, services, safety check, practice mode, and the kinds Researcher and Wallet watcher ([ADR-0101](adr/0101-researcher-and-wallet-watcher.md)) ([ADR-0094](adr/0094-plain-words-in-the-product.md): Disc, Wake, Reef and Sonar stay the names in code and docs) | W3 |
 | N15 | Cost card | Per remora: LLM + gas + purchases this month (the UI for K4) | W3 |
 | N16 | Personalization | Avatar or emoji, tone and language per remora. The avatar is a face whose eyes show its state ([ADR-0098](adr/0098-remora-faces-with-moods.md)) | W3 |
 | N17 | Shared remoras | Invite teammates as viewers or approvers (hippo's team model) | W4 |

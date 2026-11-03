@@ -252,7 +252,7 @@ export async function learningSeries(db: Db, r: Remora): Promise<LearningSeries[
 
   if (r.template === "sentinel") {
     return [
-      series("noise_rate", "ratio", "Sentinel's pings that you marked 👎 noise", (es) => {
+      series("noise_rate", "ratio", "The Wallet watcher's pings you marked 👎 noise", (es) => {
         const pings = es.filter((e) => e.type === "ping");
         const noise = pings.filter((e) => e.feedback === "noise").length;
         return { value: pings.length ? noise / pings.length : null, n: pings.length };

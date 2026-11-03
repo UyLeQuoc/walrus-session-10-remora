@@ -610,7 +610,7 @@ export function createRemoraService(deps: RemoraDeps) {
       }
       if (patch.watch !== undefined) {
         if (r.template !== "sentinel")
-          throw new RemoraError("remora.no_watch", "Only Sentinels watch addresses.");
+          throw new RemoraError("remora.no_watch", "Only Wallet watchers watch addresses.");
         next.triggers = [
           {
             kind: "chain",

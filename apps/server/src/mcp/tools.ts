@@ -393,7 +393,7 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
         const namespaces = d.config(r).namespaces;
         if (type === "rule") {
           if (r.template !== "sentinel")
-            refuse(`${r.name} doesn't take rules; only Sentinel does.`);
+            refuse(`${r.name} doesn't take rules; only a Wallet watcher does.`);
           const [a] = await rt.db
             .insert(approvals)
             .values({
@@ -618,7 +618,7 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
     {
       name: "remora_ask",
       description:
-        "Ask the remora (Scout) a question. It may buy data through its Disc to answer, inside its limits.",
+        "Ask the remora (a Researcher) a question. It may buy data through its Disc to answer, inside its limits.",
       inputSchema: {
         type: "object",
         properties: { question: { type: "string" } },

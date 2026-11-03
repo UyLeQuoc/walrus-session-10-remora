@@ -14,8 +14,8 @@ import { Activity, Database, Package, RotateCcw, Search, Shield, Siren } from "l
 import { Button } from "@/components/ui/button";
 
 export const TEACH: Array<{ icon: LucideIcon; text: string }> = [
-  { icon: Shield, text: "Teach Sentinel: ignore incoming SUI under 0.01" },
-  { icon: Package, text: "Ask Scout: is package 0x2 safe to depend on?" },
+  { icon: Shield, text: "Teach Wallet watcher: ignore incoming SUI under 0.01" },
+  { icon: Package, text: "Ask Researcher: is package 0x2 safe to depend on?" },
   { icon: Database, text: "Remember that this project settles in USDC on testnet" },
   { icon: Siren, text: "Ping me when a remora pays more than 0.05 USDC at once" },
 ];
@@ -23,7 +23,7 @@ export const TEACH: Array<{ icon: LucideIcon; text: string }> = [
 export const ASK: Array<{ icon: LucideIcon; text: string; reload?: boolean }> = [
   { icon: RotateCcw, text: "Reload, then ask what my remoras remember", reload: true },
   { icon: Activity, text: "What did my remoras do today?" },
-  { icon: Search, text: "Which sources did Scout pay for?" },
+  { icon: Search, text: "Which sources did the Researcher pay for?" },
   { icon: Shield, text: "/proof" },
 ];
 

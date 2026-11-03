@@ -169,7 +169,7 @@ export async function shareReview(
       ? [
           {
             field: "watch",
-            reason: `The ${watched} address(es) it watches stay private; a hatched Sentinel watches its new owner.`,
+            reason: `The ${watched} address(es) it watches stay private; a Wallet watcher made from it watches its new owner.`,
           },
         ]
       : []),

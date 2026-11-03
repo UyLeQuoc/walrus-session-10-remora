@@ -19,26 +19,27 @@ import { modelById } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
 import { api } from "@/features/remoras/api";
 import { RequireOwner } from "@/features/remoras/hooks";
+import { kindName } from "@/lib/kind";
 
 const EXAMPLE = `---
 schema: remora.team/v1
 name: Onchain desk
 remoras:
   - template: scout
-    name: Scout
+    name: Researcher
     budget: { monthlyUsd: 0.5, perPaymentUsd: 0.015 }
     schedules:
       - when: weekdays at 8am
         question: Is package 0x2 safe to depend on?
   - template: sentinel
-    name: Sentinel
+    name: Wallet watcher
     rules:
       - Ignore incoming SUI under 0.01
-room: { name: Team, responder: auto, lead: Scout }
+room: { name: Team, responder: auto, lead: Researcher }
 ---
 
 # Onchain desk
-Ask Scout anything onchain; tell Sentinel what matters.
+Ask the Researcher anything onchain; tell the Wallet watcher what matters.
 `;
 
 function Importer() {
@@ -182,7 +183,7 @@ function Importer() {
                 data-testid="team-remora"
               >
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
-                  {r.name} <Badge variant="outline">{r.template}</Badge>
+                  {r.name} <Badge variant="outline">{kindName(r.template)}</Badge>
                   {r.model ? <Badge variant="secondary">{modelById(r.model).label}</Badge> : null}
                   <Badge variant="warning">starts in practice mode</Badge>
                 </p>

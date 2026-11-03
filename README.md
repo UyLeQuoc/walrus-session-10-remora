@@ -42,7 +42,7 @@ the data it needs. Every remora has three things most agents don't:
 |---|---|
 | **Entry** | *Total Recall*, **Track 2: Smart Agents for Real Life**. Also **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui, [ADR-0084](docs/adr/0084-enter-best-use-of-agent-payments.md)) |
 | **Watch** | The demo video: **[video URL]** (2:45, [script](docs/remora-plan.md#demo-script-245)) |
-| **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Scout with a $1 Disc, no wallet needed (testnet). Signed out, the same site opens on the [landing page](https://getremora.vercel.app/about) |
+| **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Researcher with a $1 spending limit, no wallet needed (testnet). Signed out, the same site opens on the [landing page](https://getremora.vercel.app/about) |
 | **Read** | The blog post, **[blog URL]** ([draft](docs/launch/blog-draft.md)), then [the docs](docs/README.md) |
 | **Walrus Memory on mainnet** | **360 memories** on Oct 31 (`bun run diagnose:memory` reads the account) |
 | **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas |
@@ -50,11 +50,11 @@ the data it needs. Every remora has three things most agents don't:
 
 ## In one minute
 1. **An unknown token lands in your wallet.**
-   - Your Sentinel pings you and asks your Scout.
-   - Scout pays 0.01 USDC from its Disc for a `sui-risk` report on the token's package, then answers.
+   - Your Wallet watcher pings you and asks your Researcher.
+   - The Researcher pays 0.01 USDC from its spending limit (its Disc) for a `sui-risk` report on the token's package, then answers.
    - The receipt checks out onchain.
 2. **You mark a dust ping 👎.**
-   - Sentinel writes a rule to Walrus Memory and stays quiet the next time.
+   - The Wallet watcher writes a rule to Walrus Memory and stays quiet the next time.
    - That decision's receipt cites the rule's blob.
 3. **A paid answer says "pay this address".**
    - Sonar blocks it.
@@ -64,13 +64,13 @@ the data it needs. Every remora has three things most agents don't:
    with one signature.
 
 ## Try it
-- **No wallet:** open `/playground`. You get your own Scout with a **$1 Disc** for a few questions
+- **No wallet:** open `/playground`. You get your own Researcher with a **$1 spending limit** for a few questions
   ([ADR-0051](docs/adr/0051-playground.md)).
   - The worst case is $1, enforced onchain.
   - The Disc is revoked when the session ends.
 - **With a wallet:** sign in, then do one of these:
-  - create a **Scout**, which buys data to answer you;
-  - create a **Sentinel**, which watches your addresses and learns what matters;
+  - create a **Researcher** (`scout` in the code), which buys data to answer you;
+  - create a **Wallet watcher** (`sentinel`), which watches your addresses and learns what matters;
   - hatch a remora from the **Hatchery**.
 
 ## Screenshots
@@ -80,7 +80,7 @@ These are from the signed-in audit pass on Oct 31 (`AUDIT=1`, [ADR-0089](docs/ad
 in light and dark. The full set is in [docs/e2e/screenshots](docs/e2e/screenshots): `audit-*`, plus every
 route at 1280 and 375 px as `u13-*`.
 
-| First visit: try Scout with no wallet | A remora: ask, budget, cost |
+| First visit: try a Researcher with no wallet | A remora: ask, budget, cost |
 |---|---|
 | ![Home signed out: Try Scout, no wallet, and Check a receipt](docs/e2e/screenshots/audit-light-home-signed-out.png) | ![A remora's page: what it does, its cost card and activity](docs/e2e/screenshots/audit-light-remora-overview.png) |
 | **Memory: every blob, and writes skipped as duplicates** | **The Reef: what a remora may pay over x402** |
@@ -90,12 +90,12 @@ route at 1280 and 375 px as `u13-*`.
 The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
 that memory.**
 
-- **Sentinel learns rules from you.** A 👎 on a ping becomes a rule in Walrus Memory. The next event of
+- **The Wallet watcher learns rules from you.** A 👎 on a ping becomes a rule in Walrus Memory. The next event of
   that kind is ignored, and the Wake for that quiet decision cites the rule's blob.
   - The Proof view shows both decisions and the one blob that changed between them.
   - Recorded on testnet: the rule landed on Walrus in 25.3 s
     ([U7 exit §5](docs/spikes/2026-10-22-u7-exit.md)).
-- **Scout learns which sources are worth paying for.** A 👍 or 👎 on an answer scores the data sources
+- **The Researcher learns which sources are worth paying for.** A 👍 or 👎 on an answer scores the data sources
   it bought.
   - Each source keeps a track record, like *"10 calls · 2 useful · 8 noise · $0.050 per useful
     answer"*.
@@ -113,11 +113,11 @@ that memory.**
 - **It's your memory.**
   - You can hide, correct or forget a memory, and export to Markdown or JSON.
   - Claude Code reads the same memories through Remora's MCP server.
-- **Charts** come only from recorded events: Sentinel's noise rate, and Scout's cost per useful answer
+- **Charts** come only from recorded events: the Wallet watcher's noise rate, and the Researcher's cost per useful answer
   (`GET /api/learning/export`).
 
 ## Agent payments: x402, settled on Sui
-- **The x402 flow.** Scout asks a Reef service, gets `402 Payment Required`, pays from its Disc, and
+- **The x402 flow.** A Researcher asks a Reef service, gets `402 Payment Required`, pays from its Disc, and
   gets the answer.
 - **Our own `exact` facilitator for Sui** ([apps/facilitator](apps/facilitator/README.md)).
   - **Before it settles, it checks:**
@@ -139,18 +139,18 @@ that memory.**
 | | What you see | Proof (testnet) | Built |
 |---|---|---|---|
 | **Disc** | One signature gives a remora a budget: a monthly limit, a per-payment cap, Reef payees, and expiry. Revoke, rotate or pause from your wallet | [Disc spike](docs/spikes/2026-10-19-disc-testnet.md); [Move security](packages/move/SECURITY.md) | Oct 19, before the window |
-| **Scout** | Buys `sui-risk`, `odds` or `brief` data over x402 when it helps, answers, and says what it cost | [W2 exit](docs/spikes/2026-10-19-w2-exit.md): first remora in 4.4 s, a paid answer in 13 s | Oct 19, before the window |
-| **Sentinel** | Watches addresses through Tatum's checkpoint stream; you teach it rules in plain words or with 👎 | [W2 exit §4](docs/spikes/2026-10-19-w2-exit.md) | Oct 19, before the window; rules from 👎 on Oct 22 |
+| **Researcher** (Scout) | Buys `sui-risk`, `odds` or `brief` data over x402 when it helps, answers, and says what it cost | [W2 exit](docs/spikes/2026-10-19-w2-exit.md): first remora in 4.4 s, a paid answer in 13 s | Oct 19, before the window |
+| **Wallet watcher** (Sentinel) | Watches addresses through Tatum's checkpoint stream; you teach it rules in plain words or with 👎 | [W2 exit §4](docs/spikes/2026-10-19-w2-exit.md) | Oct 19, before the window; rules from 👎 on Oct 22 |
 | **Injection** | A paid answer says "pay <evil URL>" and the model obeys: Sonar blocks it; forced past Sonar, **the Disc aborts it onchain** | `7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV` (`EPayeeNotAllowed`) | Oct 19, before the window |
 | **Chat, rooms, teams** | Chat 1-1 with each remora, rooms with routing, a model per remora, a whole team from one Markdown file with one signature | [U6 exit](docs/spikes/2026-10-21-u6-exit.md) | Oct 21 |
 | **Hatchery** | Share a remora as a Walrus blob with its author onchain; anyone hatches a copy through a consent screen with one signature | [U7 exit](docs/spikes/2026-10-22-u7-exit.md): hatch `DTq4sd4z…`, a poisoned template refused | Oct 21–22 |
 | **Proof of Learning** | A ping, 👎, a rule, then silence on the same kind of event, with the rule's memory blob as the delta | [U7 exit §5](docs/spikes/2026-10-22-u7-exit.md) | Oct 22 |
 | **Your memory** | Hide, correct, forget all, expiry, Markdown/JSON export, and Claude Code via `packages/mcp` | [U7 exit §6](docs/spikes/2026-10-22-u7-exit.md) | Oct 22 |
 | **Agents (MCP)** | Make a scoped, revocable token on the Connections page and Claude Code (or any MCP client) uses one remora: it remembers, pays Reef services through the Disc, and over the cap asks you; every call is logged and its Wakes say `via mcp:…` | [U12 handoff](docs/handoffs/2026-10-25-uy-to-huan-u12-landed.md): Claude Code over stdio and over HTTP; a paid `sui-risk` through MCP verifies (`2UGiVjrJ…`); 10 MCP attacks in CI, 0 paid | Oct 25 |
-| **Sentinel → Scout** | A rule like "check airdrops with Scout" pings and hands the event to your Scout, once, asking about the token's package. Scout's Wake cites the ping's Wake | `runtime.test.ts` (in-process, fake chain); on the deployed testnet at U9 ([ADR-0078](docs/adr/0078-sentinel-hands-off-to-scout.md)) | Oct 31 |
+| **Wallet watcher → Researcher** | A rule like "check airdrops with Scout" pings and hands the event to your Researcher, once, asking about the token's package. The Researcher's Wake cites the ping's Wake | `runtime.test.ts` (in-process, fake chain); on the deployed testnet at U9 ([ADR-0078](docs/adr/0078-sentinel-hands-off-to-scout.md)) | Oct 31 |
 | **Reality check** | A `Paid` from a remora's Disc with no Wake behind it alerts you within minutes: the sign of a leaked key | `runtime.test.ts` (in-process); [ADR-0077](docs/adr/0077-reality-check-unexplained-payments.md) | Oct 31 |
 | **Red team** | `bun run evals`: 10 agent attacks over MCP, 12 injected payments through Sonar, 6 poisoned templates through the Hatchery review. Each names the layer that stops it | [evals/](evals/README.md): **28 attacks, 0 overspends**, in CI ([ADR-0079](docs/adr/0079-red-team-evals.md)) | Oct 31 |
-| **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. Scout reads only memories that still hold, yours first, and a write skipped as a duplicate is shown, not dropped | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4; [ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md) (in-process) | Oct 31 |
+| **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. The Researcher reads only memories that still hold, yours first, and a write skipped as a duplicate is shown, not dropped | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4; [ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md) (in-process) | Oct 31 |
 
 ## How it fits together
 

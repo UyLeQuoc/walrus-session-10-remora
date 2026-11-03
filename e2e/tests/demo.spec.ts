@@ -255,10 +255,13 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await s.hold(1200, "home");
     await s.box("what-is-remora", s.page.getByTestId("what-is-remora"));
     await s.hold(3200, "what-is-remora");
-    await s.click(s.page.getByTestId("home-try-scout"), "Try Scout, no wallet");
+    await s.click(s.page.getByTestId("home-try-scout"), "Try a Researcher, no wallet");
     await expect(s.page.getByTestId("playground-intro")).toBeVisible({ timeout: 30_000 });
     await s.hold(1500, "intro");
-    await s.click(s.page.getByRole("button", { name: /Start my Scout/ }), "Start my Scout");
+    await s.click(
+      s.page.getByRole("button", { name: /Start my Researcher/ }),
+      "Start my Researcher",
+    );
     await expect(s.page.getByTestId("playground-spent")).toHaveText("0.00 of 1.00 USDC", {
       timeout: 120_000,
     });
@@ -272,7 +275,7 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     // The box starts with a suggestion; clear it, then type the question.
     await s.page.getByLabel("Your question").fill("");
     await s.type(s.page.getByLabel("Your question"), QUESTION, "question");
-    await s.click(s.page.getByRole("button", { name: /Ask Scout/ }), "Ask Scout");
+    await s.click(s.page.getByRole("button", { name: /Ask Researcher/ }), "Ask Researcher");
     s.mark("asked");
     await expect(s.page.getByTestId("playground-answer").first()).toContainText(
       "Paid 0.01 USDC to Sui risk check",
@@ -322,15 +325,15 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
   await shot("create", owner, async (s) => {
     await go(s, "/remoras/new");
     await s.hold(1500, "new");
-    await s.click(s.page.getByRole("radio", { name: /^Scout/ }), "Scout");
+    await s.click(s.page.getByRole("radio", { name: /^Researcher/ }), "Researcher");
     await s.page.getByLabel("Name").fill("");
-    await s.type(s.page.getByLabel("Name"), "Scout · demo", "name");
+    await s.type(s.page.getByLabel("Name"), "Researcher · demo", "name");
     await s.page.getByLabel("Monthly limit (USDC)").fill("");
     await s.type(s.page.getByLabel("Monthly limit (USDC)"), "0.5", "monthly");
     await s.page.getByLabel("Most it pays at once (USDC)").fill("");
     await s.type(s.page.getByLabel("Most it pays at once (USDC)"), "0.015", "per payment");
     await s.hold(800);
-    await s.click(s.page.getByRole("button", { name: "Create Scout" }), "Create Scout");
+    await s.click(s.page.getByRole("button", { name: "Create Researcher" }), "Create Researcher");
     s.mark("signing");
     await s.page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
     created = /\/remoras\/([0-9a-f-]{36})/.exec(s.page.url())?.[1] ?? "";

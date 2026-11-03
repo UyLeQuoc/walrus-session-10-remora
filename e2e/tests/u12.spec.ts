@@ -172,11 +172,11 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
   await page.goto("/remoras/new");
   await connectAndSignIn(page);
   const stamp = Date.now().toString(36);
-  await page.getByRole("radio", { name: /^Scout/ }).click();
-  await page.getByLabel("Name").fill(`Scout u12 ${stamp}`);
+  await page.getByRole("radio", { name: /^Researcher/ }).click();
+  await page.getByLabel("Name").fill(`Researcher u12 ${stamp}`);
   await page.getByLabel("Monthly limit (USDC)").fill("0.5");
   await page.getByLabel("Most it pays at once (USDC)").fill("0.015");
-  await page.getByRole("button", { name: "Create Scout" }).click();
+  await page.getByRole("button", { name: "Create Researcher" }).click();
   await page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
   const scoutId = /\/remoras\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
   results.scoutId = scoutId;
@@ -287,7 +287,7 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
   });
   results.claudeCode = {
     ran: claude.ok,
-    answeredWithRemora: claude.out.includes(`Scout u12 ${stamp}`),
+    answeredWithRemora: claude.out.includes(`Researcher u12 ${stamp}`),
     excerpt: claude.out.replace(stdioTok.secret, "rmcp_…").slice(0, 400),
   };
 
@@ -353,7 +353,7 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
   await goto(page, "/approvals");
   await page
     .getByTestId("approval")
-    .filter({ hasText: `Scout u12 ${stamp}` })
+    .filter({ hasText: `Researcher u12 ${stamp}` })
     .getByRole("button", { name: /Pay once \(0\.02 USDC\)/ })
     .click();
   await expect(page.getByTestId("approval-answer")).toBeVisible({ timeout: 180_000 });

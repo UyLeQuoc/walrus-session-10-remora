@@ -363,7 +363,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       const r = await scoutAsk(deps(), scout, "Is 0x2 safe to depend on?");
       expect(r.outcomes[0]?.kind).toBe("blocked");
       expect(r.answer).toMatch(
-        /I tried to buy reef:sui-risk for this, but the payment didn't go through \(x402\.[a-z_]+\)/,
+        /I tried to buy Sui risk check for this, but the payment didn't go through \(x402\.[a-z_]+\)/,
       );
       // Nothing was settled.
       expect(facCalls.slice(before).filter((c) => c.path === "/settle")).toHaveLength(0);
@@ -770,8 +770,8 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     expect((await bot.command({ id: "7", name: "x" }, "/start link_ABC234"))?.text).toBe(
       "linked ABC234",
     );
-    expect((await bot.command(me, "/remoras"))?.text).toMatch(/Scout \(scout\) is active/);
-    const answer = await bot.command(me, "Scout, is 0x2 safe to depend on?");
+    expect((await bot.command(me, "/remoras"))?.text).toMatch(/• Researcher is active/);
+    const answer = await bot.command(me, "Researcher, is 0x2 safe to depend on?");
     expect(answer?.buttons?.[0]?.data).toMatch(/^fb:/);
     expect(await bot.callback(me, String(answer?.buttons?.[0]?.data))).toMatch(/Learned|noted/);
     expect((await bot.command(me, "/teach ignore outgoing SUI under 0.001"))?.text).toMatch(
@@ -779,7 +779,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     );
     expect(await bot.command(me, "/help")).toBeNull();
     expect(await bot.command(me, "hello there")).toBeNull();
-    expect((await bot.command(me, "/pause Scout"))?.text).toMatch(/needs your signature/);
+    expect((await bot.command(me, "/pause Researcher"))?.text).toMatch(/needs your signature/);
   });
 
   // ── U6: the Grok-bots shape (ADR-0042) ────────────────────────────────────
@@ -929,7 +929,7 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
         routedTo: string[];
         route: string;
       };
-    const mention = await post("@Sentinel ignore outgoing SUI under 0.002");
+    const mention = await post("@Wallet watcher ignore outgoing SUI under 0.002");
     expect(mention).toMatchObject({ routedTo: [sentinel.id], route: "mention" });
     const signal = await post("What are the odds for tonight's match?");
     expect(signal).toMatchObject({ routedTo: [scout.id], route: "signal" });

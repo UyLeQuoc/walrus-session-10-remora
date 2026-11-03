@@ -105,7 +105,7 @@ export async function reviewTemplate(input: SafetyInput): Promise<SafetyReport> 
       block(
         "raw_address",
         `remoras[${i}].watch`,
-        "Shared remoras can't come with addresses to watch; a hatched Sentinel watches its new owner.",
+        "Shared remoras can't come with addresses to watch; a Wallet watcher made from it watches its new owner.",
       );
     for (const ref of kind.payees)
       if (!reef.has(ref))

@@ -13,7 +13,7 @@ const appOnly = (path: string) => !(deployed && path === "/");
 
 const PAGES: [string, RegExp][] = [
   ["/", /Always-on agents you own/],
-  ["/chat", /Teach Sentinel/],
+  ["/chat", /Teach Wallet watcher/],
   ["/onboarding", /Sign in with your wallet/],
   ["/remoras", /Sign in with your wallet to see your remoras/],
   ["/remoras/new", /Sign in with your wallet to see the create wizard/],
@@ -28,7 +28,7 @@ const PAGES: [string, RegExp][] = [
   // The Hatchery is public to browse (U7, ADR-0046); sharing needs a wallet.
   ["/hatchery", /Remoras people shared/],
   // U8 (ADR-0051, ADR-0052): try Scout without a wallet; the ops status board.
-  ["/playground", /Try Scout/],
+  ["/playground", /Try a Researcher/],
   ["/lab/health", /Every dependency Remora needs|Check again/],
   [
     "/remoras/0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10/share",

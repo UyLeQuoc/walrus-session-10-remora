@@ -13,13 +13,13 @@ export const WHAT_IS_REMORA =
 export const KINDS = [
   {
     mood: "idle",
-    name: "Scout",
+    name: "Researcher",
     detail:
       "Answers your questions. It buys the data it needs from paid services, like a 0.01 USDC risk report on a Sui package, and learns which sources are worth it.",
   },
   {
     mood: "listening",
-    name: "Sentinel",
+    name: "Wallet watcher",
     detail:
       "Watches your wallets and tells you only what matters. Teach it in plain words, like “ignore incoming SUI under 0.002”. It never pays.",
   },
@@ -63,7 +63,7 @@ export function WhatIsRemora({ guideLink = true }: { guideLink?: boolean }) {
         <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label="What a remora's face means">
           {FACES.map((f) => (
             <li key={f.mood} className="flex items-center gap-1.5 text-md text-ob-secondary">
-              <RemoraAvatar id="Scout" mood={f.mood} size={28} />
+              <RemoraAvatar id="Researcher" mood={f.mood} size={28} />
               {f.label}
             </li>
           ))}

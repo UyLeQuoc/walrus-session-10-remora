@@ -42,7 +42,6 @@ function ApprovalCard({
 }) {
   const { mutateAsync: sign } = useSignTransaction();
   const [busy, setBusy] = useState("");
-  const [answer, setAnswer] = useState("");
   const p = a.payload as { amount?: string; payee?: string; question?: string; human?: string };
   const pay = async () => {
     try {
@@ -57,8 +56,7 @@ function ApprovalCard({
         signature: signed.signature,
       });
       if (!out.ok) throw new Error(out.error);
-      setAnswer(out.data.answer);
-      // Shown above the inbox, since this card leaves the pending list.
+      // Shown once, above the inbox: this card leaves the pending list on the refresh below.
       onPaid({ id: a.id, remora: a.remora, answer: out.data.answer, digest: out.data.digest });
       toast.success("Paid once, from your balance.");
       onDone();
@@ -133,11 +131,6 @@ function ApprovalCard({
           <p className="text-sm text-ob-secondary">{a.summary}</p>
         )}
         {p.question ? <p className="text-sm text-muted-foreground">For: “{p.question}”</p> : null}
-        {answer ? (
-          <p className="whitespace-pre-wrap text-sm text-ob-text" data-testid="approval-answer">
-            {answer}
-          </p>
-        ) : null}
       </div>
     </InteractionCard>
   );

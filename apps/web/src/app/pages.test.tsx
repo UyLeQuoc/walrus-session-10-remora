@@ -245,14 +245,14 @@ describe("chat page", () => {
       </MemoryRouter>,
     );
     // One message proves nothing here, so the first set is things to teach a remora.
-    const chip = screen.getByRole("button", { name: /Teach Sentinel/i });
+    const chip = screen.getByRole("button", { name: /Teach Wallet watcher/i });
     expect(screen.queryByRole("button", { name: /Reload, then ask/i })).toBeNull();
 
     await userEvent.click(chip);
     expect(chatSend).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveProperty(
       "value",
-      "Teach Sentinel: ignore incoming SUI under 0.01",
+      "Teach Wallet watcher: ignore incoming SUI under 0.01",
     );
   });
 
@@ -443,7 +443,7 @@ describe("chat page", () => {
     if (!greeting) throw new Error("greeting missing");
     const box = within(cluster as HTMLElement).getByRole("textbox");
     const suggestion = within(cluster as HTMLElement).getByRole("button", {
-      name: /Teach Sentinel/i,
+      name: /Teach Wallet watcher/i,
     });
     expect(showsAGreeting(greeting.textContent ?? "")).toBe(true);
     expect(greeting.querySelector("[data-slot='hello']")).toBeTruthy();

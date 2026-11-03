@@ -135,7 +135,10 @@ export async function availability(p: PlaygroundDeps) {
     .from(playgroundSessions)
     .where(and(eq(playgroundSessions.status, "live"), gt(playgroundSessions.expiresAt, now)));
   if (Number(live?.n ?? 0) >= p.limits.pool)
-    return { open: false, reason: "Every playground Scout is taken right now. Try again soon." };
+    return {
+      open: false,
+      reason: "Every playground Researcher is taken right now. Try again soon.",
+    };
   const b = await p.balances().catch(() => null);
   if (!b || b.usdc < MIN_FUNDER.usdc || b.sui < MIN_FUNDER.sui)
     return { open: false, reason: "The playground is resting while its wallet is topped up." };
@@ -171,7 +174,7 @@ export async function createSession(p: PlaygroundDeps, ip: string) {
     expiresAt: expiresAt.toISOString(),
     payees: [...TEMPLATES.scout.payees],
   };
-  const name = `Playground Scout ${randomBytes(2).toString("hex")}`;
+  const name = `Playground Researcher ${randomBytes(2).toString("hex")}`;
   const created = await p.service.create({
     owner: address,
     network: p.network,
@@ -182,7 +185,11 @@ export async function createSession(p: PlaygroundDeps, ip: string) {
     lifetimeCap: DISC_UNITS,
   });
   if (!created.transaction)
-    throw new RemoraError("playground.no_disc", "The playground Scout got no spending limit.", 409);
+    throw new RemoraError(
+      "playground.no_disc",
+      "The playground Researcher got no spending limit.",
+      409,
+    );
   const issueDigest = await p.sign(created.transaction);
   await p.service.confirmIssue(created.remora.id, address, issueDigest);
   // The $1 Disc is the safety: no shadow period (ADR-0051).
@@ -235,7 +242,7 @@ export async function ask(p: PlaygroundDeps, token: string, question: string) {
   if (row.status !== "live" || row.expiresAt <= now)
     throw new RemoraError(
       "playground.ended",
-      "This playground session has ended. Start a new one, or sign in to keep a Scout of your own.",
+      "This playground session has ended. Start a new one, or sign in to keep a Researcher of your own.",
       409,
     );
   const q = question.trim();
@@ -255,7 +262,7 @@ export async function ask(p: PlaygroundDeps, token: string, question: string) {
   if (!taken)
     throw new RemoraError(
       "playground.no_questions",
-      `That was your ${p.limits.questionsPerSession} questions. Sign in with a wallet to have a Scout of your own.`,
+      `That was your ${p.limits.questionsPerSession} questions. Sign in with a wallet to have a Researcher of your own.`,
       409,
     );
   const r = await p.service.get(row.remoraId, funderOf(p).address);

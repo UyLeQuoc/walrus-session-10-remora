@@ -11,6 +11,7 @@ import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { api } from "@/features/remoras/api";
 import { describeRemora, useTemplateCatalog } from "@/features/remoras/describe";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
+import { kindName } from "@/lib/kind";
 import {
   AgentRow,
   AgentRowItem,
@@ -52,10 +53,6 @@ export function rosterTime(iso: string, now = new Date()): string {
     : at.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function title(template: string): string {
-  return template.slice(0, 1).toUpperCase() + template.slice(1);
-}
-
 export function SidebarTeam({
   onNavigate,
   query = "",
@@ -92,10 +89,10 @@ export function SidebarTeam({
                 <Fish aria-hidden className="size-4" />
               </span>
             }
-            name="Try Scout"
+            name="Try a Researcher"
             badge="no wallet"
             preview="Ask one paid question on testnet"
-            label="Try Scout, no wallet"
+            label="Try a Researcher, no wallet"
           />
         </AgentRowItem>
       </SidebarSection>
@@ -143,7 +140,7 @@ export function SidebarTeam({
               name={r.name}
               time={rosterTime(r.updatedAt)}
               preview={describeRemora(r, catalog)}
-              label={`${r.name}, ${title(r.template)}, ${STATE[r.status] ?? r.status}`}
+              label={`${r.name}, ${kindName(r.template)}, ${STATE[r.status] ?? r.status}`}
             />
           </AgentRowItem>
         ))}

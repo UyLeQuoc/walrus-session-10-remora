@@ -116,7 +116,7 @@ function Dashboard({ owner }: { owner: string }) {
           <EmptyState
             icon={<Fish />}
             title="No remoras yet"
-            description="Start from a template. Scout buys answers; Sentinel watches wallets and learns what matters."
+            description="Start from a template. A Researcher buys answers; a Wallet watcher watches wallets and learns what matters."
             action={
               <Button asChild>
                 <Link to="/remoras/new">
@@ -158,7 +158,7 @@ function EmptyHome({ signedIn }: { signedIn: boolean }) {
           <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild>
               <Link to="/playground" data-testid="home-try-scout">
-                <Fish /> Try Scout, no wallet
+                <Fish /> Try a Researcher, no wallet
               </Link>
             </Button>
             <Button asChild variant="outline">

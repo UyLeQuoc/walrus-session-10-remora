@@ -75,9 +75,9 @@ describe("playground (H7)", () => {
       </MemoryRouter>,
     );
     expect((await screen.findByTestId("playground-intro")).textContent).toContain("1.00 USDC");
-    await userEvent.click(screen.getByRole("button", { name: /Start my Scout/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Start my Researcher/ }));
     expect((await screen.findByTestId("playground-spent")).textContent).toBe("0.00 of 1.00 USDC");
-    await userEvent.click(screen.getByRole("button", { name: /Ask Scout/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Ask Researcher/ }));
     expect((await screen.findByTestId("playground-answer")).textContent).toContain(
       "Paid 0.01 USDC to Sui risk check",
     );
@@ -100,7 +100,7 @@ describe("playground (H7)", () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText("That was your last question")).toBeDefined();
-    expect(screen.queryByRole("button", { name: /Ask Scout/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ask Researcher/ })).toBeNull();
     unmount();
     localStorage.removeItem("remora.playground");
     fakeApi({
@@ -117,7 +117,7 @@ describe("playground (H7)", () => {
     );
     expect(await screen.findByText(/resting/)).toBeDefined();
     expect(
-      (screen.getByRole("button", { name: /Start my Scout/ }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: /Start my Researcher/ }) as HTMLButtonElement).disabled,
     ).toBe(true);
   });
 });

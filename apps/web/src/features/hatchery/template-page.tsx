@@ -270,7 +270,7 @@ export function TemplatePage() {
                 <AlertTitle>It starts in practice mode</AlertTitle>
                 <AlertDescription>
                   It shows what it would pay and pays nothing until you turn it on. Schedules arrive
-                  paused; a Sentinel watches your own address.
+                  paused; a Wallet watcher watches your own address.
                 </AlertDescription>
               </Alert>
               {l?.deprecated ? (

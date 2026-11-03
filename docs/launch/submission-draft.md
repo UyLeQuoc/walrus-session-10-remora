@@ -52,16 +52,16 @@
 
 > **Remora: always-on agents you actually own.** Track 2, Smart Agents for Real Life.
 >
-> A remora runs errands for you. Scout answers questions and buys data when that helps. Sentinel watches
+> A remora runs errands for you. A Researcher answers questions and buys data when that helps. A Wallet watcher watches
 > your Sui addresses and learns what matters to you. Each remora has three things most agents lack:
 >
 > 1. **A budget Sui enforces, and payments over x402.** One signature issues a *Disc* on Sui's native
 >    app-bound allowances: a monthly limit, a per-payment cap, the only services it may pay, and an
->    expiry. Scout pays for data over **x402**, through our own `exact` facilitator for Sui, which
+>    expiry. A Researcher pays for data over **x402**, through our own `exact` facilitator for Sui, which
 >    sponsors gas and settles on Sui. A prompt injection that fools the model still can't move money,
 >    because the Disc aborts the payment onchain. CI runs 28 attacks with 0 overspends.
 > 2. **Memory that learns, and that you can read,** on Walrus Memory (mainnet). Mark a ping 👎 and
->    Sentinel writes a rule, then stays quiet the next time. That decision's receipt cites the rule's
+>    The Wallet watcher writes a rule, then stays quiet the next time. That decision's receipt cites the rule's
 >    blob. A facts ledger tracks which facts still hold and who said them. You can inspect, correct and
 >    export the memory, and use it from Claude Code over MCP.
 > 3. **A receipt for every action.** A payment's receipt (its Wake) anchors the payment's intent
@@ -69,7 +69,7 @@
 >    sign of a leaked key.
 >
 > **Tatum.** Every Sui call goes through Tatum's gRPC:
-> - the checkpoint stream behind Sentinel and our indexer;
+> - the checkpoint stream behind the Wallet watcher and our indexer;
 > - a simulation before every execute;
 > - the facilitator's settlement.
 >
@@ -118,7 +118,7 @@
 
 > We didn't use the AI Builder; Remora is hand-written. We used Tatum's Sui gRPC gateway for all chain
 > I/O and the Data API for the SUI/USD rate.
-> - **The filtered checkpoint stream is what made Sentinel possible.**
+> - **The filtered checkpoint stream is what made the Wallet watcher possible.**
 > - **Two things surprised us:**
 >   - a filter takes at most 10 addresses;
 >   - an unfiltered stream spent a month of free-plan credits in a few days.

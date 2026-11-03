@@ -18,6 +18,7 @@ import {
   toX402Network,
   X402_VERSION,
 } from "@remora/disc-sdk";
+import { payeeLabel } from "../money/reef.ts";
 import { modelIdFor, usdcLabel } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { RemoraError } from "./remoras.ts";
@@ -146,7 +147,7 @@ export async function approvalPay(
       remoraId: r.id,
       network: r.network,
       type: "payment",
-      summary: `You paid ${payload.amount} to ${payload.payee} (approved)`,
+      summary: `You paid ${payload.amount} to ${payeeLabel(payload.payee ?? "")} (approved)`,
       payload: {
         payee: payload.payee,
         amount: payload.amount,
@@ -189,7 +190,7 @@ export async function approvalPay(
     }),
     {
       action: "answer",
-      reason: `answered after the owner approved ${payload.amount} to ${payload.payee}`,
+      reason: `answered after the owner approved ${payload.amount} to ${payeeLabel(payload.payee ?? "")}`,
     },
     { verdict: "allow", reasons: ["approved by the owner"] },
     {

@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { kindName } from "@/lib/kind";
 import { usdc } from "@/lib/usdc";
 import { connections, httpLine } from "./api";
 
@@ -178,7 +179,7 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
         <NativeSelect id="mcp-remora" value={chosen} onChange={(e) => setRemora(e.target.value)}>
           {usable.map((r) => (
             <NativeSelectOption key={r.id} value={r.id}>
-              {r.name} ({r.template}, {r.status})
+              {r.name} ({kindName(r.template)}, {r.status === "shadow" ? "practice" : r.status})
             </NativeSelectOption>
           ))}
         </NativeSelect>

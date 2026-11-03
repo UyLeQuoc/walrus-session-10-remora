@@ -1,5 +1,6 @@
 /**
- * C1/C2: the MVP templates (spec §4). Templates carry no keys, memories or raw payee addresses
+ * C1/C2: the MVP templates (spec §4). The slugs stay `scout` and `sentinel`; people read the names,
+ * "Researcher" and "Wallet watcher" (ADR-0101). Templates carry no keys, memories or raw payee addresses
  * (ADR-0012); payees are Reef references resolved per network at creation.
  */
 import { Template } from "@remora/schema";
@@ -7,10 +8,10 @@ import { Template } from "@remora/schema";
 export const TEMPLATES = {
   scout: Template.parse({
     schema: "remora.template/v1",
-    name: "Scout",
+    name: "Researcher",
     summary: "Answers questions by buying the best data, and learns which sources are worth it.",
     persona:
-      "You are Scout. You answer the owner's questions by buying data from paid sources when it helps, and you say what each answer cost.",
+      "You are the owner's Researcher. You answer the owner's questions by buying data from paid sources when it helps, and you say what each answer cost.",
     tools: ["memory.recall", "memory.remember", "pay", "notify", "handoff"],
     triggers: [{ kind: "message" }],
     budgetSuggestion: { monthlyUsd: [1, 20], perPaymentUsd: 0.05 },
@@ -20,11 +21,11 @@ export const TEMPLATES = {
   }),
   sentinel: Template.parse({
     schema: "remora.template/v1",
-    name: "Sentinel",
+    name: "Wallet watcher",
     summary:
       "Watches your wallets and only wakes you for what matters, learning from what you say.",
     persona:
-      "You are Sentinel. You watch the owner's addresses and decide whether an event is worth a ping, following the rules the owner taught you.",
+      "You are the owner's Wallet watcher. You watch the owner's addresses and decide whether an event is worth a ping, following the rules the owner taught you.",
     tools: ["memory.recall", "memory.remember", "tatum.transactions", "notify", "handoff"],
     triggers: [{ kind: "chain", addresses: [], objects: [], eventTypes: [] }],
     budgetSuggestion: { monthlyUsd: [0, 0], perPaymentUsd: 0 },

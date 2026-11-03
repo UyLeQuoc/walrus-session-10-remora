@@ -1,21 +1,20 @@
-# hippo
+# Remora
 
-> A chatbot that remembers you across the web, Telegram, Discord and a CLI, where you own the memory. Facts are stored on Walrus in a Walrus Memory account your wallet owns on Sui, and hippo reaches them with a delegate key you can revoke on chain. Built for Walrus Session 8, "Chatbots That Remember".
+> Always-on AI agents you own. Each remora has a spending limit Sui enforces, a memory you can read on Walrus, and a receipt for every decision. Built for the Walrus x Tatum "Total Recall" hackathon (Track 2). Money runs on Sui testnet; memory is on Walrus Memory mainnet; every server-side Sui call goes through Tatum's gRPC.
 
-hippo starts in guest mode, so the first message needs no wallet. `/connect` moves the memory into an account your own wallet owns, with sponsored transactions; `/disconnect` removes hippo's key on chain. Memory is six kinds of fact (profile, decision, gotcha, commitment, correction, style), recalled before every reply as untrusted data. Memory text is never stored in hippo's database; it lives on Walrus.
+There are two kinds of remora. A Researcher answers your questions and buys the data it needs from paid services over x402, inside its spending limit. A Wallet watcher watches your wallets and tells you only what matters, learning from rules you teach it in plain words. Nothing a remora reads can make it overspend: the limit is enforced onchain.
 
 ## App
 
-- [Chat](https://ask-hippo.vercel.app/): talk to hippo; open a new chat and ask what it knows to see recall from Walrus
-- [How it works](https://ask-hippo.vercel.app/guide): guest and owned mode, what is on chain, the commands, Claude Code
-- [Telegram](https://t.me/walrussession8_bot): the same memory on Telegram
-- [Discord](https://discord.com/oauth2/authorize?client_id=1556955188798169228&scope=bot&permissions=68608): add the bot to a server, then DM it or mention it
-
-## Source
-
-- [Repository](https://github.com/UyLeQuoc/walrus-session-8-chatbots): code, README quickstart and the memory eval (`bun run demo`)
-- [Architecture](https://github.com/UyLeQuoc/walrus-session-8-chatbots/blob/main/docs/ARCHITECTURE.md): identity, onboarding, revoke, memory layer and measured limits
+- [Home](https://getremora.vercel.app/about): what Remora is, the demo video and the proof
+- [Try a Researcher](https://getremora.vercel.app/playground): a $1 spending limit on testnet, no wallet needed, and a paid answer whose receipt verifies
+- [Guide](https://getremora.vercel.app/guide): five steps to start, and what every page is for
+- [Templates](https://getremora.vercel.app/hatchery): remoras people shared
+- [Verify](https://getremora.vercel.app/verify): check any receipt against the chain
+- [Status](https://getremora.vercel.app/status): the services Remora depends on, live
+- [Telegram](https://t.me/total_recall_remora_bot): /ask your Researcher, /teach your Wallet watcher
 
 ## Optional
 
-- [Walrus Memory](https://memory.walrus.xyz): the memory layer hippo is built on
+- [Walrus Memory](https://memory.walrus.xyz): the memory layer Remora is built on
+- [Tatum](https://tatum.io): the Sui gRPC gateway every server-side chain call uses

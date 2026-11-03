@@ -94,7 +94,7 @@ export function PlaygroundPage() {
 
   const start = async () => {
     setError("");
-    setBusy("Setting your Scout's $1 spending limit onchain…");
+    setBusy("Setting your Researcher's $1 spending limit onchain…");
     try {
       const out = await call(
         "/api/playground/session",
@@ -111,7 +111,7 @@ export function PlaygroundPage() {
   };
   const ask = async () => {
     setError("");
-    setBusy("Scout is thinking; it may buy data first…");
+    setBusy("Your Researcher is thinking; it may buy data first…");
     try {
       const out = await call("/api/playground/ask", z.object({ session: SessionSchema }), {
         method: "POST",
@@ -131,10 +131,13 @@ export function PlaygroundPage() {
   const ended = session && session.status !== "live";
 
   return (
-    <Page title="Try Scout" description="Try Scout with a $1 budget. No wallet needed.">
+    <Page
+      title="Try a Researcher"
+      description="Try a Researcher with a $1 budget. No wallet needed."
+    >
       <PageHeader
-        title="Try Scout"
-        description="A Scout of your own with a $1 budget it can't go over. Sui enforces the limit onchain. A receipt is the onchain record of what each answer paid, and anyone can check it."
+        title="Try a Researcher"
+        description="A Researcher of your own with a $1 budget it can't go over. Sui enforces the limit onchain. A receipt is the onchain record of what each answer paid, and anyone can check it."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link to="/remoras/new">Get your own</Link>
@@ -153,15 +156,16 @@ export function PlaygroundPage() {
           <div className="flex max-w-3xl flex-col gap-3 text-md" data-testid="playground-intro">
             <ul className="list-disc pl-5 text-ob-muted">
               <li>
-                Your Scout is live at once, with a <b>{open?.limits.discUsdc ?? "1.00"} USDC</b>{" "}
-                spending limit on {open?.network ?? "testnet"}.
+                Your Researcher is live at once, with a{" "}
+                <b>{open?.limits.discUsdc ?? "1.00"} USDC</b> spending limit on{" "}
+                {open?.network ?? "testnet"}.
               </li>
               <li>
                 Ask up to <b>{open?.limits.questionsPerSession ?? 3}</b> questions. The session ends
                 after {lasts(open?.limits.ttlMinutes ?? 1440)}, and its spending limit is revoked
                 onchain.
               </li>
-              <li>Questions here are not kept in memory. Sign in for a Scout that learns.</li>
+              <li>Questions here are not kept in memory. Sign in for a Researcher that learns.</li>
             </ul>
             {open && !open.open ? (
               <Alert variant="warning">
@@ -171,7 +175,7 @@ export function PlaygroundPage() {
                   <span className="text-ob-muted">
                     Try again later, or{" "}
                     <Link className="link" to="/remoras/new">
-                      get your own Scout
+                      get your own Researcher
                     </Link>
                     .
                   </span>
@@ -180,7 +184,7 @@ export function PlaygroundPage() {
             ) : null}
             <div className="flex items-center gap-3">
               <Button type="button" disabled={!!busy || !open?.open} onClick={() => void start()}>
-                <Fish /> Start my Scout
+                <Fish /> Start my Researcher
               </Button>
               {busy ? (
                 <span className="flex items-center gap-2 text-ob-muted">
@@ -287,7 +291,7 @@ export function PlaygroundPage() {
                       disabled={!!busy || !question.trim()}
                       onClick={() => void ask()}
                     >
-                      <Send /> Ask Scout
+                      <Send /> Ask Researcher
                     </Button>
                     {SUGGESTIONS.filter((s) => s !== question).map((s) => (
                       <Button
@@ -311,8 +315,8 @@ export function PlaygroundPage() {
                 <Alert>
                   <AlertTitle>{ended ? "Session over" : "That was your last question"}</AlertTitle>
                   <AlertDescription>
-                    Sign in with a wallet for a Scout of your own. It remembers, learns from your
-                    feedback, and spends only within the budget you set.{" "}
+                    Sign in with a wallet for a Researcher of your own. It remembers, learns from
+                    your feedback, and spends only within the budget you set.{" "}
                     <Link className="link" to="/remoras/new">
                       Get your own
                     </Link>

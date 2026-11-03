@@ -18,7 +18,7 @@
    Forced past the policy, the Disc aborted it onchain: <explorer link>
 
    In CI: 28 attacks, 0 overspends.
-4. It learns from you. Mark a ping 👎, and Sentinel writes a rule to Walrus Memory and stays quiet next
+4. It learns from you. Mark a ping 👎, and the Wallet watcher writes a rule to Walrus Memory and stays quiet next
    time. The receipt for that decision cites the rule's memory blob.
 5. And it checks itself. A payment from its Disc with no decision behind it gets you an alert within
    minutes, the sign of a leaked key.

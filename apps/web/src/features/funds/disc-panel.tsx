@@ -86,7 +86,7 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
         <p className="text-md text-ob-muted">Remora isn't published on {network} yet.</p>
       ) : discs === null ? (
         <p className="text-md text-ob-muted">Reading your spending limits…</p>
-      ) : error ? (
+      ) : error && discs.length === 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-2 text-md">
           <span className="text-ob-danger-text">{error}</span>
           <Button variant="outline" size="sm" onClick={() => void reload()}>
@@ -105,11 +105,21 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           }
         />
       ) : (
-        <SettingsGroup as="ul" aria-label="Spending limits">
-          {discs.map((d) => (
-            <DiscRow key={d.disc.id} d={d} cfg={cfg} />
-          ))}
-        </SettingsGroup>
+        <>
+          {error ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-md">
+              <span className="text-ob-danger-text">{error}</span>
+              <Button variant="outline" size="sm" onClick={() => void reload()}>
+                Try again
+              </Button>
+            </div>
+          ) : null}
+          <SettingsGroup as="ul" aria-label="Spending limits">
+            {discs.map((d) => (
+              <DiscRow key={d.disc.id} d={d} cfg={cfg} />
+            ))}
+          </SettingsGroup>
+        </>
       )}
     </Section>
   );

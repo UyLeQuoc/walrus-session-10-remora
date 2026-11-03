@@ -139,7 +139,7 @@ function RoomChat({ id }: { id: string }) {
           <AgentChatEmpty
             ready={`# ${room?.name ?? "room"}`}
             title="Talk to the whole team."
-            description="Talk to the whole team. Name one with @, like “@Sentinel ignore incoming SUI under 0.01”, or just ask, and the right one answers."
+            description="Talk to the whole team. Name one with @, like “@Wallet watcher ignore incoming SUI under 0.01”, or just ask, and the right one answers."
           />
         ) : null}
         <ThreadView

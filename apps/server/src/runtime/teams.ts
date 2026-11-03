@@ -108,9 +108,9 @@ export function previewTeam(markdown: string): TeamPreview {
       warnings.push(`${r.name} watches no address yet: it will watch yours.`);
     if (!paying && r.budget) warnings.push(`${r.name} is read-only: its budget is ignored.`);
     if (r.template !== "sentinel" && r.rules.length)
-      warnings.push(`Only Sentinels learn rules: ${r.name}'s rules are ignored.`);
+      warnings.push(`Only Wallet watchers learn rules: ${r.name}'s rules are ignored.`);
     if (r.template !== "scout" && r.schedules.length)
-      warnings.push(`Only Scouts answer on a schedule: ${r.name}'s schedules are ignored.`);
+      warnings.push(`Only Researchers answer on a schedule: ${r.name}'s schedules are ignored.`);
     const b = paying ? (r.budget ?? { monthlyUsd: 1, perPaymentUsd: 0.05 }) : null;
     return {
       name: r.name,
@@ -338,8 +338,8 @@ export async function exportTeam(
     ),
     "",
     opts.ids
-      ? "Use it from Remora's Templates. It starts in practice mode, its schedules arrive paused, and a Sentinel watches your own address."
-      : "Import it in Remora under Remoras → Import. Remoras start in practice mode and schedules arrive paused. Sentinels watch the importer's own address until they're told otherwise.",
+      ? "Use it from Remora's Templates. It starts in practice mode, its schedules arrive paused, and a Wallet watcher watches your own address."
+      : "Import it in Remora under Remoras → Import. Remoras start in practice mode and schedules arrive paused. Wallet watchers watch the importer's own address until they're told otherwise.",
   ].join("\n");
   return `---\n${stringify(team).trimEnd()}\n---\n\n${body}\n`;
 }

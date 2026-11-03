@@ -10,6 +10,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, remoraEvents, sourceStats, sql } from "@remora/db";
 import { getDisc, toDiscError } from "@remora/disc-sdk";
 import { PaymentStopped, payWithDisc } from "../money/pay.ts";
+import { payeeLabel } from "../money/reef.ts";
 import { modelIdFor } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { REMORA_LIMITS } from "../runtime/limits.ts";
@@ -95,7 +96,7 @@ export async function requestPayment(
     kind: "blocked",
     code,
     reasons,
-    eventId: await event("blocked", `Didn't pay ${p.payee}: ${reasons[0] ?? code}`, {
+    eventId: await event("blocked", `Didn't pay ${payeeLabel(p.payee)}: ${reasons[0] ?? code}`, {
       code,
       reasons,
       url: p.url,
@@ -211,7 +212,7 @@ export async function requestPayment(
     }
     const eventId = await event(
       "payment",
-      `Paid ${amount} to ${p.payee}`,
+      `Paid ${amount} to ${payeeLabel(p.payee)}`,
       { payee: p.payee, amount, digest, url: p.url, status: response.status },
       receipt?.id,
     );
@@ -237,7 +238,7 @@ export async function requestPayment(
       if (shadow) {
         const eventId = await event(
           "shadow",
-          `Would have paid ${amount} to ${p.payee}`,
+          `Would have paid ${amount} to ${payeeLabel(p.payee)}`,
           { payee: p.payee, amount, url: p.url },
           wake?.id,
         );
@@ -252,7 +253,7 @@ export async function requestPayment(
       if (err.verdict === "ask" && p.onAsk === "refuse") {
         const eventId = await event(
           "blocked",
-          `Didn't pay ${amount} to ${p.payee}: over the limit, the agent can ask you`,
+          `Didn't pay ${amount} to ${payeeLabel(p.payee)}: over the limit, the agent can ask you`,
           { code: "over_limit", reasons: err.reasons, url: p.url, amount },
           wake?.id,
         );
@@ -271,7 +272,7 @@ export async function requestPayment(
             remoraId: r.id,
             network: r.network,
             kind: "over_limit_payment",
-            summary: `Pay ${amount} to ${p.payee} (${err.reasons.at(-1) ?? "over the limit"})`,
+            summary: `Pay ${amount} to ${payeeLabel(p.payee)} (${err.reasons.at(-1) ?? "over the limit"})`,
             payload: {
               payee: p.payee,
               payTo: err.requirements.payTo,

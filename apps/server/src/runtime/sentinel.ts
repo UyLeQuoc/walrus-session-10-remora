@@ -25,7 +25,7 @@ import { intentBase, recordWake } from "./wake.ts";
 
 export async function teach(deps: RuntimeDeps, r: Remora, text: string) {
   if (r.template !== "sentinel")
-    throw new RemoraError("remora.not_sentinel", "Only Sentinel learns rules.");
+    throw new RemoraError("remora.not_sentinel", "Only a Wallet watcher learns rules.");
   let rule = parseRule(text);
   if (!rule) {
     const res = await deps.brain.parseRule(text).catch(() => ({ rule: null, tokens: 0 }));

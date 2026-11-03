@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { BudgetMeter } from "@/components/app/budget-meter";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
+import { kindName } from "@/lib/kind";
 import { GalleryCard } from "@/openbot/pages";
 import { useBudget } from "./use-budget";
 
@@ -24,7 +25,7 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
         media={<RemoraAvatar id={remora.id} mood={remoraMood(remora)} size={36} />}
         bareMedia
         title={<span className="min-w-0 truncate">{remora.name}</span>}
-        byline={remora.template.charAt(0).toUpperCase() + remora.template.slice(1)}
+        byline={kindName(remora.template)}
         action={<StatusBadge status={remora.status} />}
         clamp={false}
       >

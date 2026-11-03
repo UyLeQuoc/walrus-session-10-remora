@@ -61,7 +61,7 @@ export async function addSchedule(
   opts: { paused?: boolean } = {},
 ) {
   if (r.template !== "scout")
-    throw new RemoraError("schedule.unsupported", "Only Scouts answer on a schedule.");
+    throw new RemoraError("schedule.unsupported", "Only Researchers answer on a schedule.");
   const p = previewSchedule(when);
   if (!p) throw new RemoraError("schedule.unparsed", `I can't read "${when}" as a schedule.`);
   const s: Schedule = {

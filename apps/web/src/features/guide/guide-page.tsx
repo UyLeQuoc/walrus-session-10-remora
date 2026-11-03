@@ -60,21 +60,21 @@ function Tiles({
 
 const STEPS: Array<{ title: string; to?: string; detail: string }> = [
   {
-    title: "Try Scout, no wallet",
+    title: "Try a Researcher, no wallet",
     to: "/playground",
-    detail: "Ask a Scout with a $1 spending limit on testnet, and watch it pay for an answer.",
+    detail: "Ask a Researcher with a $1 spending limit on testnet, and watch it pay for an answer.",
   },
   { title: "Sign in", detail: "Connect a Sui wallet with Sign in, at the bottom left." },
   {
     title: "Create a remora",
     to: "/remoras/new",
     detail:
-      "Pick Scout or Sentinel, set its budget, and sign once. It starts in practice mode: it shows what it would pay, and pays nothing.",
+      "Pick Researcher or Wallet watcher, set its budget, and sign once. It starts in practice mode: it shows what it would pay, and pays nothing.",
   },
   {
     title: "Use it",
     detail:
-      "Ask Scout or teach Sentinel on its page or in Chat. Why? under an answer shows its receipt. Press Go live once you trust it.",
+      "Ask your Researcher or teach your Wallet watcher on its page or in Chat. Why? under an answer shows its receipt. Press Go live once you trust it.",
   },
   {
     title: "Stay in control",
@@ -88,7 +88,7 @@ const STEPS: Array<{ title: string; to?: string; detail: string }> = [
 const PAGE_HELP: Record<string, string> = {
   "/": "Your remoras, what waits for you, and everything they did lately. Open a remora to ask or teach it, see its budget, cost and receipts, and what it learned.",
   "/chat":
-    "Talk to your remoras: ask Scout, teach Sentinel. The same chat works in Telegram and Discord.",
+    "Talk to your remoras: ask the Researcher, teach the Wallet watcher. The same chat works in Telegram and Discord.",
   "/approvals":
     "A payment over a remora's cap waits here. Pay it once from your own wallet, or decline.",
   "/funds": "Your USDC, what each remora has spent of its limit, and Pause all.",
@@ -104,9 +104,9 @@ const PAGE_HELP: Record<string, string> = {
 const MORE_PAGES = [
   {
     to: "/playground",
-    label: "Try Scout",
+    label: "Try a Researcher",
     icon: Fish,
-    help: "A Scout with a $1 limit on testnet, no wallet needed.",
+    help: "A Researcher with a $1 limit on testnet, no wallet needed.",
   },
   {
     to: "/reef",
@@ -233,7 +233,7 @@ export function GuidePage() {
           ]}
         />
         <p className="text-md text-ob-muted">
-          Start from Scout (buys answers) or Sentinel (watches wallets).{" "}
+          Start from Researcher (buys answers) or Wallet watcher (watches wallets).{" "}
           <Link className="link" to="/remoras/new">
             Create one
           </Link>

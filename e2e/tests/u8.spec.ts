@@ -78,7 +78,7 @@ test("U8 exit: playground with $1 Discs, health, diagnose, docs", async ({ brows
   await a.page.goto("/playground");
   await expect(a.page.getByTestId("playground-intro")).toContainText("1.00 USDC");
   const t1 = Date.now();
-  await a.page.getByRole("button", { name: /Start my Scout/ }).click();
+  await a.page.getByRole("button", { name: /Start my Researcher/ }).click();
   await expect(a.page.getByTestId("playground-spent")).toHaveText("0.00 of 1.00 USDC", {
     timeout: 120_000,
   });
@@ -94,22 +94,22 @@ test("U8 exit: playground with $1 Discs, health, diagnose, docs", async ({ brows
   // 3. A second visitor gets their own Scout; the pool (2) refuses a third.
   const b = await visitor(browser, ip(12));
   await b.page.goto("/playground");
-  await b.page.getByRole("button", { name: /Start my Scout/ }).click();
+  await b.page.getByRole("button", { name: /Start my Researcher/ }).click();
   await expect(b.page.getByTestId("playground-spent")).toBeVisible({ timeout: 120_000 });
   const sb = (await sessionOf(b.page)).session;
   expect(sb.remoraId).not.toBe(s.remoraId);
   results.secondIssue = sb.issueDigest;
   const c = await visitor(browser, ip(13));
   await c.page.goto("/playground");
-  await expect(c.page.getByText(/Every playground Scout is taken/)).toBeVisible({
+  await expect(c.page.getByText(/Every playground Researcher is taken/)).toBeVisible({
     timeout: 30_000,
   });
-  await expect(c.page.getByRole("button", { name: /Start my Scout/ })).toBeDisabled();
+  await expect(c.page.getByRole("button", { name: /Start my Researcher/ })).toBeDisabled();
   await c.context.close();
 
   const t2 = Date.now();
   await a.page.getByLabel("Your question").fill("Is package 0x2 safe to depend on?");
-  await a.page.getByRole("button", { name: /Ask Scout/ }).click();
+  await a.page.getByRole("button", { name: /Ask Researcher/ }).click();
   await expect(a.page.getByTestId("playground-answer").first()).toContainText(
     "Paid 0.01 USDC to Sui risk check",
     {
@@ -138,7 +138,7 @@ test("U8 exit: playground with $1 Discs, health, diagnose, docs", async ({ brows
 
   // 2. The question limit (2 here) refuses plainly.
   await a.page.getByLabel("Your question").fill("hello");
-  await a.page.getByRole("button", { name: /Ask Scout/ }).click();
+  await a.page.getByRole("button", { name: /Ask Researcher/ }).click();
   await expect(a.page.getByText("That was your last question")).toBeVisible({ timeout: 180_000 });
   const refused = await a.page.evaluate(async () => {
     const token = localStorage.getItem("remora.playground") ?? "";

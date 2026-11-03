@@ -231,21 +231,21 @@ add({ id: "split", dur: 12 });
 add({
   id: "play", chapter: "01 · Try it, no wallet", url: "remora · /playground", lead: .6,
   clip: clip("playground", [
-    { from: "start", to: "Start my Scout", speed: 1 },
-    { from: "Start my Scout", to: "disc-issued", dur: 3.0, badge: "Setting a $1 spending limit onchain · sped up" },
+    { from: "start", to: "Start my Researcher", speed: 1 },
+    { from: "Start my Researcher", to: "disc-issued", dur: 3.0, badge: "Setting a $1 spending limit onchain · sped up" },
     { from: "disc-issued", to: "question", speed: 1 },
-    { from: "question", to: "Ask Scout", speed: 2.6, badge: "Typing · 2.6×" },
-    { from: "Ask Scout", to: "answered", dur: 3.6, badge: "Paying over x402 · settling on Sui · sped up" },
+    { from: "question", to: "Ask Researcher", speed: 2.6, badge: "Typing · 2.6×" },
+    { from: "Ask Researcher", to: "answered", dur: 3.6, badge: "Paying over x402 · settling on Sui · sped up" },
     { from: "answered", to: "Why? Check its receipt", speed: 1 },
     { from: "Why? Check its receipt", to: "end", speed: 1 },
   ]),
-  steps: [["Meet", "what-is-remora"], ["Start", "Start my Scout"], ["Ask", "question"], ["Pay", "answered"], ["Verify", "verified"]],
+  steps: [["Meet", "what-is-remora"], ["Start", "Start my Researcher"], ["Ask", "question"], ["Pay", "answered"], ["Verify", "verified"]],
   caps: [
     ["what-is-remora", .1, 3.3, "A remora is an AI agent that works for you, with <b>a spending limit Sui enforces</b>."],
-    ["Try Scout, no wallet", 0, 2.6, "No wallet, no sign-up: <b>try Scout</b>."],
-    ["Start my Scout", 0, 3.4, "Start a Scout. It gets a <b>$1 spending limit</b>, onchain."],
+    ["Try a Researcher, no wallet", 0, 2.6, "No wallet, no sign-up: <b>try a Researcher</b>."],
+    ["Start my Researcher", 0, 3.4, "Start a Researcher. It gets a <b>$1 spending limit</b>, onchain."],
     ["question", 0, 3.2, "Ask about a Sui package."],
-    ["Ask Scout", 0, 3.4, "Scout decides a <b>risk report</b> is worth buying…"],
+    ["Ask Researcher", 0, 3.4, "Your Researcher decides a <b>risk report</b> is worth buying…"],
     ["answered", .2, 3.6, "…and pays <b>0.01 USDC over x402</b>, within its own limit."],
     ["Why? Check its receipt", .1, 4.2, "Every answer has a <b>receipt</b>. Anyone can check it against Sui, no sign-in."],
   ],
@@ -260,19 +260,19 @@ add({ id: "money", dur: 10.5 });
 add({
   id: "create", chapter: "02 · Your own remora", url: "remora · /remoras/new", lead: .6,
   clip: clip("create", [
-    { from: "new", to: "Create Scout", speed: 1.4, badge: "Filling the form · 1.4×" },
-    { from: "Create Scout", to: "created", dur: 3.0, badge: "One signature · confirming onchain · sped up" },
+    { from: "new", to: "Create Researcher", speed: 1.4, badge: "Filling the form · 1.4×" },
+    { from: "Create Researcher", to: "created", dur: 3.0, badge: "One signature · confirming onchain · sped up" },
     { from: "created", to: "end", speed: 1 },
   ]),
-  steps: [["Pick", "Scout"], ["Limits", "monthly"], ["Sign", "Create Scout"], ["Live", "live"]],
+  steps: [["Pick", "Researcher"], ["Limits", "monthly"], ["Sign", "Create Researcher"], ["Live", "live"]],
   caps: [
-    ["new", .1, 4.2, "Your own remora: pick <b>Scout</b>, and set its limits: <b>0.50 USDC a month</b>, at most <b>0.015</b> a payment."],
-    ["Create Scout", 0, 3.0, "<b>One signature</b> sets its spending limit on Sui."],
+    ["new", .1, 4.2, "Your own remora: pick <b>Researcher</b>, and set its limits: <b>0.50 USDC a month</b>, at most <b>0.015</b> a payment."],
+    ["Create Researcher", 0, 3.0, "<b>One signature</b> sets its spending limit on Sui."],
     ["created", .2, 2.6, "It starts in <b>practice mode</b>: it shows what it would pay, and pays nothing."],
     ["Go live", 0, 2.4, "Go live when you're ready."],
   ],
   spots: [
-    { at: "Create Scout", off: -.3, len: 2.6, box: "Create Scout" },
+    { at: "Create Researcher", off: -.3, len: 2.6, box: "Create Researcher" },
     { at: "created", off: .3, len: 2.3, box: "practice" },
   ],
 });
@@ -287,7 +287,7 @@ add({
   ]),
   steps: [["Ask", "question"], ["Pay", "answered"], ["Cost", "cost"], ["Why", "Why?"]],
   caps: [
-    ["question", 0, 3.0, "Ask your Scout. It pays within <b>its own limit</b>."],
+    ["question", 0, 3.0, "Ask your Researcher. It pays within <b>its own limit</b>."],
     ["answered", .2, 3.2, "The answer says what it cost: <b>0.01 USDC</b> for the Sui risk check."],
     ["cost", 0, 2.9, "The cost card adds it up: <b>model, sponsored gas, purchases</b>."],
     ["Why?", .4, 4.8, "<b>Why?</b> opens its receipt: what it read, what the safety check decided, the intent hash."],
@@ -308,7 +308,7 @@ add({
   ]),
   steps: [["Teach", "rule"], ["Learned", "learned"], ["Learning", "learning"]],
   caps: [
-    ["sentinel", .1, 2.4, "Sentinel watches your addresses. Teach it in plain words."],
+    ["sentinel", .1, 2.4, "A Wallet watcher keeps an eye on your addresses. Teach it in plain words."],
     ["learned", 0, 2.5, "Learned, and written to <b>Walrus Memory</b>."],
     ["ignored", 0, 2.6, "It applies what it learns: a 0.001 SUI transfer, <b>ignored</b>."],
     ["learning", .1, 3.2, "Its <b>Learning</b> tab tracks the noise rate from your 👍 and 👎."],
@@ -453,7 +453,7 @@ scene("lock", `
   <div class="abs" id="lk-ic" style="left:900px;top:250px;width:120px;height:120px;border-radius:28px;box-shadow:0 0 70px rgba(96,84,236,.35)">${LOGO(120)}</div>
   ${headline([{ t: "Give an agent a budget," }, { t: "not your wallet.", style: "color:var(--brand)" }], "", "position:absolute;left:0;right:0;top:410px;text-align:center;font-size:84px")}
   <div class="abs" id="lk-c" style="left:0;right:0;top:640px;display:flex;gap:14px;justify-content:center">
-    <span class="chip" style="background:var(--inverse);color:#141414;border-color:var(--inverse);font-weight:650">${icon("fish", "#141414", 20)} Try Scout · $1 limit · no wallet</span>
+    <span class="chip" style="background:var(--inverse);color:#141414;border-color:var(--inverse);font-weight:650">${icon("fish", "#141414", 20)} Try a Researcher · $1 limit · no wallet</span>
     <span class="chip mono" style="font-size:17px">/playground</span></div>
   <div class="abs" id="lk-f" style="left:0;right:0;top:730px;display:flex;gap:12px;justify-content:center">
     <span class="chip" style="font-size:16px;height:38px">Track 2 · Smart Agents</span><span class="chip" style="font-size:16px;height:38px">Best Walrus Memory</span><span class="chip" style="font-size:16px;height:38px">Best Use of Agent Payments</span></div>
@@ -463,7 +463,7 @@ scene("lock", `
 const STATIC_CAPS = {
   split: [[1.2, 5.2, "Most agents either hold your wallet key, or ask you to approve every click."], [5.4, 11.6, "One injected sentence, and an agent with your key pays an attacker. A remora <b>can't</b>."]],
   money: [[1.6, 10, "The remora's key can only spend <b>within its limit</b>: under the caps, to its payees. Gas is sponsored."]],
-  attack: [[1.0, 5.6, "Scout bought data with an <b>injected instruction</b>, and the model obeyed it."], [5.8, 13, "The safety check blocks it. The gas station refuses it. Forced past both, <b>Sui aborts it</b>."]],
+  attack: [[1.0, 5.6, "The Researcher bought data with an <b>injected instruction</b>, and the model obeyed it."], [5.8, 13, "The safety check blocks it. The gas station refuses it. Forced past both, <b>Sui aborts it</b>."]],
 };
 const CAPS = [];
 for (const s of SCENES) {

@@ -7,7 +7,7 @@
  */
 
 import { remoraEvents } from "@remora/db";
-import type { ResolvedReef } from "../money/reef.ts";
+import { payeeLabel, type ResolvedReef } from "../money/reef.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import { handoff, proposeSchedule } from "../tools/propose.ts";
 import { readTools } from "../tools/read.ts";
@@ -78,10 +78,10 @@ export function unpaidNote(planned: { payee: string; o: PayOutcome }[]): string 
       ? []
       : o.code === "sonar.blocked"
         ? [
-            `The safety check stopped a payment to ${payee}: ${o.reasons.at(-1) ?? "against the policy"}.`,
+            `The safety check stopped a payment to ${payeeLabel(payee)}: ${o.reasons.at(-1) ?? "against the policy"}.`,
           ]
         : [
-            `I tried to buy ${payee} for this, but the payment didn't go through (${o.code}), so this answer doesn't use it. Ask again in a minute.`,
+            `I tried to buy ${payeeLabel(payee)} for this, but the payment didn't go through (${o.code}), so this answer doesn't use it. Ask again in a minute.`,
           ],
   );
   return lines.length ? lines.join(" ") : null;
@@ -143,7 +143,7 @@ export async function scoutAsk(
     if (o.kind === "paid") {
       paidPayees.push(payee);
       data.push({
-        source: payee,
+        source: payeeLabel(payee),
         content: await o.response.clone().text(),
         cost: usdcLabel(o.amount),
       });
@@ -155,7 +155,9 @@ export async function scoutAsk(
     planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
   lap("payMs");
 
-  const persona = String((r.config as { persona?: string }).persona ?? "You are Scout.");
+  const persona = String(
+    (r.config as { persona?: string }).persona ?? "You are the owner's Researcher.",
+  );
   let answer: string;
   let tokens = 0;
   // The Wake records the model that actually answered (D9).
@@ -171,7 +173,11 @@ export async function scoutAsk(
       pay: async ({ payee, url, reason }) => {
         const o = await buy(payee, url, reason);
         return o.kind === "paid"
-          ? { source: payee, content: await o.response.clone().text(), cost: usdcLabel(o.amount) }
+          ? {
+              source: payeeLabel(payee),
+              content: await o.response.clone().text(),
+              cost: usdcLabel(o.amount),
+            }
           : outcomeLine(o);
       },
       tools: opts.playground

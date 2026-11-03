@@ -108,7 +108,7 @@ function Dashboard() {
         <EmptyState
           icon={<Fish />}
           title="Your first remora"
-          description="Scout buys answers with a budget Sui enforces. Sentinel watches wallets and learns what matters. Pick a template to start."
+          description="A Researcher buys answers with a budget Sui enforces. A Wallet watcher watches wallets and learns what matters. Pick a template to start."
           action={
             <CardGrid className="w-full max-w-2xl">
               {list.map(([slug, template]) => (

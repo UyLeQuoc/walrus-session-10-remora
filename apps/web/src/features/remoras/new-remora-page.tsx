@@ -208,7 +208,7 @@ function Wizard({ owner }: { owner: string }) {
                   onChange={(e) => setWatch(e.target.value)}
                 />
                 <FieldDescription>
-                  One per line. Read-only: Sentinel has no budget.
+                  One per line. Read-only: a Wallet watcher has no budget.
                 </FieldDescription>
               </Field>
             )}
@@ -239,7 +239,7 @@ function Wizard({ owner }: { owner: string }) {
                   You'll sign <strong>1 transaction</strong> to set its spending limit.
                 </>
               ) : (
-                <>No signature needed. Sentinel only reads.</>
+                <>No signature needed. A Wallet watcher only reads.</>
               )}
             </p>
 

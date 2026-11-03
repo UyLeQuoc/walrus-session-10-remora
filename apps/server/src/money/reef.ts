@@ -42,6 +42,17 @@ export const REEF: ReefEntry[] = [
   },
 ];
 
+/** ADR-0094: a service by its name, as the web's `payeeName()` shows it, not its `reef:` id. */
+const LABELS: Record<string, string> = {
+  "reef:sui-risk": "Sui risk check",
+  "reef:odds": "Odds",
+  "reef:brief": "Brief",
+};
+
+export function payeeLabel(ref: string): string {
+  return LABELS[ref] ?? ref.replace(/^reef:/, "");
+}
+
 export interface ResolvedReef extends ReefEntry {
   url: string;
   payTo: string;

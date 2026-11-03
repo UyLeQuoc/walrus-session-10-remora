@@ -70,7 +70,7 @@ name: U6 desk ${stamp}
 description: The U6 exit team.
 remoras:
   - template: scout
-    name: Scout ${stamp}
+    name: Researcher ${stamp}
     model: ${MODEL}
     budget:
       monthlyUsd: 0.5
@@ -79,7 +79,7 @@ remoras:
       - when: weekdays at 8am
         question: Is package 0x2 safe to depend on?
   - template: sentinel
-    name: Sentinel ${stamp}
+    name: Wallet watcher ${stamp}
     watch:
       - ${watched}
     rules:
@@ -87,7 +87,7 @@ remoras:
 room:
   name: Team
   responder: auto
-  lead: Scout ${stamp}
+  lead: Researcher ${stamp}
 ---
 
 # U6 desk
@@ -130,8 +130,8 @@ test("U6 exit: team from Markdown, 1-1 chat, room routing, inline approval, mode
       }[];
     }>(page, "/api/remoras")
   ).remoras;
-  const scout = mine.find((r) => r.name === `Scout ${stamp}`);
-  const sentinel = mine.find((r) => r.name === `Sentinel ${stamp}`);
+  const scout = mine.find((r) => r.name === `Researcher ${stamp}`);
+  const sentinel = mine.find((r) => r.name === `Wallet watcher ${stamp}`);
   expect(scout?.discId, "Scout's Disc confirmed").toBeTruthy();
   expect(scout?.config.model).toBe(MODEL);
   const ready = (await feedOf(page, scout?.id ?? "")).find((e) =>
@@ -189,21 +189,27 @@ test("U6 exit: team from Markdown, 1-1 chat, room routing, inline approval, mode
 
   // 3. The room: @Sentinel learns; an un-mentioned odds question routes to Scout.
   await goto(page, `/chat/room/${roomId}`);
-  await page.getByLabel("Message").fill(`@Sentinel ${stamp} ignore outgoing SUI under 0.002`);
+  await page.getByLabel("Message").fill(`@Wallet watcher ${stamp} ignore outgoing SUI under 0.002`);
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Send" }).click();
-  await expect(page.getByTestId("route-label").last()).toContainText(`Sentinel ${stamp} · named`, {
-    timeout: 60_000,
-  });
+  await expect(page.getByTestId("route-label").last()).toContainText(
+    `Wallet watcher ${stamp} · named`,
+    {
+      timeout: 60_000,
+    },
+  );
   await expect(page.getByText(/Learned: ignore outgoing SUI under 0.002/).first()).toBeVisible({
     timeout: 60_000,
   });
   const t2 = Date.now();
   await page.getByLabel("Message").fill("What are the odds for tonight's match?");
   await page.getByRole("button", { name: "Send" }).click();
-  await expect(page.getByTestId("route-label").last()).toContainText(`Scout ${stamp} · matched`, {
-    timeout: 180_000,
-  });
+  await expect(page.getByTestId("route-label").last()).toContainText(
+    `Researcher ${stamp} · matched`,
+    {
+      timeout: 180_000,
+    },
+  );
   results.routeMs = ms(t2);
 
   // 4. The inline approval card: Pay once, then the payment and answer follow in the room.

@@ -166,7 +166,7 @@ export function LearningSection({ remoraId }: { remoraId: string }) {
         {proofs.data && !proofs.data.proofs.length ? (
           <p className="max-w-3xl text-md text-ob-muted">
             Nothing to show yet: a proof appears once it decides differently on the same kind of
-            input after learning something (for a Sentinel, thumbs-down a ping as noise).
+            input after learning something (for a Wallet watcher, thumbs-down a ping as noise).
           </p>
         ) : null}
         <ul className="flex max-w-3xl flex-col gap-4">

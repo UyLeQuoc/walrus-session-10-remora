@@ -31,12 +31,27 @@
     Locally nothing changes.
   - `smoke.spec.ts` checks `/` as the landing page when `E2E_BASE_URL` is set. Please keep that
     when you touch it.
-- **`w2.spec.ts` fails on the deployed site, and it's the selector.**
-  - After "Pay once", the Approvals page shows the answer twice: in the approval card and in the
-    "Paid" card. So `getByTestId("approval-answer")` matches two elements.
-  - With `.first()` the whole W2 flow passes on the deployed site.
-  - Either change the test, or show the answer once. Your call.
+- **Approvals shows a paid answer once now** (it was in the approval card and in the "Paid" card,
+  so `w2.spec.ts` matched two `approval-answer` elements). It stays in the "Paid" card above the
+  inbox; the approval card leaves on the refresh. `w2` passes unchanged on the deployed site.
+- **Funds keeps its Disc list when a refresh fails.**
+  - The browser's read of the Discs from the public fullnode sometimes fails ("Failed to fetch")
+    right after a pause or resume.
+  - It now retries twice. If it still fails, it keeps the last list with a "Try again" line.
+  - Before, the list vanished, which failed `testnet.spec.ts` and left five of the burner's Discs
+    paused. They're resumed.
 - **The playground's two suggestions now answer properly** (Uy's lane, in `apps/merchants`):
   - `sui-risk` no longer calls 0x1, 0x2 or 0x3 "younger than 7 days". The network upgrades them in
     place.
   - The `odds` snapshot is dated from the request, so tonight always has a match.
+- **Scout and Sentinel read "Researcher" and "Wallet watcher" in the product**
+  ([ADR-0101](../adr/0101-researcher-and-wallet-watcher.md)).
+  - Uy asked for it.
+  - The slugs, the API and the docs keep `scout`/`sentinel`.
+  - `kindName()` in `apps/web/src/lib/kind.ts` is the one place that names a kind.
+  - The e2e selectors are updated: smoke, w2, u8, u12 and demo.
+- **Payees read by name in what the server writes too**: answers, activity and approvals say "Sui
+  risk check", not `reef:sui-risk` (`payeeLabel()` in `apps/server/src/money/reef.ts`, the server's
+  twin of `payeeName()`).
+- **`llms.txt`, `robots.txt` and `sitemap.xml` were still hippo's.** They describe Remora at
+  getremora.vercel.app now.

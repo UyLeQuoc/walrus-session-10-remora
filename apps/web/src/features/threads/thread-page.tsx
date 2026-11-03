@@ -14,6 +14,7 @@ import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { kindName } from "@/lib/kind";
 import { AgentChatEmpty, ConversationScroll } from "@/openbot";
 import { type Line, lineFromFeed, withContext } from "./lines";
 import { ThreadComposer } from "./thread-composer";
@@ -94,7 +95,9 @@ function Thread({ id }: { id: string }) {
         ) : null}
         <h1 className="conversation-title m-0 shrink-0 font-medium">{r?.name ?? "…"}</h1>
         {r ? <StatusBadge status={r.status} /> : null}
-        <span className="hidden text-xs text-ob-muted sm:inline">{r?.template}</span>
+        <span className="hidden text-xs text-ob-muted sm:inline">
+          {r ? kindName(r.template) : null}
+        </span>
       </ShellHeaderStart>
       <ShellHeaderEnd>
         {r ? (
