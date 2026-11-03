@@ -19,7 +19,7 @@ round 2's findings. The fifth judged the light theme only.
 
 **The trend in blockers and majors:** round 0 had 17 and 55, round 1 had 10 and 21, round 2 had 6
 and 12, and this round has 4 and 10. The stop rule needs none, and the freeze was three days away,
-so round 4 checks the fixes below.
+so [round 4](round-4.md) checks the fixes below.
 
 **What was left:**
 1. **"Ready to spend 19.78 USDC"** overstated what the remoras could spend: one limit of 0.10 USDC
