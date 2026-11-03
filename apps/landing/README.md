@@ -1,7 +1,8 @@
 # apps/landing
 
 This is the landing page (H6, [ADR-0092](../../docs/adr/0092-landing-page.md)). It is one static
-page in the app's design system, built for Walrus Sites.
+page, built for Walrus Sites. Since [ADR-0102](../../docs/adr/0102-landing-v2-live-shader.md) it's dark, around a live WebGL
+sea (a fragment shader in `public/index.html`, no library) with the app's faces swimming in it.
 
 - **Owner:** H6 is Huấn's lane. Uy's agent built this version when Uy asked (ADR-0087). See
   `docs/team-split.md` §2.

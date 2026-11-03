@@ -1,6 +1,6 @@
 # ADR-0092: A static landing page (H6), built for Walrus Sites; the cost card reads a payment at once
 
-- **Status:** Accepted
+- **Status:** Accepted; the page's **look** (the app's light design system) is superseded by [ADR-0102](0102-landing-v2-live-shader.md)
 - **Date:** 2026-10-31
 - **Deciders:** Uy (asked "is there a landing page? finish it"; built by Uy's agent)
 
