@@ -258,6 +258,7 @@ export function PlaygroundPage() {
             badge={
               <Badge variant={ended ? "outline" : "success"}>{ended ? "ended" : "live"}</Badge>
             }
+            description={ended ? "Session over: its spending limit is revoked onchain." : undefined}
           >
             <div
               className="grid max-w-3xl gap-4 rounded-ob-card border border-ob-border-grouped bg-ob-grouped p-4 sm:grid-cols-[1fr_auto]"
