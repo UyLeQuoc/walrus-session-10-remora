@@ -162,12 +162,22 @@ export function SidebarTeam({
               onClick={onNavigate}
               active={pathname === `/chat/r/${r.id}`}
               avatar={<RemoraAvatar id={r.id} mood={remoraMood(r, waits.get(r.id))} />}
-              status={<AgentStatusDot tone={TONE[r.status] ?? "muted"} />}
+              // ADR-0103: the dot marks only an exception; "active" is the cards' and headers' call,
+              // which read the spending limit (the roster can't afford 31 Disc reads).
+              status={
+                r.status === "active" ? undefined : (
+                  <AgentStatusDot tone={TONE[r.status] ?? "muted"} />
+                )
+              }
               name={r.name}
               time={rosterTime(r.updatedAt)}
               // ADR-0103: what it is and its state, not the persona sentence the reviewers read as
               // instructions ("You answer the owner's questi…").
-              preview={`${kindName(r.template)} · ${PREVIEW_STATE[r.status] ?? r.status}`}
+              preview={
+                r.status === "active"
+                  ? kindName(r.template)
+                  : `${kindName(r.template)} · ${PREVIEW_STATE[r.status] ?? r.status}`
+              }
               label={`${r.name}, ${kindName(r.template)}, ${STATE[r.status] ?? r.status}`}
             />
           </AgentRowItem>
