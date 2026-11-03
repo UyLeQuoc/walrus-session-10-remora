@@ -6,6 +6,7 @@
  * section (ADR-0069): a quiet heading, then the body (often a `SettingsGroup`).
  */
 import type { ReactNode } from "react";
+import { Hint } from "@/components/visual";
 import { SettingsSection } from "@/openbot/pages";
 
 export function Section({
@@ -14,10 +15,13 @@ export function Section({
   actions,
   tone = "default",
   layout = "stack",
+  hint,
   children,
 }: {
   title: ReactNode;
   description?: ReactNode;
+  /** The longer explanation, behind a `?` beside the heading (ADR-0103). */
+  hint?: ReactNode;
   actions?: ReactNode;
   tone?: "default" | "danger";
   layout?: "stack" | "split";
@@ -28,6 +32,7 @@ export function Section({
       title={title}
       description={description}
       actions={actions}
+      badge={hint ? <Hint>{hint}</Hint> : undefined}
       tone={tone}
       layout={layout}
     >
