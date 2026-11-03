@@ -176,18 +176,17 @@ export function FeedList({
     else groups.push({ day: label, items: [e] });
   }
   return (
-    <div
+    <ul
       className="flex flex-col gap-3 rounded-xl border border-ob-border bg-ob-raised px-4 py-3"
-      role="list"
       aria-label="Activity"
     >
       {groups.map((g) => (
-        <div key={g.day} role="listitem" className="flex flex-col gap-2">
+        <li key={g.day} className="flex flex-col gap-2">
           <p className="text-xs font-medium text-ob-muted">{g.day}</p>
           <Timeline label={g.day} items={g.items.map(row)} />
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 

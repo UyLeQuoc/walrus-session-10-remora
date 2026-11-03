@@ -68,6 +68,7 @@ export function Stat({
 export function StatPending({ wide = false }: { wide?: boolean }) {
   return (
     <span
+      role="status"
       aria-label="Loading"
       className={`inline-block h-7 animate-pulse rounded-md bg-ob-border-strong/60 align-middle motion-reduce:animate-none ${wide ? "w-20" : "w-10"}`}
     />
