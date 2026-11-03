@@ -1,16 +1,21 @@
-/** The owner's Discs (budgets) on this network: limits, spend, pause and resume, one per row. */
+/**
+ * The owner's Discs (spending limits) on this network: one row each, spent against its cap as a
+ * meter (ADR-0103), its per-payment cap and payees, and pause or resume.
+ */
 import { buildPause, type OwnedDisc, toDiscError } from "@remora/disc-sdk";
-import { Wallet } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/app/empty-state";
 import { Section } from "@/components/app/page";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Empty, Meter } from "@/components/visual";
+import { api } from "@/features/remoras/api";
+import { useLoad } from "@/features/remoras/hooks";
 import type { Network } from "@/lib/network";
-import { formatUsdc } from "@/lib/usdc";
+import { formatUsdc, usdc } from "@/lib/usdc";
 import { SettingsGroup } from "@/openbot/pages";
 import { DISCS_CHANGED, useOwnerDiscs } from "./discs";
 import { useSignAndRun } from "./sign";
@@ -18,9 +23,12 @@ import { useSignAndRun } from "./sign";
 function DiscRow({
   d,
   cfg,
+  owner,
 }: {
   d: OwnedDisc;
   cfg: NonNullable<ReturnType<typeof useOwnerDiscs>["cfg"]>;
+  /** The remora this limit belongs to, matched by its Disc id (ADR-0103). */
+  owner?: { id: string; name: string };
 }) {
   const run = useSignAndRun();
   const [busy, setBusy] = useState(false);
@@ -35,16 +43,32 @@ function DiscRow({
       setBusy(false);
     }
   };
-  const cap = d.allowance.lifetimeCap;
-  const used =
-    cap && BigInt(cap) > 0n
-      ? Number((BigInt(d.allowance.currentSpend) * 100n) / BigInt(cap))
-      : null;
+  // The month's window when the Disc has one (what the wizard set), else its lifetime cap.
+  const rl = d.allowance.rateLimit;
+  const cap = rl ? rl.limit.toString() : d.allowance.lifetimeCap;
+  const spentUnits = rl ? rl.spent.toString() : d.allowance.currentSpend;
+  const spent = Number(formatUsdc(spentUnits, 6));
+  const limit = cap ? Number(formatUsdc(cap, 6)) : null;
+  const days = d.allowance.expiryMs
+    ? Math.ceil((Number(d.allowance.expiryMs) - Date.now()) / 86_400_000)
+    : null;
+  const endsIn =
+    days === null
+      ? null
+      : days <= 0
+        ? "ended"
+        : days === 1
+          ? "ends tomorrow"
+          : `ends in ${days} days`;
   return (
     <li className="flex min-w-0 flex-col gap-2.5 px-4 py-3.5 text-md" data-testid="disc-row">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-medium text-ob-text">
-          {d.disc.name} <StatusBadge status={d.disc.paused ? "paused" : "live"} />
+          {owner ? <RemoraAvatar id={owner.id} size={22} still /> : null}
+          <span className="min-w-0 truncate" title={d.disc.name}>
+            {owner?.name ?? d.disc.name}
+          </span>
+          <StatusBadge status={d.disc.paused ? "paused" : "live"} />
         </p>
         <Button
           type="button"
@@ -56,20 +80,25 @@ function DiscRow({
           {d.disc.paused ? "Resume" : "Pause"}
         </Button>
       </div>
-      {used === null ? null : (
-        <Progress
-          value={Math.min(100, used)}
-          aria-label={`${used}% of this spending limit spent`}
+      {limit !== null && limit > 0 ? (
+        <Meter
+          value={spent}
+          max={limit}
+          label={`${d.disc.name}: spent of its limit`}
+          left={
+            <span className="text-sm">
+              <b className="font-semibold text-ob-text">{usdc(spentUnits)}</b> / {usdc(cap ?? "0")}{" "}
+              USDC spent{rl ? " this month" : ""}
+            </span>
+          }
         />
-      )}
-      <p className="text-ob-muted tabular-nums">
-        {formatUsdc(d.allowance.currentSpend)}
-        {cap !== null ? ` of ${formatUsdc(cap)}` : ""} USDC spent · up to{" "}
-        {formatUsdc(d.disc.perPaymentCap)} a payment · {d.disc.payees.length} payee
-        {d.disc.payees.length === 1 ? "" : "s"}
-        {d.allowance.expiryMs
-          ? ` · until ${new Date(d.allowance.expiryMs).toLocaleDateString()}`
-          : ""}
+      ) : null}
+      <p className="flex flex-wrap gap-1.5 text-xs text-ob-secondary tabular-nums">
+        <Badge variant="outline">≤ {usdc(d.disc.perPaymentCap)} USDC a payment</Badge>
+        <Badge variant="outline">
+          pays {d.disc.payees.length} address{d.disc.payees.length === 1 ? "" : "es"}
+        </Badge>
+        {endsIn ? <Badge variant="outline">{endsIn}</Badge> : null}
       </p>
     </li>
   );
@@ -77,10 +106,16 @@ function DiscRow({
 
 export function DiscPanel({ owner, network }: { owner: string; network: Network }) {
   const { discs, error, cfg, reload } = useOwnerDiscs(owner, network);
+  const remoras = useLoad(() => api.remoras(), [network]);
+  const byDisc = new Map(
+    (remoras.data?.remoras ?? [])
+      .filter((r) => r.discId)
+      .map((r) => [r.discId as string, { id: r.id, name: r.name }]),
+  );
   return (
     <Section
-      title="Budgets"
-      description="Each remora spends only within its spending limit, which Sui enforces, not us."
+      title="Spending limits"
+      hint="Each remora spends only within its spending limit. Sui enforces it, not us: the remora's key can't pay past it."
     >
       {!cfg ? (
         <p className="text-md text-ob-muted">Remora isn't published on {network} yet.</p>
@@ -94,10 +129,8 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           </Button>
         </div>
       ) : discs.length === 0 ? (
-        <EmptyState
-          icon={<Wallet />}
-          title="No budgets yet"
-          description="Creating a remora sets a spending limit that Sui enforces."
+        <Empty
+          title="No spending limits yet. Each new remora gets one."
           action={
             <Button asChild>
               <Link to="/remoras/new">Create a remora</Link>
@@ -116,7 +149,7 @@ export function DiscPanel({ owner, network }: { owner: string; network: Network 
           ) : null}
           <SettingsGroup as="ul" aria-label="Spending limits">
             {discs.map((d) => (
-              <DiscRow key={d.disc.id} d={d} cfg={cfg} />
+              <DiscRow key={d.disc.id} d={d} cfg={cfg} owner={byDisc.get(d.disc.id)} />
             ))}
           </SettingsGroup>
         </>

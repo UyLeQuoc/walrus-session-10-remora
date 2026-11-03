@@ -1,8 +1,12 @@
 /** `/connect/:token` and `/disconnect/:token`: one signature moves or revokes Remora's key. */
-import { useParams } from "react-router";
+
+import { Server, Wallet } from "lucide-react";
+import { Link, useParams } from "react-router";
 import { Page, PageHeader } from "@/components/app/page";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Flow, Hint, Problem } from "@/components/visual";
 import { WalletPicker } from "@/components/wallet-picker";
 import { Web3Address } from "@/components/web3-address";
 import { useConnectFlow } from "@/features/connect/use-connect-flow";
@@ -61,33 +65,57 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
 
   return (
     <Page
-      title={kind === "connect" ? "Connect your wallet" : "Revoke Remora's access"}
+      title={kind === "connect" ? "Own your memory" : "Revoke Remora's access"}
       description="One signature moves or revokes Remora's key."
     >
       <PageHeader
         title={kind === "connect" ? "Own your memory" : "Revoke Remora"}
         description={
           kind === "connect"
-            ? "Sign one transaction and your memory moves to a Walrus Memory account you own on Sui."
+            ? "One signature moves your memory to a Walrus account you own."
             : "This removes Remora's key from your account on chain."
         }
       />
       <div className="flex w-full flex-col gap-6">
-        <p className="max-w-2xl text-md text-ob-muted">
-          {kind === "connect" ? (
-            <>
-              Right now Remora keeps your memory under its own account. Walrus Memory normally
-              sponsors the gas, so it costs you nothing. If sponsorship is unavailable your wallet
-              pays instead, which needs a small amount of SUI, and you will be told before you sign.
-              You can take the access away again whenever you want.
-            </>
-          ) : (
-            <>
-              After it lands, Remora cannot read or write your memories at all. Gas is normally
-              sponsored; if it is not, your wallet pays and you will be told before you sign.
-            </>
-          )}
-        </p>
+        {linkDead ? null : kind === "connect" ? (
+          <>
+            <Flow
+              className="max-w-2xl"
+              label="Who holds your memory"
+              nodes={[
+                { id: "remora", label: "Remora's account", icon: <Server />, sub: "holds it now" },
+                {
+                  id: "you",
+                  label: "Your wallet",
+                  icon: <Wallet />,
+                  sub: "holds it after",
+                  tone: "success",
+                },
+              ]}
+              edges={["one signature"]}
+              active={0}
+            />
+            <p className="flex flex-wrap items-center gap-2 text-xs text-ob-muted">
+              <Badge variant="secondary">gas sponsored</Badge>
+              <Badge variant="secondary">revoke any time</Badge>
+              <span>
+                Walrus Memory sponsors the gas. If it can't, your wallet pays instead, and you're
+                asked first.
+              </span>
+              <Hint label="About owning your memory">
+                Right now Remora keeps your memory under its own account. Walrus Memory normally
+                sponsors the gas, so it costs you nothing. If sponsorship is unavailable your wallet
+                pays instead, which needs a small amount of SUI, and you will be told before you
+                sign. You can take the access away again whenever you want.
+              </Hint>
+            </p>
+          </>
+        ) : (
+          <p className="max-w-2xl text-md text-ob-muted">
+            After it lands, Remora cannot read or write your memories at all. Gas is normally
+            sponsored; if it is not, your wallet pays and you will be told before you sign.
+          </p>
+        )}
 
         {info ? (
           <dl className="ob-group ob-props max-w-2xl">
@@ -104,10 +132,21 @@ export function ConnectPage({ kind }: { kind: "connect" | "disconnect" }) {
           </dl>
         ) : null}
 
-        {error ? <p className="text-md text-ob-danger-text">{error}</p> : null}
+        {error && linkDead ? (
+          <Problem title={`This link expired. Run /${kind} again in the chat.`} detail={error} />
+        ) : error ? (
+          <p className="text-md text-ob-danger-text">{error}</p>
+        ) : null}
         {step === "working" ? <p className="text-md">{status}</p> : null}
 
-        {linkDead ? null : account ? (
+        {linkDead ? (
+          // ADR-0103: the fix the error names (run it again in the chat) is the main action.
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to="/chat">Open chat</Link>
+            </Button>
+          </div>
+        ) : account ? (
           <Button onClick={() => void run()} disabled={step === "working"}>
             {step === "working"
               ? "Working…"

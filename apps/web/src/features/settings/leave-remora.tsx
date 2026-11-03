@@ -3,12 +3,14 @@
  * signature. Honest by design (F4): retiring stops spending and revokes keys, but memories live on
  * Walrus until they expire; Remora can't delete them and doesn't promise to.
  */
+
 import type { RemoraView } from "@remora/schema";
 import { Download, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmAction } from "@/components/app/confirm-action";
 import { Section } from "@/components/app/page";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { Hash } from "@/components/hash";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -74,7 +76,7 @@ function ExportEverything() {
       title="Export everything"
       description={
         <>
-          One JSON file with your memories and your receipts (the record behind each action).
+          Your memories and receipts, in one JSON file.
           <span className="mt-1 block" role="status" data-testid="export-note">
             {note}
           </span>
@@ -114,14 +116,19 @@ function RetireAll({ remoras, onDone }: { remoras: RemoraView[] | null; onDone: 
             <span className="block">Loading your remoras…</span>
           ) : live.length ? (
             <>
-              <span className="block">
-                {live.length === 1
-                  ? "This retires 1 remora:"
-                  : `This retires ${live.length} remoras:`}
+              {/* ADR-0103: a count and their faces, not a 31-line list; each face names itself. */}
+              <span className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-semibold text-ob-text tabular-nums">
+                  {live.length}
+                </span>
+                {live.length === 1 ? "remora to retire" : "remoras to retire"}
               </span>
-              <ul className="mt-1 list-disc pl-5" aria-label="Remoras that will be retired">
+              <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Remoras that will be retired">
                 {live.map((r) => (
-                  <li key={r.id}>{r.name}</li>
+                  <li key={r.id} title={r.name}>
+                    <RemoraAvatar id={r.id} size={24} still />
+                    <span className="sr-only">{r.name}</span>
+                  </li>
                 ))}
               </ul>
             </>
@@ -131,9 +138,8 @@ function RetireAll({ remoras, onDone }: { remoras: RemoraView[] | null; onDone: 
             </span>
           )}
           <span className="mt-1 block">
-            Retiring stops all spending and revokes every remora's key, with one signature. Your
-            memories stay on Walrus until they expire; Remora can't delete them. Export first if you
-            want a copy.
+            One signature stops all spending and revokes every key. Memories stay on Walrus until
+            they expire; Remora can't delete them.
           </span>
           {unavailable ? (
             <span className="mt-1 block text-ob-muted" role="status">

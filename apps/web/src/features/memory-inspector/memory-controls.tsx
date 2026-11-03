@@ -28,6 +28,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { api, download } from "@/features/remoras/api";
 import { API_URL, identityHeaders } from "@/lib/api";
@@ -193,25 +199,29 @@ async function save(path: string, name: string) {
 
 export function ExportButtons({ remoraId, name }: { remoraId: string; name: string }) {
   const stem = `${name.replace(/[^\w-]+/g, "-").toLowerCase()}-memory`;
+  // ADR-0103: one Export menu, not two buttons above the list (a phone saw them before any memory).
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => void save(`/api/remoras/${remoraId}/memory/export`, `${stem}.json`)}
-      >
-        <Download /> Export JSON
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => void save(`/api/remoras/${remoraId}/memory/export?format=md`, `${stem}.md`)}
-      >
-        <Download /> Export Markdown
-      </Button>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" size="sm" variant="outline">
+          <Download /> Export
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem
+          onSelect={() => void save(`/api/remoras/${remoraId}/memory/export`, `${stem}.json`)}
+        >
+          Export JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() =>
+            void save(`/api/remoras/${remoraId}/memory/export?format=md`, `${stem}.md`)
+          }
+        >
+          Export Markdown
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

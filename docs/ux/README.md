@@ -40,6 +40,36 @@ own `LICENSE` and a file map in its README. Remora's pages, data, copy, logo and
   `Ported from nightly-labs/openbot <path> @ aa3c498. PolyForm Noncommercial 1.0.0, see ./LICENSE.`
   and a row in its README.
 
+## The visual kit (U14, ADR-0103)
+`apps/web/src/components/visual/` is Remora's own code (MIT), not the PolyForm folder. It draws what
+pages used to say in sentences. `/lab/visual` shows every piece.
+
+| Piece | Use it for | Notes |
+|---|---|---|
+| `Stat`, `StatRow` | a number that matters: the biggest thing in its spot, with its unit and what it's against (`of`) | `StatRow` is cards, 4 across (2 on a phone) |
+| `Meter`, `Ring` | spent against a limit | amber at 80%, red at 100%; `role="meter"` with a name and a value |
+| `Flow` | a path things travel: the money, a payment, who holds memory | a dot runs the `active` edge only on screen; `blockedAt` turns an edge red; the node list is the text |
+| `Steps` | where you are in a flow | done steps tick; `aria-current="step"` |
+| `Timeline`, `KindIcon` | what happened | one icon per kind (paid, blocked, didn't go through, learned, pinged…), an amount chip, a relative time, actions, a detail line |
+| `Receipt` | one payment | amount, payee by name, time, "Checks out on Sui" or not, the proof |
+| `Checks` | layers or checks that pass or fail | each lights up in turn; every row says passed, failed or skipped in words |
+| `ExpiryBar` | days a memory has left on Walrus (of about 210) | green, then amber at 60, red at 30 |
+| `Spark`, `StatusDot` | a small trend; ok, degraded or down | both labelled for screen readers |
+| `Empty`, `Problem` | the one empty state and the one error state | a face, one line, one action; `Problem` keeps the server's message in `title` |
+| `Hint` | the explanation a page no longer shows | a `?` that opens one or two sentences and "More in the guide"; `PageHeader` and `Section` take `hint` |
+| `Amount`, `Address`, `Digest` | money and ids | "0.01 USDC" everywhere; short forms with copy and an explorer link |
+
+**Rules:**
+- **Words.** A page's description is one line; the rest goes in `hint`. No prose block over two lines
+  outside the guide and chat content.
+- **Numbers come from the API, never a sample.** `/lab/visual`'s samples are labelled as samples.
+- **Motion shows a change.** Interface transitions take 400 ms or less, loops run only on screen, and
+  reduced motion shows the end state (`useCalm`). WebGL stays on the landing page.
+- **Unknown is not zero.** While data loads, draw a skeleton of the final shape. When it fails, use
+  `Problem`. Never show "nothing to do" under an error.
+- **Words in the counter.** Mark user and agent content with `data-ux-skip`, so the review's word count
+  measures only the interface.
+
 ## Behaviour notes
 - **The network lives in the roster's top row** ([ADR-0026](../adr/0026-network-switch.md),
   [ADR-0037](../adr/0037-network-dropdown.md)). When the roster is folded to faces, or on a phone, it

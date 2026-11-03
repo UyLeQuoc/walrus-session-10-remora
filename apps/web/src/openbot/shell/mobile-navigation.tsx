@@ -42,7 +42,7 @@ export function MobileNavigation<T extends string>({
           >
             {item.icon}
             <span>{item.label}</span>
-            {item.count ? <span className="window-rail-count static">{item.count}</span> : null}
+            {item.count ? <span className="window-rail-count">{item.count}</span> : null}
           </button>
         ))}
       </div>

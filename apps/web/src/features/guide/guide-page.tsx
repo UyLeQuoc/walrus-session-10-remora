@@ -3,6 +3,7 @@
  * every page is for; then how it works in four blocks (an agent, memory, a budget, a receipt), each
  * with a picture, a sentence and a link to the page that does it. The Claude Code recipe stays.
  */
+
 import {
   Activity,
   ArrowRight,
@@ -20,6 +21,7 @@ import { RAIL_FOOTER, RAIL_PAGES } from "@/app/app-rail";
 import { Page, PageHeader } from "@/components/app/page";
 import { WhatIsRemora } from "@/components/app/what-is-remora";
 import { Button } from "@/components/ui/button";
+import { WalletPicker } from "@/components/wallet-picker";
 import {
   ClaudeCodeSteps,
   CommandGroups,
@@ -28,6 +30,7 @@ import {
   ProofGrid,
 } from "@/features/guide/guide-visuals";
 import { useMe } from "@/features/me/use-me";
+import { useOwner } from "@/features/remoras/hooks";
 
 function Tiles({
   items,
@@ -62,63 +65,55 @@ const STEPS: Array<{ title: string; to?: string; detail: string }> = [
   {
     title: "Try a Researcher, no wallet",
     to: "/playground",
-    detail: "Ask a Researcher with a $1 spending limit on testnet, and watch it pay for an answer.",
+    detail: "A 1 USDC limit on testnet. Watch it pay.",
   },
-  { title: "Sign in", detail: "Connect a Sui wallet with Sign in, at the bottom left." },
+  { title: "Sign in", detail: "With any Sui wallet." },
   {
     title: "Create a remora",
     to: "/remoras/new",
-    detail:
-      "Pick Researcher or Wallet watcher, set its budget, and sign once. It starts in practice mode: it shows what it would pay, and pays nothing.",
+    detail: "Pick a kind, set its budget, sign once. It starts in practice mode.",
   },
   {
     title: "Use it",
-    detail:
-      "Ask your Researcher or teach your Wallet watcher on its page or in Chat. Why? under an answer shows its receipt. Press Go live once you trust it.",
+    detail: "Ask or teach it. Why? shows the receipt. Go live when you trust it.",
   },
   {
     title: "Stay in control",
     to: "/approvals",
-    detail:
-      "A payment over its cap waits for you in Approvals. Funds shows what it spent, and Pause all stops every remora at once.",
+    detail: "Approvals for big payments, Funds for spend, Pause all to stop.",
   },
 ];
 
 /** What each page is for, in the rail's order, then the pages the rail doesn't list. */
 const PAGE_HELP: Record<string, string> = {
-  "/": "Your remoras, what waits for you, and everything they did lately. Open a remora to ask or teach it, see its budget, cost and receipts, and what it learned.",
-  "/chat":
-    "Talk to your remoras: ask the Researcher, teach the Wallet watcher. The same chat works in Telegram and Discord.",
-  "/approvals":
-    "A payment over a remora's cap waits here. Pay it once from your own wallet, or decline.",
-  "/funds": "Your USDC, what each remora has spent of its limit, and Pause all.",
-  "/memory":
-    "Everything your remoras remember, stored on Walrus. Search it, hide or correct a memory, or export it.",
-  "/connections":
-    "Let another agent, like Claude Code or Cursor, use one of your remoras through MCP, within its spending limit.",
-  "/hatchery": "Remoras other people shared. Use one to make your own copy, with your own budget.",
-  "/settings": "Notifications, Telegram and the panic switch.",
-  "/verify":
-    "Paste a transaction digest or a receipt id and check it against Sui. No sign-in needed.",
+  "/": "Your remoras, what waits for you, what they did.",
+  "/chat": "Talk to your remoras, here or in Telegram.",
+  "/approvals": "Payments over a cap wait for your yes.",
+  "/funds": "Your USDC and each spending limit.",
+  "/memory": "What they remember, on Walrus.",
+  "/connections": "Let Claude Code or Cursor use a remora.",
+  "/hatchery": "Remoras people shared, to copy.",
+  "/settings": "Notifications, Telegram, the panic switch.",
+  "/verify": "Check any receipt against Sui.",
 };
 const MORE_PAGES = [
   {
     to: "/playground",
     label: "Try a Researcher",
     icon: Fish,
-    help: "A Researcher with a $1 limit on testnet, no wallet needed.",
+    help: "A Researcher, no wallet needed.",
   },
   {
     to: "/reef",
     label: "Services",
     icon: Store,
-    help: "The paid services a remora may buy from, and what each call costs.",
+    help: "What a remora may buy, and the price.",
   },
   {
     to: "/status",
     label: "Status",
     icon: Activity,
-    help: "Whether Remora's services are up right now.",
+    help: "Is Remora up right now?",
   },
 ];
 const EVERY_PAGE = [
@@ -130,6 +125,7 @@ const EVERY_PAGE = [
 
 export function GuidePage() {
   const { me } = useMe();
+  const { owner } = useOwner();
 
   return (
     <Page
@@ -139,18 +135,30 @@ export function GuidePage() {
     >
       <PageHeader
         title="How Remora works"
-        description="What Remora is, how to start, what every page is for, and how it works underneath."
+        description="What it is, how to start, how it works."
         actions={
-          <>
-            <Button asChild>
-              <Link to="/chat">
-                Open chat <ArrowRight />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/remoras/new">Create a remora</Link>
-            </Button>
-          </>
+          // ADR-0103: one first step. Signed out, it's step 1 (try one, no wallet); signed in, chat.
+          owner ? (
+            <>
+              <Button asChild>
+                <Link to="/chat">
+                  Open chat <ArrowRight />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/remoras/new">Create a remora</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button asChild>
+                <Link to="/playground">
+                  <Fish /> Try a Researcher, no wallet
+                </Link>
+              </Button>
+              <WalletPicker label="Sign in" variant="outline" signIn />
+            </>
+          )
         }
       />
 
@@ -183,7 +191,7 @@ export function GuidePage() {
         </ol>
       </GuideSection>
 
-      <GuideSection title="Every page" lead="The pages in the left rail, then three more.">
+      <GuideSection title="Every page" lead="Every page in the menu, then three more.">
         <ul className="grid gap-2 md:grid-cols-2" data-testid="guide-pages">
           {EVERY_PAGE.map((p) => (
             <li key={p.to}>
@@ -204,10 +212,7 @@ export function GuidePage() {
         </ul>
       </GuideSection>
 
-      <GuideSection
-        title="Inside a remora"
-        lead="Four parts: a key that acts, memory it can read, a budget it cannot exceed, and triggers that wake it."
-      >
+      <GuideSection title="Inside a remora">
         <Tiles
           items={[
             {
@@ -232,33 +237,19 @@ export function GuidePage() {
             },
           ]}
         />
-        <p className="text-md text-ob-muted">
-          Start from Researcher (buys answers) or Wallet watcher (watches wallets).{" "}
-          <Link className="link" to="/remoras/new">
-            Create one
-          </Link>
-          .
-        </p>
       </GuideSection>
 
       <GuideSection
         title="Memory you can read"
-        lead="Each fact is a typed line, encrypted on Walrus. Any chat or channel can recall it; the newest fact wins."
+        lead="Each fact is a line on Walrus. The newest wins."
       >
         <MemoryFlow />
-        <p className="text-md text-ob-muted">
-          Browse every blob, search it, export it, or own it with your wallet in{" "}
-          <Link className="link" to="/memory">
-            Memory
-          </Link>
-          .
-        </p>
+        <Link className="link text-md" to="/memory">
+          Open Memory
+        </Link>
       </GuideSection>
 
-      <GuideSection
-        title="A budget Sui enforces"
-        lead="Remoras never hold your money. They spend from your address balance, only within a spending limit with a cap."
-      >
+      <GuideSection title="A budget Sui enforces" lead="Remoras never hold your money.">
         <Tiles
           items={[
             {
@@ -283,42 +274,43 @@ export function GuidePage() {
             },
           ]}
         />
-        <p className="text-md text-ob-muted">
-          See the split, move coins, and pause a budget in{" "}
-          <Link className="link" to="/funds">
-            Funds
-          </Link>
-          .
-        </p>
+        <Link className="link text-md" to="/funds">
+          Open Funds
+        </Link>
       </GuideSection>
 
-      <GuideSection
-        title="A receipt for every action"
-        lead="Every payment and answer leaves a receipt: what was bought, what it cost, and why."
-      >
+      <GuideSection title="Proof it works" lead="A receipt for every action, checkable by anyone.">
         <ProofGrid />
-        <p className="text-md text-ob-muted">
-          Paste a digest or a receipt id in{" "}
-          <Link className="link" to="/verify">
-            Verify a receipt
-          </Link>{" "}
-          and check it against Sui; no sign-in needed.
-        </p>
+        <Link className="link text-md" to="/verify">
+          Verify a receipt
+        </Link>
       </GuideSection>
 
-      <GuideSection
-        title="Commands"
-        lead="The same on the web, Telegram, Discord and the terminal."
-      >
-        <CommandGroups />
-      </GuideSection>
+      {/* ADR-0103: the reference parts fold away; the page was 6,700 px with no contents. */}
+      <details className="group">
+        <summary className="cursor-pointer text-base font-semibold tracking-tight text-ob-text">
+          Commands
+        </summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <p className="text-md text-ob-muted">
+            The same on the web, Telegram, Discord and the terminal.
+          </p>
+          <CommandGroups />
+        </div>
+      </details>
 
-      <GuideSection
-        title="The same memory in Claude Code"
-        lead="Once you own it, any agent you add as a delegate can read it through the official Walrus Memory MCP."
-      >
-        <ClaudeCodeSteps />
-      </GuideSection>
+      <details className="group">
+        <summary className="cursor-pointer text-base font-semibold tracking-tight text-ob-text">
+          The same memory in Claude Code
+        </summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <p className="text-md text-ob-muted">
+            Once you own it, any agent you add as a delegate can read it through the Walrus Memory
+            MCP.
+          </p>
+          <ClaudeCodeSteps />
+        </div>
+      </details>
 
       {me?.surveyUrl ? (
         <p className="text-md text-ob-muted">

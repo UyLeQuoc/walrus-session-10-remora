@@ -5,6 +5,7 @@
 import { Link, Route, Routes } from "react-router";
 import { Page, PageHeader } from "@/components/app/page";
 import { HealthBoard } from "./health-board";
+import { VisualKit } from "./visual-kit";
 
 function LabIndex() {
   return (
@@ -17,6 +18,12 @@ function LabIndex() {
           </Link>
           : every dependency's status, with the fix when one isn't ok.
         </li>
+        <li className="px-4 py-3 text-md text-ob-secondary">
+          <Link className="link font-medium" to="/lab/visual">
+            Visual kit
+          </Link>
+          : every piece of the kit (U14).
+        </li>
       </ul>
     </Page>
   );
@@ -27,6 +34,7 @@ export function LabPage() {
     <Routes>
       <Route index element={<LabIndex />} />
       <Route path="health" element={<HealthBoard />} />
+      <Route path="visual" element={<VisualKit />} />
     </Routes>
   );
 }

@@ -3,15 +3,64 @@
  * verdict banner and the list of checks. Drawn once so a shared proof can never look more (or less)
  * verified than the page the owner sees.
  */
-import { CheckCircle2, CircleMinus, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Checks, Digest, Receipt } from "@/components/visual";
+import { payeeName } from "@/lib/payee";
+import { usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 
 export type Check = { name: string; ok: boolean | null; detail: string };
 
 /** `ok: null` means "doesn't apply", which doesn't fail the receipt. */
 export const allChecksOk = (checks: Check[]) => checks.every((c) => c.ok !== false);
+
+/**
+ * Who paid what, to whom, and when, as a receipt card on top of the checks (ADR-0103: the reviewers
+ * found the payment only as a table cell below the fold).
+ */
+export function ReceiptSummary({
+  remora,
+  agent,
+  action,
+  ts,
+  verified,
+  tx,
+  network,
+}: {
+  remora: string;
+  agent: string;
+  action: { kind: string; amount?: string; payee?: string };
+  ts: string;
+  verified: boolean;
+  tx: string | null;
+  network: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-4" data-testid="receipt-summary">
+      <span className="flex items-center gap-2.5">
+        <RemoraAvatar id={agent} mood={verified ? "success" : "error"} size={40} still />
+        <span className="flex flex-col">
+          <span className="text-sm font-medium text-ob-text">{remora}</span>
+          <span className="text-xs text-ob-muted">
+            {action.kind === "pay" ? "paid" : action.kind}
+          </span>
+        </span>
+      </span>
+      {action.kind === "pay" && action.amount ? (
+        <Receipt
+          amount={usdc(action.amount)}
+          payee={action.payee ? payeeName(action.payee) : "a service"}
+          at={ts}
+          verified={verified}
+          proof={tx ? <Digest value={tx} network={network} /> : undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
 
 export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored: boolean }) {
   const allOk = allChecksOk(checks);
@@ -49,24 +98,61 @@ export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored:
   );
 }
 
+/**
+ * The checks in plain words (ADR-0103); the server's own name stays in the row's tooltip, so a
+ * shared proof still names exactly what ran.
+ */
+const PLAIN: Record<string, string> = {
+  "intent hash": "It did what it said",
+  "transaction succeeded": "The payment is onchain",
+  "Paid.intent matches": "The payment carries its decision",
+  "payTo balance change": "The payee got the amount",
+  "decided before paying": "It decided as it paid",
+  "signed by the remora": "Its own key signed",
+  "saved onchain": "The decision is saved onchain",
+};
+
+/**
+ * Details as people read them: "10000 of 10000" (USDC's smallest unit) as "0.01 of 0.01 USDC", and
+ * the timing check's ISO stamps as three clock times (the server allows the decision 5 s of skew).
+ */
+function plainDetail(detail: string): string {
+  const amount = /^(\d+) of (\d+)$/.exec(detail);
+  if (amount) return `${usdc(amount[1] ?? "0")} of ${usdc(amount[2] ?? "0")} USDC`;
+  const times = /^Receipt (\S+?)(?:, tx (\S+?))?, stored (\S+)$/.exec(detail);
+  if (times?.[1] && times[3]) {
+    // Two machines' clocks (the server's and the chain's), so it says how close they are, not
+    // which came first to the second.
+    const decided = Date.parse(times[1]);
+    const paid = times[2] ? Date.parse(times[2]) : null;
+    const when = new Date(paid ?? decided).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return paid === null
+      ? `decided ${when}`
+      : `decided and paid within ${Math.max(1, Math.ceil(Math.abs(decided - paid) / 1000))} s · ${when}`;
+  }
+  return detail;
+}
+
+/** Each check lights up in turn (ADR-0103); `ok: null` reads as skipped, not failed. */
 export function CheckList({ checks }: { checks: Check[] }) {
   return (
-    <ul className="ob-group" aria-label="Checks">
-      {checks.map((c) => (
-        <li key={c.name} className="flex items-start gap-3 px-4 py-3 text-md">
-          {c.ok === null ? (
-            <CircleMinus className="mt-0.5 size-4 shrink-0 text-ob-dim" aria-hidden />
-          ) : c.ok ? (
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ob-success" aria-hidden />
-          ) : (
-            <XCircle className="mt-0.5 size-4 shrink-0 text-ob-danger" aria-hidden />
-          )}
-          <span className="min-w-0">
-            <span className="font-medium text-ob-text">{c.name}</span>{" "}
-            <span className="break-all text-ob-muted">{c.detail}</span>
+    <Checks
+      label="Checks"
+      items={checks.map((c) => ({
+        label: PLAIN[c.name] ?? c.name,
+        state: c.ok === null ? "skip" : c.ok ? "pass" : "fail",
+        detail: (
+          <span className="break-all" title={c.name}>
+            {plainDetail(c.detail)}
           </span>
-        </li>
-      ))}
-    </ul>
+        ),
+      }))}
+    />
   );
 }

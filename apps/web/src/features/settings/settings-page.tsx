@@ -305,7 +305,7 @@ function Panic() {
       title="Danger zone"
       tone="danger"
       layout="split"
-      description="Pauses every remora's spending on this network with one signature. Resume each one from its page."
+      hint="Pauses every remora's spending on this network with one signature. Resume each one from its page."
     >
       <ConfirmAction
         trigger={
@@ -330,21 +330,14 @@ function Panic() {
 function Settings() {
   return (
     <Page title="Settings" description="Notifications, Telegram and the panic switch.">
-      <PageHeader
-        title="Settings"
-        description="When remoras may reach you, where, and how to stop them all."
-      />
-      <Section
-        title="Notifications"
-        description="When remoras may reach you, and how often."
-        layout="split"
-      >
+      <PageHeader title="Settings" description="When and where remoras reach you." />
+      <Section title="Notifications" layout="split">
         <Policy />
       </Section>
       <Section
         layout="split"
         title="Telegram"
-        description="Talk to your remoras where you already are: /scout, /teach, /budget, and buttons on every message."
+        hint="Talk to your remoras where you already are: /ask, /teach, /budget, and buttons on every message."
       >
         <TelegramLink />
       </Section>

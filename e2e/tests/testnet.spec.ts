@@ -8,7 +8,9 @@ import { connectAndSignIn, installTestWallet } from "../support/test-wallet";
 
 const money = async (page: Page, testId: string) =>
   Number(
-    ((await page.getByTestId(testId).textContent()) ?? "").match(/\$([\d.]+)/)?.[1] ?? Number.NaN,
+    // U14 (ADR-0103): the balances read "19.78 USDC", one unit everywhere, not "$19.78".
+    ((await page.getByTestId(testId).textContent()) ?? "").match(/([\d]+\.[\d]+)/)?.[1] ??
+      Number.NaN,
   );
 
 test("burner: sign in, detect, withdraw, move, pause all, resume", async ({ page }) => {
@@ -24,7 +26,7 @@ test("burner: sign in, detect, withdraw, move, pause all, resume", async ({ page
   await connectAndSignIn(page);
   expect((await fundsCall).headers()["x-remora-network"]).toBe("testnet");
   await expect(page.getByRole("heading", { name: "Funds" })).toBeVisible();
-  await expect(page.getByTestId("ready")).toContainText("$");
+  await expect(page.getByTestId("ready")).toContainText("USDC");
   await expect.poll(() => money(page, "ready")).not.toBeNaN();
 
   // A4: make sure there's a coin to move (withdraw 0.10 from the address balance), then move it all.

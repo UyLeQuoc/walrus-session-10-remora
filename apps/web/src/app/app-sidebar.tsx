@@ -5,7 +5,7 @@
  */
 import type { ApprovalRequest } from "@remora/schema";
 import { Inbox, MessageSquare, SquarePen, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useLocation } from "react-router";
 import { AccountMenu } from "@/components/app/account-menu";
 import { NetworkSelect } from "@/components/app/network-select";
@@ -17,6 +17,7 @@ import { PanicButton } from "@/features/funds/panic-button";
 import { useOwner } from "@/features/remoras/hooks";
 import { rosterTime, SidebarTeam } from "@/features/threads/sidebar-team";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 import {
   AgentRow,
@@ -42,17 +43,24 @@ export const ROSTER_ID = "remora-roster";
  */
 function waiting(
   approvals: ApprovalRequest[],
-): Array<{ remora: string; id: string; count: number }> {
-  const rows = new Map<string, { remora: string; id: string; count: number }>();
+): Array<{ remora: string; id: string; count: number; amount: string | null }> {
+  const rows = new Map<
+    string,
+    { remora: string; id: string; count: number; amount: string | null }
+  >();
   for (const a of approvals) {
     const row = rows.get(a.remora);
-    if (row) row.count++;
-    else {
+    const amount = (a.payload as { amount?: unknown }).amount;
+    if (row) {
+      row.count++;
+      row.amount = null;
+    } else {
       const id = (a as { remoraId?: unknown }).remoraId;
       rows.set(a.remora, {
         remora: a.remora,
         id: typeof id === "string" ? id : a.remora,
         count: 1,
+        amount: typeof amount === "string" ? amount : null,
       });
     }
   }
@@ -68,7 +76,10 @@ export function AppSidebar({
   onOpenChat,
   onNavigate,
   activeChatId,
+  pages,
 }: {
+  /** On a phone: the pages the bottom bar doesn't hold, above the roster. */
+  pages?: ReactNode;
   compact: boolean;
   onExpand: () => void;
   /** Whether the network and panic controls sit here (else the main pane's top row has them). */
@@ -106,6 +117,7 @@ export function AppSidebar({
         onExpand={onExpand}
       />
       <SidebarBody>
+        {pages}
         {waits.length ? (
           <SidebarWaitingGroup name="Needs you" count={approvals.length}>
             {waits.map((w) => (
@@ -120,8 +132,14 @@ export function AppSidebar({
                     </AgentStatusWaiting>
                   }
                   name={w.remora}
-                  waitChip={w.count > 1 ? `${w.count} to approve` : "Approve"}
-                  preview="Asks you to approve a payment"
+                  waitChip={
+                    w.count > 1
+                      ? `${w.count} to approve`
+                      : w.amount
+                        ? `${usdc(w.amount)} USDC`
+                        : "Approve"
+                  }
+                  preview="wants your yes"
                   label={`${w.remora} waits for your approval (${w.count})`}
                 />
               </AgentRowItem>

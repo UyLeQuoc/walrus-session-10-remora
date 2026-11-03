@@ -230,7 +230,9 @@ describe("room (ADR-0042)", () => {
   it("labels where a line went, and changes who answers", async () => {
     const calls = fakeApi();
     at(`/chat/room/${ROOM}`, "/chat/room/:id", <RoomPage />);
-    expect((await screen.findByTestId("route-label")).textContent).toBe("→ Sentinel · named");
+    expect((await screen.findByTestId("route-label")).textContent).toBe(
+      "→ Sentinel · you named it",
+    );
     expect(screen.getByText(/Learned: ignore incoming SUI under 0.01/)).toBeDefined();
     expect(screen.getByTestId("room-members").textContent).toBe("Scout, Sentinel");
     await userEvent.selectOptions(screen.getByLabelText("Who answers"), "mentions");

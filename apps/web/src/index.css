@@ -294,3 +294,31 @@
     background-position: -150% 0;
   }
 }
+
+/*
+ * U14 (ADR-0103): a long token (a 66-character package id, a digest) breaks inside agent text and
+ * timeline rows instead of running off a phone's screen.
+ */
+.message-markdown,
+[data-slot="bubble-content"] {
+  overflow-wrap: anywhere;
+}
+
+/*
+ * U14 (ADR-0103): on a touch screen, small buttons (icons, "Why?", 👍/👎) get a 40 px hit area
+ * without changing how they look or the layout around them.
+ */
+@media (pointer: coarse) {
+  [data-slot="button"]:is([data-size^="icon"], [data-size="sm"], [data-size="xs"]):not(
+      .absolute,
+      .fixed,
+      .sticky
+    ) {
+    position: relative;
+  }
+  [data-slot="button"]:is([data-size^="icon"], [data-size="sm"], [data-size="xs"])::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+}

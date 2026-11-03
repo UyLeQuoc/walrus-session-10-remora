@@ -3,17 +3,19 @@
  * thread; Sentinel learns rules from what you say. Payments, blocks and learned rules show as chips,
  * approvals as cards you can act on, and every answer has Why?, 👍 and 👎. The header picks its model.
  */
+import type { RemoraView } from "@remora/schema";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 import { ShellHeaderEnd, ShellHeaderStart, useShellTitle } from "@/app/shell";
 import { RemoraAvatar, type RemoraMood, remoraMood } from "@/components/app/remora-avatar";
-import { StatusBadge } from "@/components/app/status-badge";
+import { SpendBadge } from "@/components/app/spend-badge";
 import { Button } from "@/components/ui/button";
 import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById } from "@/features/chat/models";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { useSpendStatus } from "@/features/remoras/use-budget";
 import { kindName } from "@/lib/kind";
 import { AgentChatEmpty, ConversationScroll } from "@/openbot";
 import { type Line, lineFromFeed, withContext } from "./lines";
@@ -94,7 +96,7 @@ function Thread({ id }: { id: string }) {
           <RemoraAvatar id={r.id} mood={threadMood(r, waiting, shown.at(-1))} size={22} />
         ) : null}
         <h1 className="conversation-title m-0 shrink-0 font-medium">{r?.name ?? "…"}</h1>
-        {r ? <StatusBadge status={r.status} /> : null}
+        {r ? <ThreadBadge r={r} /> : null}
         <span className="hidden text-xs text-ob-muted sm:inline">
           {r ? kindName(r.template) : null}
         </span>
@@ -143,6 +145,11 @@ function Thread({ id }: { id: string }) {
       />
     </div>
   );
+}
+
+function ThreadBadge({ r }: { r: RemoraView }) {
+  const { state } = useSpendStatus(r);
+  return <SpendBadge status={r.status} state={state} />;
 }
 
 export function ThreadPage() {

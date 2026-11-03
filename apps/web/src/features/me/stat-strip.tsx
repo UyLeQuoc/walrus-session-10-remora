@@ -1,4 +1,4 @@
-import { Activity, Database, UserRound, Wallet } from "lucide-react";
+import { Activity, Database } from "lucide-react";
 import type { ReactNode } from "react";
 import { Progress } from "@/components/ui/progress";
 import type { MemoryUsage } from "@/features/me/use-usage";
@@ -44,14 +44,14 @@ export function StatStrip({
   stored,
   total,
   usage,
-  owned,
 }: {
   stored: number;
   total: number;
   usage: MemoryUsage | null;
-  owned: boolean;
 }) {
   const answered = usage && usage.answers > 0 ? usage : null;
+  // Nothing to measure yet: the list below says so with its own empty state.
+  if (total === 0) return null;
   return (
     <div className={cn("grid grid-cols-2 gap-3", answered && "sm:grid-cols-3")}>
       <Tile
@@ -69,12 +69,7 @@ export function StatStrip({
           progress={share(answered.withMemory, answered.answers)}
         />
       ) : null}
-      <Tile
-        icon={owned ? <Wallet /> : <UserRound />}
-        label="Owned by"
-        value={owned ? "You" : "Remora, for now"}
-        className={answered ? "col-span-2 sm:col-span-1" : undefined}
-      />
+      {/* ADR-0103: who owns it is the chip above the strip; it isn't repeated here. */}
     </div>
   );
 }

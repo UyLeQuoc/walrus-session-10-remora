@@ -42,6 +42,7 @@ export function SettingsSection({
   title,
   description,
   actions,
+  badge,
   tone,
   layout,
   className,
@@ -50,6 +51,8 @@ export function SettingsSection({
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  /** Beside the heading, outside the h2 (Remora: a `?` hint, ADR-0103). */
+  badge?: ReactNode;
   tone?: "default" | "danger";
   layout?: "stack" | "split";
   className?: string;
@@ -64,7 +67,14 @@ export function SettingsSection({
     >
       <div className="ob-section-header">
         <div className="ob-section-copy">
-          <h2 className="ob-section-title">{title}</h2>
+          {badge ? (
+            <div className="flex items-center gap-1.5">
+              <h2 className="ob-section-title">{title}</h2>
+              {badge}
+            </div>
+          ) : (
+            <h2 className="ob-section-title">{title}</h2>
+          )}
           {description ? <p className="ob-section-description">{description}</p> : null}
         </div>
         {actions ? <div className="ob-section-actions">{actions}</div> : null}

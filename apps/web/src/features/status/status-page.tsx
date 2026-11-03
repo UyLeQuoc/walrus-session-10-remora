@@ -3,11 +3,14 @@
  * `GET /api/status` and shows a name and a status per item, nothing more. It refreshes every 60 s
  * and pauses while the tab is hidden.
  */
+
 import { useQuery } from "@tanstack/react-query";
-import { CircleAlert, CircleCheck, CircleHelp, CircleX } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import { Page, PageHeader, Section } from "@/components/app/page";
+import { Time } from "@/components/app/time";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusDot } from "@/components/visual";
 import { apiFetch } from "@/lib/api";
 import { PublicStatus } from "./status-contract";
 
@@ -21,7 +24,43 @@ const LABEL = { ok: "Operational", degraded: "Degraded", down: "Down" } as const
 
 const BADGE = { ok: "success", degraded: "warning", down: "destructive" } as const;
 
-const ICON = { ok: CircleCheck, degraded: CircleAlert, down: CircleX } as const;
+/**
+ * ADR-0103: the API names its checks the way the code does ("tatum (testnet)"); the page groups them
+ * by what you'd do and says each in plain words. The raw name stays in the row's tooltip.
+ */
+const GROUPS = [
+  { id: "pay", title: "Payments" },
+  { id: "chain", title: "Sui" },
+  { id: "memory", title: "Memory on Walrus" },
+  { id: "app", title: "Remora" },
+] as const;
+const PLAIN: Array<[RegExp, string, (typeof GROUPS)[number]["id"]]> = [
+  [/^facilitator/, "Payments (x402)", "pay"],
+  [/^sponsor gas/, "Gas station", "pay"],
+  [/^playground funder/, "Try-it funds", "pay"],
+  [/^tatum usage/, "Tatum credits", "chain"],
+  [/^tatum/, "Reading Sui (Tatum)", "chain"],
+  [/^checkpoint lag/, "Wallet watching", "chain"],
+  [/^relayer budget/, "Memory budget", "memory"],
+  [/^relayer/, "Walrus Memory", "memory"],
+  [/^memory/, "Memory writes", "memory"],
+  [/^database/, "Database", "app"],
+  [/^job queue/, "Background jobs", "app"],
+];
+const net = (name: string) => /\((testnet|mainnet)\)/.exec(name)?.[1];
+function friendly(name: string): string {
+  const hit = PLAIN.find(([re]) => re.test(name));
+  if (!hit) return name.charAt(0).toUpperCase() + name.slice(1);
+  return net(name) ? `${hit[1]} · ${net(name)}` : hit[1];
+}
+const groupOf = (name: string) => PLAIN.find(([re]) => re.test(name))?.[2] ?? "app";
+const RANK = { ok: 0, degraded: 1, down: 2 } as const;
+const IMPACT: Record<(typeof GROUPS)[number]["id"], string> = {
+  pay: "Payments may fail or wait. Your spending limits still hold.",
+  chain: "Reading Sui is slower; Remora falls back to a public node. Payments still settle.",
+  memory: "New memories may take longer to show. Nothing already stored is lost.",
+  app: "Some pages may load slowly.",
+};
 
 async function fetchStatus(): Promise<PublicStatus> {
   const res = await apiFetch("/api/status");
@@ -39,11 +78,19 @@ export function StatusPage() {
     retry: false,
   });
   const report = query.data;
+  // ADR-0103: what a degraded part means for you, one line each.
+  const impacts = [
+    ...new Set(
+      (report?.items ?? [])
+        .filter((item) => item.status !== "ok")
+        .map((item) => IMPACT[groupOf(item.name)]),
+    ),
+  ];
   const unknown = query.isError && !report;
 
   return (
     <Page title="Status" description="Whether Remora's services are up right now." index>
-      <PageHeader title="Status" description="Whether Remora's services are up right now." />
+      <PageHeader title="Status" description="Is Remora up right now?" />
 
       {query.isPending ? <Skeleton className="h-48 w-full" data-testid="status-loading" /> : null}
 
@@ -60,32 +107,59 @@ export function StatusPage() {
       ) : null}
 
       {report ? (
-        <Section title="Systems">
-          <p
-            className="text-lg font-medium"
+        <>
+          <div
+            className="flex items-center gap-3 rounded-xl border border-ob-border bg-ob-raised px-4 py-3"
             data-testid="status-overall"
             data-status={report.status}
           >
-            {OVERALL[report.status]}
-          </p>
-          <ul className="flex flex-col gap-2" aria-label="Systems">
-            {report.items.map((item) => {
-              const Icon = ICON[item.status];
-              return (
-                <li
-                  key={item.name}
-                  className="flex items-center gap-2 rounded-ob-card border border-ob-border p-3 text-sm"
-                  data-testid="status-item"
-                  data-status={item.status}
-                >
-                  <Icon className="size-4 shrink-0" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
-                  <Badge variant={BADGE[item.status]}>{LABEL[item.status]}</Badge>
-                </li>
-              );
-            })}
-          </ul>
-        </Section>
+            <StatusDot state={report.status} label={OVERALL[report.status]} className="size-3" />
+            <p className="min-w-0 flex-1 text-lg font-medium">{OVERALL[report.status]}</p>
+            {query.dataUpdatedAt ? (
+              <span className="text-xs text-ob-muted">
+                checked <Time value={new Date(query.dataUpdatedAt)} />
+              </span>
+            ) : null}
+          </div>
+          {impacts.length ? (
+            <ul
+              className="flex flex-col gap-1 text-sm text-ob-secondary"
+              aria-label="What it means"
+            >
+              {impacts.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : null}
+          {GROUPS.map((g) => {
+            // A problem first, then the rest.
+            const items = report.items
+              .filter((item) => groupOf(item.name) === g.id)
+              .sort((x, y) => RANK[y.status] - RANK[x.status]);
+            if (!items.length) return null;
+            return (
+              <Section key={g.id} title={g.title}>
+                <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label={g.title}>
+                  {items.map((item) => (
+                    <li
+                      key={item.name}
+                      className="flex items-center gap-2.5 rounded-ob-card border border-ob-border p-3 text-sm"
+                      data-testid="status-item"
+                      data-status={item.status}
+                      title={item.name}
+                    >
+                      <StatusDot state={item.status} label={LABEL[item.status]} />
+                      <span className="min-w-0 flex-1 truncate font-medium">
+                        {friendly(item.name)}
+                      </span>
+                      <Badge variant={BADGE[item.status]}>{LABEL[item.status]}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            );
+          })}
+        </>
       ) : null}
     </Page>
   );

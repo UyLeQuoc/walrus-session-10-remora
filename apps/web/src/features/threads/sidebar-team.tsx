@@ -8,8 +8,8 @@ import { Fish, Plus, Upload } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/features/remoras/api";
-import { describeRemora, useTemplateCatalog } from "@/features/remoras/describe";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { kindName } from "@/lib/kind";
 import {
@@ -35,6 +35,13 @@ const TONE: Record<string, "success" | "warning" | "accent" | "muted"> = {
   shadow: "warning",
   paused: "muted",
   creating: "accent",
+};
+
+const PREVIEW_STATE: Record<string, string> = {
+  active: "active",
+  shadow: "practice",
+  paused: "paused",
+  creating: "starting",
 };
 
 const STATE: Record<string, string> = {
@@ -74,7 +81,6 @@ export function SidebarTeam({
     [owner],
     60_000,
   );
-  const catalog = useTemplateCatalog();
   const waits = new Map(waiting.map((w) => [w.id, w.count]));
   if (!owner)
     return (
@@ -129,6 +135,26 @@ export function SidebarTeam({
           </SidebarIconButton>
         }
       >
+        {/* ADR-0103: while the list is unknown it shows its shape, never an empty account. */}
+        {remoras.loading && !live.length && !remoras.error
+          ? [0, 1, 2, 3, 4].map((i) => (
+              <li key={`skeleton-${i}`} className="flex items-center gap-2.5 px-2 py-2" aria-hidden>
+                <Skeleton className="size-9 shrink-0 rounded-full" />
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-2.5 w-36" />
+                </span>
+              </li>
+            ))
+          : null}
+        {remoras.error && !live.length ? (
+          <li className="flex items-center justify-between gap-2 px-2 py-2 text-xs text-ob-muted">
+            Can't load your remoras.
+            <button type="button" className="link text-xs" onClick={() => void remoras.refresh()}>
+              Retry
+            </button>
+          </li>
+        ) : null}
         {shown.map((r) => (
           <AgentRowItem key={r.id}>
             <AgentRow
@@ -136,15 +162,27 @@ export function SidebarTeam({
               onClick={onNavigate}
               active={pathname === `/chat/r/${r.id}`}
               avatar={<RemoraAvatar id={r.id} mood={remoraMood(r, waits.get(r.id))} />}
-              status={<AgentStatusDot tone={TONE[r.status] ?? "muted"} />}
+              // ADR-0103: the dot marks only an exception; "active" is the cards' and headers' call,
+              // which read the spending limit (the roster can't afford 31 Disc reads).
+              status={
+                r.status === "active" ? undefined : (
+                  <AgentStatusDot tone={TONE[r.status] ?? "muted"} />
+                )
+              }
               name={r.name}
               time={rosterTime(r.updatedAt)}
-              preview={describeRemora(r, catalog)}
+              // ADR-0103: what it is and its state, not the persona sentence the reviewers read as
+              // instructions ("You answer the owner's questi…").
+              preview={
+                r.status === "active"
+                  ? kindName(r.template)
+                  : `${kindName(r.template)} · ${PREVIEW_STATE[r.status] ?? r.status}`
+              }
               label={`${r.name}, ${kindName(r.template)}, ${STATE[r.status] ?? r.status}`}
             />
           </AgentRowItem>
         ))}
-        {remoras.data && !live.length ? (
+        {remoras.data && !remoras.loading && !remoras.error && !live.length ? (
           <AgentRowItem>
             <AgentRow
               to="/remoras/import"

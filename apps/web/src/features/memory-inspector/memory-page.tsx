@@ -26,6 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
+import { ExpiryBar, Hint, Problem } from "@/components/visual";
 import { ChatMemory } from "@/features/me/me-page";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
@@ -42,6 +43,10 @@ import {
 } from "./memory-controls";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—");
+const shortDay = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const daysLeft = (iso: string) =>
+  Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000));
 const size = (bytes: number) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);
 
 function RemorasTab() {
@@ -64,7 +69,24 @@ function RemorasTab() {
   const rows = (m?.rows ?? []).filter((row) => !active || row.namespace === active);
   const results = (m?.results ?? []).filter((x) => !active || x.namespace === active);
   const duplicates = (m?.duplicates ?? []).filter((x) => !active || x.namespace === active);
+  // ADR-0103: a write skipped as a duplicate isn't missing. The reviewers read "2 of 6" as lost data
+  // when the other 4 were listed just below as skipped.
+  const missing = (m?.mismatches ?? [])
+    .map((x) => ({
+      ...x,
+      found: x.relayer + (m?.duplicates ?? []).filter((d) => d.namespace === x.namespace).length,
+    }))
+    .filter((x) => x.found < x.written);
 
+  if (remoras.error && !remoras.data) {
+    return (
+      <Problem
+        title="Can't reach Remora right now."
+        detail={remoras.error}
+        onRetry={() => void remoras.refresh()}
+      />
+    );
+  }
   if (remoras.loading && !remoras.data) {
     return (
       <div className="flex flex-col gap-3">
@@ -151,19 +173,27 @@ function RemorasTab() {
         </div>
       ) : null}
 
-      {m?.mismatches.length ? (
+      {missing.length ? (
         <p
-          className="rounded-ob-lg border border-ob-warning-soft bg-ob-warning-soft px-4 py-3 text-md text-ob-warning-text"
+          className="flex flex-wrap items-center gap-1.5 rounded-ob-lg border border-ob-warning-soft bg-ob-warning-soft px-4 py-2.5 text-md text-ob-warning-text"
           data-testid="index-warning"
         >
-          Index check:{" "}
-          {m.mismatches
-            .map((x) => `${x.namespace} has ${x.relayer} of the ${x.written} we wrote`)
-            .join("; ")}
-          . New writes take about 30 s to land; if this stays, some writes didn't make it.
+          {missing
+            .map((x) => `${x.namespace}: ${x.found} of ${x.written} found on Walrus yet`)
+            .join(" · ")}
+          <Hint label="About the index check">
+            Every write we send is counted, and so is every write skipped as already known. New
+            writes take about 30 s to show up; if a gap stays, some writes didn't make it.
+          </Hint>
         </p>
       ) : null}
-      {mem.error ? <p className="text-md text-ob-danger-text">{mem.error}</p> : null}
+      {mem.error ? (
+        <Problem
+          title="Couldn't read this memory from Walrus."
+          detail={mem.error}
+          onRetry={refresh}
+        />
+      ) : null}
 
       {results.length ? (
         <SettingsGroup as="ul" className="text-md" aria-label="Search results">
@@ -175,7 +205,9 @@ function RemorasTab() {
             >
               <span className="min-w-0 flex-1">
                 <Badge variant="outline">{x.namespace}</Badge>{" "}
-                <span className="whitespace-pre-wrap">{x.text}</span>
+                <span className="whitespace-pre-wrap" data-ux-skip>
+                  {x.text}
+                </span>
               </span>
               <span className="flex gap-1">
                 <HideButton remoraId={id} m={x} hidden={false} onDone={refresh} />
@@ -225,7 +257,16 @@ function RemorasTab() {
                 data-tone="muted"
                 className={cn(row.expiresSoon && "font-medium text-ob-warning-text")}
               >
-                {row.expiresAt ? day(row.expiresAt) : "pending"}
+                {row.expiresAt ? (
+                  // ADR-0103: the real end date and the days to it; the term isn't counted from
+                  // "Stored" (Walrus extends a blob by epochs), so no "of 210" claim.
+                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                    <span>{shortDay(row.expiresAt)}</span>
+                    <ExpiryBar days={daysLeft(row.expiresAt)} />
+                  </span>
+                ) : (
+                  "pending"
+                )}
               </td>
               <td data-align="right" data-numeric>
                 {size(row.size)}
@@ -357,7 +398,8 @@ function Memory() {
     <Page title="Memory" description="What your remoras remember, and what the chat does.">
       <PageHeader
         title="Memory"
-        description="Two kinds of memory, side by side: each remora's Walrus blobs and the chat's own facts."
+        description="What your remoras remember, stored on Walrus."
+        hint="Two kinds: each remora's memories, one Walrus blob each, and the facts the chat keeps about you. You can search, hide, correct and export them."
       />
       <Tabs
         value={tab}

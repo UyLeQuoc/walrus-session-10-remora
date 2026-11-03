@@ -6,7 +6,7 @@
  * exactly what a judge clicking the live URL would hit. Each test mounts a page
  * with the network stubbed and asserts something a user would actually see.
  */
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -1048,7 +1048,8 @@ describe("chat page", () => {
     );
     const { container } = mountChat();
     const panes = screen.getByRole("navigation", { name: "Panes" });
-    await user.click(within(panes).getByRole("button", { name: /Remoras/ }));
+    // ADR-0103: the bottom bar holds Home, Chat, Approvals, Funds and More; More opens the roster.
+    await user.click(within(panes).getByRole("button", { name: /More/ }));
     const window = container.querySelector(".app-window");
     expect(window?.getAttribute("data-mobile-pane")).toBe("workspace");
     const roster = screen.getByRole("complementary", { name: "Roster" });
@@ -1211,7 +1212,10 @@ describe("how it works", () => {
     expect(container.textContent ?? "").toMatch(/seven months/);
     expect(container.textContent ?? "").toMatch(/\/connect/);
     expect(container.textContent ?? "").toMatch(/\/compare/);
-    expect(screen.getByRole("link", { name: /Open chat/ }).getAttribute("href")).toBe("/chat");
+    // ADR-0103: signed out, the guide's first step is step 1, trying one with no wallet.
+    const first = screen.getAllByRole("link", { name: /Try a Researcher, no wallet/ });
+    expect(first.length).toBeGreaterThan(0);
+    for (const link of first) expect(link.getAttribute("href")).toBe("/playground");
     expect(container.textContent ?? "").toMatch(/A receipt for every action/);
     expect(container.textContent ?? "").toMatch(/A budget Sui enforces/);
     expect(container.textContent ?? "").not.toMatch(/hippo/i);
@@ -1225,7 +1229,16 @@ describe("how it works", () => {
         <GuidePage />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("what-is-remora").textContent).toMatch(/AI agent that works for you/);
+    // ADR-0103: one line and the money flow show; the full sentence is one click away, in the hint.
+    const what = screen.getByTestId("what-is-remora");
+    expect(what.textContent).toMatch(/a budget it can't break/);
+    expect(within(what).getByRole("list", { name: "Where the money goes" }).textContent).toMatch(
+      /Your wallet.*Spending limit.*Remora.*Paid service.*Receipt/,
+    );
+    fireEvent.click(within(what).getByRole("button", { name: "More about remoras" }));
+    expect((await screen.findByText(/AI agent that works for you/)).textContent).toMatch(
+      /never holds your wallet/,
+    );
     expect(within(screen.getByTestId("guide-steps")).getAllByRole("listitem")).toHaveLength(5);
     const pages = within(screen.getByTestId("guide-pages"));
     for (const href of ["/", "/chat", "/approvals", "/funds", "/memory", "/verify", "/reef"])
@@ -1536,8 +1549,9 @@ describe("me page", () => {
     // The explorer link is now the blob id itself rather than the word "blob",
     // so the link names the thing it points at.
     expect(screen.getByRole("link", { name: /blob123/ }).getAttribute("href")).toContain("blob123");
-    // Guests are told the memory is not theirs yet, which is the whole pitch.
-    expect(seen).toMatch(/under its own account/i);
+    // Guests are told the memory is not theirs yet, which is the whole pitch. ADR-0103: as the
+    // "Not owned yet" chip; who holds it is drawn in the Account card.
+    expect(seen).toMatch(/Not owned yet/);
   });
 
   it("offers the memory as a file once something has reached Walrus, and says what it holds", async () => {
@@ -1609,7 +1623,8 @@ describe("me page", () => {
         <MePage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(container.textContent ?? "").toMatch(/Right now Remora keeps/));
+    // ADR-0103: the page has loaded once it says who owns the memory (a chip, not a sentence).
+    await waitFor(() => expect(container.textContent ?? "").toMatch(/Not owned yet/));
     expect(screen.queryByRole("button", { name: /full record/i })).toBeNull();
   });
 
@@ -2388,9 +2403,8 @@ describe("connect page", () => {
         </Routes>
       </MemoryRouter>,
     );
-    await waitFor(() =>
-      expect(container.textContent ?? "").toMatch(/expired or was already used/i),
-    );
+    // ADR-0103: the dead link says so in a few words, with the command to run.
+    await waitFor(() => expect(container.textContent ?? "").toMatch(/link expired/i));
     expect(container.textContent ?? "").toMatch(/Run \/disconnect again/);
     expect(screen.queryByRole("button", { name: /connect your sui wallet/i })).toBeNull();
   });

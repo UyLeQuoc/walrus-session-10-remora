@@ -3,6 +3,7 @@
  * remora answers on the left (with faces and coloured names in a room), events as centred markers,
  * approval cards inline, day markers, and Why? / 👍 / 👎 under remora answers and pings.
  */
+
 import {
   ArrowRightLeft,
   Brain,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  Unplug,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -23,7 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Markdown } from "@/features/chat/markdown";
 import { api } from "@/features/remoras/api";
+import { refusedBy } from "@/features/remoras/feed-list";
 import { WhyButton } from "@/features/remoras/why-drawer";
+import { shortIds } from "@/lib/short-ids";
 import {
   AgentActivity,
   ChatActionMarker,
@@ -97,12 +101,14 @@ function RemoraLine({
   onChanged: () => void;
 }) {
   if (line.type && CHIP_TYPES.includes(line.type)) {
+    // ADR-0103: a service that took no money isn't the limit stopping it; it reads grey.
+    const failed = line.type === "blocked" && refusedBy({ payload: line.payload }) === "service";
     return (
       <ChatActionMarker
         data-testid="thread-chip"
         data-type={line.type}
-        tone={CHIP_TONE[line.type] ?? "muted"}
-        icon={CHIP_ICON[line.type] ?? <Info />}
+        tone={failed ? "muted" : (CHIP_TONE[line.type] ?? "muted")}
+        icon={failed ? <Unplug /> : (CHIP_ICON[line.type] ?? <Info />)}
         action={
           line.eventId && WHY_TYPES.includes(line.type) ? (
             <WhyButton eventId={line.eventId} compact />
@@ -133,7 +139,11 @@ function RemoraLine({
         ) : undefined
       }
       reply={
-        line.context ? <span data-testid="thread-context">Re: {line.context}</span> : undefined
+        line.context ? (
+          <span data-testid="thread-context" className="[overflow-wrap:anywhere]">
+            Re: {shortIds(line.context)}
+          </span>
+        ) : undefined
       }
       footer={
         <>

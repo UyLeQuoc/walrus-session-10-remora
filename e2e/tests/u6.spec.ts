@@ -193,7 +193,8 @@ test("U6 exit: team from Markdown, 1-1 chat, room routing, inline approval, mode
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByTestId("route-label").last()).toContainText(
-    `Wallet watcher ${stamp} · named`,
+    // U14 (ADR-0103): the route reads in plain words now ("named" → "you named it").
+    `Wallet watcher ${stamp} · you named it`,
     {
       timeout: 60_000,
     },
@@ -205,7 +206,7 @@ test("U6 exit: team from Markdown, 1-1 chat, room routing, inline approval, mode
   await page.getByLabel("Message").fill("What are the odds for tonight's match?");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByTestId("route-label").last()).toContainText(
-    `Researcher ${stamp} · matched`,
+    `Researcher ${stamp} · best fit`,
     {
       timeout: 180_000,
     },

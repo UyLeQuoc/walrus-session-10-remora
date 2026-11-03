@@ -20,6 +20,23 @@ import { expect, type Page, test } from "@playwright/test";
 import { burner } from "../support/env";
 import { connectAndSignIn, installTestWallet, WALLET_NAME } from "../support/test-wallet";
 
+/**
+ * U14 (ADR-0103): Connections folds revoked and expired tokens under "Revoked or expired"; open it
+ * and find the token, by its name, with its "revoked" badge.
+ */
+async function expectRevoked(page: Page, name: string) {
+  const fold = page.getByText(/^Revoked or expired/);
+  await fold.waitFor({ timeout: 30_000 });
+  if ((await fold.locator("xpath=..").getAttribute("open")) === null) await fold.click();
+  await expect(
+    page
+      .getByTestId("token")
+      .filter({ hasText: name })
+      .filter({ has: page.locator('[data-slot="badge"]', { hasText: "revoked" }) })
+      .first(),
+  ).toBeVisible({ timeout: 30_000 });
+}
+
 const API = "http://localhost:8797";
 const root = resolve(import.meta.dirname, "../..");
 const results: Record<string, unknown> = {};
@@ -383,9 +400,7 @@ test("U12 exit (Remora): agents use a remora through MCP, inside its Disc", asyn
   const card = page.getByTestId("token").filter({ hasText: "Claude Code" }).first();
   await card.getByRole("button", { name: "Revoke" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Revoke" }).click();
-  await expect(card.locator('[data-slot="badge"]', { hasText: "revoked" })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expectRevoked(page, "Claude Code");
   const afterRevoke = await stdio.send("tools/call", { name: "remoras_list", arguments: {} });
   expect(afterRevoke.error?.code).toBe(-32001);
   const direct = await httpClient(stdioTok.secret)("tools/list");
@@ -476,9 +491,7 @@ test("U12 exit (Remora), resumed: revoke → 401, the Connections page, retire",
     const card = page.getByTestId("token").filter({ hasText: "Revoke check" }).first();
     await card.getByRole("button", { name: "Revoke" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Revoke" }).click();
-    await expect(card.locator('[data-slot="badge"]', { hasText: "revoked" })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expectRevoked(page, "Revoke check");
     const afterRevoke = await stdio.send("tools/call", { name: "remoras_list", arguments: {} });
     expect(afterRevoke.error?.code).toBe(-32001);
     const direct = await httpClient(tok.secret)("tools/list");
@@ -664,9 +677,7 @@ test("U12 exit (Remora): real Claude Code over Streamable HTTP", async ({ page }
   const card = page.getByTestId("token").filter({ hasText: "Claude Code HTTP" }).first();
   await card.getByRole("button", { name: "Revoke" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Revoke" }).click();
-  await expect(card.locator('[data-slot="badge"]', { hasText: "revoked" })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expectRevoked(page, "Claude Code HTTP");
   const after = await httpClient(tok)("tools/list");
   expect(after.status).toBe(401);
   out.revokedThen = after.status;

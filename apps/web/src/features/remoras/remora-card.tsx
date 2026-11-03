@@ -1,16 +1,20 @@
-/** A remora as an object: name, status, template and how much of its budget is left (D1). */
+/**
+ * A remora as an object: its face, name, kind, status and how much of its budget is left (D1).
+ * ADR-0103: the budget is a meter, and a remora that never pays says so in two words.
+ */
 import type { RemoraView } from "@remora/schema";
+import { EyeOff } from "lucide-react";
 import { Link } from "react-router";
 import { BudgetMeter } from "@/components/app/budget-meter";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
-import { StatusBadge } from "@/components/app/status-badge";
+import { SpendBadge } from "@/components/app/spend-badge";
 import { kindName } from "@/lib/kind";
 import { GalleryCard } from "@/openbot/pages";
-import { useBudget } from "./use-budget";
+import { useSpendStatus } from "./use-budget";
 
 export function RemoraCard({ remora }: { remora: RemoraView }) {
   const budget = remora.config.budget;
-  const meter = useBudget(remora.id, Boolean(budget && remora.discId));
+  const { state, budget: meter } = useSpendStatus(remora);
   const readable = Boolean(meter.meter?.window && BigInt(meter.meter.window.limit) > 0n);
 
   return (
@@ -26,19 +30,23 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
         bareMedia
         title={<span className="min-w-0 truncate">{remora.name}</span>}
         byline={kindName(remora.template)}
-        action={<StatusBadge status={remora.status} />}
+        action={<SpendBadge status={remora.status} state={state} />}
         clamp={false}
       >
         {!budget ? (
-          <p className="text-md text-ob-muted">Read-only: no budget to spend.</p>
-        ) : readable ? (
-          <BudgetMeter meter={meter.meter} window={budget.window} />
-        ) : (
-          <p className="text-md text-ob-muted">
-            {meter.loading
-              ? "Reading its spending limit…"
-              : meter.error || "Budget not readable just now."}
+          <p className="flex items-center gap-1.5 text-xs text-ob-muted">
+            <EyeOff className="size-3.5" aria-hidden /> Never pays
           </p>
+        ) : readable ? (
+          <BudgetMeter meter={meter.meter} window={budget.window} compact />
+        ) : (
+          <BudgetMeter
+            meter={null}
+            window={budget.window}
+            compact
+            loading={meter.loading}
+            error={meter.error}
+          />
         )}
       </GalleryCard>
     </Link>

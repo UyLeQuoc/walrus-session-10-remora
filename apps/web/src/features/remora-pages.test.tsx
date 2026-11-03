@@ -184,25 +184,33 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     expect(await screen.findByText(/Sign in with your wallet to see your remoras/)).toBeDefined();
   });
 
-  it("dashboard: remoras, what's waiting, and the feed across all (H4, N1, N2)", async () => {
+  it("dashboard: the remoras with their budgets (H4)", async () => {
     fakeApi(OWNER);
     at("/remoras", "/remoras", <RemorasPage />);
-    expect(await screen.findByText("1 approval waiting")).toBeDefined();
-    const card = screen.getByTestId("remora-card");
+    const card = await screen.findByTestId("remora-card");
     // The template shows once, capitalised ("Scout"), not again as a budget sentence.
     expect(card.textContent).toMatch(/Scout/);
     expect(card.textContent).not.toMatch(/Read-only: no budget/);
     const meter = await screen.findByTestId("budget-meter");
-    expect(meter.textContent).toMatch(/0.97.*of.*1.00 USDC left this month/);
-    expect(await screen.findByText(/Paid 0.01 USDC to Sui risk check/)).toBeDefined();
-    expect(screen.getByText(/0x2 is the Sui framework/)).toBeDefined();
+    expect(meter.textContent).toMatch(/0.97.*of.*1.00 USDC left.*this month/);
+  });
+
+  it("Home: what's waiting and the feed across all (N1, N2; ADR-0103 moved them off /remoras)", async () => {
+    fakeApi(OWNER);
+    at("/", "/", <HomePage />);
+    const waiting = (await screen.findByText("Waiting for you")).closest("a");
+    expect(waiting?.getAttribute("href")).toBe("/approvals");
+    await waitFor(() => expect(waiting?.textContent).toMatch(/Waiting for you1/));
+    const feed = await screen.findByRole("list", { name: "Activity" });
+    await waitFor(() => expect(feed.textContent).toMatch(/Paid.*Sui risk check.*0\.01.*USDC/));
+    expect(feed.textContent).toMatch(/0x2 is the Sui framework/);
   });
 
   it("remora page: budget forecast, ask, schedule preview, and Why? on a payment (N4, N5, N12, C1)", async () => {
     const calls = fakeApi(OWNER);
     at(`/remoras/${FIXTURE_SCOUT.id}`, "/remoras/:id", <RemoraPage />);
     expect((await screen.findByTestId("budget-meter")).textContent).toMatch(
-      /0.97 of 1.00 USDC left this month.*runs out around Feb 10, 2027/,
+      /0.97 of 1.00 USDC left.*this month.*runs out around Feb 10, 2027/,
     );
     await userEvent.type(screen.getByLabelText("Question"), "Is 0x2 safe?");
     await userEvent.click(screen.getByRole("button", { name: "Ask" }));
@@ -231,11 +239,21 @@ describe("W2 pages on the live API (contract fixtures)", () => {
   });
 
   it("memory inspector warns when the relayer has fewer than we wrote (F3, F6)", async () => {
-    fakeApi(OWNER);
+    fakeApi(OWNER, {
+      [`GET /api/remoras/${FIXTURE_SCOUT.id}/memory`]: { ...FIXTURE_INSPECTOR, duplicates: [] },
+    });
     at("/memory", "/memory", <MemoryInspectorPage />);
     expect((await screen.findByTestId("index-warning")).textContent).toMatch(
-      /receipts has 3 of the 4 we wrote/,
+      /receipts: 3 of 4 found on Walrus yet/,
     );
+  });
+
+  it("memory inspector counts writes skipped as duplicates as found, not lost (ADR-0103)", async () => {
+    // The fixture wrote 4 receipts: 3 are on the relayer and 2 were skipped as already known.
+    fakeApi(OWNER);
+    at("/memory", "/memory", <MemoryInspectorPage />);
+    expect(await screen.findByText("Skipped as already known")).toBeDefined();
+    expect(screen.queryByTestId("index-warning")).toBeNull();
     expect(screen.getByText(/SOURCE reef:sui-risk · 9 calls/)).toBeDefined();
     // ADR-0086: writes skipped as duplicates are shown, not dropped silently.
     expect(screen.getAllByTestId("duplicate-writes")[0]?.textContent).toBe(
@@ -271,7 +289,9 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     fakeApi(null);
     at("/verify/8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ", "/verify/:ref", <VerifyPage />);
     expect((await screen.findByTestId("verify-verdict")).textContent).toMatch(/Verified/);
-    expect(screen.getByText("Paid.intent matches")).toBeDefined();
+    // ADR-0103: the check reads in plain words; the server's name is its tooltip.
+    expect(screen.getByText("The payment carries its decision")).toBeDefined();
+    expect(screen.getByTitle("Paid.intent matches")).toBeDefined();
   });
 
   it("settings: policy loads, Telegram gives a deep link (A7, H5, A5)", async () => {
@@ -350,8 +370,8 @@ describe("funds page (A4·ui)", () => {
       }),
     );
     at("/funds", "/funds", <FundsPage />);
-    await waitFor(() => expect(screen.getByTestId("ready").textContent).toContain("$1.00"));
-    expect(screen.getByTestId("coins").textContent).toContain("$16.90");
+    await waitFor(() => expect(screen.getByTestId("ready").textContent).toMatch(/1\.00USDC/));
+    expect(screen.getByTestId("coins").textContent).toMatch(/16\.90USDC/);
     expect(screen.getByRole("button", { name: /Move \$16.90 to address balance/ })).toBeDefined();
   });
 });

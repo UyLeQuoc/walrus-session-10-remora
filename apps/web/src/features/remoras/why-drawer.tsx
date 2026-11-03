@@ -1,4 +1,5 @@
 /** N4: "Why?" opens the Wake behind an action: what triggered it, what it read, what it decided. */
+
 import type { ProofOfLearning, WakeView } from "@remora/schema";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -19,6 +20,7 @@ import { ShareControl } from "@/features/verify/share-control";
 import { useOwnsWake } from "@/features/verify/use-owns-wake";
 import { useNetwork } from "@/lib/network";
 import { payeeName } from "@/lib/payee";
+import { plainEvent } from "@/lib/readable";
 import { explorerTx, formatUsdc } from "@/lib/usdc";
 import { api } from "./api";
 
@@ -43,7 +45,7 @@ export function WakeDetails({ view }: { view: WakeView }) {
           ? `Pay ${formatUsdc(d.amount)} USDC to ${payeeName(d.payee)}`
           : d.action}
       </Row>
-      <Row label="Reason">{d.reason}</Row>
+      <Row label="Reason">{plainEvent(d.reason, payeeName)}</Row>
       <Row label="Trigger">
         {intent.trigger.kind} · {intent.trigger.ref}
       </Row>

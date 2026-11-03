@@ -4,6 +4,7 @@
  * secret shows once. Money still moves only through the remora's Disc, and over it the agent has to
  * ask you.
  */
+
 import type { McpCall, McpScope, McpToken, McpTokenCreated } from "@remora/schema";
 import { Cable, ChevronDown, CircleCheck, CircleX, KeyRound } from "lucide-react";
 import { useState } from "react";
@@ -12,11 +13,10 @@ import { toast } from "sonner";
 import { ConfirmAction } from "@/components/app/confirm-action";
 import { EmptyState } from "@/components/app/empty-state";
 import { Page, PageHeader } from "@/components/app/page";
+import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { Section } from "@/components/app/section";
-import { StatusBadge } from "@/components/app/status-badge";
 import { Time } from "@/components/app/time";
 import { CopyButton } from "@/components/copy-button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Empty, Problem } from "@/components/visual";
 import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { kindName } from "@/lib/kind";
@@ -179,7 +180,7 @@ function NewConnection({ onCreated }: { onCreated: (c: McpTokenCreated) => void 
         <NativeSelect id="mcp-remora" value={chosen} onChange={(e) => setRemora(e.target.value)}>
           {usable.map((r) => (
             <NativeSelectOption key={r.id} value={r.id}>
-              {r.name} ({kindName(r.template)}, {r.status === "shadow" ? "practice" : r.status})
+              {r.name} · {kindName(r.template)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
@@ -258,105 +259,117 @@ function Calls({ id }: { id: string }) {
   );
 }
 
-function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
+/** The scopes in the form's own words (ADR-0103: the cards showed `memory:read`). */
+const SCOPE: Record<string, string> = {
+  "memory:read": "Reads memory",
+  "memory:write": "Writes memory",
+  pay: "Pays",
+  "approve:request": "Asks approval",
+};
+
+/**
+ * One token as a compact card (ADR-0103: on a phone each card was 340 px): who it's for, its state
+ * and Revoke on one row, its numbers as chips, the dates and recent calls behind Details.
+ */
+function TokenCard({
+  t,
+  retired,
+  onChange,
+}: {
+  t: McpToken;
+  /** Its remora is retired, so the token can't act even if it hasn't expired. */
+  retired: boolean;
+  onChange: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const live = statusLabel(t) === "active";
   return (
-    <Card data-testid="token">
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          {t.name}
-          <span className="text-md font-normal text-ob-muted">
-            for {t.remoraName} · <code>mcp:{t.client}</code> · {t.prefix}…
+    <Card data-testid="token" className="gap-3 py-3">
+      <CardHeader className="px-4">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
+          <RemoraAvatar id={t.remora} size={22} still />
+          <span className="min-w-0 truncate">{t.name}</span>
+          <span className="min-w-0 truncate text-xs font-normal text-ob-muted">
+            for {t.remoraName} · <code>mcp:{t.client}</code>
           </span>
-          <span className="ml-auto">
-            {live ? (
-              <StatusBadge status={statusOf(t)} />
+          <span className="ml-auto flex items-center gap-2">
+            {retired && live ? (
+              <Badge variant="outline">remora retired</Badge>
+            ) : live ? (
+              // The token's own state, not the remora's (ADR-0103: "active" read as the remora's).
+              <Badge variant="secondary">token live</Badge>
             ) : (
               <Badge variant="outline">{statusLabel(t)}</Badge>
             )}
+            {live ? (
+              <ConfirmAction
+                trigger={
+                  <Button type="button" variant="ghost" size="sm">
+                    Revoke
+                  </Button>
+                }
+                title={`Revoke ${t.name}?`}
+                description="Its next call is refused (401). The receipts and memories it made stay."
+                confirmLabel="Revoke"
+                tone="danger"
+                onConfirm={async () => {
+                  const out = await connections.revoke(t.id);
+                  if (!out.ok) throw new Error(out.error);
+                  toast.success(`${t.name} can't act any more.`);
+                  onChange();
+                }}
+              />
+            ) : null}
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-1.5">
+      <CardContent className="flex flex-col gap-2 px-4">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {t.scopes.map((s) => (
             <Badge key={s} variant="secondary">
-              {s}
+              {SCOPE[s] ?? s}
             </Badge>
           ))}
+          <Badge variant="outline">
+            <span data-testid="token-call-count">{t.calls}</span>&nbsp;calls
+          </Badge>
+          <Badge variant="outline">
+            <span data-testid="token-spend">{usdc(t.spend)} USDC</span>
+          </Badge>
+          <Badge variant="outline">{t.memories} memories</Badge>
+          <button
+            type="button"
+            className="ml-auto flex items-center gap-1 rounded-ob-sm px-1 text-ob-secondary hover:bg-ob-hover hover:text-ob-text"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+          >
+            <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+            Recent calls
+          </button>
         </div>
-        <dl className="grid grid-cols-3 gap-3 text-md sm:max-w-md">
-          <div className="flex flex-col gap-1">
-            <dt className="text-xs text-ob-muted">Calls</dt>
-            <dd className="text-base font-semibold tabular-nums" data-testid="token-call-count">
-              {t.calls}
-            </dd>
-          </div>
-          <div className="flex flex-col gap-1">
-            <dt className="text-xs text-ob-muted">Spent</dt>
-            <dd
-              className="whitespace-nowrap text-base font-semibold tabular-nums"
-              data-testid="token-spend"
-            >
-              {usdc(t.spend)} USDC
-            </dd>
-          </div>
-          <div className="flex flex-col gap-1">
-            <dt className="text-xs text-ob-muted">Memories</dt>
-            <dd className="text-base font-semibold tabular-nums">{t.memories}</dd>
-          </div>
-        </dl>
-        <p className="text-md text-ob-muted">
-          Made <Time value={t.createdAt} />
-          {t.lastUsedAt ? (
-            <>
-              , last used <Time value={t.lastUsedAt} />
-            </>
-          ) : null}
-          {t.revokedAt ? (
-            <>
-              , revoked <Time value={t.revokedAt} />
-            </>
-          ) : (
-            <>
-              , expires <OnDate value={t.expiresAt} />
-            </>
-          )}
-          .
-        </p>
-        <button
-          type="button"
-          className="-ml-1 flex w-fit items-center gap-1 rounded-ob-sm px-1 text-md text-ob-secondary hover:bg-ob-hover hover:text-ob-text"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-        >
-          <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
-          Recent calls
-        </button>
-        {open ? <Calls id={t.id} /> : null}
+        {open ? (
+          <>
+            <p className="text-xs text-ob-muted">
+              {t.prefix}… · made <Time value={t.createdAt} />
+              {t.lastUsedAt ? (
+                <>
+                  , last used <Time value={t.lastUsedAt} />
+                </>
+              ) : null}
+              {t.revokedAt ? (
+                <>
+                  , revoked <Time value={t.revokedAt} />
+                </>
+              ) : (
+                <>
+                  , expires <OnDate value={t.expiresAt} />
+                </>
+              )}
+            </p>
+            <Calls id={t.id} />
+          </>
+        ) : null}
       </CardContent>
-      {live ? (
-        <CardFooter>
-          <ConfirmAction
-            trigger={
-              <Button type="button" variant="outline" size="sm">
-                Revoke
-              </Button>
-            }
-            title={`Revoke ${t.name}?`}
-            description="Its next call is refused (401). The receipts and memories it made stay."
-            confirmLabel="Revoke"
-            tone="danger"
-            onConfirm={async () => {
-              const out = await connections.revoke(t.id);
-              if (!out.ok) throw new Error(out.error);
-              toast.success(`${t.name} can't act any more.`);
-              onChange();
-            }}
-          />
-        </CardFooter>
-      ) : null}
     </Card>
   );
 }
@@ -364,6 +377,10 @@ function TokenCard({ t, onChange }: { t: McpToken; onChange: () => void }) {
 export function ConnectionsPage() {
   const [created, setCreated] = useState<McpTokenCreated | null>(null);
   const list = useLoad(() => connections.list(), [created?.token.id]);
+  const remoras = useLoad(() => api.remoras(), []);
+  const retiredIds = new Set(
+    (remoras.data?.remoras ?? []).filter((r) => r.status === "retired").map((r) => r.id),
+  );
   return (
     <Page
       title="Connections"
@@ -371,39 +388,76 @@ export function ConnectionsPage() {
     >
       <PageHeader
         title="Connections"
-        description="Let an agent (Claude Code, Cursor, any MCP client) use one of your remoras. It acts within the remora's spending limit; anything over it comes back to you."
+        description="Let an agent like Claude Code use one of your remoras."
+        actions={
+          <Button asChild size="sm">
+            <a href="#new-connection">New connection</a>
+          </Button>
+        }
+        hint="Any MCP client (Claude Code, Cursor) can use a remora through a token. It acts within the remora's spending limit; anything over it comes back to you. One token per agent, for one remora, and you can revoke it any time."
       />
       <RequireOwner what="connect an agent">
-        {() => (
-          <>
-            {created ? (
-              <Created c={created} onDone={() => setCreated(null)} />
-            ) : (
-              <Section
-                title="New connection"
-                description="One token per agent, for one remora. You can revoke it any time."
-              >
+        {() => {
+          const tokens = list.data?.tokens ?? [];
+          // ADR-0103: the live ones first; revoked and expired fold away (they were a third of a
+          // 6,000 px page on a phone).
+          const live = tokens.filter((t) => statusOf(t) === "active");
+          const done = tokens.filter((t) => statusOf(t) !== "active");
+          const form = created ? (
+            <Created c={created} onDone={() => setCreated(null)} />
+          ) : (
+            <div id="new-connection" className="scroll-mt-6">
+              <Section title="New connection">
                 <NewConnection onCreated={setCreated} />
               </Section>
-            )}
-            <Section title="Your connections">
-              {list.error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Can't load your connections</AlertTitle>
-                  <AlertDescription>{list.error}</AlertDescription>
-                </Alert>
-              ) : list.data && !list.data.tokens.length ? (
-                <p className="text-md text-ob-muted">No agent is connected yet.</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {(list.data?.tokens ?? []).map((t) => (
-                    <TokenCard key={t.id} t={t} onChange={() => void list.refresh()} />
-                  ))}
-                </div>
-              )}
-            </Section>
-          </>
-        )}
+            </div>
+          );
+          return (
+            <>
+              {tokens.length ? null : form}
+              <Section title="Your connections">
+                {list.error ? (
+                  <Problem
+                    title="Can't load your connections."
+                    detail={list.error}
+                    onRetry={() => void list.refresh()}
+                  />
+                ) : list.data && !tokens.length ? (
+                  <Empty title="No agent is connected yet." mood="asleep" />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {live.map((t) => (
+                      <TokenCard
+                        key={t.id}
+                        t={t}
+                        retired={retiredIds.has(t.remora)}
+                        onChange={() => void list.refresh()}
+                      />
+                    ))}
+                    {done.length ? (
+                      <details className="group">
+                        <summary className="cursor-pointer text-sm text-ob-muted hover:text-ob-text">
+                          Revoked or expired ({done.length})
+                        </summary>
+                        <div className="mt-3 flex flex-col gap-3">
+                          {done.map((t) => (
+                            <TokenCard
+                              key={t.id}
+                              t={t}
+                              retired={retiredIds.has(t.remora)}
+                              onChange={() => void list.refresh()}
+                            />
+                          ))}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                )}
+              </Section>
+              {tokens.length ? form : null}
+            </>
+          );
+        }}
       </RequireOwner>
     </Page>
   );

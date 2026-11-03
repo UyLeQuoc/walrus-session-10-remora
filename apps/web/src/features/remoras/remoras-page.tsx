@@ -1,19 +1,22 @@
 /**
- * `/remoras` (H4 dashboard): your remoras with status and budget, what is waiting for you (N2),
- * and one feed across all of them (N1). The empty state is one block with two templates.
+ * `/remoras` (H4 dashboard): every remora with its status and budget, filtered by kind. Home already
+ * shows what waits for you and the activity (ADR-0103), so this page is the list. The empty state is
+ * one block with two templates.
  */
-import { AlertTriangle, Download, Fish, Plus, Upload } from "lucide-react";
+import { AlertTriangle, Download, Plus, Upload } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { EmptyState } from "@/components/app/empty-state";
-import { Page, PageHeader, Section } from "@/components/app/page";
+import { Page, PageHeader } from "@/components/app/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Empty } from "@/components/visual";
+import { kindName } from "@/lib/kind";
 import { useNetwork } from "@/lib/network";
 import { CardGrid } from "@/openbot/pages";
 import { api, exportTeam } from "./api";
-import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
 import { RemoraCard } from "./remora-card";
 import { TemplateCard } from "./template-card";
@@ -33,18 +36,18 @@ async function downloadTeam() {
 function Dashboard() {
   const network = useNetwork();
   const remoras = useLoad(() => api.remoras(), [], 30_000);
-  const feed = useLoad(() => api.feed(), [], 15_000);
-  const inbox = useLoad(() => api.approvals(), [], 30_000);
   const templates = useLoad(() => api.templates(), []);
+  const [kind, setKind] = useState("all");
   const live = (remoras.data?.remoras ?? []).filter((r) => r.status !== "retired");
-  const pending = inbox.data?.approvals.length ?? 0;
+  const kinds = [...new Set(live.map((r) => r.template))];
+  const shown = kind === "all" ? live : live.filter((r) => r.template === kind);
   const list = Object.entries(templates.data?.templates ?? {});
 
   return (
     <Page title="Remoras" description="Your always-on agents and what they did lately.">
       <PageHeader
         title="Remoras"
-        description={`${live.length} on ${network}`}
+        description={remoras.data ? `${live.length} on ${network}` : undefined}
         actions={
           <>
             {live.length ? (
@@ -52,7 +55,7 @@ function Dashboard() {
                 <Download /> Export team
               </Button>
             ) : null}
-            <Button asChild variant="outline">
+            <Button asChild variant="ghost">
               <Link to="/remoras/import">
                 <Upload /> Import a team
               </Link>
@@ -65,20 +68,6 @@ function Dashboard() {
           </>
         }
       />
-
-      {pending > 0 ? (
-        <Alert variant="warning">
-          <AlertTitle>
-            {pending} approval{pending === 1 ? "" : "s"} waiting
-          </AlertTitle>
-          <AlertDescription className="flex items-center justify-between gap-2">
-            A payment went over its per-payment cap.
-            <Button asChild variant="outline" size="sm">
-              <Link to="/approvals">Review</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
       {remoras.error ? (
         <Alert variant="destructive">
@@ -93,6 +82,25 @@ function Dashboard() {
         </Alert>
       ) : null}
 
+      {kinds.length > 1 ? (
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={kind}
+          onValueChange={(v) => v && setKind(v)}
+          aria-label="Show"
+          className="w-fit"
+        >
+          <ToggleGroupItem value="all">All {live.length}</ToggleGroupItem>
+          {kinds.map((k) => (
+            <ToggleGroupItem key={k} value={k}>
+              {kindName(k)} {live.filter((r) => r.template === k).length}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      ) : null}
+
       {remoras.loading && !remoras.data ? (
         <CardGrid>
           <Skeleton className="h-36 w-full rounded-ob-card" />
@@ -100,17 +108,15 @@ function Dashboard() {
         </CardGrid>
       ) : live.length ? (
         <CardGrid>
-          {live.map((r) => (
+          {shown.map((r) => (
             <RemoraCard key={r.id} remora={r} />
           ))}
         </CardGrid>
       ) : (
-        <EmptyState
-          icon={<Fish />}
-          title="Your first remora"
-          description="A Researcher buys answers with a budget Sui enforces. A Wallet watcher watches wallets and learns what matters. Pick a template to start."
+        <Empty
+          title="Your first remora: pick a kind."
           action={
-            <CardGrid className="w-full max-w-2xl">
+            <CardGrid className="w-full max-w-2xl text-left">
               {list.map(([slug, template]) => (
                 <TemplateCard key={slug} slug={slug} template={template} />
               ))}
@@ -118,19 +124,6 @@ function Dashboard() {
           }
         />
       )}
-
-      {live.length ? (
-        <Section title="Activity">
-          {feed.loading && !feed.data ? (
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : (
-            <FeedList items={feed.data?.events ?? []} showRemora />
-          )}
-        </Section>
-      ) : null}
     </Page>
   );
 }

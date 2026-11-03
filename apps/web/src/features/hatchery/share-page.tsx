@@ -3,19 +3,29 @@
  * exact file that would be stored on Walrus, what each remora may do, what was taken out, and the
  * safety report; Publish stores it and records it onchain with one signature.
  */
+
 import type { ShareReview } from "@remora/schema";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Checks } from "@/components/visual";
 import { useSignAndRun } from "@/features/funds/sign";
 import { api } from "@/features/remoras/api";
 import { RequireOwner } from "@/features/remoras/hooks";
 import { PermissionsList, SafetyPanel } from "./parts";
+
+/** What stays out of the file, in plain words (ADR-0103: the reviewers read `disc:` and `wakes:`). */
+const KEPT: Record<string, string> = {
+  memories: "Memories",
+  keys: "Keys",
+  disc: "Spending limit",
+  wakes: "Receipts and history",
+};
 
 function Share({ id }: { id: string }) {
   const navigate = useNavigate();
@@ -59,12 +69,33 @@ function Share({ id }: { id: string }) {
     <Page title="Share as a template">
       <PageHeader
         title="Share as a template"
-        description="Anyone can make a copy in their own account. Your memories, keys, budget and history stay with you."
+        description="Anyone can copy it into their own account."
+        actions={
+          review ? (
+            <Button
+              type="button"
+              disabled={!!step || review.safety.verdict === "block"}
+              onClick={() => void publish()}
+            >
+              Publish as a template (one signature)
+            </Button>
+          ) : null
+        }
       />
+      {step ? (
+        <span className="flex items-center gap-2 text-md text-ob-muted">
+          <Spinner /> {step}
+        </span>
+      ) : null}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
             <span>{error}</span>
+            {!signed && !review ? (
+              <Button asChild type="button" size="sm" variant="outline">
+                <Link to={`/remoras/${id}`}>Back to the remora</Link>
+              </Button>
+            ) : null}
             {signed ? (
               <Button
                 type="button"
@@ -87,45 +118,32 @@ function Share({ id }: { id: string }) {
             </div>
           </Section>
           <Section title="What stays with you">
-            <ul className="ob-group max-w-3xl" aria-label="Removed">
-              {review.removed.map((x) => (
-                <li key={x.field} className="px-4 py-2.5 text-md">
-                  <span className="font-medium text-ob-text">{x.field}</span>:{" "}
-                  <span className="text-ob-muted">{x.reason}</span>
-                </li>
-              ))}
-            </ul>
+            <Checks
+              className="max-w-3xl"
+              label="Removed"
+              items={review.removed.map((x) => ({
+                label: KEPT[x.field] ?? x.field,
+                state: "pass",
+                detail: x.reason,
+              }))}
+            />
           </Section>
-          <Section
-            title="The file"
-            description={`Exactly what goes to Walrus (${review.sizeBytes} bytes, public, permanent for about 50 testnet epochs).`}
-          >
+          <Section title="Safety review">
+            <div className="max-w-3xl">
+              <SafetyPanel report={review.safety} />
+            </div>
+          </Section>
+          <details className="group max-w-3xl">
+            <summary className="cursor-pointer text-sm font-medium text-ob-secondary hover:text-ob-text">
+              Show the file ({review.sizeBytes} bytes, public on Walrus)
+            </summary>
             <pre
-              className="max-h-80 max-w-3xl overflow-auto rounded-ob-lg border border-ob-border-grouped bg-ob-grouped p-4 font-mono text-xs leading-5 text-ob-secondary"
+              className="mt-2 max-h-80 overflow-auto rounded-ob-lg border border-ob-border-grouped bg-ob-grouped p-4 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-ob-secondary"
               data-testid="share-file"
             >
               {review.markdown}
             </pre>
-          </Section>
-          <Section title="Safety review">
-            <div className="flex max-w-3xl flex-col gap-3">
-              <SafetyPanel report={review.safety} />
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  disabled={!!step || review.safety.verdict === "block"}
-                  onClick={() => void publish()}
-                >
-                  Publish as a template (one signature)
-                </Button>
-                {step ? (
-                  <span className="flex items-center gap-2 text-md text-ob-muted">
-                    <Spinner /> {step}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </Section>
+          </details>
         </>
       ) : null}
     </Page>

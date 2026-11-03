@@ -60,7 +60,7 @@ export function MemoryList({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Read them back: what do you know about me?"
+            placeholder="Search memories"
             aria-label="Search your memory"
             className="min-w-0 flex-1"
           />
@@ -91,7 +91,7 @@ export function MemoryList({
               <ul className="ob-group text-md">
                 {hits.map((hit) => (
                   <li key={hit.blobId} className="flex flex-col gap-2 px-3 py-2">
-                    <p>{hit.text}</p>
+                    <p data-ux-skip>{hit.text}</p>
                     <p className="flex flex-wrap items-center gap-2 text-ob-muted">
                       {hit.type && <Badge>{hit.type}</Badge>}
                       {hit.mine === false && <Badge variant="outline">shared</Badge>}
