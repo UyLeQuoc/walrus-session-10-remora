@@ -8,6 +8,7 @@ import type { DecisionRef, LearningSeries, ProofOfLearning } from "@remora/schem
 import { Link } from "react-router";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Section } from "@/components/app/page";
+import { Time } from "@/components/app/time";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,7 +38,7 @@ function Decision({ label, d }: { label: string; d: DecisionRef }) {
       <span className="font-medium text-ob-text">{ACTION[d.action]}</span>
       <span className="text-ob-secondary">{d.summary}</span>
       <span className="text-xs text-ob-muted">
-        {new Date(d.at).toLocaleString()} · {d.memories.length} memor
+        <Time value={d.at} /> · {d.memories.length} memor
         {d.memories.length === 1 ? "y" : "ies"} used
       </span>
       <Link className="link text-xs" to={d.verify}>

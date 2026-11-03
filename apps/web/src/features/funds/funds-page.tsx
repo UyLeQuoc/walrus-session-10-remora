@@ -17,9 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { Address, Problem, Stat, StatRow } from "@/components/visual";
+import { Address, Problem, Stat, StatPending, StatRow } from "@/components/visual";
 import { RequireOwner } from "@/features/remoras/hooks";
 import { apiPost } from "@/lib/api-request";
 import { FundsTxResponse } from "@/lib/contracts";
@@ -77,7 +76,7 @@ function Funds({ owner }: { owner: string }) {
 
   const withdrawAmount = parseUsdc(amount);
   const number = (v: string | undefined) =>
-    v === undefined ? <Skeleton className="h-7 w-20" /> : formatUsdc(v);
+    v === undefined ? <StatPending wide /> : formatUsdc(v);
 
   return (
     <Page title="Funds" description="What your remoras can spend, and what is still in coins.">

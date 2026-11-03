@@ -16,6 +16,6 @@ export {
   Spark,
   StatusDot,
 } from "./small";
-export { Stat, StatRow } from "./stat";
+export { Stat, StatPending, StatRow } from "./stat";
 export { type Step, Steps } from "./steps";
 export { type EventKind, KindIcon, Timeline, type TimelineItem } from "./timeline";

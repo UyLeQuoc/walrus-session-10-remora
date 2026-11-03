@@ -40,6 +40,7 @@ import { LearningSection } from "@/features/learning/learning";
 import { payeeName } from "@/lib/payee";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
+import { day, soon } from "@/lib/when";
 import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from "@/openbot/pages";
 import { api } from "./api";
 import { budgetLine } from "./budget";
@@ -488,7 +489,7 @@ function SchedulesSection({ r }: { r: RemoraView }) {
   const add = async () => {
     const out = await api.addSchedule(r.id, when, question);
     if (!out.ok) return void toast.error(out.error);
-    toast.success(`Next run ${new Date(out.data.next[0] ?? "").toLocaleString()}`);
+    toast.success(`Next run ${soon(out.data.next[0] ?? "")}`);
     setQuestion("");
     void list.refresh();
   };
@@ -516,7 +517,10 @@ function SchedulesSection({ r }: { r: RemoraView }) {
       </div>
       <p className="text-md text-ob-muted" data-testid="schedule-preview">
         {preview.data
-          ? `${preview.data.human}: next ${preview.data.next.map((t) => new Date(t).toLocaleString()).join(", ")}`
+          ? `${preview.data.human}: next ${preview.data.next
+              .slice(0, 3)
+              .map((t) => soon(t))
+              .join(" · ")}`
           : preview.error || "…"}
       </p>
       <SettingsGroup as="ul" className={cn(!schedules.length && "hidden")}>
@@ -738,7 +742,7 @@ function Remora({ id }: { id: string }) {
           <AlertTitle>Practice mode</AlertTitle>
           <AlertDescription>
             It shows what it would pay, but pays nothing
-            {r.shadowUntil ? ` until ${new Date(r.shadowUntil).toLocaleDateString()}` : ""}.
+            {r.shadowUntil ? ` until ${day(r.shadowUntil)}` : ""}.
           </AlertDescription>
         </Alert>
       ) : null}

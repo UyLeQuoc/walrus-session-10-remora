@@ -209,7 +209,8 @@ test.describe("U14 review capture", () => {
     if (room) list.push(["room", `/chat/room/${room}`]);
     const template = findKey(await apiJson(page, "/api/hatchery"), "templateId");
     if (template) list.push(["hatchery-template", `/hatchery/${template}`]);
-    const wake = findKey(await apiJson(page, "/api/feed?type=payment&limit=50"), "wakeId");
+    // A feed item carries its Wake as `receiptId`; /verify/:ref takes it as is.
+    const wake = findKey(await apiJson(page, "/api/feed?type=payment&limit=50"), "receiptId");
     if (wake) {
       list.push(["verify-receipt", `/verify/${wake}`]);
       const receipt = findKey(await apiJson(page, `/api/verify/${wake}`), "receiptId") ?? wake;

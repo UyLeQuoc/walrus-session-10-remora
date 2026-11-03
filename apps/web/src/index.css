@@ -303,3 +303,22 @@
 [data-slot="bubble-content"] {
   overflow-wrap: anywhere;
 }
+
+/*
+ * U14 (ADR-0103): on a touch screen, small buttons (icons, "Why?", 👍/👎) get a 40 px hit area
+ * without changing how they look or the layout around them.
+ */
+@media (pointer: coarse) {
+  [data-slot="button"]:is([data-size^="icon"], [data-size="sm"], [data-size="xs"]):not(
+      .absolute,
+      .fixed,
+      .sticky
+    ) {
+    position: relative;
+  }
+  [data-slot="button"]:is([data-size^="icon"], [data-size="sm"], [data-size="xs"])::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+}

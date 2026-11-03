@@ -64,6 +64,16 @@ export function Stat({
   );
 }
 
+/** A number still loading: a bar the size of one, visible on a raised card. */
+export function StatPending({ wide = false }: { wide?: boolean }) {
+  return (
+    <span
+      aria-label="Loading"
+      className={`inline-block h-7 animate-pulse rounded-md bg-ob-border-strong/60 align-middle motion-reduce:animate-none ${wide ? "w-20" : "w-10"}`}
+    />
+  );
+}
+
 /** A row of `Stat`s in cards: four across on a desktop, two on a phone. */
 export function StatRow({ children, className }: { children: ReactNode; className?: string }) {
   return (

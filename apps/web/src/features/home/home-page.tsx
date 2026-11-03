@@ -9,7 +9,7 @@ import { SetupChecklist } from "@/components/app/setup-checklist";
 import { WhatIsRemora } from "@/components/app/what-is-remora";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Empty, Problem, Stat, StatRow } from "@/components/visual";
+import { Empty, Problem, Stat, StatPending, StatRow } from "@/components/visual";
 import { useFunds } from "@/features/funds/use-funds";
 import { api } from "@/features/remoras/api";
 import { FeedList } from "@/features/remoras/feed-list";
@@ -63,14 +63,14 @@ function Dashboard({ owner }: { owner: string }) {
         <Stat
           label="Remoras"
           icon={<Bot />}
-          value={remoras.data ? live.length : <Skeleton className="h-7 w-10" />}
+          value={remoras.data ? live.length : <StatPending />}
           of={remoras.data ? `on ${network}` : undefined}
         />
         <Link to="/approvals" className="block transition-colors hover:border-ob-border-strong">
           <Stat
             label="Waiting for you"
             icon={<BellRing />}
-            value={inbox.data ? pending : <Skeleton className="h-7 w-10" />}
+            value={inbox.data ? pending : <StatPending />}
             tone={pending ? "warning" : "default"}
             of={inbox.data ? (pending ? "Review →" : "all clear") : undefined}
           />
@@ -79,7 +79,9 @@ function Dashboard({ owner }: { owner: string }) {
           <Stat
             label="Ready to spend"
             icon={<Wallet />}
-            value={ready === undefined ? <Skeleton className="h-7 w-20" /> : formatUsdc(ready)}
+            value={
+              ready !== undefined ? formatUsdc(ready) : funds.error ? "—" : <StatPending wide />
+            }
             unit={ready === undefined ? undefined : "USDC"}
           />
         </Link>

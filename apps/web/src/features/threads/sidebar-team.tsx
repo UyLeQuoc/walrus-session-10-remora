@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/features/remoras/api";
-import { describeRemora, useTemplateCatalog } from "@/features/remoras/describe";
 import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { kindName } from "@/lib/kind";
 import {
@@ -36,6 +35,13 @@ const TONE: Record<string, "success" | "warning" | "accent" | "muted"> = {
   shadow: "warning",
   paused: "muted",
   creating: "accent",
+};
+
+const PREVIEW_STATE: Record<string, string> = {
+  active: "live",
+  shadow: "practice",
+  paused: "paused",
+  creating: "starting",
 };
 
 const STATE: Record<string, string> = {
@@ -75,7 +81,6 @@ export function SidebarTeam({
     [owner],
     60_000,
   );
-  const catalog = useTemplateCatalog();
   const waits = new Map(waiting.map((w) => [w.id, w.count]));
   if (!owner)
     return (
@@ -131,7 +136,7 @@ export function SidebarTeam({
         }
       >
         {/* ADR-0103: while the list is unknown it shows its shape, never an empty account. */}
-        {!remoras.data && !remoras.error
+        {remoras.loading && !live.length && !remoras.error
           ? [0, 1, 2, 3, 4].map((i) => (
               <li key={`skeleton-${i}`} className="flex items-center gap-2.5 px-2 py-2" aria-hidden>
                 <Skeleton className="size-9 shrink-0 rounded-full" />
@@ -142,7 +147,7 @@ export function SidebarTeam({
               </li>
             ))
           : null}
-        {!remoras.data && remoras.error ? (
+        {remoras.error && !live.length ? (
           <li className="flex items-center justify-between gap-2 px-2 py-2 text-xs text-ob-muted">
             Can't load your remoras.
             <button type="button" className="link text-xs" onClick={() => void remoras.refresh()}>
@@ -160,12 +165,14 @@ export function SidebarTeam({
               status={<AgentStatusDot tone={TONE[r.status] ?? "muted"} />}
               name={r.name}
               time={rosterTime(r.updatedAt)}
-              preview={describeRemora(r, catalog)}
+              // ADR-0103: what it is and its state, not the persona sentence the reviewers read as
+              // instructions ("You answer the owner's questi…").
+              preview={`${kindName(r.template)} · ${PREVIEW_STATE[r.status] ?? r.status}`}
               label={`${r.name}, ${kindName(r.template)}, ${STATE[r.status] ?? r.status}`}
             />
           </AgentRowItem>
         ))}
-        {remoras.data && !live.length ? (
+        {remoras.data && !remoras.loading && !remoras.error && !live.length ? (
           <AgentRowItem>
             <AgentRow
               to="/remoras/import"

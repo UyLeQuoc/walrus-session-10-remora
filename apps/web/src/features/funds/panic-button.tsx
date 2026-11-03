@@ -42,7 +42,7 @@ export function PanicButton() {
       className="h-7 gap-1.5 rounded-full px-2.5 text-ob-danger-text sm:px-3"
     >
       <OctagonPause />
-      <span className="hidden sm:inline">Pause all</span>
+      <span>Pause all</span>
     </Button>
   );
 

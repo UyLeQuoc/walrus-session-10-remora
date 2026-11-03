@@ -108,10 +108,7 @@ function AnswerText({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col items-start gap-0.5">
-      <div
-        data-ux-skip
-        className={cn("w-full text-ob-secondary", !open && "line-clamp-2 [&_p]:inline")}
-      >
+      <div data-ux-skip className={cn("w-full text-ob-secondary", !open && "line-clamp-2")}>
         <Markdown>{text}</Markdown>
       </div>
       <button
@@ -134,47 +131,72 @@ export function FeedList({
   showRemora?: boolean;
 }) {
   if (!items.length) return <Empty title="Nothing yet. Its work shows up here." mood="asleep" />;
+  const row = (e: FeedItem) => {
+    const p = e.payload as { amount?: string; answer?: string };
+    const answer = e.type === "answer" ? String(p.answer ?? "") : "";
+    return {
+      id: e.id,
+      kind: e.type === "blocked" && refusedBy(e) === "service" ? ("failed" as const) : KIND[e.type],
+      title: titleOf(e),
+      amount:
+        (e.type === "payment" || e.type === "shadow") && p.amount ? (
+          <Amount value={p.amount} />
+        ) : undefined,
+      at: e.createdAt,
+      who: showRemora ? (
+        <Link
+          to={`/remoras/${e.remoraId}`}
+          className="flex items-center gap-1.5 text-xs font-medium text-ob-secondary hover:text-ob-text"
+          data-ux-skip
+        >
+          <RemoraAvatar id={e.remoraId} size={18} still />
+          <span className="max-w-32 truncate">{e.remora}</span>
+        </Link>
+      ) : undefined,
+      actions: (
+        <>
+          {e.type === "answer" || e.type === "ping" ? <Feedback e={e} /> : null}
+          {e.receiptId ? <WhyButton eventId={e.id} /> : null}
+        </>
+      ),
+      detail: answer ? (
+        <AnswerText text={answer} />
+      ) : restLines(e.summary) ? (
+        <p className="whitespace-pre-wrap text-xs text-ob-muted">{restLines(e.summary)}</p>
+      ) : undefined,
+      testId: "feed-item",
+    };
+  };
+  // ADR-0103: grouped by day, the way the chat thread separates them.
+  const groups: Array<{ day: string; items: FeedItem[] }> = [];
+  for (const e of items) {
+    const label = dayLabel(e.createdAt);
+    const last = groups.at(-1);
+    if (last?.day === label) last.items.push(e);
+    else groups.push({ day: label, items: [e] });
+  }
   return (
-    <div className="rounded-xl border border-ob-border bg-ob-raised px-4 py-3">
-      <Timeline
-        label="Activity"
-        items={items.map((e) => {
-          const p = e.payload as { amount?: string; answer?: string };
-          const answer = e.type === "answer" ? String(p.answer ?? "") : "";
-          return {
-            id: e.id,
-            kind: e.type === "blocked" && refusedBy(e) === "service" ? "failed" : KIND[e.type],
-            title: titleOf(e),
-            amount:
-              (e.type === "payment" || e.type === "shadow") && p.amount ? (
-                <Amount value={p.amount} />
-              ) : undefined,
-            at: e.createdAt,
-            who: showRemora ? (
-              <Link
-                to={`/remoras/${e.remoraId}`}
-                className="flex items-center gap-1.5 text-xs font-medium text-ob-secondary hover:text-ob-text"
-                data-ux-skip
-              >
-                <RemoraAvatar id={e.remoraId} size={18} still />
-                <span className="max-w-32 truncate">{e.remora}</span>
-              </Link>
-            ) : undefined,
-            actions: (
-              <>
-                {e.type === "answer" || e.type === "ping" ? <Feedback e={e} /> : null}
-                {e.receiptId ? <WhyButton eventId={e.id} /> : null}
-              </>
-            ),
-            detail: answer ? (
-              <AnswerText text={answer} />
-            ) : restLines(e.summary) ? (
-              <p className="whitespace-pre-wrap text-xs text-ob-muted">{restLines(e.summary)}</p>
-            ) : undefined,
-            testId: "feed-item",
-          };
-        })}
-      />
+    <div
+      className="flex flex-col gap-3 rounded-xl border border-ob-border bg-ob-raised px-4 py-3"
+      role="list"
+      aria-label="Activity"
+    >
+      {groups.map((g) => (
+        <div key={g.day} role="listitem" className="flex flex-col gap-2">
+          <p className="text-xs font-medium text-ob-muted">{g.day}</p>
+          <Timeline label={g.day} items={g.items.map(row)} />
+        </div>
+      ))}
     </div>
   );
+}
+
+/** "Today", "Yesterday", "Oct 31". */
+function dayLabel(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOf(now) - startOf(d)) / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
