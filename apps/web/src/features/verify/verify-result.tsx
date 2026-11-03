@@ -7,6 +7,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Checks } from "@/components/visual";
+import { usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 
 export type Check = { name: string; ok: boolean | null; detail: string };
@@ -50,15 +51,39 @@ export function VerifyVerdict({ checks, anchored }: { checks: Check[]; anchored:
   );
 }
 
+/**
+ * The checks in plain words (ADR-0103); the server's own name stays in the row's tooltip, so a
+ * shared proof still names exactly what ran.
+ */
+const PLAIN: Record<string, string> = {
+  "intent hash": "It did what it said",
+  "transaction succeeded": "The payment went through",
+  "Paid.intent matches": "The payment carries its decision",
+  "payTo balance change": "The payee got the amount",
+  "decided before paying": "It decided before paying",
+  "signed by the remora": "Its own key signed",
+  "saved onchain": "The decision is saved onchain",
+};
+
+/** "10000 of 10000" (USDC's smallest unit) reads as "0.01 of 0.01 USDC". */
+function plainDetail(detail: string): string {
+  const m = /^(\d+) of (\d+)$/.exec(detail);
+  return m ? `${usdc(m[1] ?? "0")} of ${usdc(m[2] ?? "0")} USDC` : detail;
+}
+
 /** Each check lights up in turn (ADR-0103); `ok: null` reads as skipped, not failed. */
 export function CheckList({ checks }: { checks: Check[] }) {
   return (
     <Checks
       label="Checks"
       items={checks.map((c) => ({
-        label: c.name,
+        label: PLAIN[c.name] ?? c.name,
         state: c.ok === null ? "skip" : c.ok ? "pass" : "fail",
-        detail: <span className="break-all">{c.detail}</span>,
+        detail: (
+          <span className="break-all" title={c.name}>
+            {plainDetail(c.detail)}
+          </span>
+        ),
       }))}
     />
   );

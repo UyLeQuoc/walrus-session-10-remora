@@ -8,6 +8,7 @@ import { Link } from "react-router";
 import { BudgetMeter } from "@/components/app/budget-meter";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { kindName } from "@/lib/kind";
 import { GalleryCard } from "@/openbot/pages";
 import { useBudget } from "./use-budget";
@@ -16,6 +17,8 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
   const budget = remora.config.budget;
   const meter = useBudget(remora.id, Boolean(budget && remora.discId));
   const readable = Boolean(meter.meter?.window && BigInt(meter.meter.window.limit) > 0n);
+  // The server read it and the Disc is gone onchain: the remora can't spend, whatever its row says.
+  const gone = Boolean(budget && remora.discId) && !meter.loading && !meter.error && !meter.meter;
 
   return (
     <Link
@@ -30,7 +33,13 @@ export function RemoraCard({ remora }: { remora: RemoraView }) {
         bareMedia
         title={<span className="min-w-0 truncate">{remora.name}</span>}
         byline={kindName(remora.template)}
-        action={<StatusBadge status={remora.status} />}
+        action={
+          gone && remora.status !== "retired" ? (
+            <Badge variant="outline">can't spend</Badge>
+          ) : (
+            <StatusBadge status={remora.status} />
+          )
+        }
         clamp={false}
       >
         {!budget ? (

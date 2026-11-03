@@ -289,7 +289,9 @@ describe("W2 pages on the live API (contract fixtures)", () => {
     fakeApi(null);
     at("/verify/8PqTz4m9uWJ3xVhK1nR2cY7bL5dA6sE0fG3hJ9kM2pQ", "/verify/:ref", <VerifyPage />);
     expect((await screen.findByTestId("verify-verdict")).textContent).toMatch(/Verified/);
-    expect(screen.getByText("Paid.intent matches")).toBeDefined();
+    // ADR-0103: the check reads in plain words; the server's name is its tooltip.
+    expect(screen.getByText("The payment carries its decision")).toBeDefined();
+    expect(screen.getByTitle("Paid.intent matches")).toBeDefined();
   });
 
   it("settings: policy loads, Telegram gives a deep link (A7, H5, A5)", async () => {
