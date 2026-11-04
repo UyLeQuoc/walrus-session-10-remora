@@ -233,6 +233,7 @@
   /* ADR-0106: what a remora can do, each job with a dated testnet receipt; a strip of real receipts. */
   .jobs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   /* U17: a network of remoras (ADR-0111) */
+  section[id] { scroll-margin-top: 96px; }
   .net { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .netc { padding: 24px 22px; display: flex; flex-direction: column; gap: 10px; }
   .netc h3 { font-size: 19px; }
@@ -240,18 +241,22 @@
   .chain { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 6px; }
   .chain li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 14px; padding: 8px 10px; border-radius: 9px; background: rgba(255,255,255,.035); border: 1px solid var(--line); }
   .chain li span { color: #e3e1ff; }
-  .chain li b { font-family: var(--mono); font-weight: 500; color: var(--c, var(--teal)); }
+  .chain li b { font-family: var(--mono); font-weight: 500; color: var(--teal); }
+  .chain li.q { color: var(--muted); font-style: italic; background: none; border-style: dashed; }
+  .chain li.sum { color: var(--muted); background: none; border: 0; padding-top: 2px; }
   .chain li .rc { margin-left: auto; font-size: 12.5px; }
   .chain li.up { margin-left: 18px; }
   .doors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
-  .doors span { font-size: 13px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line2); color: #e3e1ff; }
+  .doors span { font-size: 13px; padding: 4px 0; color: #e3e1ff; }
+  .doors span + span::before { content: "·"; margin-right: 8px; color: var(--dim); }
   .scale { margin-top: 14px; padding: 22px 24px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px 18px; align-items: end; }
   .scale .k { font-family: var(--display); font-size: clamp(30px, 3.4vw, 42px); font-weight: 600; letter-spacing: -.03em; color: #fff; line-height: 1; }
   .scale .t { margin-top: 6px; font-size: 13px; color: var(--muted); }
-  .scale .note { grid-column: 1 / -1; font-size: 13px; color: var(--dim); }
+  .scale .title { grid-column: 1 / -1; font-size: 14px; color: #e3e1ff; font-weight: 500; }
+  .scale .note { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
   @media (pointer: coarse) { .chain .rc { display: inline-flex; align-items: center; min-height: 40px; } }
   @media (max-width: 980px) { .scale { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 640px) { .net { grid-template-columns: 1fr; } .scale { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .net { grid-template-columns: 1fr; } .scale { grid-template-columns: repeat(2, 1fr); } .scale > div:nth-last-child(2) { grid-column: 1 / -1; } }
   .job { padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
   .job .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: var(--c, var(--brand2)); background: rgba(255,255,255,.05); border: 1px solid var(--line2); }
   .job .ico svg { width: 19px; height: 19px; }
@@ -445,29 +450,30 @@
 
   <section id="network">
     <div class="wrap">
-      <div class="head rv"><span class="eyebrow">// a network, not one agent</span><h2>Remoras pay remoras. <span class="soft">Anyone can join.</span></h2>
-        <p class="sub">Each of these ran on Sui testnet on Nov 4, 2026, and links its receipts.</p></div>
+      <div class="head rv"><span class="eyebrow">// a network, not one agent</span><h2>Remoras pay remoras.<br><span class="soft">Anyone can join.</span></h2>
+        <p class="sub">Each payment below ran on Sui testnet on Nov 4, 2026, and links its receipt.</p></div>
       <div class="net">
         <div class="card netc rv" style="--c:var(--teal)"><h3>An answer, bought from another owner’s remora</h3>
-          <p>“ask @uy-researcher is package 0x2 safe?” Its owner gets paid, and it pays its own source, each under a limit Sui enforces.</p>
-          <ol class="chain"><li><span>A buyer’s Researcher → @uy-researcher</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/7vkXZTwFPcDBrt6QkvNZZLrw5C9UQNUHUFHePvEVSGGb" target="_blank" rel="noopener">7vkX…SGGb ↗</a></li><li class="up"><span>↳ @uy-researcher → Sui risk check</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/5pXu4RPf7SceRh7VeNuNARm95B399NuzoTXxowWT3d5B" target="_blank" rel="noopener">5pXu…3d5B ↗</a></li></ol></div>
+          <p>“ask @uy-researcher is package 0x2 safe?” Another owner’s Researcher pays @uy-researcher’s owner, and @uy-researcher pays its own source, each under a spending limit Sui enforces. (@names are Remora handles.)</p>
+          <ol class="chain"><li><span>Another owner’s Researcher → @uy-researcher</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/7vkXZTwFPcDBrt6QkvNZZLrw5C9UQNUHUFHePvEVSGGb" target="_blank" rel="noopener">receipt 7vkX…SGGb ↗</a></li><li class="up"><span>↳ @uy-researcher → Sui risk check, its source, at cost</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/5pXu4RPf7SceRh7VeNuNARm95B399NuzoTXxowWT3d5B" target="_blank" rel="noopener">receipt 5pXu…3d5B ↗</a></li></ol></div>
         <div class="card netc rv" style="--c:var(--amber)"><h3>A crew splits one question</h3>
-          <p>One signature made four Researchers. The lead hands each purchase to the member that covers it, all at once, and pays nothing.</p>
-          <ol class="chain"><li><span>Code → Repo health</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/vkTaRBxewg4CHHj6CCnvYagtjRPqNYXWGMyuSkUWL2N" target="_blank" rel="noopener">vkTa…WL2N ↗</a></li><li><span>Markets → Prices</span><b>0.005 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/9Pqq2y658V8ai9kdpjt3srPon3B1YvFeWRVskysq6HfV" target="_blank" rel="noopener">9Pqq…6HfV ↗</a></li><li><span>Onchain → Sui risk check</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/Dagd6c4kqFSYDkLy9neWbWTaJFPa7jgDyC6tune8AsFW" target="_blank" rel="noopener">Dagd…AsFW ↗</a></li></ol></div>
-        <div class="card netc rv" style="--c:var(--brand2)"><h3>Anyone’s API, anyone’s merchant</h3>
-          <p>An x402 API in about 20 lines, listed in the Reef with the owner’s signature, settled through our public facilitator.</p>
-          <ol class="chain"><li><span>A Researcher → @haiku, an API an owner listed</span><b>0.005 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/GQR9nDvQa692eJqrafZMAD9Juq6BteDcN4kKKBjKyyWf" target="_blank" rel="noopener">GQR9…yyWf ↗</a></li></ol></div>
+          <p>One wallet approval created a crew of four Researchers. Asked one question, the lead hands each purchase to the member that covers it.</p>
+          <ol class="chain"><li class="q">“Is package 0x2 safe, what's SUI worth, and how healthy is https://github.com/MystenLabs/walrus?”</li><li><span>Crew lead → 3 members, all at once</span><b>pays 0</b></li><li class="up"><span>↳ member Code → Repo health</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/vkTaRBxewg4CHHj6CCnvYagtjRPqNYXWGMyuSkUWL2N" target="_blank" rel="noopener">receipt vkTa…WL2N ↗</a></li><li class="up"><span>↳ member Markets → Prices</span><b>0.005 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/9Pqq2y658V8ai9kdpjt3srPon3B1YvFeWRVskysq6HfV" target="_blank" rel="noopener">receipt 9Pqq…6HfV ↗</a></li><li class="up"><span>↳ member Onchain → Sui risk check</span><b>0.01 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/Dagd6c4kqFSYDkLy9neWbWTaJFPa7jgDyC6tune8AsFW" target="_blank" rel="noopener">receipt Dagd…AsFW ↗</a></li><li class="sum">3 receipts · 0.025 USDC, each from its member’s own limit</li></ol></div>
+        <div class="card netc rv" style="--c:var(--brand2)"><h3>Anyone can sell to remoras</h3>
+          <p>An x402 API (HTTP that asks for payment before it answers) in about 20 lines, listed in the Reef, Remora’s public directory, with its owner’s signature, and settled by our public payment server.</p>
+          <ol class="chain"><li><span>A Researcher → @haiku (writes a haiku), listed by another owner</span><b>0.005 USDC</b><a class="rc" href="https://suiscan.xyz/testnet/tx/GQR9nDvQa692eJqrafZMAD9Juq6BteDcN4kKKBjKyyWf" target="_blank" rel="noopener">receipt GQR9…yyWf ↗</a></li></ol></div>
         <div class="card netc rv" style="--c:var(--sui)"><h3>More doors</h3>
-          <p>Add it to Claude Code, Cursor or VS Code in one click. Pause everything from Telegram. Any x402 client can buy a remora’s answer.</p>
+          <p>Add Remora’s MCP server to Claude Code, Cursor or VS Code in one click. Check receipts and pause everything from Telegram’s Mini App. Any x402 client can buy a remora’s answer.</p>
           <div class="doors"><span>Claude Code</span><span>Cursor</span><span>VS Code</span><span>Telegram Mini App</span><span>any x402 client</span></div></div>
       </div>
       <div class="card scale rv" data-testid="scale" style="--c:var(--ok)">
-        <div><div class="k">1,000</div><div class="t">paid calls by 50 remoras</div></div>
-        <div><div class="k">22</div><div class="t">payments a minute, flat from 5 to 20 at once</div></div>
-        <div><div class="k">4.7s</div><div class="t">p95 for one payment, paid and settled</div></div>
-        <div><div class="k">50/50</div><div class="t">over the cap or off the list, stopped onchain</div></div>
-        <div><div class="k">0</div><div class="t">overspends: every Disc read back</div></div>
-        <div class="note">The payment rails under load on Sui testnet, Nov 4, 2026, with the model out of the loop. Every remora drew from one owner’s balance and Sui calls went to the public fullnode; past 5 at once, payments queued (p95 63 s at 20). <a class="rc" data-link="stats" href="#">Live numbers on /stats ↗</a></div>
+        <div class="title">Load test · Sui testnet · Nov 4, 2026 · 50 remoras under one test owner · payments only, no model</div>
+        <div><div class="k">1,000</div><div class="t">paid calls, all settled</div></div>
+        <div><div class="k">22</div><div class="t">payments a minute: the ceiling from 5 to 20 at once</div></div>
+        <div><div class="k">4.7s</div><div class="t">p95, one at a time (63s at 20 at once)</div></div>
+        <div><div class="k">50/50</div><div class="t">attempts over the cap or to an address off the allowlist, stopped onchain</div></div>
+        <div><div class="k">0</div><div class="t">overspends: every spending limit read back onchain after the run</div></div>
+        <div class="note">Measured by <code>apps/server/scripts/load-run.ts</code>; every number is in <code>docs/spikes/2026-11-04-u17-load.json</code>. Sui calls went to the public fullnode. <a class="rc" data-link="stats" href="#">Live numbers on /stats ↗</a></div>
       </div>
     </div>
   </section>
@@ -523,13 +529,14 @@
           <li>Walrus Memory on mainnet</li>
           <li>Every server-side Sui call through Tatum gRPC</li></ul></div>
         <div class="card rv" style="--c:var(--brand2)"><h3><i style="background:var(--brand2)"></i>Ours, labeled</h3><ul>
-          <li>All eight paid services are our demo merchants. Seven read live sources (Sui, Walrus, GitHub, CoinGecko, Open-Meteo, the page you name); the odds are a labeled sample</li>
+          <li>All eight house services are our demo merchants. Seven read live sources (Sui, Walrus, GitHub, CoinGecko, Open-Meteo, the page you name); the odds are a labeled sample</li>
+          <li>In “Remoras pay remoras”, the sellers, buyers and @haiku (the repo’s example API, listed by one of our test accounts) are our own test accounts on testnet</li>
           <li>The playground's 1 USDC spending limits come from our funder</li>
           <li>The money rails were built the day before the window, and the README says so</li></ul></div>
         <div class="card rv" style="--c:var(--amber)"><h3><i style="background:var(--amber)"></i>Not yet</h3><ul>
           <li>Memory on your own Walrus account (a delegate per remora)</li>
           <li>Payments on Sui mainnet</li>
-          <li>SuiNS names and the Telegram Mini App</li></ul></div>
+          <li>SuiNS names for remoras</li></ul></div>
       </div>
       <div class="stack rv">
         <span class="chip">Walrus Memory</span><span class="chip">Sui app-bound allowances</span><span class="chip">x402 exact facilitator</span><span class="chip">Tatum gRPC + Data API</span><span class="chip">Move</span><span class="chip">MCP · Claude Code</span><span class="chip">Hono · React · Bun</span>
