@@ -46,23 +46,30 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 `Researcher · examples` remoras earlier runs left, so the sidebar isn't a column of old ones. A partial
 re-capture (`DEMO_SHOTS`) without `create` keeps them.
 
-## Scenes (178 s, re-captured Nov 4 from the visual-first app, [ADR-0103](../../adr/0103-visual-first-ui-pass.md), with "08 · And more", [ADR-0105](../../adr/0105-examples-you-can-try.md))
+## Scenes (176 s, re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md))
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
 | Without vs with | An agent with your key pays an injected address (an illustration). A remora's payment to it aborts onchain (testnet tx `7NYf3QGE…`) |
-| 01 · Try it, no wallet | Home's "What's a remora?" (a money Flow), then `/playground`: a 1 USDC limit onchain → a paid answer as a receipt card → the payment's receipt, verified |
-| Where the money goes | Your address → its spending limit → the x402 facilitator → a paid service; the remora's key holds 0 SUI |
+| 01 · Try it, no wallet | Home's "What's a remora?", then `/playground`: a 1 USDC limit onchain, eight question cards with Reef prices, a paid answer as a receipt card, and the payment's receipt, verified |
 | 02 · Your own remora | `/remoras/new`: 0.50 a month, ≤ 0.015 a payment, one signature, practice mode, Go live |
-| 03 · Ask, pay, see why | A paid answer from its own Disc, the cost card, Why? → the Wake |
-| 04 · It learns from you | Teach a Wallet watcher in plain words. The capture then sends a real 0.001 SUI to the address it watches, and the new rule ignores it |
-| 05 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
-| The attack | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends |
-| 06 · Over the cap, it asks | `/approvals`: pay once from your own wallet |
-| 07 · You stay in control | `/funds`: your USDC stays in your address; Pause all |
-| 08 · And more | Real footage of four more parts of the app:<ul><li>the template gallery (six templates on Walrus);</li><li>a template's consent ("Passed the safety review", one signature to use it);</li><li>a room where remoras answer together;</li><li>a connection Claude Code uses within its limits;</li><li>Telegram in Settings.</li></ul> |
+| 03 · One question, three services | In its thread, one question buys a Sui risk check, a wallet X-ray and prices: three receipts. Then "What does a Sui upgrade cap do?" is answered free |
+| 04 · It learns from you | A Wallet watcher is taught in plain words. The capture then sends a real 0.001 SUI to the address it watches, and the new rule ignores it |
+| 05 · A brief every morning | A Briefer's list (prices, weather, a repo), Run now, and one brief with a receipt for each purchase |
+| 06 · An attack, live | `DEMO_ATTACK=1` ([ADR-0108](../../adr/0108-live-attack-bait-and-switch.md)): "Market data" demands payment to the attacker's address. The safety check blocks it before signing, and Why? shows the address it refused |
+| The attack, in layers | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends; the onchain abort `7NYf3QGE…` |
+| 07 · Claude Code pays too | A terminal frame with the real `claude -p` command and output, recorded in the capture (the token is in a temp `remora.json`, deleted after). Then the payment in the remora's thread |
+| 08 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
+| 09 · You stay in control | `/funds`: your USDC stays in your address; Pause all |
+| 10 · And more | The template gallery (ten on Walrus), a template's safety review, a room of remoras, Telegram in Settings |
 | Why Remora | Bounded, Accountable, Learns, Yours |
 | Lockup | "Give an agent a budget, not your wallet."; the playground |
+
+**Cut for time in this version:** "Where the money goes" and "06 · Over the cap, it asks". Both stay
+in the app and the README.
+
+**Capture with the attacker:** `DEMO=1 DEMO_ATTACK=1 bun run --filter @remora/e2e e2e -- --project=demo`.
+`claude` must be signed in; without it, the scene says "an MCP client".
 
 ## Editing
 - **Timing.** The storyboard is `SCENES` in `demo.html`.

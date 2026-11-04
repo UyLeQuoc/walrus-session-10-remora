@@ -480,10 +480,12 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
         .poll(async () => (await fresh(s, answers)) - answeredBefore, { timeout: 180_000 })
         .toBeGreaterThan(0);
       s.mark("multi-answered");
+      // Scroll first: the box records where the chips are on screen, after the answer lands.
+      await s.page.locator(answers).last().scrollIntoViewIfNeeded();
+      await s.page.waitForTimeout(400);
       const chips = s.page.locator(paidChips);
       const n = await chips.count();
       await s.box("multi-paid", chips.nth(n - 3), chips.nth(n - 1));
-      await s.page.locator(answers).last().scrollIntoViewIfNeeded();
       await s.hold(3500, "multi-read");
       // 2. A question it answers without buying anything.
       const beforeFree = await fresh(s, answers);
