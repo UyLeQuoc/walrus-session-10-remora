@@ -76,6 +76,11 @@ export default defineConfig({
           },
         ]
       : []),
+    // U17 (ADR-0111): a remora buys another owner's remora's answer on testnet (ECONOMY=1; a few
+    // cents of testnet USDC from the burner and the second test owner).
+    ...(process.env.ECONOMY === "1"
+      ? [{ name: "economy", testMatch: /economy\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
+      : []),
     // U14 (ADR-0103): the review capture, every route and state on a desktop and a phone, into
     // docs/ux/review/r<UX_ROUND>/. Opt in with UX=1; it reads and never pays.
     ...(process.env.UX === "1"
