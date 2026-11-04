@@ -21,7 +21,7 @@ import { useOwnsWake } from "@/features/verify/use-owns-wake";
 import { useNetwork } from "@/lib/network";
 import { payeeName } from "@/lib/payee";
 import { plainEvent } from "@/lib/readable";
-import { explorerTx, formatUsdc } from "@/lib/usdc";
+import { explorerTx, usdc } from "@/lib/usdc";
 import { api } from "./api";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -41,9 +41,7 @@ export function WakeDetails({ view }: { view: WakeView }) {
   return (
     <dl className="flex flex-col gap-3 px-4 pb-6">
       <Row label="Decision">
-        {d.action === "pay"
-          ? `Pay ${formatUsdc(d.amount)} USDC to ${payeeName(d.payee)}`
-          : d.action}
+        {d.action === "pay" ? `Pay ${usdc(d.amount)} USDC to ${payeeName(d.payee)}` : d.action}
       </Row>
       <Row label="Reason">{plainEvent(d.reason, payeeName)}</Row>
       <Row label="Trigger">
