@@ -62,7 +62,8 @@ export async function storeOnWalrus(
 ): Promise<string> {
   const res = await http(`${WALRUS_TESTNET.publisher}/v1/blobs?epochs=${epochs}`, {
     method: "PUT",
-    body: bytes,
+    // Plain bytes; some DOM lib versions don't list Uint8Array as a body type.
+    body: bytes as unknown as NonNullable<RequestInit["body"]>,
   });
   if (!res.ok) throw new Error(`Walrus publisher answered ${res.status}`);
   const out = (await res.json()) as {

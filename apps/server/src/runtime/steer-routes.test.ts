@@ -132,7 +132,7 @@ describe.skipIf(!local)("steer routes", () => {
     const out = SetupResponse.parse(await res.json());
     expect(out.done).toEqual(["persona", "rule: always ping me for anything over 1 SUI"]);
     expect(out.skipped).toEqual([
-      expect.stringMatching(/^schedule: Only Researchers and Briefers/),
+      expect.stringMatching(/^schedule: Only Researchers, Briefers and Keepers/),
       expect.stringMatching(/^rule: hmm: I couldn't turn that into a rule/),
     ]);
     const r = await service.get(remora.id, OWNER);

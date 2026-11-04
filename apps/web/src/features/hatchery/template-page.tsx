@@ -87,17 +87,20 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
           <legend className="mb-1 text-md font-medium">
             Start with its author's public memories? Pick any.
           </legend>
-          {consent.team.pack.map((t) => (
-            <label key={t} className="flex items-start gap-2 text-sm">
+          {consent.team.pack.map((t, i) => (
+            <div key={t} className="flex items-start gap-2 text-sm">
               <Checkbox
+                id={`pack-${i}`}
                 aria-label={`Start with: ${t.slice(0, 60)}`}
                 checked={pack.includes(t)}
                 onCheckedChange={(on) =>
                   setPack((p) => (on ? [...p, t] : p.filter((x) => x !== t)))
                 }
               />
-              <span data-ux-skip>{t}</span>
-            </label>
+              <label htmlFor={`pack-${i}`} data-ux-skip>
+                {t}
+              </label>
+            </div>
           ))}
         </fieldset>
       ) : null}

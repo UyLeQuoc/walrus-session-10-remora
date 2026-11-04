@@ -331,7 +331,13 @@ describe("the model sees the live lists", () => {
       summary: "Pays people you name.",
     });
     const input = draftInput({ ...ctx, templates: { ...TEMPLATES, errand } }, "pay Linh for lunch");
-    expect(input.kinds.map((k) => k.slug)).toEqual(["scout", "sentinel", "briefer", "errand"]);
+    expect(input.kinds.map((k) => k.slug)).toEqual([
+      "scout",
+      "sentinel",
+      "briefer",
+      "errand",
+      "keeper",
+    ]);
     expect(input.reef.map((r) => r.ref)).toEqual(REEF.map((e) => e.ref));
     expect(input.kinds.find((k) => k.slug === "sentinel")?.spends).toBe(false);
   });
