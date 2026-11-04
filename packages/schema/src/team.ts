@@ -35,6 +35,14 @@ export const TeamRemora = z.object({
   schedules: z.array(TeamSchedule).max(10).default([]),
   /** Briefer (ADR-0106): what its brief follows, one line each ("SUI and WAL prices"). */
   items: z.array(z.string().min(1).max(120)).max(6).default([]),
+  /**
+   * ADR-0114: in a crew, the services this member buys for its lead, by Reef slug ("price",
+   * "wallet"). Empty: it takes what no one else covers.
+   */
+  covers: z
+    .array(z.string().regex(/^[a-z0-9-]+$/))
+    .max(8)
+    .default([]),
 });
 
 export const TeamFile = z.object({
@@ -42,6 +50,11 @@ export const TeamFile = z.object({
   name: z.string().min(1).max(60),
   description: z.string().max(500).optional(),
   remoras: z.array(TeamRemora).min(1).max(10),
+  /**
+   * ADR-0114: the team is a crew. Its lead (a remora name from `remoras`) splits a question's
+   * purchases across the others, each paying from its own limit, and answers with every receipt.
+   */
+  crew: z.object({ lead: z.string().min(1).max(40) }).optional(),
   room: z
     .object({
       name: z.string().min(1).max(40).default("Team"),

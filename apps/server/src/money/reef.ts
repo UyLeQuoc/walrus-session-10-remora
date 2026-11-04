@@ -98,8 +98,10 @@ const LABELS: Record<string, string> = {
 };
 
 export function payeeLabel(ref: string): string {
-  // ADR-0112: a remora on sale is `reef:remora-<slug>`, shown as "@<slug>".
-  if (ref.startsWith("reef:remora-")) return `@${ref.slice("reef:remora-".length)}`;
+  // ADR-0112/0113: a remora on sale or a listed API is `reef:remora-<slug>` or
+  // `reef:community-<slug>`, shown as "@<slug>".
+  const listed = /^reef:(?:remora|community)-(.+)$/.exec(ref);
+  if (listed) return `@${listed[1]}`;
   return LABELS[ref] ?? ref.replace(/^reef:/, "");
 }
 
@@ -166,6 +168,18 @@ const ECONOMY_DOCS =
  */
 export function reefServices(resolved: ResolvedReef[]): ReefService[] {
   return resolved.flatMap((e): ReefService[] => {
+    if (e.ref.startsWith("reef:community-"))
+      return [
+        {
+          name: e.name,
+          category: "Community",
+          priceUsdc: e.price,
+          payTo: e.payTo,
+          docsUrl: ECONOMY_DOCS,
+          kind: "community" as const,
+          description: e.description.slice(0, 200),
+        },
+      ];
     if (e.ref.startsWith("reef:remora-"))
       return [
         {

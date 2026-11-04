@@ -24,3 +24,17 @@ Sui enforces.
   - A sold answer reads only what the remora learned about sources, never its owner's own memories.
   - It can't buy another remora's answer.
   - An owner's remoras never pay each other; they hand questions over for free.
+
+## List your own API ([ADR-0113](adr/0113-community-listings-and-public-facilitator.md))
+- **List it:** on **Services → List your API** (`/reef/new`), paste an x402 URL and pick a name.
+  - Remora reads what its 402 asks for (exact, `sui:testnet`, USDC, at most 0.1 USDC).
+  - You sign a message naming the URL, price and address. The signature moves no money.
+  - It shows in the Reef under **Community**.
+- **Buy from it:** as with a remora on sale. One signature lets a remora pay it, then
+  "ask @name …".
+
+## Settle through our facilitator
+- **The facilitator:** any Sui x402 merchant on testnet can verify and settle at
+  `https://getremora.vercel.app/api/facilitator`. Its buyers get sponsored gas there too. The
+  limits are in [apps/facilitator](../apps/facilitator/README.md#public-facilitator-testnet).
+- **A merchant in about 20 lines:** [examples/sell-an-api](../examples/sell-an-api).

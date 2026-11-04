@@ -4,6 +4,7 @@
  * back unsigned; the wallet signs and executes them, then the matching `/confirm` reads the chain.
  * Errors are `{ error: { code, message } }` with a human sentence where copy has one (N6).
  */
+import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { SuiNetwork } from "@remora/chain";
 import {
   and,
@@ -21,6 +22,7 @@ import {
   sourceStats,
 } from "@remora/db";
 import { decodeHeader, PAYMENT_RESPONSE_HEADER } from "@remora/disc-sdk";
+import { addressFromSignature } from "@remora/memory";
 import { type PaidContext, x402 } from "@remora/merchant";
 import { Budget } from "@remora/schema";
 import type { Context } from "hono";
@@ -40,7 +42,14 @@ import {
   shareLinks,
   shareReview,
 } from "../hatchery/service.ts";
-import type { Listings } from "../money/listings.ts";
+import {
+  COMMUNITY_PER_OWNER,
+  type CommunityListing,
+  listingMessage,
+  listingsOf,
+  probeX402,
+} from "../money/community.ts";
+import { type Listings, SALE_SLUG } from "../money/listings.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
@@ -192,6 +201,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/hatchery/:id/deprecate/*",
     "/api/wakes/*",
     "/api/account/*",
+    "/api/reef/probe",
+    "/api/reef/listings",
+    "/api/reef/listings/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -438,6 +450,127 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         ),
       ),
     });
+  });
+
+  // ── List your API (E8, ADR-0113) ─────────────────────────────────────────
+  const allowPrivate = !process.env.RAILWAY_ENVIRONMENT && process.env.NODE_ENV !== "production";
+  const probeFor = (url: unknown) => {
+    const usdc = rt.networks.config("testnet").usdcCoinType;
+    if (typeof url !== "string" || !usdc)
+      throw new RemoraError("listing.bad_url", "Send the API's URL.");
+    return probeX402(url, { usdc, allowPrivate, ...(rt.fetch ? { fetch: rt.fetch } : {}) });
+  };
+  const listingSlug = (v: unknown) => {
+    const slug = String(v ?? "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+    if (!SALE_SLUG.test(slug))
+      throw new RemoraError(
+        "listing.bad_slug",
+        "Pick a name of 3–32 lowercase letters, digits or dashes, like haiku-shop.",
+      );
+    return slug;
+  };
+  const mineListed = async (owner: string) =>
+    (await service.list(owner, "testnet")).flatMap((r) =>
+      r.status === "retired" ? [] : listingsOf(r.config).map((l) => ({ ...l, remoraId: r.id })),
+    );
+
+  app.post("/api/reef/probe", async (c) => {
+    const b = await body<{ url?: unknown; slug?: unknown }>(c);
+    const slug = listingSlug(b.slug);
+    const probe = await probeFor(b.url);
+    const owner = normalizeSuiAddress(c.get("owner"));
+    return c.json({ probe, message: listingMessage({ ...probe, slug, lister: owner }) });
+  });
+
+  app.get("/api/reef/listings", async (c) =>
+    c.json({ listings: await mineListed(c.get("owner")) }),
+  );
+
+  app.post("/api/reef/listings", async (c) => {
+    const b = await body<{ url?: unknown; slug?: unknown; blurb?: unknown; signature?: unknown }>(
+      c,
+    );
+    const slug = listingSlug(b.slug);
+    const owner = normalizeSuiAddress(c.get("owner"));
+    // Probed again: the owner signed what the API asked for a moment ago, and it must still match.
+    const probe = await probeFor(b.url);
+    const message = listingMessage({ ...probe, slug, lister: owner });
+    const signer =
+      typeof b.signature === "string"
+        ? await addressFromSignature(message, b.signature, rt.networks.client("testnet"))
+        : null;
+    if (!signer || normalizeSuiAddress(signer) !== owner)
+      throw new RemoraError(
+        "listing.bad_signature",
+        "That signature isn't yours over this listing. Probe it again and sign.",
+      );
+    const mine = await mineListed(owner);
+    const again = mine.find((l) => l.slug === slug);
+    if (!again && (sales().taken(slug) || mine.length >= COMMUNITY_PER_OWNER))
+      throw new RemoraError(
+        "listing.taken",
+        sales().taken(slug)
+          ? `@${slug} is taken. Pick another name.`
+          : `You can list ${COMMUNITY_PER_OWNER} APIs.`,
+        409,
+      );
+    const holders = (await service.list(owner, "testnet"))
+      .filter((r) => r.status !== "retired")
+      .sort((a, z) => z.createdAt.getTime() - a.createdAt.getTime());
+    const holder = holders.find((r) => r.id === again?.remoraId) ?? holders[0];
+    if (!holder)
+      throw new RemoraError(
+        "listing.no_remora",
+        "Make a remora first: a listing lives with one of your remoras.",
+        409,
+      );
+    const listing: CommunityListing = {
+      ...probe,
+      slug,
+      blurb: String(b.blurb ?? "")
+        .trim()
+        .slice(0, 140),
+      network: "testnet",
+      lister: owner,
+      probedAt: new Date().toISOString(),
+      message,
+      signature: String(b.signature),
+    };
+    const kept = listingsOf(holder.config).filter((l) => l.slug !== slug);
+    await rt.db
+      .update(remoras)
+      .set({ config: { ...holder.config, listings: [...kept, listing] }, updatedAt: new Date() })
+      .where(eq(remoras.id, holder.id));
+    await rt.db.insert(remoraEvents).values({
+      remoraId: holder.id,
+      network: holder.network,
+      type: "action",
+      summary: `Listed @${slug} in the Reef (${probe.url}).`,
+      payload: { kind: "listing", slug, url: probe.url, payTo: probe.payTo, price: probe.price },
+    });
+    await sales().refresh();
+    return c.json({ listing: { ...listing, remoraId: holder.id } });
+  });
+
+  app.delete("/api/reef/listings/:slug", async (c) => {
+    const slug = listingSlug(c.req.param("slug"));
+    const owner = c.get("owner");
+    for (const r of await service.list(owner, "testnet")) {
+      const all = listingsOf(r.config);
+      if (!all.some((l) => l.slug === slug)) continue;
+      await rt.db
+        .update(remoras)
+        .set({
+          config: { ...r.config, listings: all.filter((l) => l.slug !== slug) },
+          updatedAt: new Date(),
+        })
+        .where(eq(remoras.id, r.id));
+    }
+    await sales().refresh();
+    return c.json({ ok: true });
   });
 
   /**

@@ -167,7 +167,7 @@ export function BuyFromCard({ r, onChanged }: { r: RemoraView; onChanged: () => 
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const payees = r.config.budget?.payees ?? [];
-  const sellers = (reef.data ?? []).filter((s) => s.kind === "remora");
+  const sellers = (reef.data ?? []).filter((s) => s.kind === "remora" || s.kind === "community");
   if (!r.config.budget || r.status === "retired") return null;
 
   const allow = async (ref: string) => {
@@ -192,18 +192,19 @@ export function BuyFromCard({ r, onChanged }: { r: RemoraView; onChanged: () => 
   return (
     <Section
       title="Buy from other remoras"
-      hint={`Ask "@name …" and it pays that remora's owner for the answer. One signature lets it pay a remora, under the same limit.`}
+      hint={`Ask "@name …" and it pays that remora's owner (or that API) for the answer. One signature lets it pay one, under the same limit.`}
     >
       <div className="flex flex-col gap-2" data-testid="buy-from-card">
         {reef.error ? <Problem title="Can't load the Reef right now." detail={reef.error} /> : null}
         {!reef.data ? null : sellers.length ? (
           <ul className="flex flex-col divide-y divide-ob-border" aria-label="Remoras on sale">
             {sellers.map((s) => {
-              const ref = `reef:remora-${s.name.replace(/^@/, "")}`;
+              const ref = `reef:${s.kind}-${s.name.replace(/^@/, "")}`;
               const allowed = payees.includes(ref);
               return (
                 <li key={s.name} className="flex flex-wrap items-center gap-2 py-2 text-md">
                   <span className="font-medium">{payeeName(ref)}</span>
+                  {s.kind === "community" ? <Badge variant="outline">API</Badge> : null}
                   <span className="text-ob-muted">
                     {usdc(s.priceUsdc)} USDC{s.description ? ` · ${s.description}` : ""}
                   </span>

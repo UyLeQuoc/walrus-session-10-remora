@@ -46,9 +46,11 @@ const BLOB = /(?<![\w-])([A-Za-z0-9_-]{43})(?![\w-])/;
  */
 export function planBuys(question: string, reef: ResolvedReef[]): PlannedBuy[] {
   const by = (slug: string) => reef.find((r) => r.slug === slug);
-  // ADR-0111: "ask @slug …" hands the whole question to that remora on sale, and buys nothing else.
+  // ADR-0111: "ask @slug …" hands the whole question to that remora on sale (or, ADR-0113, to the
+  // API an owner listed under that name), and buys nothing else.
   const at = ASK_AT.exec(question);
-  const seller = at?.[1] ? by(`remora-${at[1].toLowerCase()}`) : undefined;
+  const name = at?.[1]?.toLowerCase();
+  const seller = name ? (by(`remora-${name}`) ?? by(`community-${name}`)) : undefined;
   if (seller) {
     const rest = question.replace(ASK_AT, " ").replace(/\s+/g, " ").trim() || question;
     return [
