@@ -9,12 +9,16 @@
  *   Then `x402` answers 402 with the requirements.
  * - **With one:** it loads the source for the header's network and keeps the result as
  *   `c.var.source`. If the load fails, it answers 502 `source.unavailable` before any payment, so a
- *   failed source costs the buyer nothing.
+ *   failed source costs the buyer nothing. An MPP credential (`Authorization: Payment`, ADR-0120)
+ *   counts as one; its network is in the challenge's request.
  */
 import {
   decodeHeader,
   fromX402Network,
+  MPP_CREDENTIAL_HEADER,
+  mppNetwork,
   PAYMENT_HEADER,
+  paymentCredentials,
   type SuiNetworkName,
 } from "@remora/disc-sdk";
 import type { Context, MiddlewareHandler } from "hono";
@@ -55,7 +59,8 @@ export function sourceFirst<T>(
       throw err;
     }
     const header = c.req.header(PAYMENT_HEADER);
-    if (!header) {
+    const credential = c.req.header(MPP_CREDENTIAL_HEADER);
+    if (!header && paymentCredentials(credential).length === 0) {
       if (opts.early) {
         try {
           await load(c, typeof opts.early === "string" ? opts.early : null);
@@ -65,11 +70,11 @@ export function sourceFirst<T>(
       }
       return next();
     }
-    let network: SuiNetworkName | null = null;
+    let network: SuiNetworkName | null = header ? null : mppNetwork(credential);
     try {
-      network = fromX402Network(decodeHeader<{ network: string }>(header).network);
+      if (header) network = fromX402Network(decodeHeader<{ network: string }>(header).network);
     } catch {
-      // A malformed header is x402's to refuse.
+      // A malformed header (or credential: `mppNetwork` is null) is the payment gate's to refuse.
     }
     if (!network) return next();
     try {

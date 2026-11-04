@@ -186,6 +186,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@hono/node-server": "^2.1.5",
+        "@remora/chain": "workspace:*",
         "@remora/merchant": "workspace:*",
         "hono": "^4.13.13",
       },
@@ -287,11 +288,11 @@
       "name": "@remora/merchant",
       "version": "0.0.1",
       "dependencies": {
+        "@mysten/sui": "^2.33.2",
         "@remora/disc-sdk": "workspace:*",
         "hono": "^4.13.13",
       },
       "devDependencies": {
-        "@mysten/sui": "^2.33.2",
         "@types/node": "^24.0.0",
         "typescript": "^5.9.3",
         "vitest": "^4.1.12",

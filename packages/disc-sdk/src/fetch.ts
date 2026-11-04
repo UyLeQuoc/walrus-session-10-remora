@@ -3,12 +3,27 @@
  * requirement for its network and coin, checks the soft budget, builds `disc::pay` with the Wake's
  * intent hash (G2), gets gas sponsored by the gas station, signs as the remora, and retries with the
  * payment header. The Disc enforces the hard limits onchain.
+ *
+ * ADR-0120: a 402 with no usable x402 requirement is paid over MPP when it offers a `sui` charge
+ * challenge: the same Disc payment, sent as `Authorization: Payment`. x402 wins when both are offered.
  */
 import type { ClientWithCoreApi } from "@mysten/sui/client";
 import type { Transaction } from "@mysten/sui/transactions";
-import { fromBase64, normalizeStructTag, toBase64 } from "@mysten/sui/utils";
+import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import { buildPay } from "./builders.ts";
 import type { DiscConfig } from "./config.ts";
+import {
+  decodeMpp,
+  encodeMpp,
+  MPP_CHALLENGE_HEADER,
+  MPP_CREDENTIAL_HEADER,
+  MPP_RECEIPT_HEADER,
+  type MppCredential,
+  type MppReceipt,
+  mppRequirements,
+  parseChallenges,
+  sameCoinType,
+} from "./mpp.ts";
 import {
   decodeHeader,
   encodeHeader,
@@ -57,16 +72,10 @@ export class DiscFetchError extends Error {
 export interface DiscPayment {
   requirements: PaymentRequirements;
   intent: Uint8Array;
+  /** Over MPP, built from the `Payment-Receipt` (its reference is the digest). */
   settle: SettleResponse | null;
+  protocol: "x402" | "mpp";
 }
-
-const sameType = (a: string, b: string) => {
-  try {
-    return normalizeStructTag(a) === normalizeStructTag(b);
-  } catch {
-    return a === b;
-  }
-};
 
 export async function discFetch(
   o: DiscFetchOptions,
@@ -77,15 +86,25 @@ export async function discFetch(
   const first = await http(url, init);
   if (first.status !== 402) return { response: first, payment: null };
 
-  const required = (await first.json()) as PaymentRequired;
+  const required = (await first.json().catch(() => null)) as Partial<PaymentRequired> | null;
+  const accepts = required && Array.isArray(required.accepts) ? required.accepts : [];
   const network = toX402Network(o.network);
-  const req = required.accepts.find(
-    (r) => r.scheme === "exact" && r.network === network && sameType(r.asset, o.cfg.coinType),
+  const x402Req = accepts.find(
+    (r) => r.scheme === "exact" && r.network === network && sameCoinType(r.asset, o.cfg.coinType),
   );
+  const challenges = parseChallenges(first.headers.get(MPP_CHALLENGE_HEADER));
+  const mpp = x402Req
+    ? null
+    : mppRequirements(challenges, { network: o.network, coinType: o.cfg.coinType, resource: url });
+  const req = x402Req ?? mpp?.requirements;
   if (!req) {
+    const offered = [
+      ...accepts.map((r) => r.network),
+      ...challenges.map((c) => `MPP ${c.method}.${c.intent}`),
+    ];
     throw new DiscFetchError(
       "x402.no_matching_requirements",
-      `No ${network} requirement in ${o.cfg.coinType} (offered: ${required.accepts.map((r) => r.network).join(", ")}).`,
+      `No ${network} requirement in ${o.cfg.coinType} (offered: ${offered.join(", ")}).`,
     );
   }
   const amount = BigInt(req.amount);
@@ -129,13 +148,34 @@ export async function discFetch(
   }
   const bytes = fromBase64(sponsored.transaction);
   const signature = await o.sign(bytes);
+  const headers = new Headers(init.headers);
+  if (mpp) {
+    const credential: MppCredential = {
+      challenge: mpp.challenge,
+      source: `did:pkh:${network}:${o.sender}`,
+      payload: { type: "transaction", transaction: sponsored.transaction, signature },
+    };
+    headers.set(MPP_CREDENTIAL_HEADER, `Payment ${encodeMpp(credential)}`);
+    const response = await http(url, { ...init, headers });
+    const receipt = readReceipt(response.headers.get(MPP_RECEIPT_HEADER));
+    return {
+      response,
+      payment: {
+        requirements: req,
+        intent,
+        settle: receipt
+          ? { success: true, network, transaction: receipt.reference, payer: o.sender }
+          : null,
+        protocol: "mpp",
+      },
+    };
+  }
   const payload: PaymentPayload = {
     x402Version: X402_VERSION,
     scheme: "exact",
     network: req.network,
     payload: { signature, transaction: sponsored.transaction },
   };
-  const headers = new Headers(init.headers);
   headers.set(PAYMENT_HEADER, encodeHeader(payload));
   const response = await http(url, { ...init, headers });
   const settleHeader = response.headers.get(PAYMENT_RESPONSE_HEADER);
@@ -145,6 +185,17 @@ export async function discFetch(
       requirements: req,
       intent,
       settle: settleHeader ? decodeHeader<SettleResponse>(settleHeader) : null,
+      protocol: "x402",
     },
   };
+}
+
+function readReceipt(header: string | null): MppReceipt | null {
+  if (!header) return null;
+  try {
+    const receipt = decodeMpp<MppReceipt>(header);
+    return receipt?.status === "success" && typeof receipt.reference === "string" ? receipt : null;
+  } catch {
+    return null;
+  }
 }

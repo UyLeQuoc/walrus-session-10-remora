@@ -21,7 +21,6 @@ import {
   sentinelRules,
   sourceStats,
 } from "@remora/db";
-import { decodeHeader, PAYMENT_RESPONSE_HEADER } from "@remora/disc-sdk";
 import { addressFromSignature } from "@remora/memory";
 import { type PaidContext, x402 } from "@remora/merchant";
 import { Budget } from "@remora/schema";
@@ -634,8 +633,8 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   });
 
   /**
-   * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 client) pays
-   * the owner's address, and the answer settles only once it's written.
+   * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 or MPP client,
+   * ADR-0120) pays the owner's address, and the answer settles only once it's written.
    */
   app.get("/api/x402/r/:slug", async (c) => {
     const slug = c.req.param("slug");
@@ -668,6 +667,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         { error: { code: "network.unavailable", message: "Payments are off here." } },
         503,
       );
+    // MPP digest credentials (@suimpp/mpp) are read over gRPC; signed transactions don't need it.
+    const client = (() => {
+      try {
+        return rt.networks.client(network);
+      } catch {
+        return undefined;
+      }
+    })();
     const paid = x402({
       amount: found.price,
       description: `${found.name}'s answer`,
@@ -679,6 +686,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
           payTo: found.payTo,
           asset: net.usdcCoinType,
           facilitatorUrl: net.facilitatorUrl,
+          ...(client ? { client } : {}),
         },
       },
     });
@@ -702,15 +710,15 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       }
     });
     if (early) return early;
-    const header = c.res.headers.get(PAYMENT_RESPONSE_HEADER);
-    if (c.res.status === 200 && header) {
-      const settled = decodeHeader<{ transaction?: string; payer?: string }>(header);
+    // Set once the payment settled (x402 or MPP), so a sale is recorded only with its digest.
+    const settled = (c as unknown as { get(k: "x402"): PaidContext | undefined }).get("x402");
+    if (c.res.status === 200 && settled?.transaction) {
       const out = (await c.res.clone().json()) as { eventId?: string };
       const [seller] = await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId));
-      if (seller && settled.transaction)
+      if (seller)
         await recordSale(rt, seller, {
           slug,
-          buyer: settled.payer ?? "",
+          buyer: settled.payer,
           amount: found.price,
           digest: settled.transaction,
           eventId: out.eventId ?? "",

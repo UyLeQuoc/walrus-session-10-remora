@@ -68,6 +68,18 @@ export function createTatumSuiClient(opts: TatumSuiOptions): SuiGrpcClient {
   return new SuiGrpcClient({ network: opts.network, transport });
 }
 
+/**
+ * A client on Mysten's public fullnode only, for code that runs without a Tatum key (the sell-an-api
+ * example reads MPP digest payments with it, ADR-0120). Native gRPC, never JSON-RPC.
+ */
+export function createPublicSuiClient(network: SuiNetwork, maxRps = 3): SuiGrpcClient {
+  const transport = new PacedTransport(grpcTransport(publicGrpcUrl(network)), {
+    maxRps,
+    metered: false,
+  });
+  return new SuiGrpcClient({ network, transport });
+}
+
 /** `SUI_GRPC_FALLBACK[_TESTNET]`: a gRPC URL, or `off`. Unset means the public fullnode (ADR-0097). */
 export function suiFallbackUrl(
   network: SuiNetwork,
