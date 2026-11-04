@@ -92,6 +92,8 @@ import {
 } from "./schedules.ts";
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
+import type { Steer } from "./steer.ts";
+import { mountSteer } from "./steer-routes.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
 import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
@@ -124,6 +126,8 @@ export interface RemoraRouteDeps {
   listings?: Listings;
   /** H3 (ADR-0115): the owner behind a Telegram Mini App's signed launch data, or null. */
   tgOwner?: (initData: string) => Promise<string | null>;
+  /** U18 C1 + C2 (ADR-0123): describe the job, chat commands and their change cards. */
+  steer?: Steer;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -208,6 +212,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/reef/probe",
     "/api/reef/listings",
     "/api/reef/listings/*",
+    "/api/changes/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -221,6 +226,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       await next();
     });
   }
+
+  // Before the id check: `/api/remoras/draft` isn't an id (ADR-0123).
+  if (d.steer) mountSteer(app, d.steer);
 
   // Ids are UUIDs; anything else is a 404 rather than a database error.
   for (const path of [

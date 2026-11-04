@@ -46,6 +46,7 @@ import { createRemoraService } from "./remoras.ts";
 import { createRemoraRoutes } from "./routes.ts";
 import { remoraJobHandlers } from "./schedules.ts";
 import { onChainEvent } from "./sentinel.ts";
+import { createSteer, steerModel } from "./steer.ts";
 
 const signer = new RemoraSigner(new PgKeyStore(db), parseKek(env.KEY_ENCRYPTION_KEY));
 const merchants = {
@@ -119,6 +120,14 @@ export const runtime: RuntimeDeps = {
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });
 
+/** U18 C1 + C2 (ADR-0123): drafts and chat commands on the small parse model. */
+export const steer = createSteer({
+  runtime,
+  service: remoraService,
+  listings,
+  ...steerModel(small.primary),
+});
+
 /** F6: what we wrote per namespace, from our own tables (Wakes → receipts, rules → rules). */
 async function written(r: { id: string }) {
   const [w] = await db.select({ n: count() }).from(receipts).where(eq(receipts.remoraId, r.id));
@@ -150,6 +159,7 @@ export const remoraRoutes = createRemoraRoutes({
   hatchery,
   written,
   listings,
+  steer,
   // H3 (ADR-0115): the Mini App's owner, from Telegram's signed launch data and the A5 link.
   tgOwner: async (initData: string) => {
     const user = env.TELEGRAM_BOT_TOKEN ? verifyInitData(initData, env.TELEGRAM_BOT_TOKEN) : null;
