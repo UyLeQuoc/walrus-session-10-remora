@@ -51,7 +51,7 @@ import {
   probeX402,
 } from "../money/community.ts";
 import { contactsOf } from "../money/contacts.ts";
-import { type Listings, SALE_SLUG } from "../money/listings.ts";
+import { type Listings, SALE_SLUG, salePath } from "../money/listings.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
@@ -664,6 +664,44 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
    * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 client) pays
    * the owner's address, and the answer settles only once it's written.
    */
+  // ── M9 (ADR-0126): a remora on sale has a public page; anyone pays one answer from a wallet ──
+  app.get("/api/public/r/:slug", async (c) => {
+    const slug = c.req.param("slug");
+    const network = listings
+      ? rt.networks
+          .list()
+          .map((n) => n.network)
+          .find((n) => listings.bySlug(n, slug)?.kind === "remora")
+      : undefined;
+    const found = network ? listings?.bySlug(network, slug) : undefined;
+    const [seller] = found
+      ? await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId))
+      : [];
+    if (!listings || !network || !found || !seller)
+      return c.json(
+        { error: { code: "sale.not_found", message: `No remora sells as @${slug}.` } },
+        404,
+      );
+    const v = await saleView(rt, listings, seller);
+    return c.json({
+      slug,
+      name: seller.name,
+      template: seller.template,
+      blurb: v.sale?.blurb ?? "",
+      price: found.price,
+      payTo: found.payTo,
+      network,
+      path: salePath(slug),
+      answered: v.sold.length,
+      sold: v.sold.slice(0, 10).map((x) => ({
+        at: x.at,
+        amount: x.amount,
+        digest: x.digest,
+        buyer: x.buyer ? `${x.buyer.slice(0, 6)}…${x.buyer.slice(-4)}` : "",
+      })),
+    });
+  });
+
   app.get("/api/x402/r/:slug", async (c) => {
     const slug = c.req.param("slug");
     const network = listings
@@ -715,6 +753,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       try {
         if (!seller)
           throw new RemoraError("sale.closed", `@${slug} isn't answering right now.`, 409);
+        // ADR-0126: one question per 30 s per paying address (a wallet or a remora). Refused here,
+        // before the answer, so nothing settles.
+        if (!rt.limiter.take(`sale:${slug}:${payer}`, { limit: 1, ms: 30_000 }).allowed)
+          throw new RemoraError(
+            "sale.busy",
+            "One question every 30 seconds; nothing was charged.",
+            409,
+          );
         const out = await sellAnswer(rt, seller, slug, question, payer);
         c.res = c.json(out);
       } catch (err) {

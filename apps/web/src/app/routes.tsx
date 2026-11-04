@@ -14,6 +14,7 @@ import { HomePage } from "../features/home/home-page";
 import { LabPage } from "../features/lab/lab-page";
 import { MemoryInspectorPage } from "../features/memory-inspector/memory-page";
 import { OnboardingPage } from "../features/onboarding/onboarding-page";
+import { PublicRemoraPage } from "../features/public-remora/public-remora-page";
 import { ListApiPage } from "../features/reef/list-api-page";
 import { ReefPage } from "../features/reef/reef-page";
 import { NewRemoraPage } from "../features/remoras/new-remora-page";
@@ -72,4 +73,5 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "stats", element: <StatsPage /> },
   { path: "tg", element: <TgPage /> },
   { path: "p/:token", element: <PublicWakePage /> },
+  { path: "r/:slug", element: <PublicRemoraPage /> },
 ];

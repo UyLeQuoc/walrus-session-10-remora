@@ -37,10 +37,12 @@ app.use(
       "x-remora-network",
       "x-remora-playground",
       "x-request-id",
+      // ADR-0126: a visitor's wallet pays a remora's answer from the public page.
+      "x-payment",
     ],
     // Without this a cross-origin page cannot read the export's file name, and
     // every download is saved as the fallback "remora-memory.json".
-    exposeHeaders: ["content-disposition", "x-request-id"],
+    exposeHeaders: ["content-disposition", "x-request-id", "x-payment-response"],
   }),
 );
 /**
