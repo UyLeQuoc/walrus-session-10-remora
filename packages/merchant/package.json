@@ -11,12 +11,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@mysten/sui": "^2.33.2",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.12"
   },
   "dependencies": {
+    "@mysten/sui": "^2.33.2",
     "@remora/disc-sdk": "workspace:*",
     "hono": "^4.13.13"
   }

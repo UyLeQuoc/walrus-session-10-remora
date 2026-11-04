@@ -33,7 +33,7 @@ Values never go in the repo. `.env.example` lists every variable with a comment.
   - `SPONSOR_PRIVATE_KEY(_TESTNET)` (the gas station);
   - `SPONSOR_DAILY_GAS_MIST`, `SPONSOR_MAX_GAS_BUDGET`;
   - `FACILITATOR_PORT`.
-- **Merchants:** `MERCHANTS_PORT`, `FACILITATOR_URL(_TESTNET)`, `MERCHANT_PAYTO(_TESTNET)`, prices (`SUI_RISK_PRICE`, `ODDS_PRICE`, `BRIEF_PRICE`), `MERCHANT_REQUIRE_DISC`.
+- **Merchants:** `MERCHANTS_PORT`, `FACILITATOR_URL(_TESTNET)`, `MERCHANT_PAYTO(_TESTNET)`, prices (`SUI_RISK_PRICE`, `ODDS_PRICE`, `BRIEF_PRICE`), `MERCHANT_REQUIRE_DISC`, and optionally `MPP_SECRET` (unset, MPP challenges are bound per process, [ADR-0120](adr/0120-mpp-on-every-door.md)).
 - **Set by `scripts/railway-start.mts`, not in Railway:** `FACILITATOR_PORT`, `MERCHANTS_PORT`, `FACILITATOR_URL_TESTNET`, `MERCHANTS_URL_TESTNET` (all on `127.0.0.1`). The facilitator and the merchants read the same variables as the API, so the service has one set.
 - **Production secrets:** `SESSION_SECRET` and `KEY_ENCRYPTION_KEY` are not the local ones. They're in `.env.production` (gitignored) on Uy's machine, and the KEK has an offline copy.
 - **Web:** `VITE_API_URL` when the API is on another origin (otherwise it's same-origin).

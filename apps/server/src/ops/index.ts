@@ -92,6 +92,7 @@ export async function liveDiagnose(network: "testnet" | "mainnet") {
       discRegistryId: dep.discRegistryId,
       hatcheryPackageId: dep.hatcheryPackageId ?? null,
       hatcheryRegistryId: dep.hatcheryRegistryId,
+      capsulePackageId: dep.capsulePackageId ?? null,
       memwalRelayer: dep.memwalRelayer,
     },
     async objectType(id) {

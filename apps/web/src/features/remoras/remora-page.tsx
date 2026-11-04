@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Address, Problem, Stat, StatRow } from "@/components/visual";
@@ -54,11 +55,18 @@ import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from 
 import { api } from "./api";
 import { BriefCard } from "./brief-card";
 import { budgetLine } from "./budget";
+import { CapsuleCard } from "./capsule-card";
 import { CostCard } from "./cost-card";
 import { CrewCard } from "./crew-card";
 import { describeRemora, useTemplateCatalog } from "./describe";
+import { ErrandCard } from "./errand-card";
 import { FeedList } from "./feed-list";
+import { HistorySection } from "./history-section";
 import { RequireOwner, useLoad } from "./hooks";
+import { HooksCard } from "./hooks-card";
+import { KeeperCard } from "./keeper-card";
+import { ProposalCard } from "./proposal-card";
+import { ReviewCard } from "./review-card";
 import { BuyFromCard, SellCard } from "./sell-card";
 import { useBudget } from "./use-budget";
 
@@ -437,7 +445,7 @@ function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
     try {
       must(await api.edit(r.id, { name, persona }));
       reload();
-      toast.success("Saved. The previous version is in the feed.");
+      toast.success("Saved. The previous version is in History.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -640,6 +648,42 @@ function SourcesSection({ r }: { r: RemoraView }) {
   );
 }
 
+/** ADR-0127: whether its counts feed the Reef's reputation. Counts only, never content. */
+function ShareSection({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const on = Boolean((r.config as { share?: { stats?: boolean } }).share?.stats);
+  const [busy, setBusy] = useState(false);
+  const flip = async (next: boolean) => {
+    setBusy(true);
+    const out = await api.setShare(r.id, next);
+    setBusy(false);
+    if (!out.ok) return void toast.error(out.error);
+    reload();
+  };
+  return (
+    <Section
+      layout="split"
+      title="Share with the Reef"
+      description="Its paid calls, refusals, your ratings and timings feed each service's 7-day score. Never a question, an answer or an amount."
+    >
+      <SettingsGroup>
+        <SettingsRow
+          title="Share its counts"
+          description={on ? "On: the Reef counts its calls." : "Off: nothing leaves this remora."}
+          actions={
+            <Switch
+              id="share-stats"
+              aria-label="Share its counts with the Reef"
+              checked={on}
+              disabled={busy || r.status === "retired"}
+              onCheckedChange={(next) => void flip(next)}
+            />
+          }
+        />
+      </SettingsGroup>
+    </Section>
+  );
+}
+
 function KeysSection({ r }: { r: RemoraView }) {
   const limit = useBudget(r.id, Boolean(r.discId) && r.status !== "retired");
   const limitGone =
@@ -731,17 +775,24 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
         </p>
         {r.template !== "sentinel" ? <SourcesSection r={r} /> : null}
         <KeysSection r={r} />
+        <HistorySection r={r} reload={reload} readOnly />
       </div>
     );
   return (
     <div className="flex flex-col gap-8 lg:gap-10">
-      <IdentitySection r={r} reload={reload} />
+      {/* A restore (History) changes these from outside the form, so the form starts again. */}
+      <IdentitySection key={`identity-${r.updatedAt}`} r={r} reload={reload} />
       <BrainSection r={r} reload={reload} />
-      <BudgetSection r={r} reload={reload} layout="split" />
+      <BudgetSection key={`budget-${r.updatedAt}`} r={r} reload={reload} layout="split" />
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
+      <HooksCard r={r} />
       {/* ADR-0106: a Briefer's schedule is its brief's; its page shows it with Run now. */}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}
+      {r.template === "scout" || r.template === "briefer" ? (
+        <ShareSection r={r} reload={reload} />
+      ) : null}
       <KeysSection r={r} />
+      <HistorySection r={r} reload={reload} />
       <DangerSection r={r} reload={reload} />
     </div>
   );
@@ -890,6 +941,10 @@ function Remora({ id }: { id: string }) {
             ) : null
           ) : r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
+          ) : r.template === "errand" ? (
+            <ErrandCard r={r} onDone={refreshFeed} />
+          ) : r.template === "keeper" ? (
+            <KeeperCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}
@@ -899,6 +954,9 @@ function Remora({ id }: { id: string }) {
               <SellCard r={r} readOnly={r.status === "retired"} />
               <BuyFromCard r={r} onChanged={reload} />
             </div>
+          ) : null}
+          {r.config.budget && r.discId ? (
+            <ProposalCard r={r} onChanged={reload} open={Boolean(params.get("proposal"))} />
           ) : null}
           <div className="grid items-start gap-8 lg:grid-cols-2">
             {r.config.budget ? <BudgetSection r={r} reload={reload} /> : null}
@@ -926,6 +984,10 @@ function Remora({ id }: { id: string }) {
         </TabsContent>
 
         <TabsContent value="learning" className="flex flex-col gap-8 pt-5">
+          {r.template === "sentinel" ? null : <ReviewCard r={r} />}
+          {r.template === "scout" || r.template === "briefer" ? (
+            <CapsuleCard r={r} onChanged={reload} />
+          ) : null}
           <LearningSection remoraId={r.id} />
         </TabsContent>
 

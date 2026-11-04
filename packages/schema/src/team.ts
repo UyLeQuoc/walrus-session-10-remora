@@ -14,6 +14,20 @@ export const TeamSchedule = z.object({
   question: z.string().min(1).max(300),
 });
 
+/**
+ * ADR-0121: what else wakes a Researcher or Briefer. A price trigger arrives paused, like a schedule;
+ * a webhook gets its own URL and secret on import, which only the owner can reveal.
+ */
+export const TeamTrigger = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("price"),
+    symbol: z.string().min(1).max(10),
+    above: z.number().positive().optional(),
+    below: z.number().positive().optional(),
+  }),
+  z.object({ kind: z.literal("webhook"), name: z.string().regex(/^[a-z0-9-]{1,20}$/) }),
+]);
+
 export const TeamRemora = z.object({
   template: z.string().min(1),
   name: z.string().min(1).max(40),
@@ -43,6 +57,7 @@ export const TeamRemora = z.object({
     .array(z.string().regex(/^[a-z0-9-]+$/))
     .max(8)
     .default([]),
+  triggers: z.array(TeamTrigger).max(4).optional(),
 });
 
 export const TeamFile = z.object({
@@ -50,6 +65,11 @@ export const TeamFile = z.object({
   name: z.string().min(1).max(60),
   description: z.string().max(500).optional(),
   remoras: z.array(TeamRemora).min(1).max(10),
+  /**
+   * ADR-0131: a starter memory pack, in public plaintext. Each line was scrubbed and approved by the
+   * author; whoever hatches it picks which lines to import (each marked `SOURCE: pack`).
+   */
+  pack: z.array(z.string().min(3).max(240)).max(20).optional(),
   /**
    * ADR-0114: the team is a crew. Its lead (a remora name from `remoras`) splits a question's
    * purchases across the others, each paying from its own limit, and answers with every receipt.
@@ -99,6 +119,7 @@ export const Schedule = z.object({
 });
 
 export type TeamSchedule = z.infer<typeof TeamSchedule>;
+export type TeamTrigger = z.infer<typeof TeamTrigger>;
 export type TeamRemora = z.infer<typeof TeamRemora>;
 export type TeamFile = z.infer<typeof TeamFile>;
 export type TeamPreview = z.infer<typeof TeamPreview>;

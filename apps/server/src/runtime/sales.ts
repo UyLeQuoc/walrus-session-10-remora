@@ -16,6 +16,7 @@ import {
   saleRef,
 } from "../money/listings.ts";
 import { answersQuestions } from "../templates/index.ts";
+import { saveConfig } from "./config-versions.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { scoutAsk } from "./scout.ts";
@@ -30,12 +31,8 @@ export interface SaleInput {
   blurb?: unknown;
 }
 
-export async function setSale(
-  deps: RuntimeDeps,
-  listings: Listings,
-  r: Remora,
-  input: SaleInput,
-): Promise<Sale> {
+/** A sale as the owner set it, checked: a free name, a price in range (also used by restore, N11). */
+export async function checkSale(deps: RuntimeDeps, r: Remora, input: SaleInput): Promise<Sale> {
   if (!answersQuestions(r.template))
     throw new RemoraError(
       "sale.unsupported",
@@ -72,18 +69,22 @@ export async function setSale(
     .limit(1);
   if (taken.length)
     throw new RemoraError("sale.slug_taken", `@${slug} is taken. Pick another name.`, 409);
-  const sale: Sale = { on, slug, price, blurb };
-  await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, sell: sale }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id));
-  await deps.db.insert(remoraEvents).values({
-    remoraId: r.id,
-    network: r.network,
-    type: "action",
-    summary: on
-      ? `${r.name} is on sale as @${slug}, ${price} an answer.`
-      : `${r.name} isn't on sale anymore.`,
+  return { on, slug, price, blurb };
+}
+
+export async function setSale(
+  deps: RuntimeDeps,
+  listings: Listings,
+  r: Remora,
+  input: SaleInput,
+): Promise<Sale> {
+  const sale = await checkSale(deps, r, input);
+  const { on, slug, price } = sale;
+  await saveConfig(deps.db, r.id, (c) => ({ ...c, sell: sale }), {
+    summary: () =>
+      on
+        ? `${r.name} is on sale as @${slug}, ${price} an answer.`
+        : `${r.name} isn't on sale anymore.`,
     payload: { sale },
   });
   await listings.refresh();

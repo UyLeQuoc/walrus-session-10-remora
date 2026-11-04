@@ -8,6 +8,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { SuiNetwork } from "@remora/chain";
 import {
   and,
+  approvals,
   desc,
   eq,
   gt,
@@ -21,7 +22,6 @@ import {
   sentinelRules,
   sourceStats,
 } from "@remora/db";
-import { decodeHeader, PAYMENT_RESPONSE_HEADER } from "@remora/disc-sdk";
 import { addressFromSignature } from "@remora/memory";
 import { type PaidContext, x402 } from "@remora/merchant";
 import { Budget } from "@remora/schema";
@@ -49,7 +49,8 @@ import {
   listingsOf,
   probeX402,
 } from "../money/community.ts";
-import { type Listings, SALE_SLUG } from "../money/listings.ts";
+import { contactsOf } from "../money/contacts.ts";
+import { type Listings, SALE_SLUG, salePath } from "../money/listings.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
@@ -57,12 +58,30 @@ import { answersQuestions } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
 import { briefNow, briefView, setBriefItems } from "./briefer.ts";
+import {
+  acceptCapsule,
+  capsuleView,
+  confirmGrant,
+  confirmRevoke,
+  grantTx,
+  lendable,
+  revokeTx,
+} from "./capsules.ts";
 import { remoraCost } from "./cost.ts";
 import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { errandAsk, usualFor } from "./errand.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
+import {
+  acceptPrice,
+  addSubscription,
+  removeSubscription,
+  runKeeper,
+  subscriptionsOf,
+} from "./keeper.ts";
 import { learningSeries, proofBetween, proofsFor } from "./learning.ts";
+import { mountLedger } from "./ledger-routes.ts";
 import { MemoryTimeout } from "./memory.ts";
 import {
   correct,
@@ -73,7 +92,15 @@ import {
   recentDuplicates,
   setHidden,
 } from "./memory-controls.ts";
+import {
+  checkProposal,
+  confirmProposal,
+  declineProposal,
+  proposalsOf,
+  proposalTx,
+} from "./proposals.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
+import { reviewsOf, writeReview } from "./review.ts";
 import {
   defaultRoom,
   postToRoom,
@@ -92,6 +119,9 @@ import {
 } from "./schedules.ts";
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
+import { confirmPayLink, payLinkOf } from "./splitter.ts";
+import type { Steer } from "./steer.ts";
+import { mountSteer } from "./steer-routes.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
 import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
@@ -124,6 +154,8 @@ export interface RemoraRouteDeps {
   listings?: Listings;
   /** H3 (ADR-0115): the owner behind a Telegram Mini App's signed launch data, or null. */
   tgOwner?: (initData: string) => Promise<string | null>;
+  /** U18 C1 + C2 (ADR-0123): describe the job, chat commands and their change cards. */
+  steer?: Steer;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -208,6 +240,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/reef/probe",
     "/api/reef/listings",
     "/api/reef/listings/*",
+    "/api/statements",
+    "/api/statements/*",
+    "/api/changes/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -221,6 +256,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       await next();
     });
   }
+
+  // Before the id check: `/api/remoras/draft` isn't an id (ADR-0123).
+  if (d.steer) mountSteer(app, d.steer);
 
   // Ids are UUIDs; anything else is a 404 rather than a database error.
   for (const path of [
@@ -262,6 +300,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       budget?: unknown;
       watch?: string[];
       items?: string[];
+      contacts?: { name?: string; address?: string }[];
     }>(c);
     if (b.watch && (!Array.isArray(b.watch) || b.watch.some((a) => !ADDRESS.test(a)))) {
       throw new RemoraError("funds.bad_address", "Every watched address must be 0x + hex.");
@@ -275,6 +314,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       ...(b.name ? { name: b.name } : {}),
       ...(budget !== undefined ? { budget } : {}),
       ...(b.watch ? { watch: b.watch } : {}),
+      ...(Array.isArray(b.contacts)
+        ? {
+            contacts: b.contacts.map((x) => ({
+              name: String(x?.name ?? ""),
+              address: String(x?.address ?? ""),
+            })),
+          }
+        : {}),
     });
     // ADR-0106: a Briefer starts with its list and its brief's schedule.
     if (out.remora.template === "briefer" && Array.isArray(b.items) && b.items.length)
@@ -393,6 +440,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const { question } = await body<{ question?: string }>(c);
     if (!question?.trim()) throw new RemoraError("ask.empty", "Ask a question.");
     const r = await service.get(c.req.param("id"), c.get("owner"));
+    // ADR-0125: an Errand takes payment requests in plain words.
+    if (r.template === "errand") {
+      const res = await errandAsk(rt, r, question.trim().slice(0, 500), {
+        kind: "message",
+        ref: "web",
+      });
+      return c.json(serialize({ ...res, receiptId: null, outcomes: [] }));
+    }
     if (!answersQuestions(r.template))
       throw new RemoraError("ask.unsupported", `${r.name} doesn't answer questions.`);
     const res = await scoutAsk(rt, r, question.trim().slice(0, 1_000), {
@@ -634,9 +689,69 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   });
 
   /**
-   * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 client) pays
-   * the owner's address, and the answer settles only once it's written.
+   * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 or MPP client,
+   * ADR-0120) pays the owner's address, and the answer settles only once it's written.
    */
+  // ── M9 (ADR-0126): a remora on sale has a public page; anyone pays one answer from a wallet ──
+  app.get("/api/public/r/:slug", async (c) => {
+    const slug = c.req.param("slug");
+    const network = listings
+      ? rt.networks
+          .list()
+          .map((n) => n.network)
+          .find((n) => listings.bySlug(n, slug)?.kind === "remora")
+      : undefined;
+    const found = network ? listings?.bySlug(network, slug) : undefined;
+    const [seller] = found
+      ? await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId))
+      : [];
+    if (!listings || !network || !found || !seller)
+      return c.json(
+        { error: { code: "sale.not_found", message: `No remora sells as @${slug}.` } },
+        404,
+      );
+    const v = await saleView(rt, listings, seller);
+    return c.json({
+      slug,
+      name: seller.name,
+      template: seller.template,
+      blurb: v.sale?.blurb ?? "",
+      price: found.price,
+      payTo: found.payTo,
+      network,
+      path: salePath(slug),
+      answered: v.sold.length,
+      sold: v.sold.slice(0, 10).map((x) => ({
+        at: x.at,
+        amount: x.amount,
+        digest: x.digest,
+        buyer: x.buyer ? `${x.buyer.slice(0, 6)}…${x.buyer.slice(-4)}` : "",
+      })),
+    });
+  });
+
+  // ── B3 (ADR-0132): a pay link from a split, paid from anyone's wallet ─────
+  app.get("/api/public/pay/:token", async (c) => {
+    const found = await payLinkOf(rt, c.req.param("token"));
+    if (!found)
+      return c.json({ error: { code: "paylink.not_found", message: "No such pay link." } }, 404);
+    const { r, link } = found;
+    return c.json({
+      name: link.name,
+      amount: link.amount,
+      memo: link.memo,
+      to: r.ownerAddress,
+      from: r.name,
+      network: r.network,
+      asset: rt.networks.config(r.network).usdcCoinType,
+      paidDigest: link.paidDigest ?? null,
+    });
+  });
+  app.post("/api/public/pay/:token/paid", async (c) => {
+    const b = await body<{ digest?: string }>(c);
+    return c.json(await confirmPayLink(rt, c.req.param("token"), digestOf(b.digest)));
+  });
+
   app.get("/api/x402/r/:slug", async (c) => {
     const slug = c.req.param("slug");
     const network = listings
@@ -668,6 +783,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         { error: { code: "network.unavailable", message: "Payments are off here." } },
         503,
       );
+    // MPP digest credentials (@suimpp/mpp) are read over gRPC; signed transactions don't need it.
+    const client = (() => {
+      try {
+        return rt.networks.client(network);
+      } catch {
+        return undefined;
+      }
+    })();
     const paid = x402({
       amount: found.price,
       description: `${found.name}'s answer`,
@@ -679,6 +802,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
           payTo: found.payTo,
           asset: net.usdcCoinType,
           facilitatorUrl: net.facilitatorUrl,
+          ...(client ? { client } : {}),
         },
       },
     });
@@ -688,6 +812,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       try {
         if (!seller)
           throw new RemoraError("sale.closed", `@${slug} isn't answering right now.`, 409);
+        // ADR-0126: one question per 30 s per paying address (a wallet or a remora). Refused here,
+        // before the answer, so nothing settles.
+        if (!rt.limiter.take(`sale:${slug}:${payer}`, { limit: 1, ms: 30_000 }).allowed)
+          throw new RemoraError(
+            "sale.busy",
+            "One question every 30 seconds; nothing was charged.",
+            409,
+          );
         const out = await sellAnswer(rt, seller, slug, question, payer);
         c.res = c.json(out);
       } catch (err) {
@@ -702,15 +834,15 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       }
     });
     if (early) return early;
-    const header = c.res.headers.get(PAYMENT_RESPONSE_HEADER);
-    if (c.res.status === 200 && header) {
-      const settled = decodeHeader<{ transaction?: string; payer?: string }>(header);
+    // Set once the payment settled (x402 or MPP), so a sale is recorded only with its digest.
+    const settled = (c as unknown as { get(k: "x402"): PaidContext | undefined }).get("x402");
+    if (c.res.status === 200 && settled?.transaction) {
       const out = (await c.res.clone().json()) as { eventId?: string };
       const [seller] = await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId));
-      if (seller && settled.transaction)
+      if (seller)
         await recordSale(rt, seller, {
           slug,
-          buyer: settled.payer ?? "",
+          buyer: settled.payer,
           amount: found.price,
           digest: settled.transaction,
           eventId: out.eventId ?? "",
@@ -866,7 +998,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const { text } = await body<{ text?: string }>(c);
     if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
     const r = await service.get(c.req.param("id"), c.get("owner"));
-    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000)), 201);
+    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000), d.steer?.inThread), 201);
   });
 
   const myRoom = async (c: Context): Promise<RoomRow> => {
@@ -957,7 +1089,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const room = await myRoom(c);
     const { text } = await body<{ text?: string }>(c);
     if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
-    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000)), 201);
+    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000), d.steer?.inRoom), 201);
   });
 
   // ── Teams from Markdown (ADR-0042) ────────────────────────────────────────
@@ -1041,8 +1173,207 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   );
 
   app.post("/api/approvals/:id/reject", async (c) => {
+    const [a] = await rt.db
+      .select({ kind: approvals.kind })
+      .from(approvals)
+      .where(eq(approvals.id, c.req.param("id")));
+    // E5: declining a budget proposal is remembered, with the owner's reason if they gave one.
+    if (a?.kind === "budget_change") {
+      const b = await body<{ reason?: string }>(c);
+      return c.json(
+        await declineProposal(rt, c.get("owner"), c.req.param("id"), String(b.reason ?? "")),
+      );
+    }
     await rejectApproval(rt, c.get("owner"), c.req.param("id"));
     return c.json({ ok: true });
+  });
+
+  // ── Memory capsules (A4, ADR-0130) ────────────────────────────────────────
+  app.get("/api/remoras/:id/capsules", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await capsuleView(rt, r));
+  });
+  app.get("/api/remoras/:id/capsules/lendable", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ memories: await lendable(rt, r, c.req.query("q") ?? "") });
+  });
+  app.post("/api/remoras/:id/capsules", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ query?: string; blobIds?: string[]; to?: string; days?: number }>(c);
+    return c.json(
+      await grantTx(rt, listings, r, {
+        query: String(b.query ?? ""),
+        blobIds: Array.isArray(b.blobIds) ? b.blobIds.map(String) : [],
+        to: String(b.to ?? ""),
+        days: Number(b.days ?? 7),
+      }),
+    );
+  });
+  app.post("/api/remoras/:id/capsules/confirm", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{
+      digest?: string;
+      draft?: {
+        keyId: string;
+        blobId: string;
+        count: number;
+        expiresMs: number;
+        granteeId: string;
+      };
+    }>(c);
+    if (!b.draft) throw new RemoraError("capsule.draft", "Send the capsule you signed for.");
+    return c.json(await confirmGrant(rt, r, digestOf(b.digest), b.draft));
+  });
+  app.post("/api/remoras/:id/capsules/:capsuleId/accept", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ remora: await view(await acceptCapsule(rt, r, c.req.param("capsuleId"))) });
+  });
+  app.post("/api/remoras/:id/capsules/:capsuleId/revoke", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await revokeTx(r, c.req.param("capsuleId")));
+  });
+  app.post("/api/remoras/:id/capsules/:capsuleId/revoke/confirm", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ digest?: string }>(c);
+    return c.json(await confirmRevoke(rt, r, c.req.param("capsuleId"), digestOf(b.digest)));
+  });
+
+  // ── A Keeper's subscriptions (B2, ADR-0129) ───────────────────────────────
+  const keeperOf = async (c: Context) => {
+    const r = await service.get(c.req.param("id") ?? "", c.get("owner"));
+    if (r.template !== "keeper")
+      throw new RemoraError("keeper.only", `${r.name} doesn't keep subscriptions.`);
+    return r;
+  };
+  app.get("/api/remoras/:id/subscriptions", async (c) => {
+    const r = await keeperOf(c);
+    const hikes = await rt.db
+      .select()
+      .from(approvals)
+      .where(and(eq(approvals.remoraId, r.id), eq(approvals.status, "pending")));
+    return c.json({
+      subscriptions: subscriptionsOf(r),
+      hikes: hikes
+        .filter((a) => (a.payload as { kind?: string }).kind === "price_hike")
+        .map((a) => ({ approvalId: a.id, summary: a.summary, ...(a.payload as object) })),
+    });
+  });
+  app.post("/api/remoras/:id/subscriptions", async (c) => {
+    const r = await keeperOf(c);
+    const b = await body<{ ref?: string; url?: string }>(c);
+    const next = await addSubscription(rt, r, {
+      ref: String(b.ref ?? ""),
+      ...(b.url ? { url: b.url } : {}),
+    });
+    // Its first subscription starts its daily run.
+    if (!((next.config as { schedules?: unknown[] }).schedules ?? []).length)
+      await addSchedule(rt, next, "every day at 8am", "charge my subscriptions");
+    return c.json({ subscriptions: subscriptionsOf(next) });
+  });
+  app.delete("/api/remoras/:id/subscriptions/:sid", async (c) => {
+    const r = await keeperOf(c);
+    return c.json({
+      subscriptions: subscriptionsOf(await removeSubscription(rt, r, c.req.param("sid"))),
+    });
+  });
+  app.post("/api/remoras/:id/subscriptions/:sid/accept", async (c) => {
+    const r = await keeperOf(c);
+    const b = await body<{ amount?: string; approvalId?: string }>(c);
+    const next = await acceptPrice(rt, r, c.req.param("sid"), String(b.amount ?? ""));
+    if (b.approvalId)
+      await rt.db
+        .update(approvals)
+        .set({ status: "rejected", decidedAt: new Date() })
+        .where(and(eq(approvals.id, b.approvalId), eq(approvals.remoraId, r.id)));
+    return c.json({ subscriptions: subscriptionsOf(next) });
+  });
+  app.post("/api/remoras/:id/subscriptions/run", async (c) => {
+    const r = await keeperOf(c);
+    return c.json(serialize(await runKeeper(rt, r, "now")));
+  });
+
+  // ── Sharing counts with the Reef's reputation (E10, ADR-0127) ─────────────
+  app.put("/api/remoras/:id/share", async (c) => {
+    const b = await body<{ stats?: boolean }>(c);
+    if (typeof b.stats !== "boolean")
+      throw new RemoraError("share.bad", "Say whether to share its counts (stats: true or false).");
+    const r = await service.setShare(c.req.param("id"), c.get("owner"), b.stats);
+    // The Reef's scores count this remora (or stop) now, not at the next 5-minute refresh.
+    await rt.refreshReputation?.().catch(() => {});
+    return c.json({ remora: await view(r) });
+  });
+
+  // ── An Errand's contacts (B1, ADR-0125) ───────────────────────────────────
+  app.get("/api/remoras/:id/contacts", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const usual = await Promise.all(contactsOf(r).map((x) => usualFor(rt, r, x)));
+    return c.json({
+      contacts: contactsOf(r).map((x, i) => ({ ...x, usual: usual[i]?.toString() ?? null })),
+    });
+  });
+
+  app.post("/api/remoras/:id/contacts", async (c) => {
+    const b = await body<{ contacts?: { name?: string; address?: string }[] }>(c);
+    const list = (b.contacts ?? []).map((x) => ({
+      name: String(x.name ?? ""),
+      address: String(x.address ?? ""),
+    }));
+    return c.json(await service.contactsTx(c.req.param("id"), c.get("owner"), list));
+  });
+
+  app.post("/api/remoras/:id/contacts/confirm", async (c) => {
+    const b = await body<{ digest?: string; contacts?: { name?: string; address?: string }[] }>(c);
+    const list = (b.contacts ?? []).map((x) => ({
+      name: String(x.name ?? ""),
+      address: String(x.address ?? ""),
+    }));
+    return c.json({
+      remora: await view(
+        await service.confirmContacts(c.req.param("id"), c.get("owner"), digestOf(b.digest), list),
+      ),
+    });
+  });
+
+  // ── The weekly review (F10, ADR-0128) ─────────────────────────────────────
+  app.get("/api/remoras/:id/reviews", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ reviews: await reviewsOf(rt, r) });
+  });
+
+  app.post("/api/remoras/:id/reviews", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!rt.limiter.take(`review:${r.id}`, { limit: 3, ms: 3_600_000 }).allowed)
+      throw new RemoraError("review.busy", "Three reviews an hour is enough; try later.", 409);
+    await writeReview(rt, r);
+    return c.json({ reviews: await reviewsOf(rt, r) });
+  });
+
+  // ── Budget proposals (E5, ADR-0124) ───────────────────────────────────────
+  app.get("/api/remoras/:id/proposals", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await proposalsOf(rt, r));
+  });
+
+  app.post("/api/remoras/:id/proposals/check", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const out = await checkProposal(rt, r);
+    return c.json({ ...out, ...(await proposalsOf(rt, r)) });
+  });
+
+  app.post("/api/approvals/:id/proposal-tx", async (c) =>
+    c.json(serialize(await proposalTx(rt, service, c.get("owner"), c.req.param("id")))),
+  );
+
+  app.post("/api/approvals/:id/proposal-confirm", async (c) => {
+    const b = await body<{ digest?: string }>(c);
+    const out = await confirmProposal(
+      rt,
+      service,
+      c.get("owner"),
+      c.req.param("id"),
+      digestOf(b.digest),
+    );
+    return c.json({ remora: await view(out.remora), digest: out.digest });
   });
 
   // ── Panic button (N10) ────────────────────────────────────────────────────
@@ -1117,9 +1448,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   };
   const networkOf = (c: Context) => resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER));
 
-  app.post("/api/remoras/:id/share", async (c) =>
-    c.json({ review: await shareReview(hatch(), c.get("owner"), c.req.param("id")) }),
-  );
+  app.post("/api/remoras/:id/share", async (c) => {
+    // ADR-0131: the starter memories the author picked from the candidates, if any.
+    const b = await body<{ pack?: string[] }>(c);
+    const pack = Array.isArray(b.pack) ? b.pack.map(String).slice(0, 20) : [];
+    return c.json({
+      review: await shareReview(hatch(), c.get("owner"), c.req.param("id"), { pack }),
+    });
+  });
 
   app.post("/api/hatchery/publish", async (c) => {
     const b = await body<{ markdown?: string; parent?: string | null }>(c);
@@ -1175,13 +1511,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   );
 
   app.post("/api/hatchery/:id/hatch/confirm", async (c) => {
-    const b = await body<{ remoraIds?: string[]; digest?: string }>(c);
+    const b = await body<{ remoraIds?: string[]; digest?: string; pack?: string[] }>(c);
     const ids = (b.remoraIds ?? []).filter((x) => UUID.test(x));
     return c.json(
       await confirmHatch(hatch(), c.get("owner"), c.get("network"), {
         templateId: templateId(c),
         remoraIds: ids,
         digest: digestOf(b.digest),
+        ...(Array.isArray(b.pack) ? { pack: b.pack.map(String).slice(0, 20) } : {}),
       }),
     );
   });
@@ -1350,9 +1687,10 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   });
 
   // Public, like the Reef itself: what a remora may pay, and to which address on this network.
-  app.get("/api/reef/services", (c) =>
-    c.json(reefServices(rt.reef(resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER))))),
-  );
+  app.get("/api/reef/services", (c) => {
+    const network = resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER));
+    return c.json(reefServices(rt.reef(network), rt.reputation?.(network)));
+  });
 
   app.post("/api/wakes/:id/share", async (c) =>
     c.json(await shareWake(rt, c.get("owner"), c.req.param("id"))),
@@ -1513,6 +1851,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
           400,
         );
   });
+
+  // ADR-0122: statements and config history.
+  mountLedger(app, { service, runtime: rt, listings: d.listings });
 
   // Mounted beside the other groups, which carry no typed variables.
   return app as unknown as Hono;

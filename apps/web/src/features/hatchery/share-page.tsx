@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Page, PageHeader, Section } from "@/components/app/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Checks } from "@/components/visual";
@@ -128,6 +129,35 @@ function Share({ id }: { id: string }) {
               }))}
             />
           </Section>
+          {review.packCandidates?.length ? (
+            <Section
+              title="Starter memories (public)"
+              description="Optional: lines from its memory that whoever copies it can start with. They're public plaintext on Walrus; anything about people is left out."
+            >
+              <ul className="flex max-w-3xl flex-col gap-1.5" data-testid="share-pack">
+                {review.packCandidates.map((c) => (
+                  <li key={c.text} className="flex items-start gap-2 text-sm">
+                    <Checkbox
+                      aria-label={`Add to the pack: ${c.text.slice(0, 60)}`}
+                      disabled={!c.ok || !!step}
+                      checked={(review.team.pack ?? []).includes(c.text)}
+                      onCheckedChange={(on) => {
+                        const now = review.team.pack ?? [];
+                        const next = on ? [...now, c.text] : now.filter((t) => t !== c.text);
+                        void api
+                          .share(id, next)
+                          .then((r) => (r.ok ? setReview(r.data.review) : setError(r.error)));
+                      }}
+                    />
+                    <span className={c.ok ? "" : "text-ob-muted line-through"} data-ux-skip>
+                      {c.text}
+                      {c.why ? <span className="ml-1 text-xs no-underline">({c.why})</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
           <Section title="Safety review">
             <div className="max-w-3xl">
               <SafetyPanel report={review.safety} />

@@ -31,12 +31,13 @@ import {
   TeamFile,
   type TemplatePermissions,
 } from "@remora/schema";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { type Remora, RemoraError, type RemoraService } from "../runtime/remoras.ts";
 import { applyTeam, confirmTeam, exportTeam, parseTeamMarkdown } from "../runtime/teams.ts";
-import { TEMPLATES } from "../templates/index.ts";
+import { answersQuestions, TEMPLATES } from "../templates/index.ts";
 import { decodeHatcheryEvents, type HatcheryEvent } from "./events.ts";
-import { reviewTemplate } from "./safety.ts";
+import { privateReason, reviewTemplate } from "./safety.ts";
 import type { WalrusStore } from "./walrus.ts";
 
 export interface HatcheryDeps {
@@ -135,10 +136,31 @@ async function readTx(h: HatcheryDeps, network: SuiNetwork, digest: string, owne
 
 // ── M1: share ────────────────────────────────────────────────────────────────
 
+/** ADR-0131: the memories an author could add as a public starter pack, each checked. */
+async function packCandidates(h: HatcheryDeps, r: Remora) {
+  const ns = answersQuestions(r.template) ? ["sources", "feedback"] : ["rules"];
+  const hits = await h.runtime.memory
+    .recall(r, answersQuestions(r.template) ? "SOURCE score useful" : "RULE ignore", ns, 10)
+    .catch(() => []);
+  const seen = new Set<string>();
+  return hits.flatMap((m) => {
+    // The stored line carries hippo's tags (`[source] [by:…] [2026-11-05]`); the pack keeps the text.
+    const text = m.text
+      .replace(/^\s*(?:\[[^\]]*\]\s*)+/, "")
+      .trim()
+      .slice(0, 240);
+    if (text.length < 3 || seen.has(text)) return [];
+    seen.add(text);
+    const why = privateReason(text);
+    return [{ text, ok: !why, why }];
+  });
+}
+
 export async function shareReview(
   h: HatcheryDeps,
   owner: string,
   remoraId: string,
+  opts: { pack?: string[] } = {},
 ): Promise<ShareReview> {
   const r = await h.service.get(remoraId, owner);
   if (r.status === "creating" || r.status === "retired")
@@ -147,18 +169,26 @@ export async function shareReview(
       `${r.name} can't be shared while it's ${r.status}.`,
     );
   const kind = kindOf(r.template);
-  const markdown = await exportTeam(h.runtime, owner, r.network, {
+  const exported = await exportTeam(h.runtime, owner, r.network, {
     ids: [r.id],
     name: r.name,
     description: kind?.summary ?? `A ${r.template} remora.`,
   });
+  const candidates = await packCandidates(h, r);
+  // Only lines the author picked from what passed the check go into the public file.
+  const pack = [...new Set(opts.pack ?? [])].filter((t) =>
+    candidates.some((c) => c.ok && c.text === t),
+  );
+  const markdown = pack.length ? withPack(exported, pack.slice(0, 20)) : exported;
   const { team } = parseTeamMarkdown(markdown);
   const config = r.config as { triggers?: { kind: string; addresses?: string[] }[] };
   const watched = (config.triggers ?? []).flatMap((t) => t.addresses ?? []).length;
   const removed = [
     {
       field: "memories",
-      reason: "Templates never carry memories; the hatcher's remora starts fresh.",
+      reason: pack.length
+        ? `Only the ${pack.length} starter memories you picked go along, in public plaintext; the rest stay yours.`
+        : "Templates carry no memories unless you pick starter ones below; the hatcher's remora starts fresh.",
     },
     { field: "keys", reason: "The remora's key and its memory delegate stay with you." },
     {
@@ -182,7 +212,16 @@ export async function shareReview(
     removed,
     safety: await review(h, r.network, team, markdown),
     sizeBytes: Buffer.byteLength(markdown, "utf8"),
+    packCandidates: candidates,
   };
+}
+
+/** Puts a starter pack into a team file's frontmatter. */
+function withPack(markdown: string, pack: string[]) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(markdown);
+  if (!m) return markdown;
+  const front = parseYaml(m[1] ?? "") as Record<string, unknown>;
+  return `---\n${stringifyYaml({ ...front, pack }).trimEnd()}\n---\n${m[2] ?? ""}`;
 }
 
 // ── M3: publish ──────────────────────────────────────────────────────────────
@@ -480,7 +519,7 @@ export async function confirmHatch(
   h: HatcheryDeps,
   owner: string,
   network: SuiNetwork,
-  input: { templateId: string; remoraIds: string[]; digest: string },
+  input: { templateId: string; remoraIds: string[]; digest: string; pack?: string[] },
 ) {
   const { pkg } = hatcheryIds(h, network);
   const tx = await readTx(h, network, input.digest, owner);
@@ -511,7 +550,53 @@ export async function confirmHatch(
       target: [hatcheryForks.txDigest, hatcheryForks.eventSeq],
       set: { remoraIds: input.remoraIds },
     });
-  return { confirmed, remoras: input.remoraIds, digest: input.digest };
+  const imported = await importPack(h, owner, network, templateId, input.remoraIds, input.pack);
+  return { confirmed, remoras: input.remoraIds, digest: input.digest, imported };
+}
+
+/**
+ * ADR-0131: the starter memories the hatcher ticked, from the template's own pack only, written to
+ * its first remora's `sources` (or a Wallet watcher's `rules`), each marked with where it came from.
+ */
+async function importPack(
+  h: HatcheryDeps,
+  owner: string,
+  network: SuiNetwork,
+  templateId: string,
+  remoraIds: string[],
+  picked: string[] = [],
+) {
+  if (!picked.length) return 0;
+  const { row } = await listing(h, network, templateId);
+  const team = TeamFile.safeParse(row.team);
+  const pack = new Set(team.success ? (team.data.pack ?? []) : []);
+  const lines = [...new Set(picked)].filter((t) => pack.has(t) && !privateReason(t));
+  const [first] = remoraIds;
+  if (!lines.length || !first) return 0;
+  const r = await h.service.get(first, owner);
+  const ns = answersQuestions(r.template) ? "sources" : "rules";
+  const source = `SOURCE: pack ${templateId.slice(0, 10)}`;
+  let n = 0;
+  for (const line of lines) {
+    const ok = await h.runtime.memory
+      .remember(r, ns, answersQuestions(r.template) ? "source" : "rule", `${line} · ${source}`, {
+        dedupe: false,
+      })
+      .then(() => true)
+      .catch((err) => {
+        h.runtime.log.warn("hatchery.pack_failed", { remora: r.id, error: err });
+        return false;
+      });
+    if (ok) n++;
+  }
+  await h.runtime.db.insert(remoraEvents).values({
+    remoraId: r.id,
+    network: r.network,
+    type: "action",
+    summary: `Started with ${n} memories from the template's public pack.`,
+    payload: { kind: "pack_imported", templateId, count: n },
+  });
+  return n;
 }
 
 // ── Deprecate (author only) ──────────────────────────────────────────────────

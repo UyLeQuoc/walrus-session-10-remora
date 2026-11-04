@@ -42,6 +42,7 @@ function ServiceTable({ rows }: { rows: ReefService[] }) {
           <th>Name</th>
           <th>Category</th>
           <th data-align="right">Price (USDC per call)</th>
+          <th>Last 7 days</th>
           <th>Pays to</th>
           <th>Docs</th>
         </tr>
@@ -54,6 +55,9 @@ function ServiceTable({ rows }: { rows: ReefService[] }) {
             <td data-align="right" data-numeric>
               {formatPrice(s.priceUsdc)}
             </td>
+            <td data-tone="muted">
+              <Score service={s} />
+            </td>
             <td className="w-64 max-w-64">
               <Hash value={s.payTo} label={`${s.name} address`} />
             </td>
@@ -64,6 +68,24 @@ function ServiceTable({ rows }: { rows: ReefService[] }) {
         ))}
       </tbody>
     </DataTable>
+  );
+}
+
+/** ADR-0127: what owners who share counts saw this week, or "new" until there's enough. */
+function Score({ service: s }: { service: ReefService }) {
+  if (!s.score) return <span>—</span>;
+  const extra =
+    s.score.status === "scored"
+      ? [
+          s.score.settledPct !== null ? `${s.score.settledPct}% settled` : null,
+          s.score.medianMs !== null ? `${(s.score.medianMs / 1000).toFixed(1)} s median` : null,
+        ].filter(Boolean)
+      : [];
+  return (
+    <span data-testid="reef-score" title="From remoras whose owners share their counts">
+      {s.score.line}
+      {extra.length ? ` · ${extra.join(" · ")}` : ""}
+    </span>
   );
 }
 
@@ -81,6 +103,9 @@ function ServiceCards({ rows }: { rows: ReefService[] }) {
             <span className="tabular-nums">{formatPrice(s.priceUsdc)} per call</span>
           </span>
           <span className="text-ob-muted">{s.category}</span>
+          <span className="text-sm text-ob-secondary">
+            <Score service={s} />
+          </span>
           <Hash value={s.payTo} label={`${s.name} address`} />
           <Docs service={s} />
         </li>

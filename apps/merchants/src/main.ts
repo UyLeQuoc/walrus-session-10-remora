@@ -32,21 +32,26 @@ for (const network of ["testnet", "mainnet"] as const) {
     | { usdcCoinType: string }
     | undefined;
   if (!payTo || !facilitatorUrl || !apiKey || !d) continue;
-  networks[network] = { payTo, asset: d.usdcCoinType, facilitatorUrl };
-  clients[network] = createTatumSuiClient({
+  const client = createTatumSuiClient({
     network,
     apiKey,
     fallbackUrl: suiFallbackUrl(network),
   });
+  clients[network] = client;
+  // ADR-0120: the client also reads MPP digest credentials (@suimpp/mpp's buyers).
+  networks[network] = { payTo, asset: d.usdcCoinType, facilitatorUrl, client };
 }
 // ADR-0031: any exact payment is accepted (an owner can pay once from the approval inbox); the
 // facilitator still reports the Disc intent when the payment came through a Disc.
 const disc = process.env.MERCHANT_REQUIRE_DISC === "1";
+// ADR-0120: every route speaks MPP too. Without MPP_SECRET, challenges are bound per process.
+const mpp = process.env.MPP_SECRET ? { secret: process.env.MPP_SECRET } : {};
 const pay = (amount: string, description: string): X402Options => ({
   amount,
   description,
   networks,
   disc,
+  mpp,
 });
 
 let summarize: Summarize | undefined;

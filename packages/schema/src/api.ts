@@ -51,6 +51,12 @@ export const FEED_TYPES = [
   "rule_learned",
   "handoff",
   "config_changed",
+  /** ADR-0124: a remora proposed its own budget. */
+  "proposal",
+  /** ADR-0128: a weekly "What I learned". */
+  "review",
+  /** U18 B2: a subscription asked more than the price it remembers. */
+  "price_hike",
 ] as const;
 
 /** One row of the activity feed (`GET /api/feed`); `receiptId` opens its Wake (N4). */

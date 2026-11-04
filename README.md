@@ -115,6 +115,24 @@ that memory.**
   - Claude Code reads the same memories through Remora's MCP server.
 - **Charts** come only from recorded events: the Wallet watcher's noise rate, and the Researcher's cost per useful answer
   (`GET /api/learning/export`).
+- **It proposes its own budget** ([ADR-0124](docs/adr/0124-budget-proposals-cite-memories.md)).
+  - Rules in code see a limit nearly spent, barely used, or asked over twice. The remora then
+    proposes a change and cites 2–5 of its own memories, each a Walrus blob.
+  - You accept with one signature, or decline with a reason.
+  - The outcome is written back to memory, and the next proposal reads it.
+- **The Reef learns from everyone who shares** ([ADR-0127](docs/adr/0127-reef-reputation-from-shared-counts.md)).
+  - Each service shows 7-day counts from owners who opted in: paid calls, refusals, ratings, median
+    time.
+  - The planner skips a service most owners rate as noise, and Why? says so.
+- **Every Monday, "What I learned"** ([ADR-0128](docs/adr/0128-weekly-review-written-back-to-memory.md)).
+  It's written from its own numbers and saved to its memory. The next week's review reads the last
+  one.
+- **Lend what it learned, and take it back** ([ADR-0130](docs/adr/0130-memory-capsules-seal.md)).
+  - A few memories go Seal-encrypted to another owner's remora, under a Move policy on Sui:
+    `seal_approve` checks the grantee, the expiry and that the capsule isn't revoked.
+  - A revoke is one signature; the next turn can't read them.
+- **Templates can carry a starter pack** ([ADR-0131](docs/adr/0131-starter-memory-packs.md)):
+  scrubbed lines its author picked, which whoever hatches it picks again.
 
 ## Agent payments: x402, settled on Sui
 - **The x402 flow.** A Researcher asks a Reef service, gets `402 Payment Required`, pays from its Disc, and
@@ -133,6 +151,20 @@ that memory.**
 - **Red team.** `bun run evals` runs 28 attacks in CI, with 0 overspends
   ([evals/](evals/README.md)). Under them, the Move tests prove that money reaches only allowlisted
   payees, within the caps.
+- **MPP too** ([ADR-0120](docs/adr/0120-mpp-on-every-door.md)).
+  - Every x402 door also answers the Payment HTTP auth scheme (`WWW-Authenticate: Payment`, method
+    `sui`, intent `charge`), shaped like `@suimpp/mpp`.
+  - It accepts a signed transaction or an executed digest checked over gRPC.
+  - `disc.fetch` pays an MPP-only 402.
+- **Anyone pays from a wallet** ([ADR-0126](docs/adr/0126-public-remora-page.md)). A remora on sale
+  has a public page where a visitor buys one answer from their own wallet. Gas is sponsored, and it
+  settles only after the answer.
+- **People, not just services.**
+  - An Errand pays your contacts, with the memo anchored onchain
+    ([ADR-0125](docs/adr/0125-errand-pays-contacts.md)), and splits bills with pay links
+    ([ADR-0132](docs/adr/0132-splitter-and-pay-links.md)).
+  - A Subscriptions keeper stops on a price it doesn't remember
+    ([ADR-0129](docs/adr/0129-subscriptions-keeper.md)).
 
 ## What it does, with proof
 
@@ -155,6 +187,13 @@ that memory.**
 | **Crews** | One signature makes a crew. Its lead splits one question across its members, all at once; each pays from its own limit, and the answer lists every receipt. Pause or retire the crew together | [U17 exit](docs/spikes/2026-11-05-u17-exit.md): three members, three receipts ([ADR-0114](docs/adr/0114-crews.md)) | Nov 4 |
 | **At scale** | 50 remoras, 1,000 paid calls through the product's own pay path with the model out of the loop; 50 attempts over the cap or off the list, all aborted onchain; every Disc read back; live numbers on `/stats` | [load run](docs/spikes/2026-11-04-u17-load.json): 1,000/1,000 paid, about 22 a minute from 5 to 20 at once, **0 overspends**, about 0.001 SUI of sponsored gas a payment | Nov 4 |
 | **More doors** | Add a remora to Claude Code, Cursor or VS Code in one click; a Telegram Mini App shows receipts and pauses everything | [ADR-0115](docs/adr/0115-telegram-mini-app-and-mcp-links.md) (unit tested; the Mini App needs the deployed bot) | Nov 4 |
+| **It proposes its budget** | Rules in code see a limit nearly spent or barely used; the remora proposes a change citing 2–5 of its Walrus memories, you sign once or decline with a reason, and the outcome is remembered | [U18 exit](docs/spikes/2026-11-05-u18-exit.md): "0.03 → 0.09 USDC", two cited blobs, accepted `8JDJStew…`, read back onchain ([ADR-0124](docs/adr/0124-budget-proposals-cite-memories.md)) | Nov 5 |
+| **Lend memories, take them back** | A few memories Seal-encrypted on Walrus for another owner's remora, under a Move policy on Sui; one signature lends, one revokes | [U18 exit](docs/spikes/2026-11-05-u18-exit.md): lent `Fx5v3mAw…`, read, revoked `BtASnRAF…`, then refused by the key servers ([ADR-0130](docs/adr/0130-memory-capsules-seal.md)) | Nov 5 |
+| **Weekly review, Reef scores, starter packs** | "What I learned" from its own numbers, back into memory; 7-day Reef counts from owners who opt in; a template's scrubbed public lines | [U18 exit](docs/spikes/2026-11-05-u18-exit.md) ([ADR-0128](docs/adr/0128-weekly-review-written-back-to-memory.md), [ADR-0127](docs/adr/0127-reef-reputation-from-shared-counts.md), [ADR-0131](docs/adr/0131-starter-memory-packs.md)) | Nov 5 |
+| **Pays people** | An Errand pays your contacts with the memo anchored onchain, asks before 3x the usual, and splits bills with pay links anyone pays from a wallet | [U18 exit](docs/spikes/2026-11-05-u18-exit.md): lunch `EBDE43cB…`, dinner after a yes `4DUjieSz…`, a pay link paid `3TW6S5Sm…` ([ADR-0125](docs/adr/0125-errand-pays-contacts.md), [ADR-0132](docs/adr/0132-splitter-and-pay-links.md)) | Nov 5 |
+| **Stops on a price hike** | A Subscriptions keeper reads each 402 first; 20% over the price it remembers, it stops and asks | [U18 exit](docs/spikes/2026-11-05-u18-exit.md): 0.005 twice, stopped at 0.006, paid after you accepted `Ab59gNyv…` ([ADR-0129](docs/adr/0129-subscriptions-keeper.md)) | Nov 5 |
+| **Anyone buys, over x402 or MPP** | A public page per remora on sale: a visitor pays one answer from their own wallet. Every door also speaks MPP | [U18 exit](docs/spikes/2026-11-05-u18-exit.md): page `CHkhGfW4…`; MPP `FFZj9QMd…`, `DugS5y3a…` ([ADR-0126](docs/adr/0126-public-remora-page.md), [ADR-0120](docs/adr/0120-mpp-on-every-door.md)) | Nov 5 |
+| **Steer it in words** | Describe a job and get a drafted remora; change settings from chat with a card you tap or sign; every config change is a version you can restore; webhooks in and out; monthly CSV statements | [U18 exit](docs/spikes/2026-11-05-u18-exit.md) ([ADR-0123](docs/adr/0123-describe-the-job-and-chat-commands.md), [ADR-0122](docs/adr/0122-statements-and-config-history.md), [ADR-0121](docs/adr/0121-price-and-webhook-triggers-outbound-hooks.md)) | Nov 5 |
 | **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. The Researcher reads only memories that still hold, yours first, and a write skipped as a duplicate is shown, not dropped | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4; [ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md) (in-process) | Oct 31 |
 
 ## How it fits together
@@ -230,10 +269,10 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 | `getCheckpoint` | LedgerService | backfill the checkpoints missed during a reconnect | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
 | `getServiceInfo` | LedgerService | the chain tip for health's checkpoint lag and Tatum latency, and diagnose | `apps/server/src/ops/index.ts` |
 | `getObject` | LedgerService | Disc, allowance and cap state; diagnose's Move type checks; Scout's object reads | `apps/merchants/src/sui-risk.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/runtime/remoras.ts` (+2) |
-| `getTransaction` | LedgerService | confirm owner transactions by digest; hatchery events; Wake checks | `apps/facilitator/src/facilitator.ts`, `apps/merchants/src/sui-risk.ts`, `apps/server/src/hatchery/service.ts` (+3) |
-| `executeTransaction` | TransactionExecutionService | remora payments (sponsored) and server-signed transactions | `apps/facilitator/src/facilitator.ts` |
+| `getTransaction` | LedgerService | confirm owner transactions by digest; hatchery events; Wake checks | `apps/facilitator/src/facilitator.ts`, `apps/merchants/src/sui-risk.ts`, `apps/server/src/hatchery/service.ts` (+5) |
+| `executeTransaction` | TransactionExecutionService | remora payments (sponsored) and server-signed transactions | `apps/facilitator/src/facilitator.ts`, `apps/server/src/runtime/approvals.ts` |
 | `simulateTransaction` | TransactionExecutionService | the gas station and Sonar dry-run before anything is signed | `apps/facilitator/src/facilitator.ts` |
-| `waitForTransaction` | LedgerService | wait for finality before confirming | `apps/facilitator/src/facilitator.ts`, `apps/server/src/playground/index.ts` |
+| `waitForTransaction` | LedgerService | wait for finality before confirming | `apps/facilitator/src/facilitator.ts`, `apps/server/src/playground/index.ts`, `apps/server/src/runtime/approvals.ts` (+1) |
 | `getBalance` | StateService | funds, the playground funder, sponsor gas | `apps/facilitator/src/config.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/playground/index.ts` (+2) |
 | `listBalances` | StateService | Scout's balance reads | `apps/merchants/src/wallet.ts`, `apps/server/src/runtime/schedules.ts`, `apps/server/src/tools/read.ts` |
 | `listCoins` | StateService | Detect funds (coins → address balance) | `apps/facilitator/src/facilitator.ts`, `apps/server/src/money/funds.ts` |

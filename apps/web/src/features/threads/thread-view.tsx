@@ -10,11 +10,13 @@ import {
   Coins,
   EyeOff,
   Info,
+  Scale,
   Settings2,
   ShieldX,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  TriangleAlert,
   Unplug,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -23,6 +25,7 @@ import { RemoraAvatar, remoraTintText } from "@/components/app/remora-avatar";
 import { Time } from "@/components/app/time";
 import { Badge } from "@/components/ui/badge";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { ChangeCard, changeOf } from "@/features/changes/change-card";
 import { Markdown } from "@/features/chat/markdown";
 import { api } from "@/features/remoras/api";
 import { refusedBy } from "@/features/remoras/feed-list";
@@ -50,6 +53,9 @@ const CHIP_TONE: Partial<
   blocked: "danger",
   shadow: "warning",
   rule_learned: "accent",
+  proposal: "accent",
+  review: "accent",
+  price_hike: "warning",
 };
 
 const CHIP_ICON: Partial<Record<NonNullable<Line["type"]>, ReactNode>> = {
@@ -60,6 +66,9 @@ const CHIP_ICON: Partial<Record<NonNullable<Line["type"]>, ReactNode>> = {
   episode: <Brain />,
   handoff: <ArrowRightLeft />,
   config_changed: <Settings2 />,
+  proposal: <Scale />,
+  review: <Sparkles />,
+  price_hike: <TriangleAlert />,
 };
 
 function Feedback({ line }: { line: Line }) {
@@ -133,7 +142,9 @@ function RemoraLine({
   remoraId?: string;
   onChanged: () => void;
 }) {
-  if (line.type && CHIP_TYPES.includes(line.type)) {
+  // C2 (ADR-0123): a change asked for in chat is an `action` with `kind: "change"`, shown as its card.
+  const change = changeOf(line.payload);
+  if (line.type && CHIP_TYPES.includes(line.type) && !change) {
     // ADR-0103: a service that took no money isn't the limit stopping it; it reads grey.
     const failed = line.type === "blocked" && refusedBy({ payload: line.payload }) === "service";
     return (
@@ -195,6 +206,13 @@ function RemoraLine({
     >
       {line.type === "approval_needed" ? (
         <InlineApproval payload={line.payload} onDone={onChanged} />
+      ) : change && line.eventId ? (
+        <ChangeCard
+          key={`${line.eventId}:${change.status}`}
+          id={line.eventId}
+          change={change}
+          onDone={onChanged}
+        />
       ) : (
         <Bubble align="start" variant={line.type === "ping" ? "tinted" : "muted"}>
           <BubbleContent>

@@ -1,13 +1,15 @@
 /**
  * `/remoras/new` (A6 + B1·ui): pick a template as a card, name it, set its budget or what it
  * watches, sign one transaction for the Disc (Scout) or none (Sentinel), and land on its page while
- * its first run (N13) comes in. Each wait says what it is waiting for (N6).
+ * its first run (N13) comes in. Each wait says what it is waiting for (N6). Or describe the job in
+ * words (C1, ADR-0123): the draft fills this same form for review.
  */
 
-import type { Template } from "@remora/schema";
+import type { RemoraDraft, Template } from "@remora/schema";
 import { Package, Shield } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { Page, PageHeader } from "@/components/app/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +26,8 @@ import { payeeName } from "@/lib/payee";
 import { parseUsdc } from "@/lib/usdc";
 import { Property, PropertyList } from "@/openbot/pages";
 import { api } from "./api";
+import { DescribeJob } from "./describe-job";
+import { formFromDraft, setupFromForm } from "./draft-form";
 import { RequireOwner, useLoad } from "./hooks";
 
 type Step = "idle" | "creating" | "signing" | "confirming";
@@ -48,6 +52,14 @@ function Wizard({ owner }: { owner: string }) {
   const [follow, setFollow] = useState(
     "SUI and WAL prices\nweather in Hanoi\ngithub.com/MystenLabs/walrus",
   );
+  // ADR-0125: an Errand's people, one "Name 0x…" per line.
+  const [people, setPeople] = useState("");
+  // C1: what a draft adds beyond the picker's fields; empty when it came from the picker.
+  const [payees, setPayees] = useState<string[] | null>(null);
+  const [persona, setPersona] = useState("");
+  const [when, setWhen] = useState("");
+  const [question, setQuestion] = useState("");
+  const [rules, setRules] = useState("");
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState("");
   const list = Object.entries(templates.data?.templates ?? {}) as [string, Template][];
@@ -60,6 +72,23 @@ function Wizard({ owner }: { owner: string }) {
     .split("\n")
     .map((x) => x.trim())
     .filter(Boolean);
+  const canPay = payees ?? chosen?.payees ?? [];
+  const drafted = Boolean(persona || when || rules);
+
+  const fill = (d: RemoraDraft) => {
+    const f = formFromDraft(d);
+    if (f.slug) setSlug(f.slug);
+    setName(f.name ?? "");
+    if (f.monthly) setMonthly(f.monthly);
+    if (f.perPayment) setPerPayment(f.perPayment);
+    setPayees(f.payees ?? null);
+    if (f.watch) setWatch(f.watch);
+    if (f.follow) setFollow(f.follow);
+    setPersona(f.persona ?? "");
+    setWhen(f.when ?? "");
+    setQuestion(f.question ?? "");
+    setRules(f.rules ?? "");
+  };
 
   const create = async () => {
     setError("");
@@ -75,7 +104,7 @@ function Wizard({ owner }: { owner: string }) {
         windowLimit: limit.toString(),
         window: "month",
         perPaymentCap: cap.toString(),
-        payees: chosen?.payees ?? [],
+        payees: canPay,
       };
     }
     const addresses = watch.split(/[\s,]+/).filter(Boolean);
@@ -86,6 +115,9 @@ function Wizard({ owner }: { owner: string }) {
       return setError("Watch one or more Sui addresses (0x…).");
     if (slug === "briefer" && !briefItems.length)
       return setError("List at least one thing for its brief to follow.");
+    const contacts = parsePeople(people);
+    if (slug === "errand" && (!contacts.length || contacts.some((c) => !c.name)))
+      return setError('Add at least one person as "Name 0x…".');
     setStep("creating");
     const made = await api.create({
       template: slug,
@@ -93,6 +125,7 @@ function Wizard({ owner }: { owner: string }) {
       ...(budget ? { budget } : {}),
       ...(slug === "sentinel" ? { watch: addresses } : {}),
       ...(slug === "briefer" ? { items: briefItems } : {}),
+      ...(slug === "errand" ? { contacts } : {}),
     });
     if (!made.ok) {
       setStep("idle");
@@ -111,6 +144,12 @@ function Wizard({ owner }: { owner: string }) {
         return setError(`${(err as Error).message} Your remora is saved; finish from its page.`);
       }
     }
+    const extras = setupFromForm({ slug, persona, when, question, rules }, chosen?.persona);
+    if (extras) {
+      const set = await api.setup(id, extras);
+      if (!set.ok) toast.error(`${set.error} Finish from its page.`);
+      else if (set.data.skipped.length) toast(`Not set: ${set.data.skipped.join("; ")}`);
+    }
     navigate(`/remoras/${id}?new=1`);
   };
 
@@ -126,10 +165,14 @@ function Wizard({ owner }: { owner: string }) {
       <PageHeader title="New remora" description="Pick what it does. You can change it later." />
 
       <div className="flex w-full flex-col gap-6">
+        <DescribeJob onDraft={fill} />
         <RadioGroup
           aria-label="Template"
           value={slug}
-          onValueChange={setSlug}
+          onValueChange={(s) => {
+            setSlug(s);
+            setPayees(null);
+          }}
           className="ob-card-grid"
         >
           {list.map(([s, t]) => {
@@ -208,7 +251,14 @@ function Wizard({ owner }: { owner: string }) {
                     </Hint>
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {(chosen?.payees ?? []).map((payee) => (
+                    {slug === "errand"
+                      ? parsePeople(people).map((c) => (
+                          <Badge key={c.address + c.name} variant="outline" title={c.address}>
+                            {c.name || "?"}
+                          </Badge>
+                        ))
+                      : null}
+                    {canPay.map((payee) => (
                       <Badge key={payee} variant="outline" title={payee}>
                         {payeeName(payee)}
                       </Badge>
@@ -232,6 +282,22 @@ function Wizard({ owner }: { owner: string }) {
                 </FieldDescription>
               </Field>
             ) : null}
+            {slug === "errand" ? (
+              <Field>
+                <FieldLabel htmlFor="people">Who it may pay</FieldLabel>
+                <Textarea
+                  id="people"
+                  rows={3}
+                  placeholder={"Linh 0x…\nHuy 0x…"}
+                  value={people}
+                  onChange={(e) => setPeople(e.target.value)}
+                />
+                <FieldDescription>
+                  One per line: a name, then a Sui address. It pays only these people, within its
+                  limit, and asks you before an unusual amount.
+                </FieldDescription>
+              </Field>
+            ) : null}
             {slug === "sentinel" ? (
               <Field>
                 <FieldLabel htmlFor="watch">Addresses to watch</FieldLabel>
@@ -243,6 +309,19 @@ function Wizard({ owner }: { owner: string }) {
                 />
                 <FieldDescription>One per line. It only reads; it never pays.</FieldDescription>
               </Field>
+            ) : null}
+            {drafted ? (
+              <DraftedFields
+                slug={slug}
+                persona={persona}
+                setPersona={setPersona}
+                when={when}
+                setWhen={setWhen}
+                question={question}
+                setQuestion={setQuestion}
+                rules={rules}
+                setRules={setRules}
+              />
             ) : null}
           </div>
 
@@ -262,7 +341,7 @@ function Wizard({ owner }: { owner: string }) {
                   <Property term="At the cap">
                     {payments === null ? "—" : `${payments} payments a month`}
                   </Property>
-                  <Property term="Can pay">{(chosen?.payees ?? []).length} sources</Property>
+                  <Property term="Can pay">{canPay.length} sources</Property>
                 </>
               ) : (
                 <Property term="Budget">None, read-only</Property>
@@ -303,10 +382,75 @@ function Wizard({ owner }: { owner: string }) {
   );
 }
 
+/** C1: what only a draft has (its persona, its schedule, a watcher's rules), editable before hatching. */
+function DraftedFields(p: {
+  slug: string;
+  persona: string;
+  setPersona: (v: string) => void;
+  when: string;
+  setWhen: (v: string) => void;
+  question: string;
+  setQuestion: (v: string) => void;
+  rules: string;
+  setRules: (v: string) => void;
+}) {
+  return (
+    <>
+      <Field>
+        <FieldLabel htmlFor="persona">How it behaves</FieldLabel>
+        <Textarea
+          id="persona"
+          rows={3}
+          maxLength={2_000}
+          value={p.persona}
+          onChange={(e) => p.setPersona(e.target.value)}
+        />
+      </Field>
+      {p.slug === "sentinel" ? (
+        <Field>
+          <FieldLabel htmlFor="rules">Rules it learns</FieldLabel>
+          <Textarea
+            id="rules"
+            rows={2}
+            value={p.rules}
+            onChange={(e) => p.setRules(e.target.value)}
+          />
+          <FieldDescription>One per line, taught right after it hatches.</FieldDescription>
+        </Field>
+      ) : p.when || p.question ? (
+        <div className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+          <Field>
+            <FieldLabel htmlFor="when">When</FieldLabel>
+            <Input id="when" value={p.when} onChange={(e) => p.setWhen(e.target.value)} />
+          </Field>
+          {p.slug === "briefer" ? null : (
+            <Field>
+              <FieldLabel htmlFor="question">It asks</FieldLabel>
+              <Input
+                id="question"
+                value={p.question}
+                onChange={(e) => p.setQuestion(e.target.value)}
+              />
+            </Field>
+          )}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function NewRemoraPage() {
   return (
     <RequireOwner what="the create wizard" needsWallet>
       {(owner) => <Wizard owner={owner} />}
     </RequireOwner>
   );
+}
+
+/** "Linh 0xabc" per line → contacts; a line without an address is skipped. */
+export function parsePeople(text: string): { name: string; address: string }[] {
+  return text
+    .split("\n")
+    .map((line) => /^(.*?)[\s,:]+(0x[0-9a-fA-F]{1,64})\s*$/.exec(line.trim()))
+    .flatMap((m) => (m ? [{ name: (m[1] ?? "").trim(), address: m[2] ?? "" }] : []));
 }

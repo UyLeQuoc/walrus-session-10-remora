@@ -15,6 +15,16 @@ export {
   type UsefulnessJudge,
 } from "./admission.ts";
 export {
+  type CapsuleMemory,
+  type CapsulePlain,
+  decryptCapsule,
+  encryptCapsule,
+  readFromWalrus,
+  storeOnWalrus,
+  TESTNET_KEY_SERVERS,
+  WALRUS_TESTNET,
+} from "./capsule.ts";
+export {
   createClient,
   guestScope,
   type MemoryScope,

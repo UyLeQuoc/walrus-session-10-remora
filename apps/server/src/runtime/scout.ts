@@ -9,10 +9,12 @@
 import { remoraEvents } from "@remora/db";
 import { isRemoraRef } from "../money/listings.ts";
 import { payeeLabel, type ResolvedReef } from "../money/reef.ts";
+import { skipReason } from "../money/reputation.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import { handoff, proposeSchedule } from "../tools/propose.ts";
 import { readTools } from "../tools/read.ts";
 import { modelIdFor, type UntrustedData, usdcLabel } from "./brain.ts";
+import { capsuleData } from "./capsules.ts";
 import { assign, crewMembers, isLead } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { admitMemories } from "./facts.ts";
@@ -170,7 +172,7 @@ async function leadAsk(
   deps: RuntimeDeps,
   lead: Remora,
   question: string,
-  trigger: { kind: "message" | "cron" | "handoff" | "webhook"; ref: string },
+  trigger: { kind: "message" | "cron" | "handoff" | "webhook" | "price"; ref: string },
 ): Promise<ScoutResult> {
   const members = await crewMembers(deps, lead);
   const reef = deps.reef(lead.network).filter((e) => !isRemoraRef(e.ref));
@@ -248,7 +250,7 @@ export async function scoutAsk(
   deps: RuntimeDeps,
   r: Remora,
   question: string,
-  trigger: { kind: "message" | "cron" | "handoff" | "webhook"; ref: string } = {
+  trigger: { kind: "message" | "cron" | "handoff" | "webhook" | "price"; ref: string } = {
     kind: "message",
     ref: "web",
   },
@@ -348,9 +350,24 @@ export async function scoutAsk(
     return o;
   };
   const planned: { payee: string; o: PayOutcome }[] = [];
-  for (const b of opts.plan ?? planBuys(question, reef))
-    planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
+  // ADR-0127: a service most owners rate as noise is skipped, and Why? says so.
+  const scores = deps.reputation?.(r.network);
+  const skipped: { payee: string; reason: string }[] = [];
+  for (const b of opts.plan ?? planBuys(question, reef)) {
+    const why = skipReason(scores?.get(b.entry.ref), payeeLabel(b.entry.ref));
+    if (why) skipped.push({ payee: b.entry.ref, reason: why });
+    else planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
+  }
   lap("payMs");
+  // ADR-0130: memories another owner lent it, decrypted now with its own key, never kept. A revoked
+  // or expired capsule is refused by the key servers, and the answer says so.
+  const capsules =
+    opts.sold || opts.playground
+      ? { data: [], reads: [] }
+      : await capsuleData(deps, r, String((r.config as { keyId?: string }).keyId ?? r.id)).catch(
+          () => ({ data: [], reads: [] }),
+        );
+  data.push(...capsules.data);
 
   const persona = String(
     (r.config as { persona?: string }).persona ?? "You are the owner's Researcher.",
@@ -373,6 +390,11 @@ export async function scoutAsk(
         ? {}
         : {
             pay: async ({ payee, url, reason }: { payee: string; url: string; reason: string }) => {
+              const why = skipReason(scores?.get(payee), payeeLabel(payee));
+              if (why) {
+                skipped.push({ payee, reason: why });
+                return `Not bought: ${why}.`;
+              }
               const o = await buy(payee, url, reason);
               return o.kind === "paid"
                 ? {
@@ -415,12 +437,26 @@ export async function scoutAsk(
       ? `Here's what I found:\n${data.map((d) => `• ${d.source}: ${d.content.slice(0, 400)}`).join("\n")}`
       : "I couldn't reach my model right now, and nothing needed buying.";
   }
-  const note = unpaidNote(planned);
+  const note = [
+    unpaidNote(planned),
+    ...skipped.map((x) => `I ${x.reason}.`),
+    ...capsules.reads
+      .filter((x) => !x.ok)
+      .map((x) => `I couldn't read the memories ${x.from} lent me (${x.reason}).`),
+  ]
+    .filter(Boolean)
+    .join(" ");
   if (note) answer = `${answer}\n\n_${note}_`;
   if (opts.suffix) answer = `${answer}${opts.suffix}`;
   lap("modelMs");
   await addUsage(deps.db, r.id, tokens);
-  const spend = outcomes.map((o) => `${outcomeLine(o)}`).join("; ");
+  const spend = [
+    ...outcomes.map((o) => `${outcomeLine(o)}`),
+    ...skipped.map((x) => x.reason),
+    ...capsules.reads.map((x) =>
+      x.ok ? `read the capsule from ${x.from}` : `capsule from ${x.from} refused: ${x.reason}`,
+    ),
+  ].join("; ");
   const wake = await recordWake(
     { db: deps.db, memory: deps.memory, log: deps.log },
     r,
@@ -433,7 +469,7 @@ export async function scoutAsk(
     }),
     {
       action: "answer",
-      reason: outcomes.length ? `answered after: ${spend}` : "answered from memory",
+      reason: spend ? `answered after: ${spend}` : "answered from memory",
     },
     { verdict: "allow", reasons: ["no money moved in this step"] },
     { responseSha256: sha256Hex(answer) },
@@ -449,6 +485,8 @@ export async function scoutAsk(
         question,
         answer,
         paidPayees,
+        ...(skipped.length ? { skipped } : {}),
+        ...(capsules.reads.length ? { capsules: capsules.reads } : {}),
         digests: outcomes.flatMap((o) => (o.kind === "paid" && o.digest ? [o.digest] : [])),
         ...(opts.sold ? { sale: { buyer: opts.sold.buyer } } : {}),
         ...(opts.payload ?? {}),

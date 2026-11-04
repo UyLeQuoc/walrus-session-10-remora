@@ -1,3 +1,5 @@
 test-results/
 playwright-report/
 screenshots/
+# U18: exit results that survive playwright clearing test-results/
+exit-results/

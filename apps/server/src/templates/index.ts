@@ -69,6 +69,44 @@ export const TEMPLATES = {
     starterMemories: [],
     examples: ["SUI and WAL prices", "weather in Hanoi", "github.com/MystenLabs/sui"],
   }),
+  // ADR-0125: the fourth kind pays people. Its payees are its owner's contacts, added with one
+  // signature each time; it remembers what each is usually paid and asks before an unusual amount.
+  errand: Template.parse({
+    schema: "remora.template/v1",
+    name: "Errand",
+    summary: "Pays the people you list, within its limit, and asks before anything unusual.",
+    persona:
+      "You are the owner's Errand. You pay the owner's contacts when asked, within your limit, with a memo for each payment. You never pay anyone who isn't a contact.",
+    tools: ["memory.recall", "memory.remember", "pay", "notify"],
+    triggers: [{ kind: "message" }],
+    budgetSuggestion: { monthlyUsd: [1, 20], perPaymentUsd: 1 },
+    payees: [],
+    starterMemories: [],
+    examples: ["Pay Linh 2 USDC for lunch", "Send Huy 0.5 USDC for the taxi"],
+  }),
+  // ADR-0129: the fifth kind pays recurring x402 charges and remembers what each normally costs.
+  keeper: Template.parse({
+    schema: "remora.template/v1",
+    name: "Subscriptions keeper",
+    summary: "Pays your recurring paid feeds, remembers their usual price, and stops on a hike.",
+    persona:
+      "You are the owner's Subscriptions keeper. You pay the owner's recurring paid services at their usual price, and you never pay a price hike without asking.",
+    tools: ["memory.recall", "memory.remember", "pay", "notify", "schedule"],
+    triggers: [{ kind: "cron", cron: "0 1 * * *", human: "every day at 8am" }],
+    budgetSuggestion: { monthlyUsd: [1, 10], perPaymentUsd: 0.05 },
+    payees: [
+      "reef:sui-risk",
+      "reef:odds",
+      "reef:brief",
+      "reef:wallet",
+      "reef:walrus",
+      "reef:github",
+      "reef:price",
+      "reef:weather",
+    ],
+    starterMemories: [],
+    examples: ["The SUI price every morning", "A paid feed you listed in the Reef"],
+  }),
 } as const;
 
 export type TemplateSlug = keyof typeof TEMPLATES;

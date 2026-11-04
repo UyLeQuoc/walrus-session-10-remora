@@ -114,7 +114,14 @@ export function SellCard({ r, readOnly = false }: { r: RemoraView; readOnly?: bo
         )}
         {v.url && on ? (
           <p className="text-xs text-ob-muted [overflow-wrap:anywhere]">
-            Paid door: <code>{v.url}?q=…</code>
+            Paid door: <code>{v.url}?q=…</code> ·{" "}
+            <a
+              href={`/r/${sale?.slug ?? ""}`}
+              className="text-ob-accent-text hover:underline"
+              data-testid="sell-public-page"
+            >
+              its public page
+            </a>
           </p>
         ) : null}
         {error ? <p className="text-md text-ob-danger-text">{error}</p> : null}

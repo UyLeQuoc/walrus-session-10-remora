@@ -20,6 +20,8 @@ export const SafetyFinding = z.object({
     "unknown_template",
     "secret",
     "model_flag",
+    /** ADR-0131: a starter memory line that names a person, a handle, an email or a phone. */
+    "private_memory",
   ]),
   /** Where in the file, e.g. `remoras[0].persona`. */
   where: z.string().min(1),
@@ -55,6 +57,10 @@ export const ShareReview = z.object({
   removed: z.array(z.object({ field: z.string().min(1), reason: z.string().min(1) })),
   safety: SafetyReport,
   sizeBytes: z.number().int().positive(),
+  /** ADR-0131: memories the author could add as a public starter pack, each checked. */
+  packCandidates: z
+    .array(z.object({ text: z.string(), ok: z.boolean(), why: z.string().nullable() }))
+    .optional(),
 });
 
 /** M4: one template in the gallery, from the hatchery events and its blob. */

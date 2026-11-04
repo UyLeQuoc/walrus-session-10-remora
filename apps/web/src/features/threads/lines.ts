@@ -34,6 +34,9 @@ export const CHIP_TYPES: FeedType[] = [
   "action",
   "handoff",
   "config_changed",
+  "proposal",
+  "review",
+  "price_hike",
 ];
 
 /** Events that have a Wake to open from Why?. */

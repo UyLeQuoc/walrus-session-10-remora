@@ -5,8 +5,18 @@
  * balances as big numbers, each spending limit as a meter, and the money path as a picture.
  */
 import { toDiscError } from "@remora/disc-sdk";
-import { ArrowDownToLine, Check, ChevronDown, Coins, Plus, RefreshCw, Wallet } from "lucide-react";
+import {
+  ArrowDownToLine,
+  Check,
+  ChevronDown,
+  Coins,
+  Plus,
+  ReceiptText,
+  RefreshCw,
+  Wallet,
+} from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { Term } from "@/components/app/glossary";
 import { Page, PageHeader, Section } from "@/components/app/page";
@@ -91,6 +101,11 @@ function Funds({ owner }: { owner: string }) {
         }
         actions={
           <>
+            <Button asChild variant="outline">
+              <Link to="/statements">
+                <ReceiptText /> Statements
+              </Link>
+            </Button>
             <Button
               type="button"
               variant="ghost"

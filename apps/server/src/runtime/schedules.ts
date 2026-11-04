@@ -6,13 +6,16 @@
  * The owner sets schedules directly; a remora can only propose one, as an approval (N2).
  */
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { approvals, eq, remoraEvents, remoras, sentinelRules } from "@remora/db";
+import { approvals, eq, ownerSettings, remoraEvents, remoras, sentinelRules } from "@remora/db";
 import { answersQuestions } from "../templates/index.ts";
 import { nextRun } from "../triggers/cron.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { briefQuestion } from "./brief-question.ts";
+import { saveConfig } from "./config-versions.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { approveUnusual } from "./errand.ts";
 import { enqueue, type JobHandler } from "./jobs.ts";
+import { payHikeOnce, runKeeper } from "./keeper.ts";
 import type { Button } from "./notify.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { scoutAsk } from "./scout.ts";
@@ -22,7 +25,9 @@ export { handoff, JOB, proposeSchedule } from "../tools/propose.ts";
 
 import { JOB } from "../tools/propose.ts";
 import { PAID_CHECK } from "../triggers/indexer.ts";
+import { PROPOSAL_CHECK, proposalCheckHandler } from "./proposals.ts";
 import { paidCheckHandler } from "./reality.ts";
+import { REVIEW_WEEKLY, weeklyReviewHandler } from "./review.ts";
 
 export interface Schedule {
   id: string;
@@ -33,8 +38,9 @@ export interface Schedule {
   paused?: boolean;
 }
 
-const schedulesOf = (r: Remora) =>
-  ((r.config as { schedules?: Schedule[] }).schedules ?? []).slice();
+const listOf = (config: Record<string, unknown>) =>
+  ((config as { schedules?: Schedule[] }).schedules ?? []).slice();
+const schedulesOf = (r: Remora) => listOf(r.config);
 
 async function load(deps: RuntimeDeps, id: string) {
   const [r] = await deps.db.select().from(remoras).where(eq(remoras.id, id));
@@ -62,10 +68,10 @@ export async function addSchedule(
   question: string,
   opts: { paused?: boolean } = {},
 ) {
-  if (!answersQuestions(r.template))
+  if (!answersQuestions(r.template) && r.template !== "keeper")
     throw new RemoraError(
       "schedule.unsupported",
-      "Only Researchers and Briefers answer on a schedule.",
+      "Only Researchers, Briefers and Keepers run on a schedule.",
     );
   const p = previewSchedule(when);
   if (!p) throw new RemoraError("schedule.unparsed", `I can't read "${when}" as a schedule.`);
@@ -76,20 +82,17 @@ export async function addSchedule(
     question: question.slice(0, 300),
     ...(opts.paused ? { paused: true } : {}),
   };
-  const schedules = [...schedulesOf(r), s].slice(-10);
-  const [updated] = await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id))
-    .returning();
-  await deps.db.insert(remoraEvents).values({
-    remoraId: r.id,
-    network: r.network,
-    type: "action",
-    summary: `Scheduled ${p.human}${s.paused ? " (paused)" : ""}: ${s.question.slice(0, 100)}`,
-    payload: { schedule: s },
-  });
-  if (!s.paused) await queueNext(deps, updated ?? r, s, new Date());
+  const updated = await saveConfig(
+    deps.db,
+    r.id,
+    (c) => ({ ...c, schedules: [...listOf(c), s].slice(-10) }),
+    {
+      summary: () =>
+        `Scheduled ${p.human}${s.paused ? " (paused)" : ""}: ${s.question.slice(0, 100)}`,
+      payload: { schedule: s },
+    },
+  );
+  if (!s.paused) await queueNext(deps, updated, s, new Date());
   return { schedule: s, next: p.next };
 }
 
@@ -104,22 +107,25 @@ export async function setSchedulePaused(
   const s = list.find((x) => x.id === scheduleId);
   if (!s) throw new RemoraError("schedule.not_found", "No such schedule.", 404);
   const next = { ...s, paused };
-  const schedules = list.map((x) => (x.id === scheduleId ? next : x));
-  const [updated] = await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id))
-    .returning();
-  if (!paused) await queueNext(deps, updated ?? r, next, new Date());
+  const updated = await saveConfig(
+    deps.db,
+    r.id,
+    (c) => ({ ...c, schedules: listOf(c).map((x) => (x.id === scheduleId ? next : x)) }),
+    { summary: () => `${paused ? "Paused" : "Resumed"} ${s.human}: ${s.question.slice(0, 100)}` },
+  );
+  if (!paused) await queueNext(deps, updated, next, new Date());
   return next;
 }
 
 export async function removeSchedule(deps: RuntimeDeps, r: Remora, scheduleId: string) {
-  const schedules = schedulesOf(r).filter((s) => s.id !== scheduleId);
-  await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id));
+  const s = schedulesOf(r).find((x) => x.id === scheduleId);
+  if (!s) return;
+  await saveConfig(
+    deps.db,
+    r.id,
+    (c) => ({ ...c, schedules: listOf(c).filter((x) => x.id !== scheduleId) }),
+    { summary: () => `Removed ${s.human}: ${s.question.slice(0, 100)}` },
+  );
 }
 
 /** N2: approves a non-payment approval (a proposed schedule). */
@@ -150,9 +156,18 @@ export async function approveRule(deps: RuntimeDeps, owner: string, approvalId: 
 /** The inbox's "Approve" for anything that isn't a payment: a proposed schedule or rule. */
 export async function approveYes(deps: RuntimeDeps, owner: string, approvalId: string) {
   const [row] = await deps.db
-    .select({ kind: approvals.kind })
+    .select({ kind: approvals.kind, payload: approvals.payload })
     .from(approvals)
     .where(eq(approvals.id, approvalId));
+  // ADR-0129: a Keeper's price hike, paid once at the new price.
+  if (
+    row?.kind === "over_limit_payment" &&
+    (row.payload as { kind?: string }).kind === "price_hike"
+  )
+    return payHikeOnce(deps, owner, approvalId);
+  // ADR-0125: an unusual amount within an Errand's limits: the owner's yes lets it pay.
+  if (row?.kind === "over_limit_payment" && (row.payload as { viaDisc?: boolean }).viaDisc)
+    return approveUnusual(deps, owner, approvalId);
   return row?.kind === "rule"
     ? approveRule(deps, owner, approvalId)
     : approveSchedule(deps, owner, approvalId);
@@ -282,6 +297,15 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
       // From this run's slot, so a worker that picks it up early never queues the same slot again.
       await queueNext(deps, r, s, new Date(Math.max(Date.now(), job.runAt.getTime())));
       if (r.status !== "active" && r.status !== "shadow") return;
+      // ADR-0129: a Keeper's schedule charges its subscriptions.
+      if (r.template === "keeper") {
+        const run = await runKeeper(deps, r, s.human);
+        await deps.notifier.send(r.ownerAddress, {
+          text: `${r.name} (${s.human}):\n${run.answer}`,
+          buttons: answerButtons(deps.webBase, r, run.eventId),
+        });
+        return;
+      }
       await askAndTell(deps, r, s.question, { kind: "cron", ref: s.id }, `${r.name} (${s.human}):`);
     },
     [JOB.ask]: async (payload) => {
@@ -301,6 +325,14 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
       if (r) await firstRun(deps, r);
     },
     [PAID_CHECK]: paidCheckHandler(deps),
+    [PROPOSAL_CHECK]: proposalCheckHandler(deps),
+    [REVIEW_WEEKLY]: weeklyReviewHandler(deps, async (owner) => {
+      const [s] = await deps.db
+        .select({ timezone: ownerSettings.timezone })
+        .from(ownerSettings)
+        .where(eq(ownerSettings.ownerAddress, owner));
+      return s?.timezone ?? "UTC";
+    }),
   };
 }
 

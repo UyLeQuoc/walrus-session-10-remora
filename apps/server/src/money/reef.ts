@@ -4,6 +4,7 @@
  */
 import type { SuiNetwork } from "@remora/chain";
 import type { ReefService } from "@remora/schema";
+import { type ReefScore, scoreLine } from "./reputation.ts";
 
 export interface ReefEntry {
   ref: `reef:${string}`;
@@ -102,6 +103,13 @@ export function payeeLabel(ref: string): string {
   // `reef:community-<slug>`, shown as "@<slug>".
   const listed = /^reef:(?:remora|community)-(.+)$/.exec(ref);
   if (listed) return `@${listed[1]}`;
+  // ADR-0125: an Errand's contact, `reef:contact-linh-tran`, reads as "Linh Tran".
+  const contact = /^reef:contact-(.+)$/.exec(ref);
+  if (contact)
+    return (contact[1] ?? "")
+      .split("-")
+      .map((w) => (w ? (w[0] ?? "").toUpperCase() + w.slice(1) : w))
+      .join(" ");
   return LABELS[ref] ?? ref.replace(/^reef:/, "");
 }
 
@@ -166,8 +174,40 @@ const ECONOMY_DOCS =
  * E7 `GET /api/reef/services`: one row per service with its `payTo` on this network. ADR-0111: a
  * remora on sale is a row too, in "Remoras", paid at its owner's address.
  */
-export function reefServices(resolved: ResolvedReef[]): ReefService[] {
-  return resolved.flatMap((e): ReefService[] => {
+/** ADR-0127: each service with its 7-day score from shared counts, when scores are given. */
+export function reefServices(
+  resolved: ResolvedReef[],
+  scores?: Map<string, ReefScore>,
+): ReefService[] {
+  return resolved
+    .flatMap((e): (ReefService & { ref: string })[] =>
+      reefService(e).map((x) => ({ ...x, ref: e.ref })),
+    )
+    .map(({ ref, ...x }) => {
+      const s = scores?.get(ref);
+      return {
+        ...x,
+        ref,
+        ...(s
+          ? {
+              score: {
+                status: s.status,
+                calls: s.calls,
+                owners: s.owners,
+                usefulPct: s.usefulPct,
+                settledPct: s.settledPct,
+                medianMs: s.medianMs,
+                days: s.days,
+                line: scoreLine(s),
+              },
+            }
+          : {}),
+      };
+    });
+}
+
+function reefService(e: ResolvedReef): ReefService[] {
+  return [e].flatMap((e): ReefService[] => {
     if (e.ref.startsWith("reef:community-"))
       return [
         {

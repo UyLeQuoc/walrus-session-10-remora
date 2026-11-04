@@ -8,6 +8,7 @@ import { Transaction } from "@mysten/sui/transactions";
 import type { ApprovalRequest, RemoraView } from "@remora/schema";
 import { Wallet } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { Page, PageHeader } from "@/components/app/page";
 import { RemoraAvatar, remoraMood } from "@/components/app/remora-avatar";
@@ -49,7 +50,15 @@ function ApprovalCard({
 }) {
   const { mutateAsync: sign } = useSignTransaction();
   const [busy, setBusy] = useState("");
-  const p = a.payload as { amount?: string; payee?: string; question?: string; human?: string };
+  const p = a.payload as {
+    amount?: string;
+    payee?: string;
+    question?: string;
+    human?: string;
+    reason?: string;
+    viaDisc?: boolean;
+    usual?: string;
+  };
   const cap = who?.config.budget?.perPaymentCap;
   const pay = async () => {
     try {
@@ -104,9 +113,19 @@ function ApprovalCard({
       actions={
         a.status === "pending" ? (
           <>
-            {a.kind === "over_limit_payment" ? (
+            {a.kind === "over_limit_payment" && p.viaDisc ? (
+              // ADR-0125: an unusual amount within an Errand's limits: a yes lets it pay.
+              <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
+                Let it pay{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
+              </Button>
+            ) : a.kind === "over_limit_payment" ? (
               <Button type="button" disabled={!!busy} onClick={() => void pay()}>
                 Pay once{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
+              </Button>
+            ) : a.kind === "budget_change" && who ? (
+              // ADR-0124: a budget proposal is signed where its cited memories are shown.
+              <Button asChild>
+                <Link to={`/remoras/${who.id}?proposal=${a.id}`}>Review</Link>
               </Button>
             ) : (
               <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
@@ -147,8 +166,18 @@ function ApprovalCard({
               />
             ) : null}
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Wallet className="size-3.5" aria-hidden /> You pay it once, from your wallet
+              <Wallet className="size-3.5" aria-hidden />{" "}
+              {p.viaDisc
+                ? `Within its limit, but usually ${usdc(p.usual ?? "0")} USDC: it pays once you say yes`
+                : "You pay it once, from your wallet"}
             </p>
+          </>
+        ) : a.kind === "budget_change" ? (
+          <>
+            <p className="text-lg font-semibold text-ob-text">{a.summary}</p>
+            {typeof p.reason === "string" ? (
+              <p className="text-sm text-ob-secondary">{p.reason}</p>
+            ) : null}
           </>
         ) : (
           <p className="text-sm text-ob-secondary">{a.summary}</p>

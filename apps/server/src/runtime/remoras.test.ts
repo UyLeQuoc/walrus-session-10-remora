@@ -229,7 +229,7 @@ describe.skipIf(!local)("remora service (B1, B3, B8, N5)", () => {
       status: 403,
     });
     await expect(
-      service.create({ owner: OWNER, network: "testnet", template: "errand" }),
+      service.create({ owner: OWNER, network: "testnet", template: "oracle" }),
     ).rejects.toMatchObject({
       code: "template.unknown",
     });

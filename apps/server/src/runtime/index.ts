@@ -10,7 +10,9 @@ import {
   channelIdentities,
   count,
   eq,
+  inArray,
   isNotNull,
+  ownerSettings,
   people,
   receipts,
   remoras,
@@ -27,14 +29,18 @@ import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
 import { personByChannel } from "../identity/persons.ts";
 import { signedInOwner } from "../identity/session.ts";
+import { contactsOf } from "../money/contacts.ts";
 import { log, networks } from "../money/index.ts";
 import { createListings } from "../money/listings.ts";
 import { createSuiUsd } from "../money/rates.ts";
 import { reefFor } from "../money/reef.ts";
+import { createReputation } from "../money/reputation.ts";
 import { startWatcher } from "../triggers/watch.ts";
 import { createBrain } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { createFactLedger, withFacts } from "./facts.ts";
+import { type HooksDeps, hookJobHandlers, startHooks } from "./hooks.ts";
+import { createHookRoutes } from "./hooks-routes.ts";
 import { inspect } from "./inspector.ts";
 import type { JobHandler } from "./jobs.ts";
 import { PgKeyStore } from "./keys.ts";
@@ -43,9 +49,11 @@ import { createRemoraMemory } from "./memory.ts";
 import { memoryIndexFor } from "./memory-controls.ts";
 import { createNotifier } from "./notify.ts";
 import { createRemoraService } from "./remoras.ts";
+import { nextMonday9, queueWeeklyReview } from "./review.ts";
 import { createRemoraRoutes } from "./routes.ts";
 import { remoraJobHandlers } from "./schedules.ts";
 import { onChainEvent } from "./sentinel.ts";
+import { createSteer, steerModel } from "./steer.ts";
 
 const signer = new RemoraSigner(new PgKeyStore(db), parseKek(env.KEY_ENCRYPTION_KEY));
 const merchants = {
@@ -63,6 +71,12 @@ export const listings = createListings({
   db,
   base: env.API_BASE_URL ?? `http://localhost:${env.PORT}`,
   log,
+});
+/** E10 (ADR-0127): the Reef's 7-day scores from shared counts, refreshed every 5 minutes. */
+export const reputation = createReputation({
+  db,
+  log,
+  networks: networks.list().map((n) => n.network),
 });
 const reef = (n: Parameters<typeof reefFor>[1]) => [
   ...reefFor(merchants, n),
@@ -115,9 +129,36 @@ export const runtime: RuntimeDeps = {
   dailyTokens: env.REMORA_DAILY_TOKENS,
   webBase: env.WEB_BASE_URL,
   suiUsd: createSuiUsd({ apiKey: env.TATUM_API_KEY ?? env.TATUM_API_KEY_TESTNET }),
+  reputation: (n) => reputation.scores(n),
+  refreshReputation: () => reputation.refresh(),
 };
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });
+
+/** U18 C1 + C2 (ADR-0123): drafts and chat commands on the small parse model. */
+/** ADR-0125: a chat command adds contacts to the ones an Errand already has (one signature). */
+const withContacts = async (
+  id: string,
+  owner: string,
+  add: { name: string; address: string }[],
+) => [
+  ...contactsOf(await remoraService.get(id, owner)).map((c) => ({
+    name: c.name,
+    address: c.address,
+  })),
+  ...add,
+];
+
+export const steer = createSteer({
+  runtime,
+  service: remoraService,
+  listings,
+  ...steerModel(small.primary),
+  contactsTx: async (id, owner, add) =>
+    (await remoraService.contactsTx(id, owner, await withContacts(id, owner, add))).transaction,
+  confirmContacts: async (id, owner, digest, add) =>
+    remoraService.confirmContacts(id, owner, digest, await withContacts(id, owner, add)),
+});
 
 /** F6: what we wrote per namespace, from our own tables (Wakes → receipts, rules → rules). */
 async function written(r: { id: string }) {
@@ -150,6 +191,7 @@ export const remoraRoutes = createRemoraRoutes({
   hatchery,
   written,
   listings,
+  steer,
   // H3 (ADR-0115): the Mini App's owner, from Telegram's signed launch data and the A5 link.
   tgOwner: async (initData: string) => {
     const user = env.TELEGRAM_BOT_TOKEN ? verifyInitData(initData, env.TELEGRAM_BOT_TOKEN) : null;
@@ -182,12 +224,48 @@ export const remoraRoutes = createRemoraRoutes({
   },
 });
 
-export const remoraJobs: Record<string, JobHandler> = remoraJobHandlers(runtime);
+/** ADR-0121: price and webhook triggers, outbound webhooks. Hook secrets derive from SESSION_SECRET. */
+const hooks: HooksDeps = {
+  rt: runtime,
+  secret: env.SESSION_SECRET,
+  // The web's origin forwards /api to this server (vercel.json), as the dev server does.
+  base: env.API_BASE_URL ?? env.WEB_BASE_URL,
+  production: !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production",
+};
+export const hookRoutes = createHookRoutes({
+  service: remoraService,
+  hooks,
+  owner: async (c: Context) => (await signedInOwner(c))?.owner ?? null,
+});
+
+export const remoraJobs: Record<string, JobHandler> = {
+  ...remoraJobHandlers(runtime),
+  ...hookJobHandlers(hooks),
+};
 
 /** Starts one chain watcher per available network (D1). Returns a stop function. */
+/** F10 (ADR-0128): every live remora has its next Monday review queued (idempotent per week). */
+async function queueReviews() {
+  const rows = await db
+    .select({ r: remoras, timezone: ownerSettings.timezone })
+    .from(remoras)
+    .leftJoin(ownerSettings, eq(ownerSettings.ownerAddress, remoras.ownerAddress))
+    .where(and(inArray(remoras.status, ["active", "shadow"]), eq(remoras.playground, false)));
+  for (const { r, timezone } of rows)
+    await queueWeeklyReview(runtime, r, nextMonday9(new Date(), timezone ?? "UTC"));
+}
+
 export function startRemoraRuntime(): () => void {
   const stopListings = listings.start();
-  if (env.WATCHER !== "on") return stopListings;
+  const stopReputation = reputation.start();
+  void queueReviews().catch((err) => log.warn("review.queue_failed", { error: err }));
+  const stopHooks = startHooks(hooks);
+  if (env.WATCHER !== "on")
+    return () => {
+      stopListings();
+      stopReputation();
+      stopHooks();
+    };
   const stops = networks
     .list()
     .filter((n) => n.available)
@@ -209,6 +287,8 @@ export function startRemoraRuntime(): () => void {
   log.info("remora.runtime", { watchers: stops.length });
   return () => {
     stopListings();
+    stopReputation();
+    stopHooks();
     for (const s of stops) s();
   };
 }

@@ -5,6 +5,7 @@ import { SharePage } from "@/features/hatchery/share-page";
 import { TemplatePage } from "@/features/hatchery/template-page";
 import { PlaygroundPage } from "@/features/playground/playground-page";
 import { ApprovalsPage } from "../features/approvals/approvals-page";
+import { ChangesPage } from "../features/changes/changes-page";
 import { ChatPage } from "../features/chat/chat-page";
 import { ConnectPage } from "../features/connect/connect-page";
 import { ConnectionsPage } from "../features/connections/connections-page";
@@ -14,12 +15,15 @@ import { HomePage } from "../features/home/home-page";
 import { LabPage } from "../features/lab/lab-page";
 import { MemoryInspectorPage } from "../features/memory-inspector/memory-page";
 import { OnboardingPage } from "../features/onboarding/onboarding-page";
+import { PayLinkPage } from "../features/public-remora/pay-link-page";
+import { PublicRemoraPage } from "../features/public-remora/public-remora-page";
 import { ListApiPage } from "../features/reef/list-api-page";
 import { ReefPage } from "../features/reef/reef-page";
 import { NewRemoraPage } from "../features/remoras/new-remora-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
 import { SettingsPage } from "../features/settings/settings-page";
+import { StatementsPage } from "../features/statements/statements-page";
 import { StatsPage } from "../features/status/stats-page";
 import { StatusPage } from "../features/status/status-page";
 import { ImportTeamPage } from "../features/teams/import-page";
@@ -72,4 +76,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "stats", element: <StatsPage /> },
   { path: "tg", element: <TgPage /> },
   { path: "p/:token", element: <PublicWakePage /> },
+  { path: "r/:slug", element: <PublicRemoraPage /> },
+  { path: "pay/:token", element: <PayLinkPage /> },
+  { path: "statements", element: <StatementsPage /> },
+  { path: "changes/:id", element: <ChangesPage /> },
 ];

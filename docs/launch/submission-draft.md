@@ -52,6 +52,15 @@
 
 > **Remora: always-on agents you actually own.** Track 2, Smart Agents for Real Life.
 >
+> **One owner's week.**
+> - **Monday:** their Researcher proposes lowering its own limit, and cites the memories behind it.
+> - **Wednesday:** a paid feed raises its price; their Subscriptions keeper stops and asks instead of
+>   paying.
+> - **Friday:** they lend their Researcher's source notes to a friend's remora for a week, then take
+>   them back with one signature.
+>
+> Every step has a receipt on Sui testnet.
+>
 > A remora runs errands for you. A Researcher answers questions and buys data when that helps. A Wallet watcher watches
 > your Sui addresses and learns what matters to you. Each remora has three things most agents lack:
 >
@@ -68,10 +77,31 @@
 >    across its members, each paying from its own limit. Under load on Nov 4, 50 remoras made 1,000 paid calls
 >    on testnet (about 22 a minute, with the model out of the loop). 50 attempts over the cap or off
 >    the list were all stopped onchain, and with every Disc read back, there were 0 overspends.
+>
+>    **Everyday money, and anyone can pay:**
+>    - An **Errand** pays the people you list ("pay Linh 2 USDC for lunch"), with the memo anchored
+>      onchain. It asks before 3x the usual, and splits bills with pay links.
+>    - A **Subscriptions keeper** reads every 402 first and stops on a price hike it doesn't
+>      remember.
+>    - Anyone, with no account, can buy a remora's answer from its **public page** with their own
+>      wallet.
+>    - Every paid door speaks **x402 and MPP** (the Payment HTTP auth scheme, shaped like
+>      `@suimpp/mpp`'s `sui` method).
 > 2. **Memory that learns, and that you can read,** on Walrus Memory (mainnet). Mark a ping 👎 and
->    The Wallet watcher writes a rule, then stays quiet the next time. That decision's receipt cites the rule's
+>    the Wallet watcher writes a rule, then stays quiet the next time. That decision's receipt cites the rule's
 >    blob. A facts ledger tracks which facts still hold and who said them. You can inspect, correct and
 >    export the memory, and use it from Claude Code over MCP.
+>
+>    **The loop closes** (act → outcome → memory → a better act → the owner signs → remembered):
+>    - a remora **proposes its own budget**, citing the memories behind it; your yes or no is
+>      remembered, and the next proposal reads it;
+>    - the **Reef scores services** from shared outcomes, and the planner skips what owners rate as
+>      noise;
+>    - every Monday it writes **"What I learned"** back to memory, and the next week's review reads
+>      it;
+>    - an owner can **lend memories** to another owner's remora through a Seal policy on Sui, and
+>      revoke them;
+>    - **starter packs** let a template carry its author's scrubbed lessons.
 > 3. **A receipt for every action.** A payment's receipt (its Wake) anchors the payment's intent
 >    onchain, and Tatum's Sui gRPC checks it. A payment from the Disc with no decision behind it alerts the owner within minutes, the
 >    sign of a leaked key.
@@ -91,7 +121,8 @@
 > - Payments run on Sui testnet; memory runs on mainnet (360+ memories).
 > - Remora is built on our earlier project, hippo. The README says what came before the build window.
 >
-> We also enter **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui).
+> We also enter **Best Walrus Memory** (the loop above, end to end) and **Best Use of Agent
+> Payments** (x402 and MPP, settled on Sui: agents, people and visitors with a wallet).
 
 | Field | Required | Answer |
 |---|---|---|

@@ -7,7 +7,12 @@ import {
   ApprovalPayTx,
   ApprovalRequest,
   BudgetMeter,
+  ChangeView,
+  ConfigHistory,
+  ConfigRestore,
+  ConfigVersionDiff,
   CreateRemoraResponse,
+  DraftResponse,
   FeedItem,
   HatchConsent,
   HatcheryListing,
@@ -22,7 +27,9 @@ import {
   SafetyReport,
   Schedule,
   SchedulePreview,
+  SetupResponse,
   ShareReview,
+  Statement,
   TeamPreview,
   Template,
   VerifyResult,
@@ -34,7 +41,7 @@ import { CostResponse } from "./cost";
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
-async function call<T>(
+export async function call<T>(
   method: string,
   path: string,
   schema: z.ZodType<T>,
@@ -102,6 +109,165 @@ export const SaleView = z.object({
 });
 export type SaleView = z.infer<typeof SaleView>;
 
+/** ADR-0124 (E5): a remora's own budget proposal, with the memories it cites. */
+const BudgetLine = z.object({
+  coinType: z.string(),
+  windowLimit: z.string(),
+  window: z.enum(["day", "week", "month"]),
+  perPaymentCap: z.string(),
+  payees: z.array(z.string()),
+});
+export const Proposal = z.object({
+  id: z.string(),
+  status: z.string(),
+  summary: z.string(),
+  createdAt: z.string(),
+  decidedAt: z.string().nullable(),
+  rule: z.enum(["approvals", "near_limit", "cap_hit", "unused"]),
+  from: BudgetLine,
+  to: BudgetLine,
+  numbers: z.record(z.string(), z.string()),
+  cites: z.array(
+    z.object({
+      memoryId: z.string(),
+      blobId: z.string(),
+      namespace: z.string(),
+      label: z.string(),
+      at: z.string(),
+    }),
+  ),
+  reason: z.string(),
+  previous: z
+    .object({
+      rule: z.string(),
+      outcome: z.enum(["accepted", "declined"]),
+      reason: z.string().optional(),
+      at: z.string(),
+    })
+    .optional(),
+  declineReason: z.string().optional(),
+  digest: z.string().optional(),
+});
+export type Proposal = z.infer<typeof Proposal>;
+export const ProposalsView = z.object({
+  open: Proposal.nullable(),
+  recent: z.array(Proposal),
+  skipped: z.string().optional(),
+  proposalId: z.string().optional(),
+});
+export type ProposalsView = z.infer<typeof ProposalsView>;
+
+/** ADR-0128: a remora's weekly "What I learned", with the numbers behind it. */
+export const ReviewsView = z.object({
+  reviews: z.array(
+    z.object({
+      id: z.string(),
+      at: z.string(),
+      lines: z.array(z.string()),
+      previousId: z.string().nullable(),
+      blobId: z.string().nullable(),
+      facts: z.object({
+        from: z.string(),
+        to: z.string(),
+        days: z.array(z.object({ date: z.string(), spent: z.string() })),
+        spent: z.string(),
+        limit: z.string().nullable(),
+        useful: z.number(),
+        noise: z.number(),
+        answers: z.number(),
+      }),
+    }),
+  ),
+});
+export type ReviewsView = z.infer<typeof ReviewsView>;
+
+/** ADR-0129: a Keeper's subscriptions, and the price hikes waiting for a decision. */
+export const SubscriptionsView = z.object({
+  subscriptions: z.array(
+    z.object({
+      id: z.string(),
+      ref: z.string(),
+      url: z.string(),
+      usual: z.string().nullable(),
+      failures: z.number(),
+      paused: z.boolean().optional(),
+    }),
+  ),
+  hikes: z
+    .array(
+      z.object({
+        approvalId: z.string(),
+        summary: z.string(),
+        subscriptionId: z.string(),
+        amount: z.string(),
+        usual: z.string(),
+      }),
+    )
+    .optional(),
+});
+export type SubscriptionsView = z.infer<typeof SubscriptionsView>;
+
+/** ADR-0130: memory capsules this remora lent, was offered, and reads. */
+export const CapsulesView = z.object({
+  lent: z.array(
+    z
+      .object({
+        capsuleId: z.string(),
+        count: z.number(),
+        expiresMs: z.number(),
+        to: z.string(),
+        revoked: z.boolean(),
+        at: z.string(),
+      })
+      .loose(),
+  ),
+  offered: z.array(
+    z
+      .object({
+        capsuleId: z.string(),
+        count: z.number(),
+        expiresMs: z.number(),
+        from: z.object({ remora: z.string(), owner: z.string() }),
+      })
+      .loose(),
+  ),
+  reading: z.array(
+    z
+      .object({
+        id: z.string(),
+        count: z.number(),
+        expiresMs: z.number(),
+        from: z.object({ remora: z.string(), owner: z.string() }),
+      })
+      .loose(),
+  ),
+});
+export type CapsulesView = z.infer<typeof CapsulesView>;
+const CapsuleDraft = z.object({
+  transaction: z.string(),
+  draft: z.object({
+    keyId: z.string(),
+    blobId: z.string(),
+    count: z.number(),
+    expiresMs: z.number(),
+    granteeId: z.string(),
+    granteeName: z.string(),
+  }),
+});
+
+/** ADR-0125: an Errand's contacts, and what each is usually paid. */
+export const ContactsView = z.object({
+  contacts: z.array(
+    z.object({
+      name: z.string(),
+      address: z.string(),
+      ref: z.string(),
+      usual: z.string().nullable(),
+    }),
+  ),
+});
+export type ContactsView = z.infer<typeof ContactsView>;
+
 /** ADR-0114: a crew, its members and what each spent this month. */
 export const CrewView = z.object({
   crew: z.object({ id: z.string(), name: z.string(), leadId: z.string() }),
@@ -139,7 +305,39 @@ export const api = {
     budget?: unknown;
     watch?: string[];
     items?: string[];
+    contacts?: { name: string; address: string }[];
   }) => call("POST", "/api/remoras", CreateRemoraResponse, b),
+  contacts: (id: string) => call("GET", `/api/remoras/${id}/contacts`, ContactsView),
+  contactsTx: (id: string, contacts: { name: string; address: string }[]) =>
+    call("POST", `/api/remoras/${id}/contacts`, Tx, { contacts }),
+  contactsConfirm: (id: string, digest: string, contacts: { name: string; address: string }[]) =>
+    call("POST", `/api/remoras/${id}/contacts/confirm`, Remora, { digest, contacts }),
+  pay: (id: string, text: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/ask`,
+      z.object({
+        answer: z.string(),
+        eventId: z.string(),
+        outcome: z.string().optional(),
+        digest: z.string().nullable().optional(),
+        approvalId: z.string().optional(),
+      }),
+      { question: text },
+    ),
+  // ── U18 C1 + C2 (ADR-0123): describe the job, change cards from chat ─────
+  draft: (text: string) => call("POST", "/api/remoras/draft", DraftResponse, { text }),
+  setup: (
+    id: string,
+    b: { persona?: string; schedule?: { when: string; question: string }; rules?: string[] },
+  ) => call("POST", `/api/remoras/${id}/setup`, SetupResponse, b),
+  change: (id: string) => call("GET", `/api/changes/${id}`, ChangeView),
+  applyChange: (id: string) => call("POST", `/api/changes/${id}/apply`, ChangeView),
+  declineChange: (id: string) => call("POST", `/api/changes/${id}/decline`, ChangeView),
+  changeTx: (id: string) =>
+    call("POST", `/api/changes/${id}/tx`, z.object({ transaction: z.string() })),
+  confirmChange: (id: string, digest: string) =>
+    call("POST", `/api/changes/${id}/confirm`, ChangeView, { digest }),
   brief: (id: string) => call("GET", `/api/remoras/${id}/brief`, BriefView),
   setBriefItems: (id: string, items: string[]) =>
     call("PUT", `/api/remoras/${id}/brief/items`, BriefView, { items }),
@@ -160,6 +358,74 @@ export const api = {
       z.object({ retired: z.array(z.string()) }),
       { digest },
     ),
+  capsules: (id: string) => call("GET", `/api/remoras/${id}/capsules`, CapsulesView),
+  lendable: (id: string, q: string) =>
+    call(
+      "GET",
+      `/api/remoras/${id}/capsules/lendable?q=${encodeURIComponent(q)}`,
+      z.object({
+        memories: z.array(
+          z.object({ blobId: z.string(), namespace: z.string(), text: z.string() }),
+        ),
+      }),
+    ),
+  lendTx: (id: string, b: { query: string; blobIds: string[]; to: string; days: number }) =>
+    call("POST", `/api/remoras/${id}/capsules`, CapsuleDraft, b),
+  lendConfirm: (id: string, digest: string, draft: z.infer<typeof CapsuleDraft>["draft"]) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/capsules/confirm`,
+      z.object({ capsuleId: z.string(), digest: z.string() }),
+      { digest, draft },
+    ),
+  acceptCapsule: (id: string, capsuleId: string) =>
+    call("POST", `/api/remoras/${id}/capsules/${capsuleId}/accept`, Remora),
+  revokeCapsuleTx: (id: string, capsuleId: string) =>
+    call("POST", `/api/remoras/${id}/capsules/${capsuleId}/revoke`, Tx),
+  revokeCapsuleConfirm: (id: string, capsuleId: string, digest: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/capsules/${capsuleId}/revoke/confirm`,
+      z.object({ capsuleId: z.string(), digest: z.string() }),
+      { digest },
+    ),
+  subscriptions: (id: string) => call("GET", `/api/remoras/${id}/subscriptions`, SubscriptionsView),
+  subscribe: (id: string, ref: string, url?: string) =>
+    call("POST", `/api/remoras/${id}/subscriptions`, SubscriptionsView, {
+      ref,
+      ...(url ? { url } : {}),
+    }),
+  unsubscribe: (id: string, sid: string) =>
+    call("DELETE", `/api/remoras/${id}/subscriptions/${sid}`, SubscriptionsView),
+  acceptPrice: (id: string, sid: string, amount: string, approvalId?: string) =>
+    call("POST", `/api/remoras/${id}/subscriptions/${sid}/accept`, SubscriptionsView, {
+      amount,
+      ...(approvalId ? { approvalId } : {}),
+    }),
+  runKeeper: (id: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/subscriptions/run`,
+      z.object({ answer: z.string(), eventId: z.string() }),
+    ),
+  setShare: (id: string, stats: boolean) =>
+    call("PUT", `/api/remoras/${id}/share`, Remora, { stats }),
+  reviews: (id: string) => call("GET", `/api/remoras/${id}/reviews`, ReviewsView),
+  writeReview: (id: string) => call("POST", `/api/remoras/${id}/reviews`, ReviewsView),
+  proposals: (id: string) => call("GET", `/api/remoras/${id}/proposals`, ProposalsView),
+  checkProposals: (id: string) => call("POST", `/api/remoras/${id}/proposals/check`, ProposalsView),
+  proposalTx: (approvalId: string) => call("POST", `/api/approvals/${approvalId}/proposal-tx`, Tx),
+  proposalConfirm: (approvalId: string, digest: string) =>
+    call(
+      "POST",
+      `/api/approvals/${approvalId}/proposal-confirm`,
+      z.object({ digest: z.string() }),
+      {
+        digest,
+      },
+    ),
+  declineProposal: (approvalId: string, reason: string) =>
+    call("POST", `/api/approvals/${approvalId}/reject`, z.object({ ok: z.boolean() }), { reason }),
   sale: (id: string) => call("GET", `/api/remoras/${id}/sell`, SaleView),
   setSale: (id: string, b: { on?: boolean; slug?: string; price?: string; blurb?: string }) =>
     call("PUT", `/api/remoras/${id}/sell`, SaleView, b),
@@ -173,6 +439,12 @@ export const api = {
     id: string,
     b: { name?: string; persona?: string; watch?: string[]; model?: string | null },
   ) => call("PATCH", `/api/remoras/${id}`, Remora, b),
+  // ── N11 (ADR-0122): config history ──
+  history: (id: string) => call("GET", `/api/remoras/${id}/history`, ConfigHistory),
+  historyDiff: (id: string, version: string) =>
+    call("GET", `/api/remoras/${id}/history/${version}`, ConfigVersionDiff),
+  restore: (id: string, version: string) =>
+    call("POST", `/api/remoras/${id}/history/${version}/restore`, ConfigRestore),
   activate: (id: string) => call("POST", `/api/remoras/${id}/activate`, Remora),
   pause: (id: string, paused: boolean) =>
     call(
@@ -189,6 +461,9 @@ export const api = {
     call("GET", `/api/remoras/${id}/budget`, z.object({ meter: BudgetMeter.nullable() })),
   cost: (id: string, month: string) =>
     call("GET", `/api/remoras/${id}/cost?month=${encodeURIComponent(month)}`, CostResponse),
+  /** E6 (ADR-0122): no month is this month where the owner is. */
+  statement: (month: string | null) =>
+    call("GET", `/api/statements${month ? `?month=${encodeURIComponent(month)}` : ""}`, Statement),
   budgetTx: (id: string, budget: unknown) =>
     call("POST", `/api/remoras/${id}/budget`, Tx, { budget }),
   budgetConfirm: (id: string, digest: string, budget: unknown) =>
@@ -376,8 +651,13 @@ export const api = {
       remoraIds,
     }),
   // ── U7 (ADR-0046, ADR-0048): Hatchery, Proof of Learning, learning, memory controls ──
-  share: (id: string) =>
-    call("POST", `/api/remoras/${id}/share`, z.object({ review: ShareReview })),
+  share: (id: string, pack?: string[]) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/share`,
+      z.object({ review: ShareReview }),
+      pack ? { pack } : undefined,
+    ),
   publishTx: (markdown: string, parent?: string | null) =>
     call(
       "POST",
@@ -414,12 +694,12 @@ export const api = {
         skipped: z.array(z.string()),
       }),
     ),
-  hatchConfirm: (id: string, digest: string, remoraIds: string[]) =>
+  hatchConfirm: (id: string, digest: string, remoraIds: string[], pack?: string[]) =>
     call(
       "POST",
       `/api/hatchery/${id}/hatch/confirm`,
       z.object({ confirmed: z.array(z.string()), remoras: z.array(z.string()) }).loose(),
-      { digest, remoraIds },
+      { digest, remoraIds, ...(pack?.length ? { pack } : {}) },
     ),
   deprecateTx: (id: string) =>
     call("POST", `/api/hatchery/${id}/deprecate`, z.object({ transaction: z.string() })),

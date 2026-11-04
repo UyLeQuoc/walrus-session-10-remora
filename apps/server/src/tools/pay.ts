@@ -9,6 +9,7 @@
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, remoraEvents, sourceStats, sql } from "@remora/db";
 import { getDisc, toDiscError } from "@remora/disc-sdk";
+import { listedFor } from "../money/contacts.ts";
 import { isRemoraRef } from "../money/listings.ts";
 import { PaymentStopped, payWithDisc } from "../money/pay.ts";
 import { atListedAddress, payeeLabel } from "../money/reef.ts";
@@ -16,6 +17,7 @@ import { modelIdFor } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { REMORA_LIMITS } from "../runtime/limits.ts";
 import type { Recalled } from "../runtime/memory.ts";
+import { queueProposalCheck } from "../runtime/proposals.ts";
 import type { Remora } from "../runtime/remoras.ts";
 import { sonar } from "../runtime/sonar.ts";
 import { intentBase, recordWake, sha256Hex } from "../runtime/wake.ts";
@@ -55,7 +57,7 @@ export interface PayInput {
   payee: string;
   url: string;
   reason: string;
-  trigger: { kind: "message" | "cron" | "chain" | "handoff" | "webhook"; ref: string };
+  trigger: { kind: "message" | "cron" | "chain" | "handoff" | "webhook" | "price"; ref: string };
   question: string;
   memories: Recalled[];
   /**
@@ -66,6 +68,8 @@ export interface PayInput {
   onAsk?: "approval" | "refuse";
   /** ADR-0111: this turn answers a question someone bought, so it can't buy another remora's answer. */
   sold?: boolean;
+  /** ADR-0125: a payment to a person carries its memo onto the payment event (and the statement). */
+  memo?: string;
 }
 
 /** What a remora on sale says it paid for the answer it sold: its own receipts (ADR-0111). */
@@ -136,13 +140,17 @@ export async function requestPayment(
       code,
       reasons,
       url: p.url,
+      // ADR-0127: the Reef's reputation counts a service's refusals after its 402.
+      payee: reefLabel(p.payee),
     }),
   });
 
   // ADR-0109: before anything is fetched, an unlisted payee, or a listed one at an address that isn't
   // its own, is refused with Sonar's code and recorded (that's where an injection shows up). With the
   // safety check forced off (tests of the onchain layer), this goes too.
-  const listed = deps.reef(r.network).find((e) => e.ref === p.payee);
+  // ADR-0125: an Errand's contacts are listed too, each at its own address.
+  const reef = listedFor(deps, r);
+  const listed = reef.find((e) => e.ref === p.payee);
   if (!deps.sonarOff && !listed)
     return blocked("sonar.blocked", [`${p.payee} isn't a listed service`]);
   if (!deps.sonarOff && listed && !atListedAddress(p.url, listed.url))
@@ -187,7 +195,7 @@ export async function requestPayment(
     perPaymentCap: disc.perPaymentCap,
     paused: disc.paused,
     softLimit: BigInt(budget?.perPaymentCap ?? disc.perPaymentCap.toString()),
-    reef: deps.reef(r.network),
+    reef,
   };
   const base = intentBase({
     trigger: p.trigger,
@@ -197,6 +205,7 @@ export async function requestPayment(
     prompt: p.reason,
   });
   let shadow = false;
+  const started = Date.now();
   try {
     const { response, receipt } = await payWithDisc(
       {
@@ -278,9 +287,16 @@ export async function requestPayment(
         digest,
         url: p.url,
         status: response.status,
+        // ADR-0127: from the first request to the settled answer, for the Reef's median.
+        ms: Date.now() - started,
+        ...(p.memo ? { memo: p.memo } : {}),
         ...(upstream.length ? { upstream } : {}),
       },
       receipt?.id,
+    );
+    // E5 (ADR-0124): after a payment, see whether the budget still fits (once an hour at most).
+    void queueProposalCheck(deps, r.id).catch((err) =>
+      log.warn("proposal.queue_failed", { error: err }),
     );
     return { kind: "paid", response, digest, amount, receiptId: receipt?.id ?? null, eventId };
   } catch (err) {
@@ -354,6 +370,9 @@ export async function requestPayment(
           `Asked you to approve ${amount} to ${p.payee}`,
           { approvalId: a?.id },
           wake?.id,
+        );
+        void queueProposalCheck(deps, r.id).catch((e) =>
+          log.warn("proposal.queue_failed", { error: e }),
         );
         await deps.notifier.send(r.ownerAddress, {
           text: `${r.name} wants to pay ${amount} to ${p.payee}, over its limit. Approve?`,

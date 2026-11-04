@@ -29,6 +29,12 @@ import { planBuys } from "./scout.ts";
 import { runRemora, withApprovalState } from "./threads.ts";
 
 export type Room = typeof rooms.$inferSelect;
+export interface RoomPost {
+  messageId: string;
+  routedTo: string[];
+  route: RoomRoute;
+  replies: string[];
+}
 const LIVE = ["shadow", "active", "paused"] as const;
 /** Below this the decision model's pick is ignored and the lead answers. */
 export const AUTO_THRESHOLD = 0.6;
@@ -157,7 +163,7 @@ export async function route(
 }
 
 /** Puts one remora event into a room as that remora's line. */
-async function mirror(
+export async function mirror(
   db: RuntimeDeps["db"],
   roomId: string,
   r: Pick<Remora, "id">,
@@ -178,7 +184,15 @@ async function mirror(
 }
 
 /** The owner's line in a room: routed, answered by each remora in turn, mirrored back. */
-export async function postToRoom(deps: RuntimeDeps, room: Room, text: string) {
+export async function postToRoom(
+  deps: RuntimeDeps,
+  room: Room,
+  text: string,
+  /** C2 (ADR-0123): a chat command posts its own lines; null lets the line go on. */
+  steer?: (room: Room, text: string) => Promise<RoomPost | null>,
+): Promise<RoomPost> {
+  const steered = await steer?.(room, text);
+  if (steered) return steered;
   const members = await membersOf(deps.db, room);
   const routed = await route(deps, room, members, text);
   const [line] = await deps.db
