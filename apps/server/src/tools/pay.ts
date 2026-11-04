@@ -55,7 +55,7 @@ export interface PayInput {
   payee: string;
   url: string;
   reason: string;
-  trigger: { kind: "message" | "cron" | "chain" | "handoff" | "webhook"; ref: string };
+  trigger: { kind: "message" | "cron" | "chain" | "handoff" | "webhook" | "price"; ref: string };
   question: string;
   memories: Recalled[];
   /**

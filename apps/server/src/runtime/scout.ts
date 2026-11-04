@@ -170,7 +170,7 @@ async function leadAsk(
   deps: RuntimeDeps,
   lead: Remora,
   question: string,
-  trigger: { kind: "message" | "cron" | "handoff" | "webhook"; ref: string },
+  trigger: { kind: "message" | "cron" | "handoff" | "webhook" | "price"; ref: string },
 ): Promise<ScoutResult> {
   const members = await crewMembers(deps, lead);
   const reef = deps.reef(lead.network).filter((e) => !isRemoraRef(e.ref));
@@ -248,7 +248,7 @@ export async function scoutAsk(
   deps: RuntimeDeps,
   r: Remora,
   question: string,
-  trigger: { kind: "message" | "cron" | "handoff" | "webhook"; ref: string } = {
+  trigger: { kind: "message" | "cron" | "handoff" | "webhook" | "price"; ref: string } = {
     kind: "message",
     ref: "web",
   },

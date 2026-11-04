@@ -88,6 +88,15 @@ describe("isUnmetered", () => {
     expect(isUnmetered("GET", "/api/health")).toBe(true);
   });
 
+  it("ADR-0121: lets webhook deliveries through, which come from GitHub's few shared addresses", () => {
+    const id = "0b6f2d4e-8a51-4c3e-9f1a-2d7c5b8e9a10";
+    expect(isUnmetered("POST", `/api/hooks/${id}/abcdefgh12345678`)).toBe(true);
+    expect(isUnmetered("GET", `/api/hooks/${id}/abcdefgh12345678`)).toBe(false);
+    // The owner's hook settings still count.
+    expect(isUnmetered("POST", `/api/remoras/${id}/hooks/in`)).toBe(false);
+    expect(isUnmetered("GET", `/api/remoras/${id}/hooks/in/x/secret`)).toBe(false);
+  });
+
   it("still counts search, export, and anything that writes", () => {
     expect(isUnmetered("GET", "/api/me/search")).toBe(false);
     expect(isUnmetered("GET", "/api/me/export")).toBe(false);

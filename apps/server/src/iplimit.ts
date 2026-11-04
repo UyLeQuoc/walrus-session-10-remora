@@ -58,6 +58,9 @@ export interface IpDecision {
 export function isUnmetered(method: string, path: string): boolean {
   if (path.startsWith("/api/health") || path === "/api/config" || path === "/api/stats")
     return true;
+  // ADR-0121: webhook deliveries come from GitHub's few shared addresses. Each hook has its own
+  // limit after its signature checks out, and a bad signature counts against the caller's address.
+  if (method === "POST" && path.startsWith("/api/hooks/")) return true;
   return (
     method === "GET" &&
     (path === "/api/me" ||

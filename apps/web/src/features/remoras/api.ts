@@ -34,7 +34,7 @@ import { CostResponse } from "./cost";
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
-async function call<T>(
+export async function call<T>(
   method: string,
   path: string,
   schema: z.ZodType<T>,
