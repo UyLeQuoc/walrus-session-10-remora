@@ -13,6 +13,8 @@ export interface DiagnoseDeps {
     discRegistryId: string | null;
     hatcheryPackageId: string | null;
     hatcheryRegistryId: string | null;
+    /** ADR-0130: memory capsules; checked once published. */
+    capsulePackageId?: string | null;
     memwalRelayer: string;
   };
   /** The object's Move type (`package` for a package); throws when it doesn't exist. */
@@ -127,6 +129,8 @@ export async function diagnose(d: DiagnoseDeps): Promise<DiagnoseReport> {
     "hatcheryRegistryId",
     dep.hatcheryPackageId ? `${dep.hatcheryPackageId}::hatchery::Registry` : "::hatchery::Registry",
   );
+  if (dep.capsulePackageId)
+    await expect("capsule package", dep.capsulePackageId, "capsulePackageId", null);
 
   try {
     const tip = await d.tip();
