@@ -7,12 +7,15 @@ const SECRET = "rmcp_test_secret";
 describe("one-click MCP installs (ADR-0111, C1)", () => {
   it("gives every client the same server: the URL and the token as a bearer header", () => {
     expect(JSON.parse(mcpJson(URL_, SECRET))).toEqual({
-      mcpServers: { remora: { url: URL_, headers: { Authorization: `Bearer ${SECRET}` } } },
+      mcpServers: {
+        remora: { type: "http", url: URL_, headers: { Authorization: `Bearer ${SECRET}` } },
+      },
     });
     const cursor = new URL(cursorLink(URL_, SECRET));
     expect(cursor.protocol).toBe("cursor:");
     expect(cursor.searchParams.get("name")).toBe("remora");
     expect(JSON.parse(atob(cursor.searchParams.get("config") ?? ""))).toEqual({
+      type: "http",
       url: URL_,
       headers: { Authorization: `Bearer ${SECRET}` },
     });

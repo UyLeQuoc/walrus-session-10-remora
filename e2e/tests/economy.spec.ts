@@ -11,9 +11,10 @@
  *
  * What happened goes to `test-results/economy.json`, for the exit note.
  */
-import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { expect, type Page, test } from "@playwright/test";
@@ -384,4 +385,74 @@ test("economy: a crew's lead splits one question across three members, three rec
     await page.getByRole("button", { name: /Retire the crew/ }).click();
     await expect(page.getByTestId("crew-card")).toContainText("retired", { timeout: 120_000 });
   }
+});
+
+test("economy: the Connections page's JSON config works in a real claude -p, and the app links are local", async ({
+  page,
+}) => {
+  test.setTimeout(10 * 60_000);
+  test.skip(
+    spawnSync("claude", ["--version"]).status !== 0,
+    "the Claude Code CLI isn't installed here",
+  );
+  await installTestWallet(page, burner());
+  await page.goto("/remoras");
+  await connectAndSignIn(page);
+  await retireLeftovers(page, "Researcher · MCP links");
+  const id = await researcher(page, "Researcher · MCP links");
+
+  // C1 (ADR-0115): what the page gives, used as it is.
+  await rotate(page);
+  await page.goto("/connections");
+  const name = `Claude JSON ${Date.now().toString(36)}`;
+  await page.getByLabel("Name").fill(name);
+  await page.getByRole("button", { name: "Create token" }).click();
+  const json = (await page.getByTestId("token-json").textContent())?.trim() ?? "";
+  expect(await page.getByTestId("token-cursor").getAttribute("href")).toMatch(/^cursor:\/\//);
+  expect(await page.getByTestId("token-vscode").getAttribute("href")).toMatch(
+    /^vscode:mcp\/install\?/,
+  );
+  await page.getByRole("button", { name: "I've copied it" }).click();
+
+  const dir = mkdtempSync(join(tmpdir(), "remora-mcp-"));
+  let out = "";
+  try {
+    writeFileSync(join(dir, "remora.json"), json);
+    const run = spawnSync(
+      "claude",
+      [
+        "-p",
+        "Use the remora_ask tool to ask my remora: What does a Sui upgrade cap do? Then say its answer in one line.",
+        "--mcp-config",
+        "remora.json",
+        "--allowedTools",
+        "mcp__remora__remora_ask",
+        "--output-format",
+        "text",
+      ],
+      { cwd: dir, encoding: "utf8", timeout: 240_000 },
+    );
+    out = `${run.stdout ?? ""}`.trim();
+    expect(run.status, run.stderr).toBe(0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  expect(out.length).toBeGreaterThan(20);
+  writeFileSync(
+    "test-results/economy.json",
+    JSON.stringify(
+      { ...prior(), mcp: { at: new Date().toISOString(), claude: out.slice(0, 600) } },
+      null,
+      2,
+    ),
+  );
+
+  // Leave nothing behind: the token, then the Researcher.
+  await rotate(page);
+  const { tokens } = await api<{
+    tokens: { id: string; name: string; revokedAt: string | null }[];
+  }>(page, "/api/mcp/tokens");
+  for (const t of tokens.filter((t) => t.name === name && !t.revokedAt))
+    await api(page, `/api/mcp/tokens/${t.id}/revoke`, { method: "POST" });
+  if (process.env.ECONOMY_KEEP !== "1") await retire(page, id);
 });

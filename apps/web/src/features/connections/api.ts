@@ -41,11 +41,12 @@ export const httpLine = (url: string, secret: string) =>
 
 /** ADR-0111 (C1): what every HTTP MCP client needs: the server's URL and the token as a header. */
 const server = (url: string, secret: string) => ({
+  type: "http",
   url,
   headers: { Authorization: `Bearer ${secret}` },
 });
 
-/** The JSON most MCP clients read (Cursor's mcp.json, VS Code, Claude Desktop…). */
+/** The JSON MCP clients read (Claude Code's `--mcp-config`, Cursor's mcp.json, VS Code…). */
 export const mcpJson = (url: string, secret: string) =>
   JSON.stringify({ mcpServers: { remora: server(url, secret) } }, null, 2);
 
@@ -61,5 +62,5 @@ export const cursorLink = (url: string, secret: string) =>
 /** VS Code's one-click install, the same way. */
 export const vscodeLink = (url: string, secret: string) =>
   `vscode:mcp/install?${encodeURIComponent(
-    JSON.stringify({ name: "remora", type: "http", ...server(url, secret) }),
+    JSON.stringify({ name: "remora", ...server(url, secret) }),
   )}`;
