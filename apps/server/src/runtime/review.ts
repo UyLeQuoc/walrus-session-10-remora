@@ -124,6 +124,25 @@ export async function reviewFacts(
   };
 }
 
+/** The week's numbers with every amount in USDC, for the model. */
+export function inUsdc(f: ReviewFacts) {
+  return {
+    ...f,
+    days: f.days.map((d) => ({ date: d.date, spentUsdc: usdc(d.spent) })),
+    spent: undefined,
+    spentUsdc: usdc(f.spent),
+    limit: undefined,
+    limitUsdc: f.limit ? usdc(f.limit) : null,
+    bought: f.bought.map((b) => ({
+      service: payeeLabel(b.payee),
+      calls: b.calls,
+      spentUsdc: usdc(b.spent),
+      useful: b.useful,
+      noise: b.noise,
+    })),
+  };
+}
+
 /** The lines when no model writes them: plain, from the numbers only. */
 export function plainLines(f: ReviewFacts, previous: string | null): string[] {
   const lines: string[] = [];
@@ -173,7 +192,8 @@ export async function writeReview(deps: RuntimeDeps, r: Remora, now = new Date()
         .filter(Boolean)
         .join(" "),
       memories: [],
-      data: [{ source: "this week's numbers", content: JSON.stringify(facts) }],
+      // In USDC, so the model never writes smallest units.
+      data: [{ source: "this week's numbers (USDC)", content: JSON.stringify(inUsdc(facts)) }],
     });
     const written = out.text
       .split("\n")

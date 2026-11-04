@@ -41,4 +41,6 @@ export interface RuntimeDeps {
   buildKind?: (tx: Transaction) => Promise<Uint8Array>;
   /** E10 (ADR-0127): the Reef's 7-day scores from shared counts; absent, nothing is skipped. */
   reputation?: (network: SuiNetwork) => Map<string, ReefScore>;
+  /** Recounts the Reef's scores now (after an owner starts or stops sharing). */
+  refreshReputation?: () => Promise<void>;
 }

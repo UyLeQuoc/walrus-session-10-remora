@@ -1297,9 +1297,10 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const b = await body<{ stats?: boolean }>(c);
     if (typeof b.stats !== "boolean")
       throw new RemoraError("share.bad", "Say whether to share its counts (stats: true or false).");
-    return c.json({
-      remora: await view(await service.setShare(c.req.param("id"), c.get("owner"), b.stats)),
-    });
+    const r = await service.setShare(c.req.param("id"), c.get("owner"), b.stats);
+    // The Reef's scores count this remora (or stop) now, not at the next 5-minute refresh.
+    await rt.refreshReputation?.().catch(() => {});
+    return c.json({ remora: await view(r) });
   });
 
   // ── An Errand's contacts (B1, ADR-0125) ───────────────────────────────────

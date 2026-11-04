@@ -130,6 +130,7 @@ export const runtime: RuntimeDeps = {
   webBase: env.WEB_BASE_URL,
   suiUsd: createSuiUsd({ apiKey: env.TATUM_API_KEY ?? env.TATUM_API_KEY_TESTNET }),
   reputation: (n) => reputation.scores(n),
+  refreshReputation: () => reputation.refresh(),
 };
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });

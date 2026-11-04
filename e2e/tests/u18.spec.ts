@@ -575,7 +575,15 @@ test("A2 + A3: it shares counts with the Reef, and writes a weekly review the ne
     (x) => x.reviews.some((r) => r.blobId),
   );
   await rotate(page);
-  const reef = await api<{ ref?: string; score?: { line: string } }[]>(page, "/api/reef/services");
+  const reef = await api<{ ref?: string; score?: { line: string; calls: number } }[]>(
+    page,
+    "/api/reef/services",
+  );
+  // The Researcher shares now, so the services it paid this week have counts.
+  expect(
+    reef.some((x) => x.ref === "reef:sui-risk" && (x.score?.calls ?? 0) > 0),
+    JSON.stringify(reef.map((x) => [x.ref, x.score?.line])),
+  ).toBe(true);
   save({
     a2: { scores: reef.filter((x) => x.score).map((x) => `${x.ref}: ${x.score?.line}`) },
     a3: { lines: second?.lines, blobId: landed.reviews.find((r) => r.blobId)?.blobId },
@@ -908,6 +916,45 @@ test("C1 + C2 + C3: describe a job; rename from chat (tap) and raise a limit (si
     body: { text: "Every weekday at 8, tell me if any of my wallets moved more than 50 USDC" },
   });
   expect(draft.ok, JSON.stringify(draft)).toBe(true);
+  // It hatches: the draft goes through the ordinary create (and its one signature, if it pays).
+  const d = draft.draft as unknown as {
+    template: string;
+    name: string;
+    budget: unknown;
+    watch: string[];
+    items: string[];
+  };
+  await retireLeftovers(page, [d.name]);
+  await rotate(page);
+  const made = await api<{ remora: { id: string; status: string }; transaction: string | null }>(
+    page,
+    "/api/remoras",
+    {
+      method: "POST",
+      body: {
+        template: d.template,
+        name: d.name,
+        ...(d.budget ? { budget: d.budget } : {}),
+        ...(d.watch.length ? { watch: d.watch } : {}),
+        ...(d.items.length ? { items: d.items } : {}),
+      },
+    },
+  );
+  expect(made.remora?.id, JSON.stringify(made)).toBeTruthy();
+  if (made.transaction) {
+    const issued = await signRun(burner(), made.transaction);
+    await rotate(page);
+    await api(page, `/api/remoras/${made.remora.id}/confirm`, {
+      method: "POST",
+      body: { digest: issued },
+    });
+  }
+  await rotate(page);
+  const hatched = await api<{ remora: { status: string; template: string } }>(
+    page,
+    `/api/remoras/${made.remora.id}`,
+  );
+  expect(["shadow", "active"]).toContain(hatched.remora.status);
   await rotate(page);
   const refused = await api<{ ok: boolean; refused?: string }>(page, "/api/remoras/draft", {
     method: "POST",
@@ -933,7 +980,16 @@ test("C1 + C2 + C3: describe a job; rename from chat (tap) and raise a limit (si
   const renamed = await api<{ remora: { name: string } }>(page, `/api/remoras/${id}`);
   expect(renamed.remora.name).toBe("Researcher · u18x");
 
-  const raise = await say("raise Researcher · u18x's monthly limit to 0.2 USDC");
+  // A limit it doesn't have yet, so the card has a change to sign.
+  await rotate(page);
+  const now = await api<{ meter: { window: { limit: string } | null } }>(
+    page,
+    `/api/remoras/${id}/budget`,
+  );
+  const target = now.meter?.window?.limit === "200000" ? "250000" : "200000";
+  const raise = await say(
+    `raise Researcher · u18x's monthly limit to ${Number(target) / 1e6} USDC`,
+  );
   const signCard = raise.eventIds?.[0];
   expect(signCard, JSON.stringify(raise)).toBeTruthy();
   await rotate(page);
@@ -946,7 +1002,7 @@ test("C1 + C2 + C3: describe a job; rename from chat (tap) and raise a limit (si
   const meter = await until<{ meter: { window: { limit: string } | null } }>(
     page,
     `/api/remoras/${id}/budget`,
-    (x) => x.meter?.window?.limit === "200000",
+    (x) => x.meter?.window?.limit === target,
   );
 
   // C3: the rename is a version; restoring the one before it brings the name back.
@@ -974,6 +1030,7 @@ test("C1 + C2 + C3: describe a job; rename from chat (tap) and raise a limit (si
       template: draft.draft?.template,
       payees: draft.draft?.budget?.payees,
       refused: refused.refused,
+      hatched: made.remora.id,
     },
     c2: { renamed: true, limitDigest: digest, newLimit: meter.meter.window?.limit },
     c3: { restoredFrom: before?.id },

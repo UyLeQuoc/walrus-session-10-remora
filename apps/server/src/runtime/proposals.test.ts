@@ -233,7 +233,28 @@ describe.skipIf(!local)("budget proposals end to end in Postgres (E5)", () => {
       intentHash: randomUUID(),
       createdAt: at,
     });
+    // An answer's Wake, older: its label reads what it bought in USDC.
+    await db.insert(receipts).values({
+      network: "testnet",
+      remoraId: r.id,
+      agent: r.address,
+      wake: {
+        intent: {
+          decision: { action: "answer", reason: "answered after: paid 10000 to reef:sui-risk" },
+        },
+      },
+      intentHash: randomUUID(),
+      createdAt: new Date(at.getTime() - 10_000),
+    });
     await db.insert(remoraMemories).values([
+      {
+        remoraId: r.id,
+        namespace: "receipts",
+        type: "wake",
+        blobId: "blob-answer-1",
+        status: "stored",
+        createdAt: new Date(at.getTime() - 8_000),
+      },
       {
         remoraId: r.id,
         namespace: "receipts",
@@ -258,6 +279,10 @@ describe.skipIf(!local)("budget proposals end to end in Postgres (E5)", () => {
     expect(open?.summary).toBe("Lower its monthly limit 0.50 → 0.08 USDC");
     expect(open?.cites).toEqual([
       expect.objectContaining({ blobId: "blob-wake-1", label: "paid 0.01 USDC to Sui risk check" }),
+      expect.objectContaining({
+        blobId: "blob-answer-1",
+        label: "answered after buying Sui risk check 0.01 USDC",
+      }),
       expect.objectContaining({ blobId: "blob-source-1", label: "a source score it wrote" }),
     ]);
     expect(open?.reason).toBe("I spent 0.07 of 0.50 in two weeks.");

@@ -248,8 +248,14 @@ export async function citedMemories(
       const d = (w?.wake as { intent?: { decision?: Record<string, string> } } | undefined)?.intent
         ?.decision;
       if (!d) return null;
-      return d.action === "pay"
-        ? `paid ${usdc(BigInt(d.amount ?? "0"))} USDC to ${payeeLabel(d.payee ?? "")}`
+      if (d.action === "pay")
+        return `paid ${usdc(BigInt(d.amount ?? "0"))} USDC to ${payeeLabel(d.payee ?? "")}`;
+      // An answer's Wake says what it bought in smallest units; the label reads in USDC.
+      const bought = [...String(d.reason ?? "").matchAll(/paid (\d+) to (reef:[a-z0-9-]+)/g)].map(
+        (m) => `${payeeLabel(m[2] ?? "")} ${usdc(BigInt(m[1] ?? "0"))}`,
+      );
+      return bought.length
+        ? `answered after buying ${bought.join(", ")} USDC`
         : `${d.action ?? "acted"}: ${String(d.reason ?? "").slice(0, 60)}`;
     }
     const f = factFor(m.id);

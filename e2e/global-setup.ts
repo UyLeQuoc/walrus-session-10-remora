@@ -30,7 +30,9 @@ export default async function globalSetup() {
   // Disc panel (read over public gRPC-web) stays small. `E2E_KEEP_DISCS=1` keeps them, for a rerun of
   // later U18 exits that use the remoras an earlier run made.
   const leftovers =
-    process.env.E2E_KEEP_DISCS === "1" ? [] : discs.filter((x) => x.disc.name.startsWith("remora-"));
+    process.env.E2E_KEEP_DISCS === "1"
+      ? []
+      : discs.filter((x) => x.disc.name.startsWith("remora-"));
   for (const d of leftovers) {
     const r = await client.signAndExecuteTransaction({
       transaction: buildRevoke(cfg, {
