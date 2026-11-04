@@ -207,6 +207,54 @@ export const SubscriptionsView = z.object({
 });
 export type SubscriptionsView = z.infer<typeof SubscriptionsView>;
 
+/** ADR-0130: memory capsules this remora lent, was offered, and reads. */
+export const CapsulesView = z.object({
+  lent: z.array(
+    z
+      .object({
+        capsuleId: z.string(),
+        count: z.number(),
+        expiresMs: z.number(),
+        to: z.string(),
+        revoked: z.boolean(),
+        at: z.string(),
+      })
+      .loose(),
+  ),
+  offered: z.array(
+    z
+      .object({
+        capsuleId: z.string(),
+        count: z.number(),
+        expiresMs: z.number(),
+        from: z.object({ remora: z.string(), owner: z.string() }),
+      })
+      .loose(),
+  ),
+  reading: z.array(
+    z
+      .object({
+        id: z.string(),
+        count: z.number(),
+        expiresMs: z.number(),
+        from: z.object({ remora: z.string(), owner: z.string() }),
+      })
+      .loose(),
+  ),
+});
+export type CapsulesView = z.infer<typeof CapsulesView>;
+const CapsuleDraft = z.object({
+  transaction: z.string(),
+  draft: z.object({
+    keyId: z.string(),
+    blobId: z.string(),
+    count: z.number(),
+    expiresMs: z.number(),
+    granteeId: z.string(),
+    granteeName: z.string(),
+  }),
+});
+
 /** ADR-0125: an Errand's contacts, and what each is usually paid. */
 export const ContactsView = z.object({
   contacts: z.array(
@@ -308,6 +356,37 @@ export const api = {
       "POST",
       `/api/remoras/${id}/crew/retire/confirm`,
       z.object({ retired: z.array(z.string()) }),
+      { digest },
+    ),
+  capsules: (id: string) => call("GET", `/api/remoras/${id}/capsules`, CapsulesView),
+  lendable: (id: string, q: string) =>
+    call(
+      "GET",
+      `/api/remoras/${id}/capsules/lendable?q=${encodeURIComponent(q)}`,
+      z.object({
+        memories: z.array(
+          z.object({ blobId: z.string(), namespace: z.string(), text: z.string() }),
+        ),
+      }),
+    ),
+  lendTx: (id: string, b: { query: string; blobIds: string[]; to: string; days: number }) =>
+    call("POST", `/api/remoras/${id}/capsules`, CapsuleDraft, b),
+  lendConfirm: (id: string, digest: string, draft: z.infer<typeof CapsuleDraft>["draft"]) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/capsules/confirm`,
+      z.object({ capsuleId: z.string(), digest: z.string() }),
+      { digest, draft },
+    ),
+  acceptCapsule: (id: string, capsuleId: string) =>
+    call("POST", `/api/remoras/${id}/capsules/${capsuleId}/accept`, Remora),
+  revokeCapsuleTx: (id: string, capsuleId: string) =>
+    call("POST", `/api/remoras/${id}/capsules/${capsuleId}/revoke`, Tx),
+  revokeCapsuleConfirm: (id: string, capsuleId: string, digest: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/capsules/${capsuleId}/revoke/confirm`,
+      z.object({ capsuleId: z.string(), digest: z.string() }),
       { digest },
     ),
   subscriptions: (id: string) => call("GET", `/api/remoras/${id}/subscriptions`, SubscriptionsView),

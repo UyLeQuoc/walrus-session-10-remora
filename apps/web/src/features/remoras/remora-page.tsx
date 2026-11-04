@@ -55,6 +55,7 @@ import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from 
 import { api } from "./api";
 import { BriefCard } from "./brief-card";
 import { budgetLine } from "./budget";
+import { CapsuleCard } from "./capsule-card";
 import { CostCard } from "./cost-card";
 import { CrewCard } from "./crew-card";
 import { describeRemora, useTemplateCatalog } from "./describe";
@@ -984,6 +985,9 @@ function Remora({ id }: { id: string }) {
 
         <TabsContent value="learning" className="flex flex-col gap-8 pt-5">
           {r.template === "sentinel" ? null : <ReviewCard r={r} />}
+          {r.template === "scout" || r.template === "briefer" ? (
+            <CapsuleCard r={r} onChanged={reload} />
+          ) : null}
           <LearningSection remoraId={r.id} />
         </TabsContent>
 

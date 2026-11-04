@@ -58,6 +58,15 @@ import { answersQuestions } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
 import { briefNow, briefView, setBriefItems } from "./briefer.ts";
+import {
+  acceptCapsule,
+  capsuleView,
+  confirmGrant,
+  confirmRevoke,
+  grantTx,
+  lendable,
+  revokeTx,
+} from "./capsules.ts";
 import { remoraCost } from "./cost.ts";
 import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -1154,6 +1163,56 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     }
     await rejectApproval(rt, c.get("owner"), c.req.param("id"));
     return c.json({ ok: true });
+  });
+
+  // ── Memory capsules (A4, ADR-0130) ────────────────────────────────────────
+  app.get("/api/remoras/:id/capsules", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await capsuleView(rt, r));
+  });
+  app.get("/api/remoras/:id/capsules/lendable", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ memories: await lendable(rt, r, c.req.query("q") ?? "") });
+  });
+  app.post("/api/remoras/:id/capsules", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ query?: string; blobIds?: string[]; to?: string; days?: number }>(c);
+    return c.json(
+      await grantTx(rt, listings, r, {
+        query: String(b.query ?? ""),
+        blobIds: Array.isArray(b.blobIds) ? b.blobIds.map(String) : [],
+        to: String(b.to ?? ""),
+        days: Number(b.days ?? 7),
+      }),
+    );
+  });
+  app.post("/api/remoras/:id/capsules/confirm", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{
+      digest?: string;
+      draft?: {
+        keyId: string;
+        blobId: string;
+        count: number;
+        expiresMs: number;
+        granteeId: string;
+      };
+    }>(c);
+    if (!b.draft) throw new RemoraError("capsule.draft", "Send the capsule you signed for.");
+    return c.json(await confirmGrant(rt, r, digestOf(b.digest), b.draft));
+  });
+  app.post("/api/remoras/:id/capsules/:capsuleId/accept", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ remora: await view(await acceptCapsule(rt, r, c.req.param("capsuleId"))) });
+  });
+  app.post("/api/remoras/:id/capsules/:capsuleId/revoke", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await revokeTx(r, c.req.param("capsuleId")));
+  });
+  app.post("/api/remoras/:id/capsules/:capsuleId/revoke/confirm", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const b = await body<{ digest?: string }>(c);
+    return c.json(await confirmRevoke(rt, r, c.req.param("capsuleId"), digestOf(b.digest)));
   });
 
   // ── A Keeper's subscriptions (B2, ADR-0129) ───────────────────────────────

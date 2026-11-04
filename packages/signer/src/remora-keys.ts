@@ -55,6 +55,14 @@ export class RemoraSigner {
     return this.#withKeypair(remoraId, async (kp) => (await kp.signTransaction(bytes)).signature);
   }
 
+  /** ADR-0130: signs a personal message as the remora (a Seal session key for a memory capsule). */
+  async signPersonalMessage(remoraId: string, bytes: Uint8Array): Promise<string> {
+    return this.#withKeypair(
+      remoraId,
+      async (kp) => (await kp.signPersonalMessage(bytes)).signature,
+    );
+  }
+
   async #withKeypair<T>(remoraId: string, use: (kp: Ed25519Keypair) => Promise<T>): Promise<T> {
     const k = await this.store.get(remoraId);
     if (!k) throw new Error(`no key for remora ${remoraId}`);
