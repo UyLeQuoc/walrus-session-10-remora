@@ -7,6 +7,9 @@ import {
   ApprovalPayTx,
   ApprovalRequest,
   BudgetMeter,
+  ConfigHistory,
+  ConfigRestore,
+  ConfigVersionDiff,
   CreateRemoraResponse,
   FeedItem,
   HatchConsent,
@@ -23,6 +26,7 @@ import {
   Schedule,
   SchedulePreview,
   ShareReview,
+  Statement,
   TeamPreview,
   Template,
   VerifyResult,
@@ -295,6 +299,12 @@ export const api = {
     id: string,
     b: { name?: string; persona?: string; watch?: string[]; model?: string | null },
   ) => call("PATCH", `/api/remoras/${id}`, Remora, b),
+  // ── N11 (ADR-0122): config history ──
+  history: (id: string) => call("GET", `/api/remoras/${id}/history`, ConfigHistory),
+  historyDiff: (id: string, version: string) =>
+    call("GET", `/api/remoras/${id}/history/${version}`, ConfigVersionDiff),
+  restore: (id: string, version: string) =>
+    call("POST", `/api/remoras/${id}/history/${version}/restore`, ConfigRestore),
   activate: (id: string) => call("POST", `/api/remoras/${id}/activate`, Remora),
   pause: (id: string, paused: boolean) =>
     call(
@@ -311,6 +321,9 @@ export const api = {
     call("GET", `/api/remoras/${id}/budget`, z.object({ meter: BudgetMeter.nullable() })),
   cost: (id: string, month: string) =>
     call("GET", `/api/remoras/${id}/cost?month=${encodeURIComponent(month)}`, CostResponse),
+  /** E6 (ADR-0122): no month is this month where the owner is. */
+  statement: (month: string | null) =>
+    call("GET", `/api/statements${month ? `?month=${encodeURIComponent(month)}` : ""}`, Statement),
   budgetTx: (id: string, budget: unknown) =>
     call("POST", `/api/remoras/${id}/budget`, Tx, { budget }),
   budgetConfirm: (id: string, digest: string, budget: unknown) =>

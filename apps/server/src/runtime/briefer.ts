@@ -8,6 +8,7 @@
 import { and, desc, eq, inArray, remoraEvents, remoras } from "@remora/db";
 import { nextRun } from "../triggers/cron.ts";
 import { BRIEF_WHEN, briefQuestion, MAX_ITEMS } from "./brief-question.ts";
+import { saveConfig } from "./config-versions.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { addSchedule, askNow, type Schedule } from "./schedules.ts";
@@ -38,15 +39,19 @@ export async function setBriefItems(
   if (!items.length) throw new RemoraError("brief.empty", "List at least one thing to follow.");
   const question = briefQuestion(items);
   const current = briefSchedule(r);
-  const schedules = current
-    ? [{ ...current, question }, ...schedulesOf(r).slice(1)]
-    : schedulesOf(r);
-  const [updated] = await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, items, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id))
-    .returning();
-  let next = updated ?? r;
+  let next = await saveConfig(
+    deps.db,
+    r.id,
+    (c) => {
+      const list = (c as { schedules?: Schedule[] }).schedules ?? [];
+      const first = list[0];
+      return { ...c, items, schedules: first ? [{ ...first, question }, ...list.slice(1)] : list };
+    },
+    {
+      summary: () => `Brief list changed: ${items.length} item${items.length === 1 ? "" : "s"}`,
+      payload: { items },
+    },
+  );
   if (!current) {
     await addSchedule(deps, next, BRIEF_WHEN, question, opts);
     const [reloaded] = await deps.db.select().from(remoras).where(eq(remoras.id, r.id));

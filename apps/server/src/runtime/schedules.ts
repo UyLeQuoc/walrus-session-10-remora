@@ -11,6 +11,7 @@ import { answersQuestions } from "../templates/index.ts";
 import { nextRun } from "../triggers/cron.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { briefQuestion } from "./brief-question.ts";
+import { saveConfig } from "./config-versions.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { approveUnusual } from "./errand.ts";
 import { enqueue, type JobHandler } from "./jobs.ts";
@@ -36,8 +37,9 @@ export interface Schedule {
   paused?: boolean;
 }
 
-const schedulesOf = (r: Remora) =>
-  ((r.config as { schedules?: Schedule[] }).schedules ?? []).slice();
+const listOf = (config: Record<string, unknown>) =>
+  ((config as { schedules?: Schedule[] }).schedules ?? []).slice();
+const schedulesOf = (r: Remora) => listOf(r.config);
 
 async function load(deps: RuntimeDeps, id: string) {
   const [r] = await deps.db.select().from(remoras).where(eq(remoras.id, id));
@@ -79,20 +81,17 @@ export async function addSchedule(
     question: question.slice(0, 300),
     ...(opts.paused ? { paused: true } : {}),
   };
-  const schedules = [...schedulesOf(r), s].slice(-10);
-  const [updated] = await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id))
-    .returning();
-  await deps.db.insert(remoraEvents).values({
-    remoraId: r.id,
-    network: r.network,
-    type: "action",
-    summary: `Scheduled ${p.human}${s.paused ? " (paused)" : ""}: ${s.question.slice(0, 100)}`,
-    payload: { schedule: s },
-  });
-  if (!s.paused) await queueNext(deps, updated ?? r, s, new Date());
+  const updated = await saveConfig(
+    deps.db,
+    r.id,
+    (c) => ({ ...c, schedules: [...listOf(c), s].slice(-10) }),
+    {
+      summary: () =>
+        `Scheduled ${p.human}${s.paused ? " (paused)" : ""}: ${s.question.slice(0, 100)}`,
+      payload: { schedule: s },
+    },
+  );
+  if (!s.paused) await queueNext(deps, updated, s, new Date());
   return { schedule: s, next: p.next };
 }
 
@@ -107,22 +106,25 @@ export async function setSchedulePaused(
   const s = list.find((x) => x.id === scheduleId);
   if (!s) throw new RemoraError("schedule.not_found", "No such schedule.", 404);
   const next = { ...s, paused };
-  const schedules = list.map((x) => (x.id === scheduleId ? next : x));
-  const [updated] = await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id))
-    .returning();
-  if (!paused) await queueNext(deps, updated ?? r, next, new Date());
+  const updated = await saveConfig(
+    deps.db,
+    r.id,
+    (c) => ({ ...c, schedules: listOf(c).map((x) => (x.id === scheduleId ? next : x)) }),
+    { summary: () => `${paused ? "Paused" : "Resumed"} ${s.human}: ${s.question.slice(0, 100)}` },
+  );
+  if (!paused) await queueNext(deps, updated, next, new Date());
   return next;
 }
 
 export async function removeSchedule(deps: RuntimeDeps, r: Remora, scheduleId: string) {
-  const schedules = schedulesOf(r).filter((s) => s.id !== scheduleId);
-  await deps.db
-    .update(remoras)
-    .set({ config: { ...r.config, schedules }, updatedAt: new Date() })
-    .where(eq(remoras.id, r.id));
+  const s = schedulesOf(r).find((x) => x.id === scheduleId);
+  if (!s) return;
+  await saveConfig(
+    deps.db,
+    r.id,
+    (c) => ({ ...c, schedules: listOf(c).filter((x) => x.id !== scheduleId) }),
+    { summary: () => `Removed ${s.human}: ${s.question.slice(0, 100)}` },
+  );
 }
 
 /** N2: approves a non-payment approval (a proposed schedule). */

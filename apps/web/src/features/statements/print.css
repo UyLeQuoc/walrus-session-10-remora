@@ -1,0 +1,36 @@
+/*
+ * E6 (ADR-0122): a statement prints as the page alone. While a statement is on screen, printing hides
+ * the rail, the roster, the top row, the side panel and the phone's bottom bar, and lets the page run
+ * past one screen instead of scrolling inside it.
+ */
+@media print {
+  html:has([data-statement]) .window-rail,
+  html:has([data-statement]) .sidebar,
+  html:has([data-statement]) .panel-resizer,
+  html:has([data-statement]) .side-panel,
+  html:has([data-statement]) .conversation-header,
+  html:has([data-statement]) .web-mobile-navigation,
+  html:has([data-statement]) [data-sonner-toaster],
+  html:has([data-statement]) [data-slot="page-column"]:not(:has([data-statement])) {
+    display: none !important;
+  }
+
+  html:has([data-statement]),
+  html:has([data-statement]) body,
+  html:has([data-statement]) #root,
+  html:has([data-statement]) .app-window,
+  html:has([data-statement]) .app-frame,
+  html:has([data-statement]) .app-main,
+  html:has([data-statement]) .app-main-body,
+  html:has([data-statement]) .app-main-body > * {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  [data-statement] [data-print-avoid] {
+    break-inside: avoid;
+  }
+}

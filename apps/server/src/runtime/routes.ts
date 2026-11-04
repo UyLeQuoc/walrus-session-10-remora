@@ -65,6 +65,7 @@ import { errandAsk, usualFor } from "./errand.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
 import { learningSeries, proofBetween, proofsFor } from "./learning.ts";
+import { mountLedger } from "./ledger-routes.ts";
 import { MemoryTimeout } from "./memory.ts";
 import {
   correct,
@@ -218,6 +219,8 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/reef/probe",
     "/api/reef/listings",
     "/api/reef/listings/*",
+    "/api/statements",
+    "/api/statements/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -1690,6 +1693,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
           400,
         );
   });
+
+  // ADR-0122: statements and config history.
+  mountLedger(app, { service, runtime: rt, listings: d.listings });
 
   // Mounted beside the other groups, which carry no typed variables.
   return app as unknown as Hono;

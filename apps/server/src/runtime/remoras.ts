@@ -41,6 +41,7 @@ import {
   TEMPLATES,
   type TemplateSlug,
 } from "../templates/index.ts";
+import { saveConfig } from "./config-versions.ts";
 
 export type Remora = typeof remoras.$inferSelect;
 
@@ -630,14 +631,12 @@ export function createRemoraService(deps: RemoraDeps) {
       const capId = createdOf(tx, /::allowance::AllowanceCap</);
       if (!discId || !allowanceId || !capId)
         throw new RemoraError("tx.not_issue", "That transaction didn't renew the spending limit.");
-      const updated = await setRow(id, {
-        discId,
-        allowanceId,
-        capId,
-        config: { ...r.config, budget } as Record<string, unknown>,
+      return saveConfig(db, id, (c) => ({ ...c, budget }), {
+        summary: () => `${r.name}'s budget changed.`,
+        payload: { digest, budget },
+        set: { discId, allowanceId, capId },
+        now: now(),
       });
-      await event(updated, "action", `${r.name}'s budget changed.`, { digest, budget });
-      return updated;
     },
 
     /** B9: a fresh key for the remora; the owner signs `disc::rotate`, then `confirmRotate` switches. */
@@ -679,15 +678,14 @@ export function createRemoraService(deps: RemoraDeps) {
       return updated;
     },
 
-    /** B6: edit name, persona or watched addresses. The previous config goes into the feed. */
+    /** B6: edit name, persona or watched addresses. The change is a version (N11, ADR-0122). */
     async edit(
       id: string,
       owner: string,
       patch: { name?: string; persona?: string; watch?: string[]; model?: string | null },
     ) {
       const r = await mine(id, owner);
-      const prev = r.config as Record<string, unknown> & { revision?: number };
-      const next: Record<string, unknown> = { ...prev, revision: (prev.revision ?? 1) + 1 };
+      const next: Record<string, unknown> = { ...r.config };
       if (patch.name !== undefined) next.name = patch.name.trim().slice(0, 40);
       if (patch.persona !== undefined) next.persona = patch.persona.trim().slice(0, 2_000);
       if (patch.model !== undefined) {
@@ -710,20 +708,26 @@ export function createRemoraService(deps: RemoraDeps) {
         ];
       }
       RemoraConfig.parse({ ...next, status: "shadow" });
-      const updated = await setRow(id, {
-        config: next,
-        ...(typeof next.name === "string" ? { name: next.name } : {}),
-      });
-      await event(
-        updated,
-        "config_changed",
-        `${updated.name}'s settings changed (revision ${String(next.revision)}).`,
+      const keys = (["name", "persona", "model", "watch"] as const)
+        .filter((f) => patch[f] !== undefined)
+        .map((f) => (f === "watch" ? "triggers" : f));
+      return saveConfig(
+        db,
+        id,
+        (c) => {
+          const out: Record<string, unknown> = { ...c };
+          for (const key of keys) {
+            if (next[key] === undefined) delete out[key];
+            else out[key] = next[key];
+          }
+          return out;
+        },
         {
-          previous: prev,
-          revision: next.revision,
+          summary: (after, revision) =>
+            `${String(after.name ?? r.name)}'s settings changed (revision ${revision}).`,
+          now: now(),
         },
       );
-      return updated;
     },
 
     /** ADR-0127: whether this remora's counts feed the Reef's reputation. Counts only, never content. */
@@ -895,18 +899,19 @@ export function createRemoraService(deps: RemoraDeps) {
       const onchain = new Set(disc.payees.map((a) => normalizeSuiAddress(a)));
       if (want.length !== onchain.size || want.some((a) => !onchain.has(a)))
         throw new RemoraError("tx.not_payees", "That transaction didn't set these payees.");
-      const budget = (r.config as { budget?: Budget }).budget;
-      const updated = await setRow(id, {
-        config: {
-          ...r.config,
-          budget: { ...budget, payees: [...new Set(refs)] },
-        } as Record<string, unknown>,
-      });
-      await event(updated, "action", `${r.name} may now pay ${refs.length} services.`, {
-        digest,
-        payees: refs,
-      });
-      return updated;
+      return saveConfig(
+        db,
+        id,
+        (c) => ({
+          ...c,
+          budget: { ...(c as { budget?: Budget }).budget, payees: [...new Set(refs)] },
+        }),
+        {
+          summary: () => `${r.name} may now pay ${refs.length} services.`,
+          payload: { digest, payees: refs },
+          now: now(),
+        },
+      );
     },
 
     /**
