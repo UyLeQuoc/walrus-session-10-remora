@@ -26,6 +26,7 @@ import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
 import { signedInOwner } from "../identity/session.ts";
 import { log, networks } from "../money/index.ts";
+import { createListings } from "../money/listings.ts";
 import { createSuiUsd } from "../money/rates.ts";
 import { reefFor } from "../money/reef.ts";
 import { startWatcher } from "../triggers/watch.ts";
@@ -55,7 +56,16 @@ const merchants = {
   RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
   NODE_ENV: process.env.NODE_ENV,
 };
-const reef = (n: Parameters<typeof reefFor>[1]) => reefFor(merchants, n);
+/** E11 (ADR-0111): remoras on sale, in the Reef beside the house services, paid at `/api/x402/r/…`. */
+export const listings = createListings({
+  db,
+  base: env.API_BASE_URL ?? `http://localhost:${env.PORT}`,
+  log,
+});
+const reef = (n: Parameters<typeof reefFor>[1]) => [
+  ...reefFor(merchants, n),
+  ...listings.entries(n),
+];
 const answer = createModel({ apiKey: env.OPENROUTER_API_KEY, model: env.LLM_MODEL });
 const small = createModel({
   apiKey: env.OPENROUTER_API_KEY,
@@ -137,6 +147,7 @@ export const remoraRoutes = createRemoraRoutes({
   operator,
   hatchery,
   written,
+  listings,
   telegramLinked: async (owner: string) => {
     const [row] = await db
       .select({ id: channelIdentities.id })
@@ -167,7 +178,8 @@ export const remoraJobs: Record<string, JobHandler> = remoraJobHandlers(runtime)
 
 /** Starts one chain watcher per available network (D1). Returns a stop function. */
 export function startRemoraRuntime(): () => void {
-  if (env.WATCHER !== "on") return () => {};
+  const stopListings = listings.start();
+  if (env.WATCHER !== "on") return stopListings;
   const stops = networks
     .list()
     .filter((n) => n.available)
@@ -188,6 +200,7 @@ export function startRemoraRuntime(): () => void {
     );
   log.info("remora.runtime", { watchers: stops.length });
   return () => {
+    stopListings();
     for (const s of stops) s();
   };
 }

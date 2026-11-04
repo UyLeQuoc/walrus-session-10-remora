@@ -30,6 +30,7 @@
     "@remora/db": "workspace:*",
     "@remora/disc-sdk": "workspace:*",
     "@remora/memory": "workspace:*",
+    "@remora/merchant": "workspace:*",
     "@remora/schema": "workspace:*",
     "@remora/signer": "workspace:*",
     "@slack/bolt": "^4.6.0",
@@ -41,7 +42,6 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@remora/merchant": "workspace:*",
     "@types/node": "^24.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

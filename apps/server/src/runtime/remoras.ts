@@ -17,6 +17,7 @@ import {
   buildRevoke,
   buildRevokeAndReissue,
   buildRotate,
+  buildSetPayees,
   type DiscConfig,
   getAllowance,
   getDisc,
@@ -142,6 +143,24 @@ export function createRemoraService(deps: RemoraDeps) {
     }
     return { packageId: c.packageId, registryId: c.discRegistryId, coinType: c.usdcCoinType };
   };
+
+  /** Reef refs → the unique addresses a Disc lists as payees. */
+  function payeeAddresses(r: Remora, refs: string[]) {
+    if (!refs.length) throw new RemoraError("payees.empty", "Pick at least one service.");
+    return [
+      ...new Set(
+        refs.map((ref) => {
+          const hit = deps.reef(r.network).find((e) => e.ref === ref);
+          if (!hit)
+            throw new RemoraError(
+              "reef.unknown_payee",
+              `${ref} isn't a listed service on this network.`,
+            );
+          return normalizeSuiAddress(hit.payTo);
+        }),
+      ),
+    ];
+  }
 
   async function mine(id: string, owner: string): Promise<Remora> {
     const [r] = await db.select().from(remoras).where(eq(remoras.id, id));
@@ -761,6 +780,40 @@ export function createRemoraService(deps: RemoraDeps) {
         retired.push(r.id);
       }
       return { retired };
+    },
+
+    /**
+     * ADR-0111: the payees a remora may pay, set in place on its Disc (`disc::set_payees`, one owner
+     * signature). This is how an owner lets a remora buy from a remora on sale.
+     */
+    async payeesTx(id: string, owner: string, refs: string[]) {
+      const r = await mine(id, owner);
+      if (!r.discId) throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
+      const tx = buildSetPayees(discCfg(r.network), r.discId, payeeAddresses(r, refs));
+      tx.setSender(r.ownerAddress);
+      return tx.toJSON();
+    },
+
+    async confirmPayees(id: string, owner: string, digest: string, refs: string[]) {
+      const r = await mine(id, owner);
+      await ownerTx(r, digest);
+      const want = payeeAddresses(r, refs);
+      const disc = await getDisc(deps.networks.client(r.network).core, r.discId ?? "");
+      const onchain = new Set(disc.payees.map((a) => normalizeSuiAddress(a)));
+      if (want.length !== onchain.size || want.some((a) => !onchain.has(a)))
+        throw new RemoraError("tx.not_payees", "That transaction didn't set these payees.");
+      const budget = (r.config as { budget?: Budget }).budget;
+      const updated = await setRow(id, {
+        config: {
+          ...r.config,
+          budget: { ...budget, payees: [...new Set(refs)] },
+        } as Record<string, unknown>,
+      });
+      await event(updated, "action", `${r.name} may now pay ${refs.length} services.`, {
+        digest,
+        payees: refs,
+      });
+      return updated;
     },
 
     /** N5: budget meter straight from the allowance. */

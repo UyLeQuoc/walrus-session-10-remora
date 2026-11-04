@@ -20,6 +20,8 @@ import {
   sentinelRules,
   sourceStats,
 } from "@remora/db";
+import { decodeHeader, PAYMENT_RESPONSE_HEADER } from "@remora/disc-sdk";
+import { type PaidContext, x402 } from "@remora/merchant";
 import { Budget } from "@remora/schema";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -38,6 +40,7 @@ import {
   shareLinks,
   shareReview,
 } from "../hatchery/service.ts";
+import type { Listings } from "../money/listings.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
@@ -69,6 +72,7 @@ import {
   roomLines,
   roomView,
 } from "./rooms.ts";
+import { recordSale, type SaleInput, saleView, sellAnswer, setSale } from "./sales.ts";
 import {
   addSchedule,
   approveYes,
@@ -105,6 +109,8 @@ export interface RemoraRouteDeps {
   operator?: { key: string; accountId: string; serverUrl: string };
   /** The Hatchery (M1–M7): Walrus storage and share links. */
   hatchery?: Omit<HatcheryDeps, "runtime" | "service">;
+  /** E11 (ADR-0111): remoras on sale. */
+  listings?: Listings;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -387,6 +393,137 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         ),
       }),
     );
+  });
+
+  // ── Selling answers (E11, ADR-0111) ───────────────────────────────────────
+  const listings = d.listings;
+  const sales = () => {
+    if (!listings) throw new RemoraError("sale.unavailable", "Selling isn't on here.", 409);
+    return listings;
+  };
+
+  app.get("/api/remoras/:id/sell", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(serialize(await saleView(rt, sales(), r)));
+  });
+
+  app.put("/api/remoras/:id/sell", async (c) => {
+    const b = await body<SaleInput>(c);
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    await setSale(rt, sales(), r, b);
+    return c.json(serialize(await saleView(rt, sales(), await service.get(r.id, c.get("owner")))));
+  });
+
+  /** The payees its Disc allows, set with one owner signature (`disc::set_payees`). */
+  const payeeRefs = (v: unknown) => {
+    if (!Array.isArray(v) || v.some((x) => typeof x !== "string" || !/^reef:[a-z0-9-]+$/.test(x)))
+      throw new RemoraError("payees.bad", "Send the services as reef: references.");
+    return v as string[];
+  };
+  app.post("/api/remoras/:id/payees", async (c) => {
+    const { payees } = await body<{ payees?: unknown }>(c);
+    return c.json({
+      transaction: await service.payeesTx(c.req.param("id"), c.get("owner"), payeeRefs(payees)),
+    });
+  });
+  app.post("/api/remoras/:id/payees/confirm", async (c) => {
+    const b = await body<{ digest?: unknown; payees?: unknown }>(c);
+    return c.json({
+      remora: await view(
+        await service.confirmPayees(
+          c.req.param("id"),
+          c.get("owner"),
+          digestOf(b.digest),
+          payeeRefs(b.payees),
+        ),
+      ),
+    });
+  });
+
+  /**
+   * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 client) pays
+   * the owner's address, and the answer settles only once it's written.
+   */
+  app.get("/api/x402/r/:slug", async (c) => {
+    const slug = c.req.param("slug");
+    const network = listings
+      ? rt.networks
+          .list()
+          .map((n) => n.network)
+          .find((n) => !!listings.bySlug(n, slug))
+      : undefined;
+    const found = network ? listings?.bySlug(network, slug) : undefined;
+    if (!found)
+      return c.json(
+        { error: { code: "sale.not_found", message: `No remora sells as @${slug}.` } },
+        404,
+      );
+    const question = (c.req.query("q") ?? "").trim();
+    if (!question || question.length > 500)
+      return c.json(
+        {
+          error: {
+            code: "sale.bad_question",
+            message: "Ask a question of 1–500 characters (?q=).",
+          },
+        },
+        400,
+      );
+    const net = network ? rt.networks.config(network) : null;
+    if (!network || !net?.facilitatorUrl || !net.usdcCoinType)
+      return c.json(
+        { error: { code: "network.unavailable", message: "Payments are off here." } },
+        503,
+      );
+    const paid = x402({
+      amount: found.price,
+      description: `${found.name}'s answer`,
+      settle: "after",
+      maxTimeoutSeconds: 120,
+      ...(rt.fetch ? { fetch: rt.fetch } : {}),
+      networks: {
+        [network]: {
+          payTo: found.payTo,
+          asset: net.usdcCoinType,
+          facilitatorUrl: net.facilitatorUrl,
+        },
+      },
+    });
+    const early = await paid(c as never, async () => {
+      const payer = (c as unknown as { get(k: "x402"): PaidContext }).get("x402").payer;
+      const [seller] = await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId));
+      try {
+        if (!seller)
+          throw new RemoraError("sale.closed", `@${slug} isn't answering right now.`, 409);
+        const out = await sellAnswer(rt, seller, slug, question, payer);
+        c.res = c.json(out);
+      } catch (err) {
+        const e =
+          err instanceof RemoraError
+            ? err
+            : new RemoraError("sale.failed", `@${slug} couldn't answer, so nothing was charged.`);
+        if (!(err instanceof RemoraError)) rt.log.warn("sale.failed", { slug, error: err });
+        // Any non-2xx means the payment is never settled.
+        const status = e.code === "sale.timeout" ? 504 : e.code === "sale.failed" ? 502 : e.status;
+        c.res = c.json({ error: { code: e.code, message: e.message } }, status as 409);
+      }
+    });
+    if (early) return early;
+    const header = c.res.headers.get(PAYMENT_RESPONSE_HEADER);
+    if (c.res.status === 200 && header) {
+      const settled = decodeHeader<{ transaction?: string; payer?: string }>(header);
+      const out = (await c.res.clone().json()) as { eventId?: string };
+      const [seller] = await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId));
+      if (seller && settled.transaction)
+        await recordSale(rt, seller, {
+          slug,
+          buyer: settled.payer ?? "",
+          amount: found.price,
+          digest: settled.transaction,
+          eventId: out.eventId ?? "",
+        }).catch((err) => rt.log.warn("sale.record_failed", { slug, error: err }));
+    }
+    return c.res;
   });
 
   // ── The Briefer (ADR-0106): its list, Run now, and what its page shows ────────

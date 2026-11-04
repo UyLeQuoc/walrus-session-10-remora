@@ -27,7 +27,9 @@ import { Markdown } from "@/features/chat/markdown";
 import { api } from "@/features/remoras/api";
 import { refusedBy } from "@/features/remoras/feed-list";
 import { WhyButton } from "@/features/remoras/why-drawer";
+import { payeeName } from "@/lib/payee";
 import { shortIds } from "@/lib/short-ids";
+import { explorerTx, usdc } from "@/lib/usdc";
 import {
   AgentActivity,
   ChatActionMarker,
@@ -89,6 +91,37 @@ function Feedback({ line }: { line: Line }) {
   );
 }
 
+/**
+ * ADR-0111: what a remora on sale paid for the answer it sold, under the buyer's payment: the rest
+ * of the chain of receipts, each one onchain.
+ */
+function Upstream({ payload }: { payload: Record<string, unknown> }) {
+  const up = (payload.upstream ?? []) as { payee: string; amount: string; digest: string | null }[];
+  if (!Array.isArray(up) || !up.length) return null;
+  return (
+    <span className="ml-1 text-ob-muted" data-testid="thread-upstream">
+      → it paid{" "}
+      {up.map((u, i) => (
+        <span key={u.digest ?? i}>
+          {i ? ", " : ""}
+          {payeeName(u.payee)} {usdc(u.amount)}
+          {u.digest ? (
+            <a
+              className="ml-0.5 underline-offset-2 hover:underline"
+              href={explorerTx("testnet", u.digest)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${payeeName(u.payee)} receipt`}
+            >
+              ↗
+            </a>
+          ) : null}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function RemoraLine({
   line,
   showName,
@@ -117,6 +150,7 @@ function RemoraLine({
       >
         {showName && line.remora ? <strong>{line.remora}: </strong> : null}
         {line.text}
+        <Upstream payload={line.payload} />
       </ChatActionMarker>
     );
   }

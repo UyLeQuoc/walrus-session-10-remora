@@ -29,6 +29,12 @@ export const ReefService = z.object({
   payTo: z.string().min(1),
   /** http(s) only: the page renders it as a link. */
   docsUrl: z.string().regex(/^https?:\/\//i),
+  /**
+   * ADR-0111: who runs it. `house` is ours; `remora` is a remora on sale (paid at its owner's
+   * address); `community` is an API an owner listed. Absent on older servers.
+   */
+  kind: z.enum(["house", "remora", "community"]).optional(),
+  description: z.string().max(200).optional(),
 });
 export const ReefServices = z.array(ReefService);
 

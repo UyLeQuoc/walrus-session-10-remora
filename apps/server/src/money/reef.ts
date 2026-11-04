@@ -3,6 +3,7 @@
  * address; the Reef maps `reef:<slug>` to a URL and a `payTo` (spec §12.5).
  */
 import type { SuiNetwork } from "@remora/chain";
+import type { ReefService } from "@remora/schema";
 
 export interface ReefEntry {
   ref: `reef:${string}`;
@@ -97,6 +98,8 @@ const LABELS: Record<string, string> = {
 };
 
 export function payeeLabel(ref: string): string {
+  // ADR-0112: a remora on sale is `reef:remora-<slug>`, shown as "@<slug>".
+  if (ref.startsWith("reef:remora-")) return `@${ref.slice("reef:remora-".length)}`;
   return LABELS[ref] ?? ref.replace(/^reef:/, "");
 }
 
@@ -154,9 +157,27 @@ const LISTING: Record<string, { category: string; docsUrl: string }> = {
   weather: { category: "Everyday", docsUrl: MERCHANT_DOCS },
 };
 
-/** E7 `GET /api/reef/services`: one row per service with its `payTo` on this network. */
-export function reefServices(resolved: ResolvedReef[]) {
-  return resolved.flatMap((e) => {
+const ECONOMY_DOCS =
+  "https://github.com/UyLeQuoc/walrus-session-10-remora/blob/main/docs/economy.md";
+
+/**
+ * E7 `GET /api/reef/services`: one row per service with its `payTo` on this network. ADR-0111: a
+ * remora on sale is a row too, in "Remoras", paid at its owner's address.
+ */
+export function reefServices(resolved: ResolvedReef[]): ReefService[] {
+  return resolved.flatMap((e): ReefService[] => {
+    if (e.ref.startsWith("reef:remora-"))
+      return [
+        {
+          name: e.name,
+          category: "Remoras",
+          priceUsdc: e.price,
+          payTo: e.payTo,
+          docsUrl: ECONOMY_DOCS,
+          kind: "remora" as const,
+          description: e.description,
+        },
+      ];
     const l = LISTING[e.slug];
     return l
       ? [
@@ -166,6 +187,8 @@ export function reefServices(resolved: ResolvedReef[]) {
             priceUsdc: e.price,
             payTo: e.payTo,
             docsUrl: l.docsUrl,
+            kind: "house" as const,
+            description: e.description,
           },
         ]
       : [];

@@ -81,6 +81,27 @@ export const BriefView = z.object({
 });
 export type BriefView = z.infer<typeof BriefView>;
 
+/** ADR-0111: a remora's answers on sale, and what it has sold. */
+export const SaleView = z.object({
+  sale: z
+    .object({ on: z.boolean(), slug: z.string(), price: z.string(), blurb: z.string() })
+    .nullable(),
+  listed: z.boolean(),
+  ref: z.string().nullable(),
+  url: z.string().nullable(),
+  path: z.string().nullable(),
+  sold: z.array(
+    z.object({
+      at: z.string(),
+      buyer: z.string(),
+      amount: z.string(),
+      digest: z.string().nullable(),
+    }),
+  ),
+  earned: z.string(),
+});
+export type SaleView = z.infer<typeof SaleView>;
+
 const Ok = z.object({ ok: z.literal(true) });
 const Tx = z.object({ transaction: z.string().nullable() });
 const Remora = z.object({ remora: RemoraView });
@@ -106,6 +127,13 @@ export const api = {
       `/api/remoras/${id}/brief/run`,
       z.object({ answer: z.string(), eventId: z.string() }).loose(),
     ),
+  sale: (id: string) => call("GET", `/api/remoras/${id}/sell`, SaleView),
+  setSale: (id: string, b: { on?: boolean; slug?: string; price?: string; blurb?: string }) =>
+    call("PUT", `/api/remoras/${id}/sell`, SaleView, b),
+  payeesTx: (id: string, payees: string[]) =>
+    call("POST", `/api/remoras/${id}/payees`, Tx, { payees }),
+  payeesConfirm: (id: string, digest: string, payees: string[]) =>
+    call("POST", `/api/remoras/${id}/payees/confirm`, Remora, { digest, payees }),
   confirm: (id: string, digest: string) =>
     call("POST", `/api/remoras/${id}/confirm`, Remora, { digest }),
   edit: (

@@ -12,5 +12,7 @@ const NAMES: Record<string, string> = {
 };
 
 export function payeeName(ref: string): string {
+  // ADR-0111: a remora on sale is `reef:remora-<slug>`, shown as "@<slug>".
+  if (ref.startsWith("reef:remora-")) return `@${ref.slice("reef:remora-".length)}`;
   return NAMES[ref] ?? ref.replace(/^reef:/, "");
 }

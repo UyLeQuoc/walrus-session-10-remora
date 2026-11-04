@@ -7,6 +7,7 @@
  */
 
 import { remoraEvents } from "@remora/db";
+import { isRemoraRef } from "../money/listings.ts";
 import { payeeLabel, type ResolvedReef } from "../money/reef.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import { handoff, proposeSchedule } from "../tools/propose.ts";
@@ -34,6 +35,8 @@ const WEATHERY = /\b(weather|rain|raining|rainy|temperature|forecast|umbrella|su
 const CITY = /\b(?:in|for|at)\s+((?:[A-Z][\p{L}'.-]*)(?:\s+[A-Z][\p{L}'.-]*){0,3})/u;
 const GITHUB =
   /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?=[/?#\s;,.!)]|$)/i;
+/** "ask @slug", or just "@slug": a remora on sale (ADR-0111). */
+const ASK_AT = /(?:\bask\s+)?(?<![\w@])@([a-z0-9][a-z0-9-]{1,30}[a-z0-9])\b/i;
 /** A Walrus blob id: 32 bytes in URL-safe base64, 43 characters. */
 const BLOB = /(?<![\w-])([A-Za-z0-9_-]{43})(?![\w-])/;
 
@@ -43,6 +46,19 @@ const BLOB = /(?<![\w-])([A-Za-z0-9_-]{43})(?![\w-])/;
  */
 export function planBuys(question: string, reef: ResolvedReef[]): PlannedBuy[] {
   const by = (slug: string) => reef.find((r) => r.slug === slug);
+  // ADR-0111: "ask @slug …" hands the whole question to that remora on sale, and buys nothing else.
+  const at = ASK_AT.exec(question);
+  const seller = at?.[1] ? by(`remora-${at[1].toLowerCase()}`) : undefined;
+  if (seller) {
+    const rest = question.replace(ASK_AT, " ").replace(/\s+/g, " ").trim() || question;
+    return [
+      {
+        entry: seller,
+        url: `${seller.url}?q=${encodeURIComponent(rest.slice(0, 500))}`,
+        reason: `${seller.name}'s answer`,
+      },
+    ];
+  }
   const out: PlannedBuy[] = [];
   // Every 0x id: an address next to wallet words gets the X-ray, anything else the risk check.
   const risk = by("sui-risk");
@@ -128,6 +144,8 @@ export interface ScoutResult {
   eventId: string;
   receiptId: string | null;
   outcomes: PayOutcome[];
+  /** What this turn paid, per service. */
+  paid: { payee: string; amount: string; digest: string | null }[];
 }
 
 const outcomeLine = (o: PayOutcome) =>
@@ -163,9 +181,19 @@ export async function scoutAsk(
   deps: RuntimeDeps,
   r: Remora,
   question: string,
-  trigger: { kind: "message" | "cron" | "handoff"; ref: string } = { kind: "message", ref: "web" },
+  trigger: { kind: "message" | "cron" | "handoff" | "webhook"; ref: string } = {
+    kind: "message",
+    ref: "web",
+  },
   /** H7 (ADR-0051): a playground turn reads the chain only: no web fetch, schedules or handoffs. */
-  opts: { playground?: boolean } = {},
+  opts: {
+    playground?: boolean;
+    /**
+     * ADR-0111: an answer sold to another owner's remora. It never reads the owner's `me` memories,
+     * never buys another remora's answer (depth 1), and has no handoffs or schedules.
+     */
+    sold?: { buyer: string };
+  } = {},
 ): Promise<ScoutResult> {
   if (r.status !== "active" && r.status !== "shadow") {
     throw new RemoraError("remora.not_active", `${r.name} is ${r.status}.`, 409);
@@ -184,7 +212,7 @@ export async function scoutAsk(
     timings[stage] = now - mark;
     mark = now;
   };
-  const namespaces = ["me", "sources", "feedback"];
+  const namespaces = opts.sold ? ["sources", "feedback"] : ["me", "sources", "feedback"];
   const recalled = await deps.memory.recall(r, question, namespaces);
   lap("recallMs");
   // F15 (ADR-0074): what the model reads, and what the Wake cites, is what admission let through.
@@ -209,11 +237,27 @@ export async function scoutAsk(
   const outcomes: PayOutcome[] = [];
   const data: UntrustedData[] = [];
   const paidPayees: string[] = [];
+  const paid: ScoutResult["paid"] = [];
+  // ADR-0111: a remora never buys its own answer, and a sold answer never buys another remora's.
+  const reef = deps
+    .reef(r.network)
+    .filter(
+      (e) => !isRemoraRef(e.ref) || (!opts.sold && (e as { sellerId?: string }).sellerId !== r.id),
+    );
   const buy = async (payee: string, url: string, reason: string) => {
-    const o = await requestPayment(deps, r, { payee, url, reason, trigger, question, memories });
+    const o = await requestPayment(deps, r, {
+      payee,
+      url,
+      reason,
+      trigger,
+      question,
+      memories,
+      ...(opts.sold ? { sold: true } : {}),
+    });
     outcomes.push(o);
     if (o.kind === "paid") {
       paidPayees.push(payee);
+      paid.push({ payee, amount: o.amount, digest: o.digest });
       data.push({
         source: payeeLabel(payee),
         content: await o.response.clone().text(),
@@ -223,7 +267,7 @@ export async function scoutAsk(
     return o;
   };
   const planned: { payee: string; o: PayOutcome }[] = [];
-  for (const b of planBuys(question, deps.reef(r.network)))
+  for (const b of planBuys(question, reef))
     planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
   lap("payMs");
 
@@ -236,10 +280,7 @@ export async function scoutAsk(
   let usedModel = modelIdFor(r, deps.brain.answerModel);
   try {
     // ADR-0109: the model is told the only addresses it may pay; the pay path refuses any other.
-    const listedServices = deps
-      .reef(r.network)
-      .map((e) => `${e.ref} at ${e.url}`)
-      .join("; ");
+    const listedServices = reef.map((e) => `${e.ref} at ${e.url}`).join("; ");
     const res = await deps.brain.answer({
       model: modelIdFor(r, deps.brain.answerModel),
       persona: `${persona}\n\nPaid services you may buy from, each only at its own address (any other address is refused): ${listedServices}. Buy only when one of them adds data the question needs; otherwise answer from what you know, without paying.`,
@@ -257,26 +298,27 @@ export async function scoutAsk(
             }
           : outcomeLine(o);
       },
-      tools: opts.playground
-        ? chainOnly(
-            readTools({
-              client: deps.networks.client(r.network),
-              memory: deps.memory,
-              remora: r,
-              ...(deps.facts ? { facts: deps.facts } : {}),
-            }),
-          )
-        : {
-            ...readTools({
-              client: deps.networks.client(r.network),
-              memory: deps.memory,
-              remora: r,
-              ...(deps.fetch ? { fetch: deps.fetch } : {}),
-              ...(deps.facts ? { facts: deps.facts } : {}),
-            }),
-            schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
-            handoff: ({ to, question: q }) => handoff(deps, r, to, q),
-          },
+      tools:
+        opts.playground || opts.sold
+          ? chainOnly(
+              readTools({
+                client: deps.networks.client(r.network),
+                memory: deps.memory,
+                remora: r,
+                ...(deps.facts ? { facts: deps.facts } : {}),
+              }),
+            )
+          : {
+              ...readTools({
+                client: deps.networks.client(r.network),
+                memory: deps.memory,
+                remora: r,
+                ...(deps.fetch ? { fetch: deps.fetch } : {}),
+                ...(deps.facts ? { facts: deps.facts } : {}),
+              }),
+              schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
+              handoff: ({ to, question: q }) => handoff(deps, r, to, q),
+            },
     });
     answer = res.text;
     tokens = res.tokens;
@@ -322,6 +364,7 @@ export async function scoutAsk(
         answer,
         paidPayees,
         digests: outcomes.flatMap((o) => (o.kind === "paid" && o.digest ? [o.digest] : [])),
+        ...(opts.sold ? { sale: { buyer: opts.sold.buyer } } : {}),
         outcomes: outcomes.map((o) => ({ kind: o.kind, eventId: o.eventId })),
         admission,
       },
@@ -330,7 +373,7 @@ export async function scoutAsk(
     .returning({ id: remoraEvents.id });
   lap("writeMs");
   deps.log.info("turn.timings", { remora: r.id, ...timings, paid: paidPayees.length });
-  return { answer, eventId: e?.id ?? "", receiptId: wake?.id ?? null, outcomes };
+  return { answer, eventId: e?.id ?? "", receiptId: wake?.id ?? null, outcomes, paid };
 }
 
 /** A playground turn's tools: Tatum reads only. */
