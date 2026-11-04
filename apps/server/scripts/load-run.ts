@@ -201,6 +201,8 @@ interface Call {
   amount: string;
   digest: string | null;
   ms: number;
+  /** Why it didn't pay, as the pay path said it. */
+  reason: string | null;
 }
 const calls: Call[] = [];
 let next = 0;
@@ -238,6 +240,7 @@ const one = async (
     amount: out.kind === "paid" ? out.amount : "0",
     digest: out.kind === "paid" ? out.digest : null,
     ms: Math.round(performance.now() - t0),
+    reason: out.kind === "paid" ? null : (out.reasons.at(-1)?.slice(0, 160) ?? null),
   });
 };
 const pool = async (n: number, concurrency: number, run: () => Promise<void>) => {
@@ -362,6 +365,14 @@ const result = {
     attempts: calls.filter((c) => c.step === failStep).length,
     stopped: calls.filter((c) => c.step === failStep && c.kind !== "paid").length,
     outcomes: byCode(calls.filter((c) => c.step === failStep)),
+    /** What the Disc said, one example per kind of attempt. */
+    reasons: [
+      ...new Set(
+        calls
+          .filter((c) => c.step === failStep && c.reason)
+          .map((c) => `${c.payee}: ${c.reason}`),
+      ),
+    ].slice(0, 4),
   },
   failuresByCode: byCode(calls.filter((c) => c.kind !== "paid")),
   overspends: overspends.length + overCap.length,
