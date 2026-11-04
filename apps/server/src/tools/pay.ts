@@ -16,6 +16,7 @@ import { modelIdFor } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { REMORA_LIMITS } from "../runtime/limits.ts";
 import type { Recalled } from "../runtime/memory.ts";
+import { queueProposalCheck } from "../runtime/proposals.ts";
 import type { Remora } from "../runtime/remoras.ts";
 import { sonar } from "../runtime/sonar.ts";
 import { intentBase, recordWake, sha256Hex } from "../runtime/wake.ts";
@@ -282,6 +283,10 @@ export async function requestPayment(
       },
       receipt?.id,
     );
+    // E5 (ADR-0124): after a payment, see whether the budget still fits (once an hour at most).
+    void queueProposalCheck(deps, r.id).catch((err) =>
+      log.warn("proposal.queue_failed", { error: err }),
+    );
     return { kind: "paid", response, digest, amount, receiptId: receipt?.id ?? null, eventId };
   } catch (err) {
     if (err instanceof PaymentStopped) {
@@ -354,6 +359,9 @@ export async function requestPayment(
           `Asked you to approve ${amount} to ${p.payee}`,
           { approvalId: a?.id },
           wake?.id,
+        );
+        void queueProposalCheck(deps, r.id).catch((e) =>
+          log.warn("proposal.queue_failed", { error: e }),
         );
         await deps.notifier.send(r.ownerAddress, {
           text: `${r.name} wants to pay ${amount} to ${p.payee}, over its limit. Approve?`,

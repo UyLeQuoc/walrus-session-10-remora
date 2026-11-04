@@ -22,6 +22,7 @@ export { handoff, JOB, proposeSchedule } from "../tools/propose.ts";
 
 import { JOB } from "../tools/propose.ts";
 import { PAID_CHECK } from "../triggers/indexer.ts";
+import { PROPOSAL_CHECK, proposalCheckHandler } from "./proposals.ts";
 import { paidCheckHandler } from "./reality.ts";
 
 export interface Schedule {
@@ -301,6 +302,7 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
       if (r) await firstRun(deps, r);
     },
     [PAID_CHECK]: paidCheckHandler(deps),
+    [PROPOSAL_CHECK]: proposalCheckHandler(deps),
   };
 }
 

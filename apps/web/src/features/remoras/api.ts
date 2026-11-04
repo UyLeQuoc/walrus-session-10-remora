@@ -102,6 +102,54 @@ export const SaleView = z.object({
 });
 export type SaleView = z.infer<typeof SaleView>;
 
+/** ADR-0124 (E5): a remora's own budget proposal, with the memories it cites. */
+const BudgetLine = z.object({
+  coinType: z.string(),
+  windowLimit: z.string(),
+  window: z.enum(["day", "week", "month"]),
+  perPaymentCap: z.string(),
+  payees: z.array(z.string()),
+});
+export const Proposal = z.object({
+  id: z.string(),
+  status: z.string(),
+  summary: z.string(),
+  createdAt: z.string(),
+  decidedAt: z.string().nullable(),
+  rule: z.enum(["approvals", "near_limit", "cap_hit", "unused"]),
+  from: BudgetLine,
+  to: BudgetLine,
+  numbers: z.record(z.string(), z.string()),
+  cites: z.array(
+    z.object({
+      memoryId: z.string(),
+      blobId: z.string(),
+      namespace: z.string(),
+      label: z.string(),
+      at: z.string(),
+    }),
+  ),
+  reason: z.string(),
+  previous: z
+    .object({
+      rule: z.string(),
+      outcome: z.enum(["accepted", "declined"]),
+      reason: z.string().optional(),
+      at: z.string(),
+    })
+    .optional(),
+  declineReason: z.string().optional(),
+  digest: z.string().optional(),
+});
+export type Proposal = z.infer<typeof Proposal>;
+export const ProposalsView = z.object({
+  open: Proposal.nullable(),
+  recent: z.array(Proposal),
+  skipped: z.string().optional(),
+  proposalId: z.string().optional(),
+});
+export type ProposalsView = z.infer<typeof ProposalsView>;
+
 /** ADR-0114: a crew, its members and what each spent this month. */
 export const CrewView = z.object({
   crew: z.object({ id: z.string(), name: z.string(), leadId: z.string() }),
@@ -160,6 +208,20 @@ export const api = {
       z.object({ retired: z.array(z.string()) }),
       { digest },
     ),
+  proposals: (id: string) => call("GET", `/api/remoras/${id}/proposals`, ProposalsView),
+  checkProposals: (id: string) => call("POST", `/api/remoras/${id}/proposals/check`, ProposalsView),
+  proposalTx: (approvalId: string) => call("POST", `/api/approvals/${approvalId}/proposal-tx`, Tx),
+  proposalConfirm: (approvalId: string, digest: string) =>
+    call(
+      "POST",
+      `/api/approvals/${approvalId}/proposal-confirm`,
+      z.object({ digest: z.string() }),
+      {
+        digest,
+      },
+    ),
+  declineProposal: (approvalId: string, reason: string) =>
+    call("POST", `/api/approvals/${approvalId}/reject`, z.object({ ok: z.boolean() }), { reason }),
   sale: (id: string) => call("GET", `/api/remoras/${id}/sell`, SaleView),
   setSale: (id: string, b: { on?: boolean; slug?: string; price?: string; blurb?: string }) =>
     call("PUT", `/api/remoras/${id}/sell`, SaleView, b),

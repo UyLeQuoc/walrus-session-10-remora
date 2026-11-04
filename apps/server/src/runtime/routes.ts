@@ -8,6 +8,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { SuiNetwork } from "@remora/chain";
 import {
   and,
+  approvals,
   desc,
   eq,
   gt,
@@ -73,6 +74,13 @@ import {
   recentDuplicates,
   setHidden,
 } from "./memory-controls.ts";
+import {
+  checkProposal,
+  confirmProposal,
+  declineProposal,
+  proposalsOf,
+  proposalTx,
+} from "./proposals.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
 import {
   defaultRoom,
@@ -1041,8 +1049,47 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   );
 
   app.post("/api/approvals/:id/reject", async (c) => {
+    const [a] = await rt.db
+      .select({ kind: approvals.kind })
+      .from(approvals)
+      .where(eq(approvals.id, c.req.param("id")));
+    // E5: declining a budget proposal is remembered, with the owner's reason if they gave one.
+    if (a?.kind === "budget_change") {
+      const b = await body<{ reason?: string }>(c);
+      return c.json(
+        await declineProposal(rt, c.get("owner"), c.req.param("id"), String(b.reason ?? "")),
+      );
+    }
     await rejectApproval(rt, c.get("owner"), c.req.param("id"));
     return c.json({ ok: true });
+  });
+
+  // ── Budget proposals (E5, ADR-0124) ───────────────────────────────────────
+  app.get("/api/remoras/:id/proposals", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await proposalsOf(rt, r));
+  });
+
+  app.post("/api/remoras/:id/proposals/check", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const out = await checkProposal(rt, r);
+    return c.json({ ...out, ...(await proposalsOf(rt, r)) });
+  });
+
+  app.post("/api/approvals/:id/proposal-tx", async (c) =>
+    c.json(serialize(await proposalTx(rt, service, c.get("owner"), c.req.param("id")))),
+  );
+
+  app.post("/api/approvals/:id/proposal-confirm", async (c) => {
+    const b = await body<{ digest?: string }>(c);
+    const out = await confirmProposal(
+      rt,
+      service,
+      c.get("owner"),
+      c.req.param("id"),
+      digestOf(b.digest),
+    );
+    return c.json({ remora: await view(out.remora), digest: out.digest });
   });
 
   // ── Panic button (N10) ────────────────────────────────────────────────────
