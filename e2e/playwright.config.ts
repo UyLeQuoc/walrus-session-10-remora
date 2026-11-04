@@ -81,6 +81,16 @@ export default defineConfig({
     ...(process.env.ECONOMY === "1"
       ? [{ name: "economy", testMatch: /economy\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // U17: confirm the curated templates to a deployment's gallery (GALLERY=1, with E2E_BASE_URL).
+    ...(process.env.GALLERY === "1"
+      ? [
+          {
+            name: "gallery",
+            testMatch: /gallery-confirm\.spec\.ts/,
+            use: { ...devices["Desktop Chrome"] },
+          },
+        ]
+      : []),
     // U14 (ADR-0103): the review capture, every route and state on a desktop and a phone, into
     // docs/ux/review/r<UX_ROUND>/. Opt in with UX=1; it reads and never pays.
     ...(process.env.UX === "1"
