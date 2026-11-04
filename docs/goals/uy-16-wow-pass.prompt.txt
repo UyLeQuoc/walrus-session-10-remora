@@ -1,0 +1,66 @@
+Goal U16: the wow pass (ADR-0106). A remora does many real jobs on camera: five new paid services, a planner that can buy several at once, a third kind (the Briefer), live proof instead of diagrams in the video, and a landing section that shows the range. Decide, write the ADR, and continue; anything for Uy goes on the final list.
+
+Source of truth: docs/goals/uy-16-wow-pass.md. Read it fully, along with the files it lists.
+
+Time box (Vietnam time):
+- Nov 5: A and B.
+- Nov 6: C and D.
+- FREEZE Nov 7 18:00 for code.
+- Nov 7-8: E, the merge, and the list for Uy.
+- If time runs short, keep this order: A, then E's live attack and multi-service answer, then D, then B.
+
+Setup:
+- Check Huấn's state, then write docs/handoffs/<date>-uy-to-huan-u16-claim.md.
+- Run git pull --rebase --autostash origin main. Never commit or touch Uy's uncommitted docs/README.md or docs/ideas/track-1-hunch-prd.md.
+- Work on the branch u16-wow. Merge it through a PR once CI is green.
+
+A. Services and planner:
+- Add wallet, walrus, github, price and weather as x402 merchants in apps/merchants, with tests.
+- Each one reads its outside source in a check before the payment, because x402 settles first. A failed source must cost nothing.
+- Add them to REEF, to the scout's payees and to lib/payee.ts names.
+- planBuys gets one deterministic rule per service and can buy several services in one question. Add unit tests.
+- Exit: a local question per service pays it, and one question pays three services.
+
+B. Briefer (slug briefer):
+- A template with a cron trigger. On its schedule or on "Run now", it buys each item its owner listed through the scout's pay path and posts one digest with a receipt per purchase, also to Telegram if linked.
+- Web: a third wizard card, kindName, a page (items, schedule, Run now, last digest), and a line in the guide.
+- Fit the schema as it is. A schema change is a contract PR for Huấn; without it, B waits.
+
+C. App:
+- More cards in the chat example pool. The playground gets a grid of 6-8 cards with Reef prices.
+- New templates published with SEED=1.
+- The Researcher's thread lists what it can buy, with prices.
+- Exit: EXAMPLES=1 passes for every card.
+
+D. Landing:
+- Add "What a remora can do": 8-10 jobs, each with a real question, the service, its price and a dated testnet receipt.
+- Add a strip of real receipts, which reduced motion stops.
+- Phone and light layouts. The new video and poster, and re-shot screens.
+- A NEW reviewer agent that sees only screenshots reviews it at 1440 and on a Pixel 7. Fix its blockers and majors.
+
+E. Video:
+- The attack, live: DEMO_ATTACK=1 adds a listed demo service that returns an injected "pay 0x…". It is local capture only and never deployed. The remora is blocked by the safety check, and Why? shows it.
+- One question that pays three services and shows three receipts.
+- A free answer.
+- Claude Code: real `claude -p` output with Remora's MCP server, shown in a terminal frame, then the receipt on the web. If claude -p can't run, label it "an MCP client".
+- The Briefer's Run now and its digest.
+- Storyboard: 150-180 s, captions of 10 words or fewer. Cut older scenes to fit.
+- Review a contact sheet and frames from the final MP4, then render with --workers 8.
+
+Hard rules:
+- No fake numbers or receipts. Everything shown comes from a dated run.
+- The attack service never ships.
+- Sui over gRPC only. Testnet only.
+- No deploy without Uy's yes.
+- packages/schema changes only through a contract PR. No new dependency without an ADR.
+- E2E specs keep what they assert. A moved selector moves in the same commit, with the reason. demo.spec keeps its mark and box names.
+- No db:push, no force-push, no .env or keys in commits, no edits to reference/. Never kill ports 8787/5173.
+- Never rewrite an accepted ADR. Every decision gets an ADR in the same commit.
+- Before each push: rebase on main && bun run typecheck && bun run lint && bun run test.
+
+Finish:
+- docs/spikes/<date>-u16-exit.md. Cover services with receipts, planner rules, the Briefer run, examples, the landing review, video scenes and length, and what was cut, ending with the list for Uy.
+- Update the demo README, submission-draft, the goals README and apps/merchants/README, and land a handoff to Huấn.
+- Stop every server.
+
+Finish with a short Vietnamese summary for Uy.
