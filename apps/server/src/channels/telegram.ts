@@ -72,6 +72,13 @@ export function telegramAdapter(): ChannelAdapter | null {
     async start() {
       bot.catch((e) => console.error("[telegram]", e));
       await bot.api.setMyCommands([...REMORA_COMMANDS, ...telegramCommands()].slice(0, 100));
+      // H3 (ADR-0115): the menu button opens the Mini App. Telegram takes https only.
+      if (runtime.webBase.startsWith("https://"))
+        await bot.api
+          .setChatMenuButton({
+            menu_button: { type: "web_app", text: "Remora", web_app: { url: `${runtime.webBase}/tg` } },
+          })
+          .catch((e) => console.error("[telegram] menu button", e));
       // Not `void bot.start()`: a 409 during a deploy overlap rejected it
       // unhandled and crashed the whole server. See polling.ts.
       void keepPolling({

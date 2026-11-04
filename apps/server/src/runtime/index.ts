@@ -19,11 +19,13 @@ import {
 import { parseKek, RemoraSigner } from "@remora/signer";
 import type { Context } from "hono";
 import { sendNotice, telegramBot } from "../channels/telegram-bot.ts";
+import { verifyInitData } from "../channels/tg-init-data.ts";
 import { db, modelFor, operator } from "../context.ts";
 import { env } from "../env/load.ts";
 import { onIndexedEvents } from "../hatchery/service.ts";
 import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
+import { personByChannel } from "../identity/persons.ts";
 import { signedInOwner } from "../identity/session.ts";
 import { log, networks } from "../money/index.ts";
 import { createListings } from "../money/listings.ts";
@@ -148,6 +150,12 @@ export const remoraRoutes = createRemoraRoutes({
   hatchery,
   written,
   listings,
+  // H3 (ADR-0115): the Mini App's owner, from Telegram's signed launch data and the A5 link.
+  tgOwner: async (initData: string) => {
+    const user = env.TELEGRAM_BOT_TOKEN ? verifyInitData(initData, env.TELEGRAM_BOT_TOKEN) : null;
+    if (!user) return null;
+    return (await personByChannel("telegram", user.id))?.walletAddress ?? null;
+  },
   telegramLinked: async (owner: string) => {
     const [row] = await db
       .select({ id: channelIdentities.id })

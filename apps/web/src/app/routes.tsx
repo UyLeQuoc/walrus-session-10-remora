@@ -23,6 +23,7 @@ import { SettingsPage } from "../features/settings/settings-page";
 import { StatsPage } from "../features/status/stats-page";
 import { StatusPage } from "../features/status/status-page";
 import { ImportTeamPage } from "../features/teams/import-page";
+import { TgPage } from "../features/tg/tg-page";
 import { RoomPage } from "../features/threads/room-page";
 import { ThreadPage } from "../features/threads/thread-page";
 import { PublicWakePage } from "../features/verify/public-wake-page";
@@ -69,5 +70,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "reef", element: <ReefPage /> },
   { path: "reef/new", element: <ListApiPage /> },
   { path: "stats", element: <StatsPage /> },
+  { path: "tg", element: <TgPage /> },
   { path: "p/:token", element: <PublicWakePage /> },
 ];

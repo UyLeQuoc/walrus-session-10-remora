@@ -93,6 +93,7 @@ import {
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
+import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
 import { verifyWake } from "./verify.ts";
 import { publicWake, shareWake, unshareWake } from "./wake-share.ts";
@@ -121,6 +122,8 @@ export interface RemoraRouteDeps {
   hatchery?: Omit<HatcheryDeps, "runtime" | "service">;
   /** E11 (ADR-0111): remoras on sale. */
   listings?: Listings;
+  /** H3 (ADR-0115): the owner behind a Telegram Mini App's signed launch data, or null. */
+  tgOwner?: (initData: string) => Promise<string | null>;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -406,6 +409,25 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         ),
       }),
     );
+  });
+
+  // ── The Telegram Mini App (H3, ADR-0115): no session, just Telegram's signed launch data ──
+  const tgOwner = async (c: Context) => {
+    const owner = d.tgOwner ? await d.tgOwner(c.req.header("x-telegram-init-data") ?? "") : null;
+    if (!owner)
+      throw new RemoraError(
+        "tg.unlinked",
+        "Open this from Remora's Telegram bot, after linking Telegram in Settings.",
+        403,
+      );
+    return owner;
+  };
+  app.get("/api/tg/me", async (c) => c.json(await tgOverview(rt, await tgOwner(c))));
+  app.post("/api/tg/pause", async (c) => {
+    const { paused } = await body<{ paused?: unknown }>(c);
+    const owner = await tgOwner(c);
+    await tgPauseAll(rt, owner, paused !== false);
+    return c.json(await tgOverview(rt, owner));
   });
 
   // ── Crews (ADR-0114): the members, their spend, pause together, retire together ──
