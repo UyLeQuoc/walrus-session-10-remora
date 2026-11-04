@@ -733,18 +733,13 @@ export function createRemoraService(deps: RemoraDeps) {
     /** ADR-0127: whether this remora's counts feed the Reef's reputation. Counts only, never content. */
     async setShare(id: string, owner: string, stats: boolean) {
       const r = await mine(id, owner);
-      const prev = r.config as Record<string, unknown> & { revision?: number };
-      const next = { ...prev, share: { stats }, revision: (prev.revision ?? 1) + 1 };
-      const updated = await setRow(id, { config: next });
-      await event(
-        updated,
-        "config_changed",
-        stats
-          ? `${r.name} shares its counts with the Reef.`
-          : `${r.name} stopped sharing its counts with the Reef.`,
-        { previous: prev, revision: next.revision },
-      );
-      return updated;
+      return saveConfig(db, id, (c) => ({ ...c, share: { stats } }), {
+        summary: () =>
+          stats
+            ? `${r.name} shares its counts with the Reef.`
+            : `${r.name} stopped sharing its counts with the Reef.`,
+        now: now(),
+      });
     },
 
     /** N10: one owner transaction pauses every Disc on this network; Disc-less remoras pause on confirm. */
@@ -948,19 +943,20 @@ export function createRemoraService(deps: RemoraDeps) {
       const onchain = new Set(disc.payees.map((a) => normalizeSuiAddress(a)));
       if (want.length !== onchain.size || want.some((a) => !onchain.has(a)))
         throw new RemoraError("tx.not_payees", "That transaction didn't set these contacts.");
-      const budget = (r.config as { budget?: Budget }).budget;
-      const updated = await setRow(id, {
-        config: {
-          ...r.config,
+      return saveConfig(
+        db,
+        id,
+        (c) => ({
+          ...c,
           contacts,
-          budget: { ...budget, payees: refs },
-        } as Record<string, unknown>,
-      });
-      await event(updated, "action", `${r.name} may now pay ${contacts.length} people.`, {
-        digest,
-        contacts: contacts.map((c) => c.name),
-      });
-      return updated;
+          budget: { ...(c as { budget?: Budget }).budget, payees: refs },
+        }),
+        {
+          summary: () => `${r.name} may now pay ${contacts.length} people.`,
+          payload: { digest, contacts: contacts.map((x) => x.name) },
+          now: now(),
+        },
+      );
     },
 
     /** N5: budget meter straight from the allowance. */

@@ -68,6 +68,8 @@ export interface PayInput {
   onAsk?: "approval" | "refuse";
   /** ADR-0111: this turn answers a question someone bought, so it can't buy another remora's answer. */
   sold?: boolean;
+  /** ADR-0125: a payment to a person carries its memo onto the payment event (and the statement). */
+  memo?: string;
 }
 
 /** What a remora on sale says it paid for the answer it sold: its own receipts (ADR-0111). */
@@ -287,6 +289,7 @@ export async function requestPayment(
         status: response.status,
         // ADR-0127: from the first request to the settled answer, for the Reef's median.
         ms: Date.now() - started,
+        ...(p.memo ? { memo: p.memo } : {}),
         ...(upstream.length ? { upstream } : {}),
       },
       receipt?.id,

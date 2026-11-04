@@ -165,6 +165,7 @@ export async function payContact(
       trigger: opts.trigger ?? { kind: "message", ref: "web" },
       question,
       memories: [],
+      ...(memo ? { memo } : {}),
     },
   );
   if (out.kind === "paid") {
