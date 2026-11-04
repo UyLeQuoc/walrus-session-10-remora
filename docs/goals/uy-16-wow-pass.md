@@ -1,10 +1,9 @@
 # Goal U16: the wow pass: more things to buy, a third kind, live proof in the video, and a landing page that shows the range
 
-- **Owner:** Uy's agent.
-  - It owns `apps/server`, `apps/merchants` and `apps/landing`.
-  - It claims the web parts from Huấn again ([ADR-0027](../adr/0027-flex-takeover.md); write
-    `docs/handoffs/<date>-uy-to-huan-u16-claim.md` first).
-- **Decision:** [ADR-0106](../adr/0106-wow-pass-more-uses.md).
+- **Owner:** Uy's agent, for every part, Huấn's lane and `packages/schema` included. There's no
+  claim note, no handoff, and no wait for Huấn ([ADR-0107](../adr/0107-u16-without-handoffs.md)).
+- **Decision:** [ADR-0106](../adr/0106-wow-pass-more-uses.md) and
+  [ADR-0107](../adr/0107-u16-without-handoffs.md).
 - **Runs in:** `/Users/uydev/orca/projects/walrus-session-10`, on the branch `u16-wow`, merged through
   a PR.
 - **Time box** (Vietnam time; the deadline is Nov 10, 17:00 UTC):
@@ -42,7 +41,7 @@ Sui enforces:
     `apps/landing/README.md`.
 - **Pull:** `git pull --rebase --autostash origin main`.
   - Never commit or touch Uy's uncommitted `docs/README.md` and `docs/ideas/track-1-hunch-prd.md`.
-- **Huấn's state:** check his commits and open PRs. Write the claim note, then branch `u16-wow`.
+- **Branch:** `u16-wow`.
 - **The local stack:** `bun run dev` with Docker Postgres and the root `.env` (the burner). The e2e
   ports are 8797/8798/8799/5183; **never kill 8787/5173**.
 
@@ -96,9 +95,9 @@ Sui enforces:
   - `lib/kind.ts` names it ("Briefer");
   - its page shows its items, its schedule, "Run now" and the last digest;
   - the guide adds one line.
-- **Contracts:**
-  - fit the schema as it stands (the existing `TOOL_NAMES`, `cron`, `template` as a string);
-  - a needed schema change is a contract PR for Huấn. Without it, B waits and the rest ships.
+- **Contracts:** fit the schema as it stands where you can: the existing `TOOL_NAMES`, `cron`, and
+  `template` as a string. A needed change goes in the same PR, and the exit note lists it
+  ([ADR-0107](../adr/0107-u16-without-handoffs.md)).
 - **Exit B:** create a Briefer on testnet, press "Run now", and see a digest with three or more paid
   receipts that verify.
 
@@ -159,9 +158,8 @@ Sui enforces:
   - the attack service never ships to a deployed Reef.
 - **Sui and Walrus:** Sui over gRPC only. Testnet only, no mainnet.
 - **No deploy** without Uy's yes. The commands go in the exit note.
-- **Contracts:**
-  - `packages/schema` changes only through a contract PR approved by Huấn;
-  - `lib/api.ts` changes only with the server's `AppType`.
+- **Contracts:** `packages/schema` changes go in the same PR, listed in the exit note (ADR-0107).
+  `lib/api.ts` changes only with the server's `AppType`.
 - **Dependencies:** no new dependency without an ADR.
 - **E2E specs keep what they assert.** A removed text moves to a role or `data-testid` in the same
   commit, with the reason. demo.spec's marks and boxes keep their names.
@@ -180,8 +178,6 @@ Sui enforces:
   - the video's scenes and length;
   - what was cut;
   - the list for Uy (upload, deploy, live gallery confirms, Telegram footage if wanted).
-- **Update:**
-  - the demo README, the submission draft, the goals README and `apps/merchants/README.md`;
-  - a landed handoff to Huấn.
+- **Update:** the demo README, the submission draft, the goals README and `apps/merchants/README.md`.
 - **Stop every server.**
 - **Finish with a short Vietnamese summary for Uy.**

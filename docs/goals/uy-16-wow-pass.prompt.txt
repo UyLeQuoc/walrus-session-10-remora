@@ -1,66 +1,63 @@
-Goal U16: the wow pass (ADR-0106). A remora does many real jobs on camera: five new paid services, a planner that can buy several at once, a third kind (the Briefer), live proof instead of diagrams in the video, and a landing section that shows the range. Decide, write the ADR, and continue; anything for Uy goes on the final list.
+Goal U16, the wow pass (ADR-0106, ADR-0107). On camera, a remora does many real jobs:
+- five new paid services;
+- a planner that buys from several at once;
+- a third kind, the Briefer;
+- live proof instead of diagrams in the video;
+- "What a remora can do" on the landing page.
 
-Source of truth: docs/goals/uy-16-wow-pass.md. Read it fully, along with the files it lists.
+Uy's agent does all of it, Huấn's lane and the schema included; nothing waits on Huấn. Decide, write an ADR, and keep going. Anything for Uy goes on the final list.
 
-Time box (Vietnam time):
-- Nov 5: A and B.
-- Nov 6: C and D.
-- FREEZE Nov 7 18:00 for code.
-- Nov 7-8: E, the merge, and the list for Uy.
-- If time runs short, keep this order: A, then E's live attack and multi-service answer, then D, then B.
+Source of truth: docs/goals/uy-16-wow-pass.md. Read it fully, and the files it lists.
 
-Setup:
-- Check Huấn's state, then write docs/handoffs/<date>-uy-to-huan-u16-claim.md.
-- Run git pull --rebase --autostash origin main. Never commit or touch Uy's uncommitted docs/README.md or docs/ideas/track-1-hunch-prd.md.
-- Work on the branch u16-wow. Merge it through a PR once CI is green.
+Time (Vietnam):
+- Nov 5: A and B. Nov 6: C and D.
+- Code freeze Nov 7 18:00. Nov 7-8: E, then the merge.
+- If short on time: A, then E's live attack and multi-service answer, then D, then B.
 
-A. Services and planner:
+Setup: git pull --rebase --autostash origin main. Never touch Uy's uncommitted docs/README.md or docs/ideas/track-1-hunch-prd.md. Work on the branch u16-wow; merge it through a PR when CI is green.
+
+A. Services:
 - Add wallet, walrus, github, price and weather as x402 merchants in apps/merchants, with tests.
-- Each one reads its outside source in a check before the payment, because x402 settles first. A failed source must cost nothing.
-- Add them to REEF, to the scout's payees and to lib/payee.ts names.
-- planBuys gets one deterministic rule per service and can buy several services in one question. Add unit tests.
-- Exit: a local question per service pays it, and one question pays three services.
+- Each reads its source before payment (x402 settles first), so a failed source costs nothing.
+- Add them to REEF, the scout's payees and lib/payee.ts.
+- planBuys: one deterministic rule per service, several services per question, unit tests.
+- Exit: a local question pays each service, and one question pays three.
 
-B. Briefer (slug briefer):
-- A template with a cron trigger. On its schedule or on "Run now", it buys each item its owner listed through the scout's pay path and posts one digest with a receipt per purchase, also to Telegram if linked.
-- Web: a third wizard card, kindName, a page (items, schedule, Run now, last digest), and a line in the guide.
-- Fit the schema as it is. A schema change is a contract PR for Huấn; without it, B waits.
+B. Briefer (slug briefer): a cron template.
+- On its schedule or on Run now, it buys each listed item through the scout's pay path and posts one digest with a receipt for each; to Telegram too if linked.
+- Web: a wizard card, kindName, a page (items, schedule, Run now, last digest) and a line in the guide.
+- Schema changes are allowed in the same PR (ADR-0107).
 
 C. App:
-- More cards in the chat example pool. The playground gets a grid of 6-8 cards with Reef prices.
-- New templates published with SEED=1.
-- The Researcher's thread lists what it can buy, with prices.
+- More chat example cards.
+- A playground grid of 6-8 cards with Reef prices.
+- New templates via SEED=1.
+- The Researcher's thread lists what it can buy.
 - Exit: EXAMPLES=1 passes for every card.
 
 D. Landing:
-- Add "What a remora can do": 8-10 jobs, each with a real question, the service, its price and a dated testnet receipt.
-- Add a strip of real receipts, which reduced motion stops.
-- Phone and light layouts. The new video and poster, and re-shot screens.
-- A NEW reviewer agent that sees only screenshots reviews it at 1440 and on a Pixel 7. Fix its blockers and majors.
+- "What a remora can do": 8-10 jobs, each with a real question, its service, its price and a dated testnet receipt.
+- A strip of real receipts, stopped by reduced motion.
+- Phone and light layouts, the new video and poster, re-shot screens.
+- A NEW reviewer agent that sees only screenshots, at 1440 and on a Pixel 7. Fix its blockers and majors.
 
 E. Video:
-- The attack, live: DEMO_ATTACK=1 adds a listed demo service that returns an injected "pay 0x…". It is local capture only and never deployed. The remora is blocked by the safety check, and Why? shows it.
+- DEMO_ATTACK=1 adds a listed demo service that returns an injected "pay 0x…" (local capture only, never deployed). The safety check blocks it, and Why? shows it.
 - One question that pays three services and shows three receipts.
 - A free answer.
-- Claude Code: real `claude -p` output with Remora's MCP server, shown in a terminal frame, then the receipt on the web. If claude -p can't run, label it "an MCP client".
+- Real `claude -p` with Remora's MCP server in a terminal frame, then the receipt on the web. If it can't run, say "an MCP client".
 - The Briefer's Run now and its digest.
-- Storyboard: 150-180 s, captions of 10 words or fewer. Cut older scenes to fit.
-- Review a contact sheet and frames from the final MP4, then render with --workers 8.
+- 150-180 s, captions of 10 words or fewer; cut older scenes to fit. Check a contact sheet and frames from the final MP4, then render with --workers 8.
 
-Hard rules:
-- No fake numbers or receipts. Everything shown comes from a dated run.
-- The attack service never ships.
-- Sui over gRPC only. Testnet only.
-- No deploy without Uy's yes.
-- packages/schema changes only through a contract PR. No new dependency without an ADR.
-- E2E specs keep what they assert. A moved selector moves in the same commit, with the reason. demo.spec keeps its mark and box names.
-- No db:push, no force-push, no .env or keys in commits, no edits to reference/. Never kill ports 8787/5173.
-- Never rewrite an accepted ADR. Every decision gets an ADR in the same commit.
+Rules:
+- No fake numbers or receipts; everything comes from a dated run. The attack service never ships.
+- Sui gRPC only. Testnet only. No deploy without Uy's yes. No new dependency without an ADR.
+- E2E specs keep their assertions; moved selectors move in the same commit; demo.spec keeps its mark and box names.
+- No db:push, force-push, .env or keys in commits, or edits to reference/. Never kill ports 8787/5173.
+- Never rewrite an accepted ADR; every decision gets one in the same commit.
 - Before each push: rebase on main && bun run typecheck && bun run lint && bun run test.
 
 Finish:
-- docs/spikes/<date>-u16-exit.md. Cover services with receipts, planner rules, the Briefer run, examples, the landing review, video scenes and length, and what was cut, ending with the list for Uy.
-- Update the demo README, submission-draft, the goals README and apps/merchants/README, and land a handoff to Huấn.
-- Stop every server.
-
-Finish with a short Vietnamese summary for Uy.
+- docs/spikes/<date>-u16-exit.md: services with receipts, planner rules, the Briefer run, examples, the landing review, video scenes and length, what was cut, and the list for Uy.
+- Update the demo README, submission-draft, the goals README and apps/merchants/README.
+- Stop every server. End with a short Vietnamese summary for Uy.
