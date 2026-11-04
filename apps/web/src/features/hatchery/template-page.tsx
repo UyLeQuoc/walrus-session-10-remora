@@ -14,6 +14,7 @@ import { Hash } from "@/components/hash";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useSignAndRun } from "@/features/funds/sign";
@@ -43,11 +44,13 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
   const [step, setStep] = useState("");
   const [error, setError] = useState("");
   const [signed, setSigned] = useState<{ digest: string; ids: string[] } | null>(null);
+  // ADR-0131: the template's public starter memories this owner chose to start with.
+  const [pack, setPack] = useState<string[]>([]);
   const blocked = consent.safety.verdict === "block" || consent.listing.deprecated;
 
   const finish = async (digest: string, ids: string[]) => {
     setStep("Confirming onchain…");
-    const done = await api.hatchConfirm(id, digest, ids);
+    const done = await api.hatchConfirm(id, digest, ids, pack);
     if (!done.ok) throw new Error(done.error);
     setSigned(null);
     toast.success(
@@ -79,6 +82,25 @@ function Hatch({ id, consent, owner }: { id: string; consent: HatchConsent; owne
         page; until then the template's suggestion applies, and its spending limit caps every
         payment onchain.
       </p>
+      {consent.team.pack?.length ? (
+        <fieldset className="flex flex-col gap-1.5" data-testid="hatch-pack">
+          <legend className="mb-1 text-md font-medium">
+            Start with its author's public memories? Pick any.
+          </legend>
+          {consent.team.pack.map((t) => (
+            <label key={t} className="flex items-start gap-2 text-sm">
+              <Checkbox
+                aria-label={`Start with: ${t.slice(0, 60)}`}
+                checked={pack.includes(t)}
+                onCheckedChange={(on) =>
+                  setPack((p) => (on ? [...p, t] : p.filter((x) => x !== t)))
+                }
+              />
+              <span data-ux-skip>{t}</span>
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription className="flex flex-wrap items-center justify-between gap-2">

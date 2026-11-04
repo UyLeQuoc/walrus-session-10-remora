@@ -136,12 +136,10 @@ export async function confirmGrant(
   digest: string,
   draft: { keyId: string; blobId: string; count: number; expiresMs: number; granteeId: string },
 ) {
-  const res = await deps.networks
-    .client(r.network)
-    .core.getTransaction({
-      digest,
-      include: { effects: true, objectTypes: true, transaction: true },
-    });
+  const res = await deps.networks.client(r.network).core.getTransaction({
+    digest,
+    include: { effects: true, objectTypes: true, transaction: true },
+  });
   const tx = res.Transaction ?? res.FailedTransaction;
   if (!tx.effects?.status.success) throw new RemoraError("tx.failed", "That transaction failed.");
   if (normalizeSuiAddress(tx.transaction?.sender ?? "") !== normalizeSuiAddress(r.ownerAddress))

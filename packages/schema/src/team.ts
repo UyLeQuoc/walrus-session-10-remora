@@ -66,6 +66,11 @@ export const TeamFile = z.object({
   description: z.string().max(500).optional(),
   remoras: z.array(TeamRemora).min(1).max(10),
   /**
+   * ADR-0131: a starter memory pack, in public plaintext. Each line was scrubbed and approved by the
+   * author; whoever hatches it picks which lines to import (each marked `SOURCE: pack`).
+   */
+  pack: z.array(z.string().min(3).max(240)).max(20).optional(),
+  /**
    * ADR-0114: the team is a crew. Its lead (a remora name from `remoras`) splits a question's
    * purchases across the others, each paying from its own limit, and answers with every receipt.
    */

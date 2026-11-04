@@ -1424,9 +1424,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   };
   const networkOf = (c: Context) => resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER));
 
-  app.post("/api/remoras/:id/share", async (c) =>
-    c.json({ review: await shareReview(hatch(), c.get("owner"), c.req.param("id")) }),
-  );
+  app.post("/api/remoras/:id/share", async (c) => {
+    // ADR-0131: the starter memories the author picked from the candidates, if any.
+    const b = await body<{ pack?: string[] }>(c);
+    const pack = Array.isArray(b.pack) ? b.pack.map(String).slice(0, 20) : [];
+    return c.json({
+      review: await shareReview(hatch(), c.get("owner"), c.req.param("id"), { pack }),
+    });
+  });
 
   app.post("/api/hatchery/publish", async (c) => {
     const b = await body<{ markdown?: string; parent?: string | null }>(c);
@@ -1482,13 +1487,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   );
 
   app.post("/api/hatchery/:id/hatch/confirm", async (c) => {
-    const b = await body<{ remoraIds?: string[]; digest?: string }>(c);
+    const b = await body<{ remoraIds?: string[]; digest?: string; pack?: string[] }>(c);
     const ids = (b.remoraIds ?? []).filter((x) => UUID.test(x));
     return c.json(
       await confirmHatch(hatch(), c.get("owner"), c.get("network"), {
         templateId: templateId(c),
         remoraIds: ids,
         digest: digestOf(b.digest),
+        ...(Array.isArray(b.pack) ? { pack: b.pack.map(String).slice(0, 20) } : {}),
       }),
     );
   });

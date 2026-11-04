@@ -651,8 +651,13 @@ export const api = {
       remoraIds,
     }),
   // ── U7 (ADR-0046, ADR-0048): Hatchery, Proof of Learning, learning, memory controls ──
-  share: (id: string) =>
-    call("POST", `/api/remoras/${id}/share`, z.object({ review: ShareReview })),
+  share: (id: string, pack?: string[]) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/share`,
+      z.object({ review: ShareReview }),
+      pack ? { pack } : undefined,
+    ),
   publishTx: (markdown: string, parent?: string | null) =>
     call(
       "POST",
@@ -689,12 +694,12 @@ export const api = {
         skipped: z.array(z.string()),
       }),
     ),
-  hatchConfirm: (id: string, digest: string, remoraIds: string[]) =>
+  hatchConfirm: (id: string, digest: string, remoraIds: string[], pack?: string[]) =>
     call(
       "POST",
       `/api/hatchery/${id}/hatch/confirm`,
       z.object({ confirmed: z.array(z.string()), remoras: z.array(z.string()) }).loose(),
-      { digest, remoraIds },
+      { digest, remoraIds, ...(pack?.length ? { pack } : {}) },
     ),
   deprecateTx: (id: string) =>
     call("POST", `/api/hatchery/${id}/deprecate`, z.object({ transaction: z.string() })),

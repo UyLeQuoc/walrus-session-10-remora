@@ -59,6 +59,9 @@ function texts(team: TeamFile): { where: string; text: string }[] {
     { where: "name", text: team.name },
     { where: "description", text: team.description ?? "" },
   ];
+  (team.pack ?? []).forEach((t, k) => {
+    out.push({ where: `pack[${k}]`, text: t });
+  });
   team.remoras.forEach((r, i) => {
     out.push({ where: `remoras[${i}].name`, text: r.name });
     if (r.persona) out.push({ where: `remoras[${i}].persona`, text: r.persona });
@@ -70,6 +73,21 @@ function texts(team: TeamFile): { where: string; text: string }[] {
     });
   });
   return out.filter((t) => t.text);
+}
+
+/**
+ * ADR-0131: why a memory line can't go into a public starter pack, or null. People (contacts),
+ * handles, emails, phone numbers and links with parameters stay private; raw addresses are caught by
+ * the address check.
+ */
+export function privateReason(line: string): string | null {
+  if (/^\s*CONTACT\b/i.test(line)) return "it's about a person you pay";
+  if (/[\w.+-]+@[\w-]+\.[\w.]+/.test(line)) return "it has an email address";
+  if (/(^|\s)@[A-Za-z0-9_]{2,}/.test(line)) return "it has a handle";
+  if (/\+?\d[\d\s().-]{8,}\d/.test(line) && !/\d+\.\d+/.test(line)) return "it has a phone number";
+  if (/https?:\/\/\S*[?#]/.test(line)) return "it has a link with parameters";
+  if (RAW_ADDRESS.test(line)) return "it names a raw address";
+  return null;
 }
 
 export async function reviewTemplate(input: SafetyInput): Promise<SafetyReport> {
@@ -93,6 +111,11 @@ export async function reviewTemplate(input: SafetyInput): Promise<SafetyReport> 
         `Names a raw address (${addr.slice(0, 8)}…); payees must be listed services.`,
       );
   }
+
+  (input.team.pack ?? []).forEach((t, k) => {
+    const why = privateReason(t);
+    if (why) block("private_memory", `pack[${k}]`, `A starter memory can't be public: ${why}.`);
+  });
 
   const reef = new Set(input.reef);
   input.team.remoras.forEach((r, i) => {
