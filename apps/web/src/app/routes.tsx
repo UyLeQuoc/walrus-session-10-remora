@@ -20,6 +20,7 @@ import { NewRemoraPage } from "../features/remoras/new-remora-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
 import { SettingsPage } from "../features/settings/settings-page";
+import { StatementsPage } from "../features/statements/statements-page";
 import { StatsPage } from "../features/status/stats-page";
 import { StatusPage } from "../features/status/status-page";
 import { ImportTeamPage } from "../features/teams/import-page";
@@ -72,4 +73,5 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "stats", element: <StatsPage /> },
   { path: "tg", element: <TgPage /> },
   { path: "p/:token", element: <PublicWakePage /> },
+  { path: "statements", element: <StatementsPage /> },
 ];

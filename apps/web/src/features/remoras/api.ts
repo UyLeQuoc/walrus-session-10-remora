@@ -26,6 +26,7 @@ import {
   Schedule,
   SchedulePreview,
   ShareReview,
+  Statement,
   TeamPreview,
   Template,
   VerifyResult,
@@ -198,6 +199,9 @@ export const api = {
     call("GET", `/api/remoras/${id}/budget`, z.object({ meter: BudgetMeter.nullable() })),
   cost: (id: string, month: string) =>
     call("GET", `/api/remoras/${id}/cost?month=${encodeURIComponent(month)}`, CostResponse),
+  /** E6 (ADR-0122): no month is this month where the owner is. */
+  statement: (month: string | null) =>
+    call("GET", `/api/statements${month ? `?month=${encodeURIComponent(month)}` : ""}`, Statement),
   budgetTx: (id: string, budget: unknown) =>
     call("POST", `/api/remoras/${id}/budget`, Tx, { budget }),
   budgetConfirm: (id: string, digest: string, budget: unknown) =>

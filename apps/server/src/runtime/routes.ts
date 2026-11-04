@@ -209,6 +209,8 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/reef/probe",
     "/api/reef/listings",
     "/api/reef/listings/*",
+    "/api/statements",
+    "/api/statements/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -1515,7 +1517,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         );
   });
 
-  // ADR-0122: config history.
+  // ADR-0122: statements and config history.
   mountLedger(app, { service, runtime: rt, listings: d.listings });
 
   // Mounted beside the other groups, which carry no typed variables.
