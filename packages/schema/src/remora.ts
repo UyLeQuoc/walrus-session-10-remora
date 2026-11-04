@@ -31,9 +31,30 @@ export const Trigger = z.discriminatedUnion("kind", [
     symbol: z.string().min(1),
     above: z.number().optional(),
     below: z.number().optional(),
+    /** ADR-0121: names the trigger's crossing state; imported ones arrive paused. */
+    id: z.string().min(1).optional(),
+    paused: z.boolean().optional(),
   }),
-  z.object({ kind: z.literal("webhook"), id: z.string().min(1) }),
+  /** ADR-0121: its secret is derived from the server's and never stored; `name` says who sends it. */
+  z.object({ kind: z.literal("webhook"), id: z.string().min(1), name: z.string().optional() }),
 ]);
+
+/** ADR-0121: what an outbound webhook can be sent. */
+export const HOOK_EVENTS = [
+  "payment.settled",
+  "approval.asked",
+  "answer.ready",
+  "proposal.made",
+  "price.hike",
+] as const;
+export const HookEvent = z.enum(HOOK_EVENTS);
+
+/** ADR-0121: a URL the owner wants told about some of this remora's events. */
+export const OutHook = z.object({
+  id: z.string().min(1),
+  url: z.string().min(1),
+  events: z.array(HookEvent),
+});
 
 /** The remora's Disc budget as the owner configured it (ADR-0003). Amounts are smallest units. */
 export const Budget = z.object({
@@ -83,6 +104,8 @@ export const RemoraConfig = z.object({
       covers: z.array(z.string()).default([]),
     })
     .optional(),
+  /** ADR-0121: outbound webhooks, signed with a secret derived per remora. */
+  hooks: z.object({ out: z.array(OutHook).default([]) }).optional(),
 });
 
 export type ToolName = z.infer<typeof ToolName>;
@@ -90,3 +113,5 @@ export type Trigger = z.infer<typeof Trigger>;
 export type Budget = z.infer<typeof Budget>;
 export type RemoraStatus = z.infer<typeof RemoraStatus>;
 export type RemoraConfig = z.infer<typeof RemoraConfig>;
+export type HookEvent = z.infer<typeof HookEvent>;
+export type OutHook = z.infer<typeof OutHook>;

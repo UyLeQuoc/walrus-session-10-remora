@@ -38,6 +38,8 @@ import { startWatcher } from "../triggers/watch.ts";
 import { createBrain } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { createFactLedger, withFacts } from "./facts.ts";
+import { type HooksDeps, hookJobHandlers, startHooks } from "./hooks.ts";
+import { createHookRoutes } from "./hooks-routes.ts";
 import { inspect } from "./inspector.ts";
 import type { JobHandler } from "./jobs.ts";
 import { PgKeyStore } from "./keys.ts";
@@ -193,7 +195,24 @@ export const remoraRoutes = createRemoraRoutes({
   },
 });
 
-export const remoraJobs: Record<string, JobHandler> = remoraJobHandlers(runtime);
+/** ADR-0121: price and webhook triggers, outbound webhooks. Hook secrets derive from SESSION_SECRET. */
+const hooks: HooksDeps = {
+  rt: runtime,
+  secret: env.SESSION_SECRET,
+  // The web's origin forwards /api to this server (vercel.json), as the dev server does.
+  base: env.API_BASE_URL ?? env.WEB_BASE_URL,
+  production: !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production",
+};
+export const hookRoutes = createHookRoutes({
+  service: remoraService,
+  hooks,
+  owner: async (c: Context) => (await signedInOwner(c))?.owner ?? null,
+});
+
+export const remoraJobs: Record<string, JobHandler> = {
+  ...remoraJobHandlers(runtime),
+  ...hookJobHandlers(hooks),
+};
 
 /** Starts one chain watcher per available network (D1). Returns a stop function. */
 /** F10 (ADR-0128): every live remora has its next Monday review queued (idempotent per week). */
@@ -211,10 +230,12 @@ export function startRemoraRuntime(): () => void {
   const stopListings = listings.start();
   const stopReputation = reputation.start();
   void queueReviews().catch((err) => log.warn("review.queue_failed", { error: err }));
+  const stopHooks = startHooks(hooks);
   if (env.WATCHER !== "on")
     return () => {
       stopListings();
       stopReputation();
+      stopHooks();
     };
   const stops = networks
     .list()
@@ -238,6 +259,7 @@ export function startRemoraRuntime(): () => void {
   return () => {
     stopListings();
     stopReputation();
+    stopHooks();
     for (const s of stops) s();
   };
 }

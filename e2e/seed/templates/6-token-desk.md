@@ -14,6 +14,10 @@ remoras:
     budget:
       monthlyUsd: 0.5
       perPaymentUsd: 0.015
+    triggers:
+      - kind: price
+        symbol: SUI
+        below: 0.85
 room:
   name: Token desk
   responder: auto
@@ -24,3 +28,6 @@ room:
 
 Two remoras in one room. The Wallet watcher sees a token you never asked for and hands it to the
 Researcher, who checks the package and tells you in the room.
+
+The Researcher can also wake when SUI drops below 0.85. That trigger arrives paused: set your own
+price on its page (Settings → Hooks) and turn it on.

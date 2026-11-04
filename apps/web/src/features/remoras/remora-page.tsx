@@ -61,6 +61,7 @@ import { describeRemora, useTemplateCatalog } from "./describe";
 import { ErrandCard } from "./errand-card";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
+import { HooksCard } from "./hooks-card";
 import { ProposalCard } from "./proposal-card";
 import { ReviewCard } from "./review-card";
 import { BuyFromCard, SellCard } from "./sell-card";
@@ -779,6 +780,7 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
       <BrainSection r={r} reload={reload} />
       <BudgetSection r={r} reload={reload} layout="split" />
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
+      <HooksCard r={r} />
       {/* ADR-0106: a Briefer's schedule is its brief's; its page shows it with Run now. */}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}
       {r.template === "scout" || r.template === "briefer" ? (

@@ -23,6 +23,7 @@ import { previewSchedule } from "../triggers/schedule.ts";
 import { setBriefItems } from "./briefer.ts";
 import type { Crew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { exportTriggers, importTriggers } from "./hooks.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
 import { defaultRoom } from "./rooms.ts";
 import { parseRule } from "./rules.ts";
@@ -116,6 +117,10 @@ export function previewTeam(markdown: string): TeamPreview {
       warnings.push(`Only Researchers answer on a schedule: ${r.name}'s schedules are ignored.`);
     if (r.template !== "briefer" && r.items.length)
       warnings.push(`Only Briefers follow a list: ${r.name}'s items are ignored.`);
+    if (!answersQuestions(r.template) && r.triggers?.length)
+      warnings.push(
+        `Only Researchers and Briefers wake on a price or a webhook: ${r.name}'s triggers are ignored.`,
+      );
     const b = paying ? (r.budget ?? { monthlyUsd: 1, perPaymentUsd: 0.05 }) : null;
     return {
       name: r.name,
@@ -212,6 +217,13 @@ export async function applyTeam(
           skipped.push(`${current.name}: "${s.when}"`),
         );
       }
+    }
+    // ADR-0121: price triggers arrive paused; a webhook gets its own URL and secret.
+    if (spec.triggers?.length) {
+      const [fresh] = await deps.db.select().from(remoras).where(eq(remoras.id, current.id));
+      await importTriggers(deps, fresh ?? current, spec.triggers).catch(() =>
+        skipped.push(`${current.name}: its triggers`),
+      );
     }
   }
   // ADR-0114: a crew. Every member knows its crew, its lead and what it covers.
@@ -355,6 +367,8 @@ export async function exportTeam(
         items: r.template === "briefer" ? (c.items ?? []) : [],
         // ADR-0114: what this member buys for its crew's lead.
         covers: c.crew?.covers ?? [],
+        // ADR-0121: what wakes it besides questions; never a webhook's id or secret.
+        ...(exportTriggers(r).length ? { triggers: exportTriggers(r) } : {}),
       };
     }),
     // ADR-0114: a crew travels with its lead.

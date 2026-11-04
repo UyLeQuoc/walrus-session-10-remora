@@ -9,9 +9,15 @@ remoras:
     budget:
       monthlyUsd: 0.5
       perPaymentUsd: 0.015
+    triggers:
+      - kind: webhook
+        name: github
 ---
 
 # Repo reviewer
 
 Paste a github.com link, and a package id if it has one. It buys the repo's health and the package's
 risk check, and tells you what to watch.
+
+To have it look at every push, add its webhook (its page → Settings → Hooks) to the repo's GitHub
+settings, with the secret it shows you.
