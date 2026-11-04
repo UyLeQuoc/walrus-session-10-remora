@@ -263,6 +263,13 @@ export async function addSubscription(
 ) {
   const listed = listedFor(deps, r).find((e) => e.ref === input.ref);
   if (!listed) throw new RemoraError("reef.unknown_payee", `${input.ref} isn't a listed service.`);
+  const payees = (r.config as { budget?: { payees?: string[] } }).budget?.payees ?? [];
+  if (!payees.includes(input.ref))
+    throw new RemoraError(
+      "subscription.payee",
+      `Let it pay ${payeeLabel(input.ref)} first (one signature).`,
+      409,
+    );
   const url = input.url?.trim() || listed.url;
   if (url.includes("/:"))
     throw new RemoraError("subscription.url", "Give the exact URL it should charge each time.");

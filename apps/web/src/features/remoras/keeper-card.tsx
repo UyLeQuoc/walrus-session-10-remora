@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Problem } from "@/components/visual";
+import { useSignAndRun } from "@/features/funds/sign";
 import { fetchReefServices } from "@/features/reef/api";
 import { payeeName } from "@/lib/payee";
 import { usdc } from "@/lib/usdc";
@@ -21,6 +22,7 @@ const price = (u: string) => `${(Number(u) / 1e6).toFixed(3)} USDC`;
 
 export function KeeperCard({ r, onDone }: { r: RemoraView; onDone?: () => void }) {
   const view = useLoad(() => api.subscriptions(r.id), [r.id]);
+  const run = useSignAndRun();
   const [reef, setReef] = useState<ReefService[]>([]);
   const [ref, setRef] = useState("");
   const [url, setUrl] = useState("");
@@ -192,6 +194,16 @@ export function KeeperCard({ r, onDone }: { r: RemoraView; onDone?: () => void }
               data-testid="keeper-add"
               onClick={() =>
                 void act("add", async () => {
+                  // A service it can't pay yet: one signature adds it to its payees first.
+                  const payees = (r.config.budget as { payees?: string[] } | null)?.payees ?? [];
+                  if (!payees.includes(ref)) {
+                    const tx = await api.payeesTx(r.id, [...payees, ref]);
+                    if (!tx.ok || !tx.data.transaction)
+                      return { ok: false, error: tx.ok ? "Nothing to sign." : tx.error };
+                    const digest = await run(tx.data.transaction);
+                    const done = await api.payeesConfirm(r.id, digest, [...payees, ref]);
+                    if (!done.ok) return done;
+                  }
                   const out = await api.subscribe(r.id, ref, url.trim() || undefined);
                   if (out.ok) {
                     setRef("");

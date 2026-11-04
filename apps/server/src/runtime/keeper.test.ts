@@ -103,12 +103,15 @@ describe.skipIf(!local)("Subscriptions keeper in Postgres (B2)", () => {
         network: "testnet",
         template: "keeper",
         name: "Keeper",
-        config: {},
+        config: { budget: { payees: ["reef:community-haiku"] } },
         status: "active",
         address: OWNER,
       })
       .returning();
     if (!r0) throw new Error("no remora");
+    await expect(
+      addSubscription(deps, { ...r0, config: {} }, { ref: "reef:community-haiku", url: URL_ }),
+    ).rejects.toMatchObject({ code: "subscription.payee" });
     const r1 = await addSubscription(deps, r0, { ref: "reef:community-haiku", url: URL_ });
     const s = subscriptionsOf(r1)[0];
     if (!s) throw new Error("no subscription");
