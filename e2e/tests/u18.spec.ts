@@ -427,11 +427,13 @@ test("B3: a split; settle up pays Linh from the Errand and sends a pay link that
 
 test("B5: MPP-paid calls to a house merchant and to the remora sale door", async ({ page }) => {
   test.setTimeout(8 * 60_000);
-  const run = (url: string) => {
+  const run = (url: string, payer?: string) => {
     const out = spawnSync("bun", ["scripts/mpp-exit.ts", url], {
       cwd: `${ROOT}/apps/server`,
       env: {
         ...process.env,
+        // The script pays as E2E_BURNER_KEY; the sale door's seller is the burner, so burner2 buys.
+        ...(payer ? { E2E_BURNER_KEY: payer } : {}),
         MPP_EXIT: "1",
         GAS_STATION: "http://localhost:8798/gas",
         NO_COLOR: "1",
@@ -452,6 +454,7 @@ test("B5: MPP-paid calls to a house merchant and to the remora sale door", async
   await page.waitForTimeout(31_000); // one question per 30 s per payer at the sale door
   const door = run(
     `http://localhost:8797/api/x402/r/${SLUG}?q=${encodeURIComponent("Is package 0x2 safe?")}`,
+    process.env.E2E_BURNER2_KEY,
   );
   expect(door.ok, door.text.slice(-800)).toBe(true);
   expect(door.receipt).toBeTruthy();
@@ -523,7 +526,8 @@ test("C4 + C5: a signed webhook wakes it, an unsigned one gets 401; a receiver g
     await rotate(page);
     await api(page, `/api/remoras/${id}/ask`, {
       method: "POST",
-      body: { question: "What's the price of SUI?" },
+      // A package id makes the plan buy the risk check, so a payment settles for the hook.
+      body: { question: "Is package 0x2 safe to depend on?" },
     });
     const end = Date.now() + 120_000;
     while (Date.now() < end && !got.some((g) => g.body.includes('"payment.settled"')))
