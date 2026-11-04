@@ -31,6 +31,7 @@ in [team-split.md §7](../team-split.md#7-running-long-agent-goals-treo-goal-wit
 | 23 | U15: examples you can try, a curated gallery, and the video's "And more" (asked directly, no goal file) | Uy's agent ([claim](../handoffs/2026-11-04-uy-to-huan-examples-claim.md)) | ✅ **Done Nov 4:** 16 examples verified on testnet, six templates on Walrus, video 178 s ([notes](../spikes/2026-11-04-examples-exit.md), [ADR-0105](../adr/0105-examples-you-can-try.md)); PR #20 | U14 ✅ |
 | 24 | [U16: the wow pass: more things to buy, a third kind, live proof in the video, the landing's range](uy-16-wow-pass.md) ([prompt](uy-16-wow-pass.prompt.txt)) | Uy's agent, every part ([ADR-0107](../adr/0107-u16-without-handoffs.md)) | ✅ **Done Nov 4** ([exit](../spikes/2026-11-04-u16-exit.md); [ADR-0106](../adr/0106-wow-pass-more-uses.md) to [ADR-0109](../adr/0109-pay-only-at-listed-address.md)) | U15 ✅ |
 | 25 | [U17: Remora at scale: an open Reef, crews, more doors, numbers under load, then the deploy](uy-17-scale.md) ([prompt](uy-17-scale.prompt.txt)) | Uy's agent, every part ([ADR-0107](../adr/0107-u16-without-handoffs.md)'s way) | ✅ **Done Nov 5** ([exit](../spikes/2026-11-05-u17-exit.md); [ADR-0111](../adr/0111-scale-pass.md) to [ADR-0117](../adr/0117-image-carries-load-runs.md)); deployed to getremora.vercel.app | U16 ✅ |
+| 26 | [U18: a learning loop you can see, everyday money, a remora anyone can use, then the deploy](uy-18-learning-loop.md) ([prompt](uy-18-learning-loop.prompt.txt)) | Uy's agent, every part ([ADR-0107](../adr/0107-u16-without-handoffs.md)'s way) | ⏳ **Ready** ([ADR-0119](../adr/0119-u18-learning-loop-everyday-money.md)); paste the prompt with `/goal` | U17 ✅ |
 
 H1–H6 run without E2E while the burner wallet is empty ([ADR-0071](../adr/0071-huan-goals-without-e2e.md)).
 
@@ -38,7 +39,7 @@ H1–H6 run without E2E while the burner wallet is empty ([ADR-0071](../adr/0071
 ```bash
 # Every goal runs in your main checkout on main (no worktrees, ADR-0022):
 git pull --rebase origin main && bun install
-pbcopy < docs/goals/uy-14-visual-ui-pass.prompt.txt   # next (<4000 chars each)
+pbcopy < docs/goals/uy-18-learning-loop.prompt.txt   # next (<4000 chars each)
 ```
 
 Each goal has two files:
