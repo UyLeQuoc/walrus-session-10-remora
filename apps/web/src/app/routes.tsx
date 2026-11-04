@@ -5,6 +5,7 @@ import { SharePage } from "@/features/hatchery/share-page";
 import { TemplatePage } from "@/features/hatchery/template-page";
 import { PlaygroundPage } from "@/features/playground/playground-page";
 import { ApprovalsPage } from "../features/approvals/approvals-page";
+import { ChangesPage } from "../features/changes/changes-page";
 import { ChatPage } from "../features/chat/chat-page";
 import { ConnectPage } from "../features/connect/connect-page";
 import { ConnectionsPage } from "../features/connections/connections-page";
@@ -76,4 +77,5 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "p/:token", element: <PublicWakePage /> },
   { path: "r/:slug", element: <PublicRemoraPage /> },
   { path: "statements", element: <StatementsPage /> },
+  { path: "changes/:id", element: <ChangesPage /> },
 ];

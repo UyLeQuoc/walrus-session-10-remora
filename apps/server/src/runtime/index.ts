@@ -29,6 +29,7 @@ import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
 import { personByChannel } from "../identity/persons.ts";
 import { signedInOwner } from "../identity/session.ts";
+import { contactsOf } from "../money/contacts.ts";
 import { log, networks } from "../money/index.ts";
 import { createListings } from "../money/listings.ts";
 import { createSuiUsd } from "../money/rates.ts";
@@ -52,6 +53,7 @@ import { nextMonday9, queueWeeklyReview } from "./review.ts";
 import { createRemoraRoutes } from "./routes.ts";
 import { remoraJobHandlers } from "./schedules.ts";
 import { onChainEvent } from "./sentinel.ts";
+import { createSteer, steerModel } from "./steer.ts";
 
 const signer = new RemoraSigner(new PgKeyStore(db), parseKek(env.KEY_ENCRYPTION_KEY));
 const merchants = {
@@ -132,6 +134,31 @@ export const runtime: RuntimeDeps = {
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });
 
+/** U18 C1 + C2 (ADR-0123): drafts and chat commands on the small parse model. */
+/** ADR-0125: a chat command adds contacts to the ones an Errand already has (one signature). */
+const withContacts = async (
+  id: string,
+  owner: string,
+  add: { name: string; address: string }[],
+) => [
+  ...contactsOf(await remoraService.get(id, owner)).map((c) => ({
+    name: c.name,
+    address: c.address,
+  })),
+  ...add,
+];
+
+export const steer = createSteer({
+  runtime,
+  service: remoraService,
+  listings,
+  ...steerModel(small.primary),
+  contactsTx: async (id, owner, add) =>
+    (await remoraService.contactsTx(id, owner, await withContacts(id, owner, add))).transaction,
+  confirmContacts: async (id, owner, digest, add) =>
+    remoraService.confirmContacts(id, owner, digest, await withContacts(id, owner, add)),
+});
+
 /** F6: what we wrote per namespace, from our own tables (Wakes → receipts, rules → rules). */
 async function written(r: { id: string }) {
   const [w] = await db.select({ n: count() }).from(receipts).where(eq(receipts.remoraId, r.id));
@@ -163,6 +190,7 @@ export const remoraRoutes = createRemoraRoutes({
   hatchery,
   written,
   listings,
+  steer,
   // H3 (ADR-0115): the Mini App's owner, from Telegram's signed launch data and the A5 link.
   tgOwner: async (initData: string) => {
     const user = env.TELEGRAM_BOT_TOKEN ? verifyInitData(initData, env.TELEGRAM_BOT_TOKEN) : null;

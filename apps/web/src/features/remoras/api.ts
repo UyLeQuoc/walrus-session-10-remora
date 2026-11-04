@@ -7,10 +7,12 @@ import {
   ApprovalPayTx,
   ApprovalRequest,
   BudgetMeter,
+  ChangeView,
   ConfigHistory,
   ConfigRestore,
   ConfigVersionDiff,
   CreateRemoraResponse,
+  DraftResponse,
   FeedItem,
   HatchConsent,
   HatcheryListing,
@@ -25,6 +27,7 @@ import {
   SafetyReport,
   Schedule,
   SchedulePreview,
+  SetupResponse,
   ShareReview,
   Statement,
   TeamPreview,
@@ -248,6 +251,19 @@ export const api = {
       }),
       { question: text },
     ),
+  // ── U18 C1 + C2 (ADR-0123): describe the job, change cards from chat ─────
+  draft: (text: string) => call("POST", "/api/remoras/draft", DraftResponse, { text }),
+  setup: (
+    id: string,
+    b: { persona?: string; schedule?: { when: string; question: string }; rules?: string[] },
+  ) => call("POST", `/api/remoras/${id}/setup`, SetupResponse, b),
+  change: (id: string) => call("GET", `/api/changes/${id}`, ChangeView),
+  applyChange: (id: string) => call("POST", `/api/changes/${id}/apply`, ChangeView),
+  declineChange: (id: string) => call("POST", `/api/changes/${id}/decline`, ChangeView),
+  changeTx: (id: string) =>
+    call("POST", `/api/changes/${id}/tx`, z.object({ transaction: z.string() })),
+  confirmChange: (id: string, digest: string) =>
+    call("POST", `/api/changes/${id}/confirm`, ChangeView, { digest }),
   brief: (id: string) => call("GET", `/api/remoras/${id}/brief`, BriefView),
   setBriefItems: (id: string, items: string[]) =>
     call("PUT", `/api/remoras/${id}/brief/items`, BriefView, { items }),

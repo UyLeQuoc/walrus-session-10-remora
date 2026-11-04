@@ -24,6 +24,7 @@ export * from "./playground.ts";
 export * from "./remora.ts";
 export * from "./rooms.ts";
 export * from "./statement.ts";
+export * from "./steer.ts";
 export * from "./team.ts";
 export * from "./template.ts";
 export * from "./wake.ts";

@@ -103,6 +103,8 @@ import {
 } from "./schedules.ts";
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
+import type { Steer } from "./steer.ts";
+import { mountSteer } from "./steer-routes.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
 import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
@@ -135,6 +137,8 @@ export interface RemoraRouteDeps {
   listings?: Listings;
   /** H3 (ADR-0115): the owner behind a Telegram Mini App's signed launch data, or null. */
   tgOwner?: (initData: string) => Promise<string | null>;
+  /** U18 C1 + C2 (ADR-0123): describe the job, chat commands and their change cards. */
+  steer?: Steer;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -221,6 +225,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/reef/listings/*",
     "/api/statements",
     "/api/statements/*",
+    "/api/changes/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -234,6 +239,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       await next();
     });
   }
+
+  // Before the id check: `/api/remoras/draft` isn't an id (ADR-0123).
+  if (d.steer) mountSteer(app, d.steer);
 
   // Ids are UUIDs; anything else is a 404 rather than a database error.
   for (const path of [
@@ -951,7 +959,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const { text } = await body<{ text?: string }>(c);
     if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
     const r = await service.get(c.req.param("id"), c.get("owner"));
-    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000)), 201);
+    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000), d.steer?.inThread), 201);
   });
 
   const myRoom = async (c: Context): Promise<RoomRow> => {
@@ -1042,7 +1050,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const room = await myRoom(c);
     const { text } = await body<{ text?: string }>(c);
     if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
-    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000)), 201);
+    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000), d.steer?.inRoom), 201);
   });
 
   // ── Teams from Markdown (ADR-0042) ────────────────────────────────────────

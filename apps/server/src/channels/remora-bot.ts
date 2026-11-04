@@ -23,6 +23,7 @@ import { type Remora, RemoraError, type RemoraService } from "../runtime/remoras
 import { answerButtons } from "../runtime/schedules.ts";
 import { scoutAsk } from "../runtime/scout.ts";
 import { teach } from "../runtime/sentinel.ts";
+import type { Steer } from "../runtime/steer.ts";
 import { isTemplateSlug, TEMPLATES } from "../templates/index.ts";
 
 /** ADR-0101: a remora's kind in plain words ("Researcher", "Wallet watcher"). */
@@ -42,6 +43,8 @@ export interface RemoraBotDeps {
   /** Redeems a dashboard link code for this Telegram user; returns the sentence to send. */
   link: (telegramId: string, displayName: string, code: string) => Promise<string>;
   network?: SuiNetwork;
+  /** C2 (ADR-0123): "raise Researcher's limit to 1 USDC" → a change card for the linked owner. */
+  steer?: Pick<Steer, "inTelegram" | "tap">;
 }
 
 const NOT_LINKED =
@@ -116,6 +119,10 @@ export function createRemoraBot(d: RemoraBotDeps) {
     if (cmd && !known.includes(cmd)) return null;
 
     const owner = await d.ownerOf(from.id);
+    if (!cmd && owner && d.steer) {
+      const change = await d.steer.inTelegram(owner, network(), t);
+      if (change) return change;
+    }
     if (!cmd) {
       // "Scout, …" / "Scout: …" addresses a remora by name.
       const m = /^([\p{L}\p{N} _-]{1,40})[,:]\s*(.+)$/su.exec(t);
@@ -218,10 +225,12 @@ export function createRemoraBot(d: RemoraBotDeps) {
     return null;
   }
 
-  /** Inline buttons: `fb:<eventId>:u|n` (👍/👎, N19), `why:<eventId>` (N4). */
+  /** Inline buttons: `fb:<eventId>:u|n` (👍/👎, N19), `why:<eventId>` (N4), `chg:<id>:a|x` (C2). */
   async function callback(from: { id: string }, data: string): Promise<string> {
     const owner = await d.ownerOf(from.id);
     if (!owner) return NOT_LINKED;
+    const tapped = d.steer ? await d.steer.tap(owner, data) : null;
+    if (tapped) return tapped;
     const fb = /^fb:([0-9a-f-]{36}):(u|n)$/.exec(data);
     if (fb) {
       const out = await giveFeedback(
