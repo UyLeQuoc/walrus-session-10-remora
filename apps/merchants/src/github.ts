@@ -6,6 +6,7 @@
  */
 import {
   type PaidContext,
+  retryingFetch,
   SourceInputError,
   sourceFirst,
   type X402Options,
@@ -79,14 +80,16 @@ export async function healthOf(
 
 export function createGithubApp(o: { pay: X402Options; fetch?: typeof fetch }) {
   const app = new Hono<{ Variables: { x402: PaidContext; source: RepoHealth } }>();
+  const http = retryingFetch(o.fetch);
   app.get(
     "/github/:owner/:repo",
     sourceFirst(
-      async (c) => healthOf(c.req.param("owner") ?? "", c.req.param("repo") ?? "", o.fetch),
+      async (c) => healthOf(c.req.param("owner") ?? "", c.req.param("repo") ?? "", http),
       (c) => {
         if (!NAME.test(c.req.param("owner") ?? "") || !NAME.test(c.req.param("repo") ?? ""))
           throw new SourceInputError("bad_repo", "Name a repo as owner/repo.");
       },
+      { early: true },
     ),
     x402(o.pay),
     (c) => c.json({ ...c.get("source"), paid: c.get("x402") }),

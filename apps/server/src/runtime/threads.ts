@@ -5,6 +5,7 @@
  * has learned. The reply is the remora's events, which the thread shows in order, cards included.
  */
 import { and, approvals, eq, inArray, remoraEvents, sentinelRules } from "@remora/db";
+import { answersQuestions } from "../templates/index.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { scoutAsk } from "./scout.ts";
@@ -25,7 +26,7 @@ export async function runRemora(
   if (r.status !== "active" && r.status !== "shadow") {
     throw new RemoraError("remora.not_active", `${r.name} is ${r.status}.`, 409);
   }
-  if (r.template === "scout") {
+  if (answersQuestions(r.template)) {
     const res = await scoutAsk(deps, r, text, trigger);
     return { eventIds: [...res.outcomes.map((o) => o.eventId), res.eventId].filter(Boolean) };
   }

@@ -65,13 +65,21 @@ describe("price (ADR-0106)", () => {
     });
   });
 
-  it("asks for payment first, and charges nothing when CoinGecko is down", async () => {
+  it("says CoinGecko is down before asking for payment, so nothing is sponsored or charged", async () => {
     const app = createPriceApp({ pay, fetch: down });
-    expect((await app.request("/price?symbols=ETH")).status).toBe(402);
+    // The first, unpaid call already reads the source: a buyer never reaches the gas station.
+    expect((await app.request("/price?symbols=ETH")).status).toBe(502);
     facilitatorCalls.length = 0;
-    const res = await app.request("/price?symbols=ETH", { headers: paid });
-    expect(res.status).toBe(502);
+    expect((await app.request("/price?symbols=ETH", { headers: paid })).status).toBe(502);
     expect(facilitatorCalls).toEqual([]);
+  });
+
+  it("asks for payment once the source has answered", async () => {
+    const app = createPriceApp({
+      pay,
+      fetch: web([["https://api.coingecko.com", () => Response.json({ bitcoin: { usd: 1 } })]]),
+    });
+    expect((await app.request("/price?symbols=BTC")).status).toBe(402);
   });
 });
 
@@ -264,8 +272,32 @@ describe("walrus (ADR-0106)", () => {
   it("refuses a blob no aggregator has before any payment", async () => {
     facilitatorCalls.length = 0;
     const app = createWalrusApp({ pay, fetch: web([]) });
-    expect((await app.request(`/walrus/${id}`, { headers: paid })).status).toBe(400);
+    const missing = "A".repeat(43);
+    expect((await app.request(`/walrus/${missing}`)).status).toBe(400);
+    expect((await app.request(`/walrus/${missing}`, { headers: paid })).status).toBe(400);
     expect((await app.request("/walrus/too-short")).status).toBe(400);
     expect(facilitatorCalls).toEqual([]);
+  });
+});
+
+describe("the demo's attacker (ADR-0108)", () => {
+  it("demands payment to the attacker, with an injected instruction, and never serves data", async () => {
+    const { createAttackApp, ATTACKER, INJECTION } = await import("./attack.ts");
+    const app = createAttackApp({ pay });
+    for (const headers of [{}, paid]) {
+      const res = await app.request("/market", { headers });
+      expect(res.status).toBe(402);
+      const body = (await res.json()) as { accepts: { payTo: string; description?: string }[] };
+      expect(body.accepts.map((a) => a.payTo)).toEqual([ATTACKER]);
+      expect(body.accepts[0]?.description).toBe(INJECTION);
+    }
+  });
+
+  it("runs only when asked, and never on a deployed host", async () => {
+    const { attackAllowed } = await import("./attack.ts");
+    expect(attackAllowed({})).toBe(false);
+    expect(attackAllowed({ DEMO_ATTACK: "1" })).toBe(true);
+    expect(attackAllowed({ DEMO_ATTACK: "1", RAILWAY_ENVIRONMENT: "production" })).toBe(false);
+    expect(attackAllowed({ DEMO_ATTACK: "1", NODE_ENV: "production" })).toBe(false);
   });
 });

@@ -41,8 +41,10 @@ import {
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
+import { answersQuestions } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
+import { briefNow, briefView, setBriefItems } from "./briefer.ts";
 import { remoraCost } from "./cost.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
@@ -232,9 +234,13 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   });
 
   app.post("/api/remoras", async (c) => {
-    const b = await body<{ template?: string; name?: string; budget?: unknown; watch?: string[] }>(
-      c,
-    );
+    const b = await body<{
+      template?: string;
+      name?: string;
+      budget?: unknown;
+      watch?: string[];
+      items?: string[];
+    }>(c);
     if (b.watch && (!Array.isArray(b.watch) || b.watch.some((a) => !ADDRESS.test(a)))) {
       throw new RemoraError("funds.bad_address", "Every watched address must be 0x + hex.");
     }
@@ -248,6 +254,13 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       ...(budget !== undefined ? { budget } : {}),
       ...(b.watch ? { watch: b.watch } : {}),
     });
+    // ADR-0106: a Briefer starts with its list and its brief's schedule.
+    if (out.remora.template === "briefer" && Array.isArray(b.items) && b.items.length)
+      await setBriefItems(
+        rt,
+        out.remora,
+        b.items.filter((x) => typeof x === "string"),
+      );
     // N13: a Disc-less remora is ready now; a paying one after its confirm.
     if (!out.transaction) await queueFirstRun(rt, out.remora.id);
     return c.json({ remora: await view(out.remora), transaction: out.transaction }, 201);
@@ -358,7 +371,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const { question } = await body<{ question?: string }>(c);
     if (!question?.trim()) throw new RemoraError("ask.empty", "Ask a question.");
     const r = await service.get(c.req.param("id"), c.get("owner"));
-    if (r.template !== "scout")
+    if (!answersQuestions(r.template))
       throw new RemoraError("ask.unsupported", `${r.name} doesn't answer questions.`);
     const res = await scoutAsk(rt, r, question.trim().slice(0, 1_000), {
       kind: "message",
@@ -369,6 +382,35 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         answer: res.answer,
         eventId: res.eventId,
         receiptId: res.receiptId,
+        outcomes: res.outcomes.map(({ ...o }) =>
+          "response" in o ? { ...o, response: undefined } : o,
+        ),
+      }),
+    );
+  });
+
+  // ── The Briefer (ADR-0106): its list, Run now, and what its page shows ────────
+  app.get("/api/remoras/:id/brief", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await briefView(rt, r));
+  });
+
+  app.put("/api/remoras/:id/brief/items", async (c) => {
+    const { items } = await body<{ items?: unknown }>(c);
+    if (!Array.isArray(items) || items.some((x) => typeof x !== "string"))
+      throw new RemoraError("brief.bad_items", "Send the list as text, one item each.");
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    await setBriefItems(rt, r, items as string[]);
+    return c.json(await briefView(rt, await service.get(r.id, c.get("owner"))));
+  });
+
+  app.post("/api/remoras/:id/brief/run", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const res = await briefNow(rt, r);
+    return c.json(
+      serialize({
+        answer: res.answer,
+        eventId: res.eventId,
         outcomes: res.outcomes.map(({ ...o }) =>
           "response" in o ? { ...o, response: undefined } : o,
         ),

@@ -27,7 +27,12 @@ import { type Budget, isCatalogModel, RemoraConfig } from "@remora/schema";
 import type { RemoraSigner } from "@remora/signer";
 import type { Networks } from "../money/networks.ts";
 import { type ResolvedReef, reefRef } from "../money/reef.ts";
-import { isTemplateSlug, TEMPLATES, type TemplateSlug } from "../templates/index.ts";
+import {
+  answersQuestions,
+  isTemplateSlug,
+  TEMPLATES,
+  type TemplateSlug,
+} from "../templates/index.ts";
 
 export type Remora = typeof remoras.$inferSelect;
 
@@ -56,13 +61,13 @@ export interface RemoraDeps {
 
 /** Testnet-sized defaults; the owner can change them before signing (B7 later). */
 export function defaultBudget(slug: TemplateSlug, coinType: string): Budget | null {
-  if (slug !== "scout") return null;
+  if (!answersQuestions(slug)) return null;
   return {
     coinType,
     windowLimit: "1000000",
     window: "month",
-    perPaymentCap: "50000",
-    payees: [...TEMPLATES.scout.payees],
+    perPaymentCap: slug === "briefer" ? "15000" : "50000",
+    payees: [...TEMPLATES[slug].payees],
   };
 }
 
@@ -363,10 +368,9 @@ export function createRemoraService(deps: RemoraDeps) {
         budget,
         status: "shadow",
         identity: { address },
-        namespaces:
-          input.template === "scout"
-            ? ["me", "sources", "feedback", "receipts"]
-            : ["me", "rules", "episodes", "receipts"],
+        namespaces: answersQuestions(input.template)
+          ? ["me", "sources", "feedback", "receipts"]
+          : ["me", "rules", "episodes", "receipts"],
       });
       const { status: _s, ...stored } = remoraConfig;
       const discName = `remora-${id.slice(0, 8)}`;

@@ -32,7 +32,8 @@ const PRICEY = /\b(price|prices|priced|worth|cost|trading|value|usd)\b/i;
 const WEATHERY = /\b(weather|rain|raining|rainy|temperature|forecast|umbrella|sunny)\b/i;
 /** "in Hanoi", "for Ho Chi Minh City": a capitalised place after in/for/at. */
 const CITY = /\b(?:in|for|at)\s+((?:[A-Z][\p{L}'.-]*)(?:\s+[A-Z][\p{L}'.-]*){0,3})/u;
-const GITHUB = /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?=[/?#\s]|$)/i;
+const GITHUB =
+  /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?=[/?#\s;,.!)]|$)/i;
 /** A Walrus blob id: 32 bytes in URL-safe base64, 43 characters. */
 const BLOB = /(?<![\w-])([A-Za-z0-9_-]{43})(?![\w-])/;
 
@@ -103,10 +104,15 @@ export function planBuys(question: string, reef: ResolvedReef[]): PlannedBuy[] {
       url: `${weather.url}?city=${encodeURIComponent(city)}`,
       reason: `the forecast for ${city}`,
     });
+  // ADR-0108: the demo's attacker, listed only during the video's local capture.
+  const market = by("market");
+  if (market && /\bmarket (data|report|update)\b/i.test(question))
+    out.push({ entry: market, url: market.url, reason: "market data" });
   // A GitHub link is the repo's health, not a page to summarize.
   const brief = by("brief");
+  // A link ends before trailing punctuation: "…docs.wal.app;" is docs.wal.app.
   const link = [...question.matchAll(/https?:\/\/\S+/g)]
-    .map((l) => l[0])
+    .map((l) => l[0].replace(/[;,.!?)]+$/, ""))
     .find((l) => !GITHUB.test(l));
   if (brief && (link || /\b(summari[sz]e|brief|tl;?dr)\b/i.test(question))) {
     const q = link

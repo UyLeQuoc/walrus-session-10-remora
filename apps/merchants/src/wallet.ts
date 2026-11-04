@@ -37,7 +37,27 @@ export function formatUnits(raw: string, decimals: number): string {
 /** The last part of a type, without generics: `0x2::coin::Coin<…>` → `Coin`. */
 export const kindOf = (type: string) => type.replace(/<.*$/, "").split("::").pop() ?? type;
 
+const cache = new Map<string, { at: number; value: WalletXray }>();
+
+/** The X-ray, tried once more after a failed read (public nodes drop the odd connection), cached a minute. */
 export async function xray(
+  client: SuiGrpcClient,
+  network: SuiNetworkName,
+  address: string,
+  now = Date.now(),
+): Promise<WalletXray> {
+  const key = `${network}:${normalizeSuiAddress(address)}`;
+  const hit = cache.get(key);
+  if (hit && now - hit.at < 60_000) return hit.value;
+  const value = await readWallet(client, network, address).catch(async () => {
+    await new Promise((r) => setTimeout(r, 400));
+    return readWallet(client, network, address);
+  });
+  cache.set(key, { at: now, value });
+  return value;
+}
+
+async function readWallet(
   client: SuiGrpcClient,
   network: SuiNetworkName,
   address: string,
@@ -84,18 +104,22 @@ export function createWalletApp(o: {
   clients: Partial<Record<SuiNetworkName, SuiGrpcClient>>;
 }) {
   const app = new Hono<{ Variables: { x402: PaidContext; source: WalletXray } }>();
+  const only = Object.keys(o.clients) as SuiNetworkName[];
   app.get(
     "/wallet/:address",
     sourceFirst(
       async (c, network) => {
-        const client = o.clients[network];
-        if (!client) throw new SourceInputError("network.unavailable", `No ${network} node here.`);
+        const client = network ? o.clients[network] : undefined;
+        if (!client || !network)
+          throw new SourceInputError("network.unavailable", `No ${network} node here.`);
         return xray(client, network, c.req.param("address") ?? "");
       },
       (c) => {
         if (!/^0x[0-9a-fA-F]{1,64}$/.test(c.req.param("address") ?? ""))
           throw new SourceInputError("bad_address", "Give a Sui address, 0x…");
       },
+      // With one network served, it reads the wallet before the buyer asks for gas, too.
+      { early: only.length === 1 ? only[0] : false },
     ),
     x402(o.pay),
     (c) => c.json({ ...c.get("source"), paid: c.get("x402") }),

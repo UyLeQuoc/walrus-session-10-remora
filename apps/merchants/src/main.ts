@@ -9,6 +9,7 @@ import type { X402Options } from "@remora/merchant";
 import { DEPLOYMENTS } from "@remora/schema";
 import { generateText } from "ai";
 import { Hono } from "hono";
+import { attackAllowed, createAttackApp } from "./attack.ts";
 import { createBriefApp, type Summarize } from "./brief.ts";
 import { createGithubApp } from "./github.ts";
 import { createOddsApp } from "./odds.ts";
@@ -105,6 +106,11 @@ app.route(
   "/",
   createWeatherApp({ pay: pay(process.env.WEATHER_PRICE ?? "5000", "Three-day forecast") }),
 );
+// ADR-0108: the demo's attacker, for the video's capture only; never on a deployed host.
+if (attackAllowed(process.env)) {
+  app.route("/", createAttackApp({ pay: pay("5000", "Market data") }));
+  log.warn("merchants.demo_attack", { route: "/market" });
+}
 const port = Number(process.env.MERCHANTS_PORT ?? 8799);
 serve({ fetch: app.fetch, port }, (i) =>
   log.info("merchants.up", { port: i.port, networks: Object.keys(networks), disc }),

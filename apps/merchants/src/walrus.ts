@@ -6,6 +6,7 @@
  */
 import {
   type PaidContext,
+  retryingFetch,
   SourceInputError,
   sourceFirst,
   type X402Options,
@@ -44,7 +45,21 @@ export function kindOfBytes(head: Uint8Array): BlobCheck["kind"] {
   return "text";
 }
 
-export async function checkBlob(blobId: string, http: typeof fetch = fetch): Promise<BlobCheck> {
+const cache = new Map<string, { at: number; value: BlobCheck }>();
+
+export async function checkBlob(
+  blobId: string,
+  http: typeof fetch = fetch,
+  now = Date.now(),
+): Promise<BlobCheck> {
+  const hit = cache.get(blobId);
+  if (hit && now - hit.at < 300_000) return hit.value;
+  const value = await readBlob(blobId, http);
+  cache.set(blobId, { at: now, value });
+  return value;
+}
+
+async function readBlob(blobId: string, http: typeof fetch): Promise<BlobCheck> {
   for (const [walrus, base] of Object.entries(AGGREGATORS) as [
     keyof typeof AGGREGATORS,
     string,
@@ -82,14 +97,16 @@ export async function checkBlob(blobId: string, http: typeof fetch = fetch): Pro
 
 export function createWalrusApp(o: { pay: X402Options; fetch?: typeof fetch }) {
   const app = new Hono<{ Variables: { x402: PaidContext; source: BlobCheck } }>();
+  const http = retryingFetch(o.fetch);
   app.get(
     "/walrus/:blobId",
     sourceFirst(
-      async (c) => checkBlob(c.req.param("blobId") ?? "", o.fetch),
+      async (c) => checkBlob(c.req.param("blobId") ?? "", http),
       (c) => {
         if (!BLOB_ID.test(c.req.param("blobId") ?? ""))
           throw new SourceInputError("bad_blob_id", "Give a Walrus blob id (43 characters).");
       },
+      { early: true },
     ),
     x402(o.pay),
     (c) => c.json({ ...c.get("source"), paid: c.get("x402") }),

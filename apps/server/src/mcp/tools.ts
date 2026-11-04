@@ -20,6 +20,7 @@ import { type FactView, factLine } from "../runtime/facts.ts";
 import type { Remora } from "../runtime/remoras.ts";
 import { scoutAsk } from "../runtime/scout.ts";
 import { verifyWake } from "../runtime/verify.ts";
+import { answersQuestions } from "../templates/index.ts";
 import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import type { TokenRow } from "./tokens.ts";
 
@@ -629,7 +630,7 @@ export function createMcpTools(d: McpToolDeps): McpTool[] {
       async run({ remora: r, via }, args) {
         const question = str(args.question, 1_000);
         if (!question) refuse("Ask a question.");
-        if (r.template !== "scout") refuse(`${r.name} doesn't answer questions.`);
+        if (!answersQuestions(r.template)) refuse(`${r.name} doesn't answer questions.`);
         const res = await scoutAsk(rt, r, question, { kind: "message", ref: via });
         const spend = res.outcomes.reduce(
           (s, o) => (o.kind === "paid" ? s + BigInt(o.amount) : s),

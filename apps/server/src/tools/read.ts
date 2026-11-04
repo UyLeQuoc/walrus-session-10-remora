@@ -12,6 +12,15 @@ import type { RemoraMemory, RemoraRef } from "../runtime/memory.ts";
 
 const short = (coinType: string) => coinType.split("::").pop() ?? coinType;
 
+/** A raw amount in its coin's decimals: "0.638767245", not "638767245". */
+export function units(raw: string, decimals: number): string {
+  const n = BigInt(raw);
+  if (!decimals) return n.toString();
+  const base = 10n ** BigInt(decimals);
+  const frac = (n % base).toString().padStart(decimals, "0").replace(/0+$/, "");
+  return frac ? `${n / base}.${frac}` : (n / base).toString();
+}
+
 export function readTools(o: {
   client: SuiGrpcClient;
   memory: RemoraMemory;
@@ -23,9 +32,19 @@ export function readTools(o: {
     async balances(address) {
       const { balances } = await o.client.core.listBalances({ owner: address });
       if (!balances.length) return `${address} holds nothing.`;
-      return balances
-        .map((b) => `${short(b.coinType)}: ${b.balance} (address balance ${b.addressBalance})`)
-        .join("\n");
+      // ADR-0106: amounts in each coin's own decimals, so the model can't read MIST as SUI.
+      const lines = await Promise.all(
+        balances.map(async (b) => {
+          const meta = await o.client.core
+            .getCoinMetadata({ coinType: b.coinType })
+            .then((m) => m.coinMetadata)
+            .catch(() => null);
+          return meta
+            ? `${meta.symbol}: ${units(b.balance, meta.decimals)} (${b.balance} base units)`
+            : `${short(b.coinType)}: ${b.balance} base units (decimals unknown)`;
+        }),
+      );
+      return lines.join("\n");
     },
     async object(id) {
       const { object } = await o.client.core.getObject({ objectId: id });

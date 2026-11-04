@@ -2,7 +2,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { encodeHeader, PAYMENT_HEADER } from "@remora/disc-sdk";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
-import { SourceInputError, sourceFirst } from "./source-first.ts";
+import { retryingFetch, SourceInputError, sourceFirst } from "./source-first.ts";
 import { type PaidContext, x402 } from "./x402.ts";
 
 const FACILITATOR = "http://facilitator.test";
@@ -78,5 +78,51 @@ describe("sourceFirst (ADR-0106)", () => {
     expect(await res.json()).toEqual({ source: "fresh data" });
     expect(order).toEqual(["load before 0 facilitator calls"]);
     expect(calls).toEqual(["/verify", "/settle"]);
+  });
+});
+
+describe("sourceFirst early, and retryingFetch (ADR-0106)", () => {
+  it("with early, reads the source on the first call, before any sponsorship", async () => {
+    let loads = 0;
+    const a = new Hono<{ Variables: { source: string; x402: PaidContext } }>();
+    a.get(
+      "/thing",
+      sourceFirst(
+        async () => {
+          loads++;
+          throw new Error("down");
+        },
+        undefined,
+        { early: true },
+      ),
+      x402(pay([])),
+      (c) => c.json({}),
+    );
+    expect((await a.request("/thing")).status).toBe(502);
+    expect(loads).toBe(1);
+  });
+
+  it("tries once more after a network error, not after an HTTP error", async () => {
+    let calls = 0;
+    const flaky = retryingFetch(
+      (async () => {
+        calls++;
+        if (calls === 1) throw new TypeError("fetch failed");
+        return new Response("ok");
+      }) as typeof fetch,
+      0,
+    );
+    expect(await (await flaky("http://x.test")).text()).toBe("ok");
+    expect(calls).toBe(2);
+    let errors = 0;
+    const failing = retryingFetch(
+      (async () => {
+        errors++;
+        return new Response("no", { status: 503 });
+      }) as typeof fetch,
+      0,
+    );
+    expect((await failing("http://x.test")).status).toBe(503);
+    expect(errors).toBe(1);
   });
 });

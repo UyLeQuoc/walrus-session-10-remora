@@ -1,4 +1,5 @@
 /** apps/merchants: the demo x402 merchants (E9; ADR-0106 added the last five). */
+export * from "./attack.ts";
 export * from "./brief.ts";
 export * from "./github.ts";
 export * from "./odds.ts";

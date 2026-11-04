@@ -5,6 +5,7 @@
  */
 import {
   type PaidContext,
+  retryingFetch,
   SourceInputError,
   sourceFirst,
   type X402Options,
@@ -82,16 +83,18 @@ export async function forecastFor(city: string, http: typeof fetch = fetch, now 
 
 export function createWeatherApp(o: { pay: X402Options; fetch?: typeof fetch }) {
   const app = new Hono<{ Variables: { x402: PaidContext; source: Forecast } }>();
+  const http = retryingFetch(o.fetch);
   const city = (q: string | undefined) => (q ?? "").trim();
   app.get(
     "/weather",
     sourceFirst(
-      async (c) => forecastFor(city(c.req.query("city")), o.fetch),
+      async (c) => forecastFor(city(c.req.query("city")), http),
       (c) => {
         const name = city(c.req.query("city"));
         if (!name || name.length > 80)
           throw new SourceInputError("bad_city", "Name a city, up to 80 characters.");
       },
+      { early: true },
     ),
     x402(o.pay),
     (c) => c.json({ ...c.get("source"), paid: c.get("x402") }),

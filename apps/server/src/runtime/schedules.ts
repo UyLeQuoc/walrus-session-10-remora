@@ -7,8 +7,10 @@
  */
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, eq, remoraEvents, remoras, sentinelRules } from "@remora/db";
+import { answersQuestions } from "../templates/index.ts";
 import { nextRun } from "../triggers/cron.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
+import { briefQuestion } from "./brief-question.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { enqueue, type JobHandler } from "./jobs.ts";
 import type { Button } from "./notify.ts";
@@ -60,8 +62,11 @@ export async function addSchedule(
   question: string,
   opts: { paused?: boolean } = {},
 ) {
-  if (r.template !== "scout")
-    throw new RemoraError("schedule.unsupported", "Only Researchers answer on a schedule.");
+  if (!answersQuestions(r.template))
+    throw new RemoraError(
+      "schedule.unsupported",
+      "Only Researchers and Briefers answer on a schedule.",
+    );
   const p = previewSchedule(when);
   if (!p) throw new RemoraError("schedule.unparsed", `I can't read "${when}" as a schedule.`);
   const s: Schedule = {
@@ -181,6 +186,9 @@ export const answerButtons = (webBase: string, r: Remora, eventId: string): Butt
   { label: "Why?", url: `${webBase}/remoras/${r.id}?event=${eventId}`, data: `why:${eventId}` },
 ];
 
+/** Asks now and tells the owner, as a scheduled run does (the Briefer's Run now, ADR-0106). */
+export const askNow = (...args: Parameters<typeof askAndTell>) => askAndTell(...args);
+
 async function askAndTell(
   deps: RuntimeDeps,
   r: Remora,
@@ -208,6 +216,19 @@ export async function firstRun(deps: RuntimeDeps, r: Remora) {
       { kind: "message", ref: "first_run" },
       `${r.name}'s first answer:`,
     );
+  }
+  // ADR-0106: a Briefer's first answer is its first brief, when it has a list.
+  if (r.template === "briefer") {
+    const items = ((r.config as { items?: string[] }).items ?? []).filter(Boolean);
+    if (items.length)
+      return askAndTell(
+        deps,
+        r,
+        briefQuestion(items),
+        { kind: "message", ref: "first_run" },
+        `${r.name}'s first brief:`,
+      );
+    return null;
   }
   if (r.template === "sentinel") {
     const watched = (

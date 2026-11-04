@@ -45,7 +45,34 @@ export const TEMPLATES = {
       "Always ping me for anything over 1 SUI",
     ],
   }),
+  // ADR-0106: the third kind. It answers like a Researcher, but on a schedule, about a list its owner
+  // keeps (runtime/briefer.ts), and posts one brief with a receipt for each thing it bought.
+  briefer: Template.parse({
+    schema: "remora.template/v1",
+    name: "Briefer",
+    summary: "Every weekday morning, buys what you follow and sends one brief, a receipt for each.",
+    persona:
+      "You are the owner's Briefer. Each morning you get fresh data you bought for the owner's list. Write one short brief: one line per item with the number that matters, then what the brief cost in total. No advice.",
+    tools: ["memory.recall", "memory.remember", "pay", "notify"],
+    triggers: [{ kind: "cron", cron: "0 1 * * 1-5", human: "weekdays at 8am" }],
+    budgetSuggestion: { monthlyUsd: [1, 5], perPaymentUsd: 0.015 },
+    payees: [
+      "reef:sui-risk",
+      "reef:odds",
+      "reef:brief",
+      "reef:wallet",
+      "reef:walrus",
+      "reef:github",
+      "reef:price",
+      "reef:weather",
+    ],
+    starterMemories: [],
+    examples: ["SUI and WAL prices", "weather in Hanoi", "github.com/MystenLabs/sui"],
+  }),
 } as const;
 
 export type TemplateSlug = keyof typeof TEMPLATES;
+/** Kinds that answer questions and pay for data: the Researcher, and the Briefer (ADR-0106). */
+export const answersQuestions = (template: string) =>
+  template === "scout" || template === "briefer";
 export const isTemplateSlug = (s: string): s is TemplateSlug => s in TEMPLATES;

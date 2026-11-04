@@ -5,6 +5,7 @@
  */
 import {
   type PaidContext,
+  retryingFetch,
   SourceInputError,
   sourceFirst,
   type X402Options,
@@ -72,14 +73,16 @@ export async function pricesOf(symbols: string[], http: typeof fetch = fetch, no
 
 export function createPriceApp(o: { pay: X402Options; fetch?: typeof fetch }) {
   const app = new Hono<{ Variables: { x402: PaidContext; source: Prices } }>();
+  const http = retryingFetch(o.fetch);
   app.get(
     "/price",
     sourceFirst(
-      async (c) => pricesOf(symbolsIn(c.req.query("symbols") ?? c.req.query("q") ?? ""), o.fetch),
+      async (c) => pricesOf(symbolsIn(c.req.query("symbols") ?? c.req.query("q") ?? ""), http),
       (c) => {
         if ((c.req.query("q") ?? "").length > 300)
           throw new SourceInputError("too_long", "Ask about at most 300 characters.");
       },
+      { early: true },
     ),
     x402(o.pay),
     (c) => c.json({ ...c.get("source"), paid: c.get("x402") }),

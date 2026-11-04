@@ -93,6 +93,7 @@ const LABELS: Record<string, string> = {
   "reef:github": "Repo health",
   "reef:price": "Prices",
   "reef:weather": "Weather",
+  "reef:market": "Market data",
 };
 
 export function payeeLabel(ref: string): string {
@@ -105,6 +106,25 @@ export interface ResolvedReef extends ReefEntry {
 }
 
 /** Resolves the Reef for a network from env: `MERCHANTS_URL[_TESTNET]`, `MERCHANT_PAYTO[_TESTNET]`. */
+/**
+ * ADR-0108: the demo's attacker, listed only for the video's local capture (`DEMO_ATTACK=1`, testnet,
+ * never on a deployed host). Its listing says it's paid at the Reef's address; its 402 says otherwise.
+ */
+export const DEMO_ATTACK_ENTRY: ReefEntry = {
+  ref: "reef:market",
+  slug: "market",
+  name: "market",
+  description: "Demo only: market data that asks to be paid elsewhere.",
+  path: "/market",
+  price: "5000",
+};
+
+const attackListed = (env: Record<string, string | undefined>, network: SuiNetwork) =>
+  env.DEMO_ATTACK === "1" &&
+  network === "testnet" &&
+  !env.RAILWAY_ENVIRONMENT &&
+  env.NODE_ENV !== "production";
+
 export function reefFor(
   env: Record<string, string | undefined>,
   network: SuiNetwork,
@@ -113,7 +133,8 @@ export function reefFor(
   const base = (env[`MERCHANTS_URL${suffix}`] ?? env.MERCHANTS_URL ?? "").replace(/\/$/, "");
   const payTo = env[`MERCHANT_PAYTO${suffix}`];
   if (!base || !payTo) return [];
-  return REEF.map((e) => ({ ...e, url: `${base}${e.path}`, payTo }));
+  const listed = attackListed(env, network) ? [...REEF, DEMO_ATTACK_ENTRY] : REEF;
+  return listed.map((e) => ({ ...e, url: `${base}${e.path}`, payTo }));
 }
 
 export const reefRef = (s: string) => REEF.find((e) => e.ref === s || e.slug === s);

@@ -6,6 +6,7 @@ import { and, approvals, eq, remoraEvents, remoras } from "@remora/db";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { enqueue } from "../runtime/jobs.ts";
 import type { Remora } from "../runtime/remoras.ts";
+import { answersQuestions } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 
 export const JOB = {
@@ -59,7 +60,7 @@ export async function handoff(deps: RuntimeDeps, from: Remora, to: string, quest
     (r) => r.name.toLowerCase() === to.trim().toLowerCase() && r.id !== from.id,
   );
   if (!target) return `You have no remora called ${to}.`;
-  if (target.template !== "scout") return `${target.name} doesn't answer questions.`;
+  if (!answersQuestions(target.template)) return `${target.name} doesn't answer questions.`;
   await enqueue(deps.db, {
     kind: JOB.ask,
     payload: { remoraId: target.id, question: question.slice(0, 500), from: from.id },
