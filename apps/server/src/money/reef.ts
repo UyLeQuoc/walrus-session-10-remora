@@ -171,3 +171,20 @@ export function reefServices(resolved: ResolvedReef[]) {
       : [];
   });
 }
+
+/**
+ * Whether a URL is a listed service's address: the same origin, and the listed path up to its first
+ * `:param` (`/sui-risk/:id` takes any id; `/price` takes any query).
+ */
+export function atListedAddress(url: string, listedUrl: string): boolean {
+  try {
+    const u = new URL(url);
+    const l = new URL(listedUrl.split("/:")[0] ?? listedUrl);
+    if (u.origin !== l.origin) return false;
+    return listedUrl.includes("/:")
+      ? u.pathname.startsWith(`${l.pathname}/`)
+      : u.pathname === l.pathname;
+  } catch {
+    return false;
+  }
+}

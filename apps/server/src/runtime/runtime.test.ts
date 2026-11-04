@@ -53,6 +53,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createRemoraBot } from "../channels/remora-bot.ts";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import { atListedAddress } from "../money/reef.ts";
 import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
 import { type Brain, type UntrustedData, wrapUntrusted } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -129,6 +130,19 @@ describe("Scout planning", () => {
     expect(p("Summarize https://example.com/post")).toEqual(["brief"]);
     expect(p("hello")).toEqual([]);
     expect(planBuys("check 0xabc", reef)[0]?.url).toBe(`${MERCHANT}/sui-risk/0xabc`);
+  });
+
+  it("ADR-0106: the model may buy a listed service only at its listed address", () => {
+    expect(atListedAddress(`${MERCHANT}/sui-risk/0x2`, `${MERCHANT}/sui-risk/:id`)).toBe(true);
+    expect(atListedAddress(`${MERCHANT}/price?symbols=SUI`, `${MERCHANT}/price`)).toBe(true);
+    expect(
+      atListedAddress(`${MERCHANT}/github/MystenLabs/sui`, `${MERCHANT}/github/:owner/:repo`),
+    ).toBe(true);
+    expect(atListedAddress("https://www.google.com/search?q=sui", `${MERCHANT}/brief`)).toBe(false);
+    expect(atListedAddress("https://reef.io/sui-risk", `${MERCHANT}/sui-risk/:id`)).toBe(false);
+    expect(atListedAddress(`${MERCHANT}/sui-risk`, `${MERCHANT}/sui-risk/:id`)).toBe(false);
+    expect(atListedAddress(`${MERCHANT}/price/../brief`, `${MERCHANT}/price`)).toBe(false);
+    expect(atListedAddress("not a url", `${MERCHANT}/price`)).toBe(false);
   });
 
   it("ADR-0106: one rule per new service, and several services in one question", () => {

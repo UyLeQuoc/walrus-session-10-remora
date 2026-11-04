@@ -10,7 +10,7 @@ import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, remoraEvents, sourceStats, sql } from "@remora/db";
 import { getDisc, toDiscError } from "@remora/disc-sdk";
 import { PaymentStopped, payWithDisc } from "../money/pay.ts";
-import { payeeLabel } from "../money/reef.ts";
+import { atListedAddress, payeeLabel } from "../money/reef.ts";
 import { modelIdFor } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { REMORA_LIMITS } from "../runtime/limits.ts";
@@ -103,6 +103,16 @@ export async function requestPayment(
     }),
   });
 
+  // ADR-0109: before anything is fetched, an unlisted payee, or a listed one at an address that isn't
+  // its own, is refused with Sonar's code and recorded (that's where an injection shows up). With the
+  // safety check forced off (tests of the onchain layer), this goes too.
+  const listed = deps.reef(r.network).find((e) => e.ref === p.payee);
+  if (!deps.sonarOff && !listed)
+    return blocked("sonar.blocked", [`${p.payee} isn't a listed service`]);
+  if (!deps.sonarOff && listed && !atListedAddress(p.url, listed.url))
+    return blocked("sonar.blocked", [
+      `${p.url} isn't ${payeeLabel(p.payee)}'s listed address (${listed.url})`,
+    ]);
   if (r.status !== "active" && r.status !== "shadow")
     return blocked("remora.not_active", [`the remora is ${r.status}`]);
   if (!r.discId || !r.allowanceId)

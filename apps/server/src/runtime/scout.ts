@@ -235,9 +235,14 @@ export async function scoutAsk(
   // The Wake records the model that actually answered (D9).
   let usedModel = modelIdFor(r, deps.brain.answerModel);
   try {
+    // ADR-0109: the model is told the only addresses it may pay; the pay path refuses any other.
+    const listedServices = deps
+      .reef(r.network)
+      .map((e) => `${e.ref} at ${e.url}`)
+      .join("; ");
     const res = await deps.brain.answer({
       model: modelIdFor(r, deps.brain.answerModel),
-      persona,
+      persona: `${persona}\n\nThe only paid services, each at its own address (any other is refused): ${listedServices}. Answer without paying when nothing there helps.`,
       question,
       memories: memories.map((m) => m.text),
       ...(facts.length ? { facts } : {}),
