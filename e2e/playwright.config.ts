@@ -62,6 +62,20 @@ export default defineConfig({
     ...(process.env.DEMO === "1"
       ? [{ name: "demo", testMatch: /demo\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // ADR-0105: publish the curated templates and deprecate the test runs' (SEED=1), and run every
+    // example the app suggests once on testnet (EXAMPLES=1; a few cents of testnet USDC).
+    ...(process.env.SEED === "1"
+      ? [{ name: "seed", testMatch: /seed\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
+      : []),
+    ...(process.env.EXAMPLES === "1"
+      ? [
+          {
+            name: "examples",
+            testMatch: /examples\.spec\.ts/,
+            use: { ...devices["Desktop Chrome"] },
+          },
+        ]
+      : []),
     // U14 (ADR-0103): the review capture, every route and state on a desktop and a phone, into
     // docs/ux/review/r<UX_ROUND>/. Opt in with UX=1; it reads and never pays.
     ...(process.env.UX === "1"
