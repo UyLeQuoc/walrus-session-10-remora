@@ -10,14 +10,18 @@ import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { afterAll, describe, expect, it } from "vitest";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import { REEF as LISTED_REEF } from "../money/reef.ts";
 import { createRemoraService, defaultBudget, issueArgs } from "./remoras.ts";
+
+const LISTED = LISTED_REEF.map((e) => e.slug);
 
 const PKG = normalizeSuiAddress("0xcc");
 const USDC = `${normalizeSuiAddress("0xa1ec")}::usdc::USDC`;
 const OWNER = normalizeSuiAddress("0x0f0f");
 const STRANGER = normalizeSuiAddress("0xbad");
 const PAYTO = normalizeSuiAddress("0x3e");
-const reef: ResolvedReef[] = ["sui-risk", "odds", "brief"].map((slug) => ({
+// ADR-0106: every listed service, as the scout template pays all of them.
+const reef: ResolvedReef[] = LISTED.map((slug) => ({
   ref: `reef:${slug}` as const,
   slug,
   name: slug,

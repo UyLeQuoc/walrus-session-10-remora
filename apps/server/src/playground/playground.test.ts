@@ -17,6 +17,7 @@ import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { afterAll, describe, expect, it } from "vitest";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import { REEF as LISTED_REEF } from "../money/reef.ts";
 import type { Brain } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { SlidingLimiter } from "../runtime/limits.ts";
@@ -35,6 +36,8 @@ import {
   type PlaygroundDeps,
 } from "./service.ts";
 
+const LISTED = LISTED_REEF.map((e) => e.slug);
+
 loadEnv();
 const url = process.env.DATABASE_URL;
 const local = url && /localhost|127\.0\.0\.1/.test(url) ? url : undefined;
@@ -42,7 +45,8 @@ const local = url && /localhost|127\.0\.0\.1/.test(url) ? url : undefined;
 const PKG = normalizeSuiAddress("0xcc");
 const USDC = `${normalizeSuiAddress("0xa1ec")}::usdc::USDC`;
 const PAYTO = normalizeSuiAddress("0x3e");
-const reef: ResolvedReef[] = ["sui-risk", "odds", "brief"].map((slug) => ({
+// ADR-0106: every listed service, as the scout template pays all of them.
+const reef: ResolvedReef[] = LISTED.map((slug) => ({
   ref: `reef:${slug}` as const,
   slug,
   name: slug,

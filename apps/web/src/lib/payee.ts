@@ -3,6 +3,11 @@ const NAMES: Record<string, string> = {
   "reef:sui-risk": "Sui risk check",
   "reef:odds": "Odds",
   "reef:brief": "Brief",
+  "reef:wallet": "Wallet X-ray",
+  "reef:walrus": "Walrus blob check",
+  "reef:github": "Repo health",
+  "reef:price": "Prices",
+  "reef:weather": "Weather",
 };
 
 export function payeeName(ref: string): string {
