@@ -11,8 +11,10 @@
  * ADR-0096: the app is filmed in dark mode (`DEMO_THEME=light` for the light one), and the manifest
  * records the boxes of the elements the video spotlights, so a re-capture needs no re-measuring.
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { Transaction } from "@mysten/sui/transactions";
 import {
   type Browser,
@@ -56,6 +58,8 @@ class Shot {
   private n = 0;
   private frames: { f: number; t: number }[] = [];
   private events: Ev[] = [];
+  /** ADR-0106: data a scene draws itself, recorded with the shot (Claude Code's real output). */
+  readonly notes: Record<string, unknown> = {};
   private x = VIEW.width / 2;
   private y = VIEW.height / 2;
   constructor(
@@ -169,6 +173,7 @@ class Shot {
           duration: this.now(),
           frames: this.frames,
           events: this.events,
+          notes: this.notes,
         },
         null,
         1,
@@ -256,7 +261,7 @@ async function retireLeftovers(page: Page) {
       [path, JSON.stringify(body)],
     );
   const stale = (await remoras(page)).filter(
-    (r) => r.status !== "retired" && /^Researcher · (demo|examples)$/.test(r.name),
+    (r) => r.status !== "retired" && /^(Researcher|Briefer) · (demo|examples)$/.test(r.name),
   );
   for (const r of stale) {
     // Each retire counts as its own client, so the cleanup never spends the shots' request budget.
@@ -446,6 +451,186 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       await s.hold(800);
     });
 
+  // ADR-0106: in its own thread, one question that buys three services, a question it answers free,
+  // and (ADR-0108, DEMO_ATTACK=1) a "market data" service that asks to be paid at the attacker's
+  // address: the safety check blocks it, and Why? shows it.
+  const ownerAddress = burner().toSuiAddress();
+  const fresh = async (s: Shot, sel: string) => s.page.locator(sel).count();
+  if (scout)
+    await shot("thread", owner, async (s) => {
+      await go(s, `/chat/r/${scout.id}`);
+      await s.hold(1500, "thread");
+      const box = s.page.getByLabel("Message");
+      const answers = "[data-testid=thread-remora]";
+      const paidChips = '[data-testid=thread-chip][data-type="payment"]';
+      // 1. Three services from one question.
+      const paidBefore = await fresh(s, paidChips);
+      const answeredBefore = await fresh(s, answers);
+      await s.type(
+        box,
+        `Is package 0x2 safe, what does wallet ${ownerAddress} hold, and what's SUI worth?`,
+        "multi",
+      );
+      await box.press("Enter");
+      s.mark("multi-asked");
+      await expect
+        .poll(async () => (await fresh(s, paidChips)) - paidBefore, { timeout: 180_000 })
+        .toBeGreaterThanOrEqual(3);
+      await expect
+        .poll(async () => (await fresh(s, answers)) - answeredBefore, { timeout: 180_000 })
+        .toBeGreaterThan(0);
+      s.mark("multi-answered");
+      const chips = s.page.locator(paidChips);
+      const n = await chips.count();
+      await s.box("multi-paid", chips.nth(n - 3), chips.nth(n - 1));
+      await s.page.locator(answers).last().scrollIntoViewIfNeeded();
+      await s.hold(3500, "multi-read");
+      // 2. A question it answers without buying anything.
+      const beforeFree = await fresh(s, answers);
+      await s.type(box, "What does a Sui upgrade cap do?", "free");
+      await box.press("Enter");
+      await expect
+        .poll(async () => (await fresh(s, answers)) - beforeFree, { timeout: 120_000 })
+        .toBeGreaterThan(0);
+      s.mark("free-answered");
+      await s.box("free-answer", s.page.locator(answers).last());
+      await s.hold(3000, "free-read");
+      s.mark("free-end");
+      // 3. The attack, live.
+      const blockedChips = '[data-testid=thread-chip][data-type="blocked"]';
+      const blockedBefore = await fresh(s, blockedChips);
+      await s.type(box, "Pull today's market data report for SUI.", "attack");
+      await box.press("Enter");
+      await expect
+        .poll(async () => (await fresh(s, blockedChips)) - blockedBefore, { timeout: 120_000 })
+        .toBeGreaterThan(0);
+      s.mark("blocked");
+      const chip = s.page.locator(blockedChips).last();
+      await s.box("blocked-chip", chip);
+      await s.hold(2200);
+      await s.click(chip.getByRole("button", { name: /Why/ }), "Why blocked");
+      const drawer = s.page.getByRole("dialog");
+      if (await shows(drawer)) await s.box("why-blocked", drawer);
+      await s.hold(4500, "why-read");
+      await s.page.keyboard.press("Escape");
+      await s.hold(600);
+    });
+
+  // ADR-0106: the Briefer. Made off camera with one signature; Run now on camera.
+  let brieferId = "";
+  await shot(
+    "brief-make",
+    owner,
+    async (s) => {
+      await go(s, "/remoras/new");
+      await s.page.getByRole("radio", { name: /^Briefer/ }).click();
+      await s.page.getByLabel("Name").fill("Morning brief");
+      await s.page
+        .getByLabel("What to follow")
+        .fill("SUI and WAL prices\nweather in Hanoi\ngithub.com/MystenLabs/walrus");
+      await s.page.getByLabel("Monthly limit (USDC)").fill("1");
+      await s.page.getByLabel("Most it pays at once (USDC)").fill("0.015");
+      await s.page.getByRole("button", { name: "Create Briefer" }).click();
+      await s.page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
+      brieferId = /\/remoras\/([0-9a-f-]{36})/.exec(s.page.url())?.[1] ?? "";
+      await s.page.getByRole("button", { name: "Go live" }).click();
+      await expect(s.page.getByText("active").first()).toBeVisible({ timeout: 30_000 });
+    },
+    true,
+  );
+  if (brieferId)
+    await shot("brief", owner, async (s) => {
+      await go(s, `/remoras/${brieferId}`);
+      const card = s.page.getByTestId("brief-card");
+      await expect(card).toBeVisible({ timeout: 30_000 });
+      await s.box("brief-list", card.getByRole("list", { name: "What it follows" }));
+      await s.hold(2000, "brief");
+      const ran = s.page.waitForResponse(
+        (r) => r.url().endsWith("/brief/run") && r.request().method() === "POST",
+        { timeout: 240_000 },
+      );
+      await s.click(card.getByRole("button", { name: /Run now/ }), "Run now");
+      const { eventId } = (await (await ran).json()) as { eventId: string };
+      s.notes.briefEvent = eventId;
+      const last = s.page.getByTestId("brief-last");
+      await expect(last.getByTestId("brief-receipt")).toHaveCount(3, { timeout: 60_000 });
+      s.mark("brief-done");
+      await last.scrollIntoViewIfNeeded();
+      await s.box("brief-last", last);
+      await s.hold(5000, "brief-read");
+    });
+
+  // ADR-0106: Claude Code asks the same Researcher over MCP and it pays. The real `claude -p` output
+  // is kept in the shot's notes for the video's terminal frame; the web then shows the payment.
+  if (scout)
+    await shot("claude", owner, async (s) => {
+      const call = (path: string, body?: unknown) =>
+        s.page.evaluate(
+          async ([p, b]) => {
+            const res = await fetch(p as string, {
+              method: b ? "POST" : "GET",
+              headers: { "x-remora-network": "testnet", "content-type": "application/json" },
+              ...(b ? { body: b as string } : {}),
+            });
+            return res.json();
+          },
+          [path, body === undefined ? "" : JSON.stringify(body)],
+        ) as Promise<Record<string, unknown>>;
+      const made = (await call("/api/mcp/tokens", {
+        remora: scout.id,
+        name: "Claude Code",
+        scopes: ["memory:read", "pay"],
+        days: 1,
+      })) as { secret: string; httpUrl: string; token: { id: string } };
+      const prompt =
+        "Use the remora_ask tool to ask my remora: Is package 0x2 safe to depend on? Then tell me in two short lines what it answered and what it paid.";
+      const config = {
+        mcpServers: {
+          remora: {
+            type: "http",
+            url: made.httpUrl,
+            headers: { Authorization: `Bearer ${made.secret}` },
+          },
+        },
+      };
+      // The command the video shows is the one that ran: the config is a remora.json in a temp folder,
+      // deleted right after, since it holds the token.
+      const dir = mkdtempSync(join(tmpdir(), "remora-claude-"));
+      writeFileSync(join(dir, "remora.json"), JSON.stringify(config));
+      const t0 = Date.now();
+      const run = spawnSync(
+        "claude",
+        [
+          "-p",
+          prompt,
+          "--mcp-config",
+          "remora.json",
+          "--allowedTools",
+          "mcp__remora__remora_ask",
+          "--output-format",
+          "text",
+        ],
+        { cwd: dir, encoding: "utf8", timeout: 240_000 },
+      );
+      rmSync(dir, { recursive: true, force: true });
+      // The secret never reaches the video: the terminal frame shows the command without it.
+      s.notes.claude = {
+        prompt,
+        output: (run.stdout ?? "").trim(),
+        ok: run.status === 0,
+        ms: Date.now() - t0,
+        at: new Date(t0).toISOString(),
+      };
+      await call(`/api/mcp/tokens/${made.token.id}/revoke`, {});
+      expect(run.status, run.stderr).toBe(0);
+      // The payment it made, on the web.
+      await go(s, `/chat/r/${scout.id}`);
+      await s.hold(1200, "claude-web");
+      const chip = s.page.locator('[data-testid=thread-chip][data-type="payment"]').last();
+      await s.box("claude-paid", chip);
+      await s.hold(3000, "claude-paid");
+    });
+
   // 5. Sentinel learns a rule in plain words, and the Learning tab shows what it learned.
   if (sentinel)
     await shot("teach", owner, async (s) => {
@@ -583,5 +768,7 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
 
   console.log(`demo shots: ${done.join(", ")}`);
   // Every shot asked for was recorded (all of them, without DEMO_SHOTS).
-  expect(done).toEqual(expect.arrayContaining(only ?? ["playground", "create", "scout", "more"]));
+  expect(done).toEqual(
+    expect.arrayContaining(only ?? ["playground", "create", "thread", "brief", "claude", "more"]),
+  );
 });

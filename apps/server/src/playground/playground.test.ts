@@ -354,3 +354,16 @@ describe.skipIf(!local)("playground (H7, ADR-0051)", () => {
     expect((await off.request("/api/playground")).status).toBe(200);
   });
 });
+
+describe("playground amounts (ADR-0106)", () => {
+  it("shows the digits a small price needs", async () => {
+    const { usdc } = await import("./service.ts");
+    expect([usdc(1_000_000n), usdc(10_000n), usdc(5_000n), usdc(25_000n), usdc(0n)]).toEqual([
+      "1.00",
+      "0.01",
+      "0.005",
+      "0.025",
+      "0.00",
+    ]);
+  });
+});
