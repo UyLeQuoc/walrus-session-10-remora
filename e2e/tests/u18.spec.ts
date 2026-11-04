@@ -430,12 +430,19 @@ test("B5: MPP-paid calls to a house merchant and to the remora sale door", async
   const run = (url: string) => {
     const out = spawnSync("bun", ["scripts/mpp-exit.ts", url], {
       cwd: `${ROOT}/apps/server`,
-      env: { ...process.env, MPP_EXIT: "1", GAS_STATION: "http://localhost:8798/gas" },
+      env: {
+        ...process.env,
+        MPP_EXIT: "1",
+        GAS_STATION: "http://localhost:8798/gas",
+        NO_COLOR: "1",
+        FORCE_COLOR: "0",
+      },
       encoding: "utf8",
       timeout: 180_000,
     });
-    const text = `${out.stdout}\n${out.stderr}`;
-    const receipt = /reference: '([1-9A-HJ-NP-Za-km-z]{32,44})'/.exec(text)?.[1];
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: strips terminal colours from the log
+    const text = `${out.stdout}\n${out.stderr}`.replace(/\x1b\[[0-9;]*m/g, "");
+    const receipt = /reference: ['"]([1-9A-HJ-NP-Za-km-z]{32,44})['"]/.exec(text)?.[1];
     return { text, receipt, ok: /answer: 200/.test(text) };
   };
   const house = run("http://localhost:8799/weather?city=Hanoi");

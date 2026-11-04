@@ -115,6 +115,24 @@ that memory.**
   - Claude Code reads the same memories through Remora's MCP server.
 - **Charts** come only from recorded events: the Wallet watcher's noise rate, and the Researcher's cost per useful answer
   (`GET /api/learning/export`).
+- **It proposes its own budget** ([ADR-0124](docs/adr/0124-budget-proposals-cite-memories.md)).
+  - Rules in code see a limit nearly spent, barely used, or asked over twice. The remora then
+    proposes a change and cites 2–5 of its own memories, each a Walrus blob.
+  - You accept with one signature, or decline with a reason.
+  - The outcome is written back to memory, and the next proposal reads it.
+- **The Reef learns from everyone who shares** ([ADR-0127](docs/adr/0127-reef-reputation-from-shared-counts.md)).
+  - Each service shows 7-day counts from owners who opted in: paid calls, refusals, ratings, median
+    time.
+  - The planner skips a service most owners rate as noise, and Why? says so.
+- **Every Monday, "What I learned"** ([ADR-0128](docs/adr/0128-weekly-review-written-back-to-memory.md)).
+  It's written from its own numbers and saved to its memory. The next week's review reads the last
+  one.
+- **Lend what it learned, and take it back** ([ADR-0130](docs/adr/0130-memory-capsules-seal.md)).
+  - A few memories go Seal-encrypted to another owner's remora, under a Move policy on Sui:
+    `seal_approve` checks the grantee, the expiry and that the capsule isn't revoked.
+  - A revoke is one signature; the next turn can't read them.
+- **Templates can carry a starter pack** ([ADR-0131](docs/adr/0131-starter-memory-packs.md)):
+  scrubbed lines its author picked, which whoever hatches it picks again.
 
 ## Agent payments: x402, settled on Sui
 - **The x402 flow.** A Researcher asks a Reef service, gets `402 Payment Required`, pays from its Disc, and
@@ -133,6 +151,20 @@ that memory.**
 - **Red team.** `bun run evals` runs 28 attacks in CI, with 0 overspends
   ([evals/](evals/README.md)). Under them, the Move tests prove that money reaches only allowlisted
   payees, within the caps.
+- **MPP too** ([ADR-0120](docs/adr/0120-mpp-on-every-door.md)).
+  - Every x402 door also answers the Payment HTTP auth scheme (`WWW-Authenticate: Payment`, method
+    `sui`, intent `charge`), shaped like `@suimpp/mpp`.
+  - It accepts a signed transaction or an executed digest checked over gRPC.
+  - `disc.fetch` pays an MPP-only 402.
+- **Anyone pays from a wallet** ([ADR-0126](docs/adr/0126-public-remora-page.md)). A remora on sale
+  has a public page where a visitor buys one answer from their own wallet. Gas is sponsored, and it
+  settles only after the answer.
+- **People, not just services.**
+  - An Errand pays your contacts, with the memo anchored onchain
+    ([ADR-0125](docs/adr/0125-errand-pays-contacts.md)), and splits bills with pay links
+    ([ADR-0132](docs/adr/0132-splitter-and-pay-links.md)).
+  - A Subscriptions keeper stops on a price it doesn't remember
+    ([ADR-0129](docs/adr/0129-subscriptions-keeper.md)).
 
 ## What it does, with proof
 

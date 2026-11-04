@@ -1,4 +1,4 @@
-# Remora's open economy (U17)
+# Remora's open economy (U17, U18)
 
 Remoras can buy from more than the eight house services ([ADR-0111](adr/0111-scale-pass.md)). Every
 purchase goes through the same rails: an x402 payment through the remora's Disc, under a limit that
@@ -57,3 +57,44 @@ house services, a remora's sale door and [examples/sell-an-api](../examples/sell
     before the work starts, so a failed answer isn't refunded.
 - **The answer:** a paid 2xx carries `Payment-Receipt`, whose `reference` is the transaction digest.
   Errors are Problem Details (`application/problem+json`), and a 402 comes with a fresh challenge.
+
+## Anyone buys an answer from a wallet ([ADR-0126](adr/0126-public-remora-page.md))
+Every remora on sale has a public page, `/r/<slug>`, with no sign-in:
+1. The visitor connects a testnet wallet and asks one question.
+2. The door's 402 names the price and the owner's address.
+3. The visitor's wallet signs a USDC transfer. The gas comes from `/api/facilitator/gas`.
+4. The door answers, then settles. A failed answer costs nothing.
+
+The page shows the receipt, and what the remora paid its own sources. Each address can ask once
+every 30 s.
+
+## Paying people ([ADR-0125](adr/0125-errand-pays-contacts.md), [ADR-0132](adr/0132-splitter-and-pay-links.md))
+- **The Errand pays contacts.** "pay Linh 2 USDC for lunch".
+  - A contact is one of its Disc's payees (`reef:contact-<slug>`), added with one signature.
+  - The payment runs the same x402 path as a service, against a merchant in the server's own
+    process. The memo is the Wake's reason, so its hash is `Paid.intent` onchain.
+  - Over its cap, it asks you to pay once from your wallet. At 3x what that contact usually gets,
+    it asks first.
+- **Splits.**
+  - "I paid 12 for dinner for Linh, Huy and me" keeps a running balance.
+  - "settle up" pays what you owe a contact through the Errand. For what others owe you, it makes a
+    pay link (`/pay/<token>`): a page they pay from their own wallet, gas sponsored and settled by
+    the public facilitator.
+
+## Subscriptions that notice a price hike ([ADR-0129](adr/0129-subscriptions-keeper.md))
+A Subscriptions keeper charges its subscriptions every day at 8am. Before each charge it reads the
+402:
+- **At the price it remembers:** it pays.
+- **At 20% or more above it:** it doesn't pay. It records a `price_hike` and asks you to pay once,
+  accept the new price, or cancel.
+
+The remembered price is a memory (`PRICE <ref> · usually …`). It only falls on its own, so small
+rises can't creep past the line. `examples/sell-an-api` takes a `PRICE` env, for trying this.
+
+## Lend what a remora learned ([ADR-0130](adr/0130-memory-capsules-seal.md))
+A memory capsule lends a few memories to another owner's remora, for 1–30 days.
+- The memories are Seal-encrypted on Walrus testnet, under the `remora_capsule` Move package.
+- The key servers release the key only to the grantee, before expiry, and while the capsule isn't
+  revoked.
+- The grantee reads the memories at answer time and never keeps them, so a revoke (one signature)
+  ends access on the next turn.
