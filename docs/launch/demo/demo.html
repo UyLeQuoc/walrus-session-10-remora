@@ -187,7 +187,7 @@ function clip(shot, segs) {
   const S = segs.map((s) => {
     const a = mark(shot, s.from) + (s.fromOff || 0), b = mark(shot, s.to) + (s.toOff || 0);
     const dur = s.dur ?? Math.max(.01, (b - a) / (s.speed || 1));
-    const r = { a, b, o0: out, o1: out + dur, badge: s.badge }; out += dur; return r;
+    const r = { a, b, o0: out, o1: out + dur, badge: s.badge, url: s.url }; out += dur; return r;
   });
   return { shot, segs: S, dur: out };
 }
@@ -303,7 +303,9 @@ add({
   id: "teach", chapter: "04 · It learns from you", url: "remora · /remoras/sentinel", lead: .6,
   clip: clip("teach", [
     { from: "sentinel", to: "Teach", speed: 1.4 },
-    { from: "Teach", to: "learning", speed: .9 },
+    { from: "Teach", to: "transfer", speed: .9 },
+    { from: "transfer", to: "ignored", dur: 2.0, badge: "A real 0.001 SUI transfer arrives · sped up" },
+    { from: "ignored", to: "learning", speed: .9 },
   ]),
   steps: [["Teach", "rule"], ["Learned", "learned"], ["Applied", "ignored"]],
   caps: [
@@ -348,6 +350,32 @@ add({
   spots: [
     { at: "funds", off: .4, len: 1.8, box: "budgets" },
     { at: "Pause all", off: .2, len: 2.2, box: "Pause all", zoom: 1.1 },
+  ],
+});
+add({
+  id: "more", chapter: "08 · And more", url: "remora · /hatchery", lead: .5, tail: .4,
+  clip: clip("more", [
+    { from: "gallery", to: "Token desk", speed: 1.1 },
+    { from: "template", to: "template-end", speed: 1.4, url: "remora · /hatchery/token-desk" },
+    { from: "room", to: "room-end", speed: 1.3, url: "remora · /chat/room/team" },
+    { from: "connections", to: "connections-end", speed: 1.3, url: "remora · /connections" },
+    { from: "settings", to: "end", speed: 1.35, url: "remora · /settings" },
+  ]),
+  steps: [["Templates", "gallery"], ["Rooms", "room"], ["Claude Code", "connections"], ["Telegram", "settings"]],
+  caps: [
+    ["gallery", .1, 2.2, "Share a remora as a <b>template on Walrus</b>."],
+    ["template", .1, 2.9, "Checked for safety; <b>one signature</b> to use it."],
+    ["room", .1, 2.6, "Remoras in a <b>room</b> answer together."],
+    ["connections", .1, 2.4, "<b>Claude Code</b> uses a remora, within its limits."],
+    ["settings", .1, 2.4, "Talk to your remoras on <b>Telegram</b> too."],
+  ],
+  spots: [
+    { at: "gallery", off: .3, len: 2.0, box: "gallery" },
+    { at: "template", off: .2, len: 1.6, box: "consent" },
+    { at: "on Walrus", off: 0, len: 1.6, box: "on Walrus", zoom: 1.06 },
+    { at: "room", off: .3, len: 2.2, box: "room-paid", zoom: 1.06 },
+    { at: "connections", off: .3, len: 2.4, box: "token" },
+    { at: "Link Telegram", off: 0, len: 1.8, box: "Link Telegram", zoom: 1.08 },
   ],
 });
 add({ id: "why", dur: 8.5 });
@@ -573,9 +601,10 @@ async function setWin(s, t) {
   const lt = t - s.t0, c = s.clip, lead = s.lead ?? .8;
   const inK = P(lt, 0, .8, E.out5), outK = P(t, s.t1 - .45, s.t1, E.in);
   css("win", { o: Math.min(inK, 1 - outK), y: (1 - inK) * 50, s: WIN_S * lerp(.965, 1, inK) });
-  css("url-t", { text: s.url });
   const cl = clamp(lt - lead, 0, c.dur - 1e-3);
   const { ts, seg } = srcAt(c, cl);
+  // ADR-0105: a chapter over several pages names each segment's page.
+  css("url-t", { text: seg.url ?? s.url });
   const img = $("shot"); const src = `capture/${c.shot}/${String(frameAt(c.shot, ts)).padStart(5, "0")}.jpg`;
   if (!img.src.endsWith(src)) { img.src = src; try { await img.decode(); } catch { /* keep the last frame */ } }
   const cu = cursorAt(c.shot, ts);
