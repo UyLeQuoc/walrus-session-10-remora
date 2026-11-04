@@ -18,25 +18,34 @@ import type { LucideIcon } from "lucide-react";
 import {
   ArrowUpRight,
   Bell,
+  BellRing,
+  CloudRain,
   Database,
   EyeOff,
   FileText,
   Fingerprint,
   Gift,
+  GitBranch,
   Lock,
   MessageSquareText,
+  Newspaper,
   Package,
   RotateCcw,
   Shuffle,
+  TrendingUp,
   Trophy,
+  Wallet,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type ExampleKind = "pays" | "learns" | "remembers" | "proves";
-/** Where an example works: the chat itself, or a Researcher's (scout) or Wallet watcher's thread. */
-export type ExampleTarget = "chat" | "scout" | "sentinel";
+export type ExampleKind = "pays" | "learns" | "remembers" | "proves" | "briefs";
+/**
+ * Where an example works: the chat itself, a Researcher's (scout) or Wallet watcher's thread, or a
+ * Briefer's page (ADR-0106).
+ */
+export type ExampleTarget = "chat" | "scout" | "sentinel" | "briefer";
 
 export interface Example {
   kind: ExampleKind;
@@ -44,8 +53,11 @@ export interface Example {
   icon: LucideIcon;
   /** What the card says. */
   text: string;
-  /** What goes in the box, when it isn't the text (a command, for one). */
-  fill?: string;
+  /**
+   * What goes in the box, when it isn't the text: a command, a full link, or (a function) a question
+   * about the signed-in owner's own wallet. A card whose fill needs an owner hides without one.
+   */
+  fill?: string | ((owner: string) => string);
   reload?: true;
 }
 
@@ -54,6 +66,7 @@ export const KIND_LOOK: Record<ExampleKind, { label: string; tone: string }> = {
   learns: { label: "Wallet watcher learns", tone: "bg-ob-success-soft text-ob-success-text" },
   remembers: { label: "Memory", tone: "bg-ob-warning-soft text-ob-warning-text" },
   proves: { label: "Proof", tone: "bg-ob-control text-ob-secondary" },
+  briefs: { label: "Briefer", tone: "bg-ob-accent-soft text-ob-accent-text" },
 };
 
 /** In the order a set is dealt: one of each kind, then the next of each. */
@@ -119,13 +132,43 @@ export const POOL: Example[] = [
     text: "What's stored, and for how long?",
     fill: "/privacy",
   },
+  // ADR-0106: the services added in U16, each run on testnet (examples.spec.ts).
+  {
+    kind: "pays",
+    target: "scout",
+    icon: Wallet,
+    text: "X-ray my wallet",
+    fill: (owner) => `What does wallet ${owner} hold?`,
+  },
+  {
+    kind: "learns",
+    target: "sentinel",
+    icon: BellRing,
+    text: "Ping me about incoming USDC over 100",
+  },
+  {
+    kind: "pays",
+    target: "scout",
+    icon: TrendingUp,
+    text: "What are SUI and WAL worth right now?",
+  },
+  { kind: "pays", target: "scout", icon: CloudRain, text: "Will it rain in Hanoi tomorrow?" },
+  {
+    kind: "pays",
+    target: "scout",
+    icon: GitBranch,
+    text: "How healthy is MystenLabs/walrus on GitHub?",
+    fill: "How healthy is https://github.com/MystenLabs/walrus?",
+  },
+  // A Briefer's card opens its page, where Run now sends the brief.
+  { kind: "briefs", target: "briefer", icon: Newspaper, text: "Send my morning brief now" },
 ];
 
 /** The question the reload card asks once the page is back. */
 export const RELOAD_ASK = "What do you remember about me?";
 
 /** The remora a kind's cards open: the first live one, else the first in practice. */
-export function remoraFor(roster: RemoraView[], template: "scout" | "sentinel") {
+export function remoraFor(roster: RemoraView[], template: "scout" | "sentinel" | "briefer") {
   const mine = roster.filter((r) => r.template === template);
   return mine.find((r) => r.status === "active") ?? mine.find((r) => r.status === "shadow") ?? null;
 }
@@ -137,32 +180,51 @@ export function exampleSet(usable: Example[], n: number, size = 4): Example[] {
   return Array.from({ length: size }, (_, i) => usable[(start + i) % usable.length] as Example);
 }
 
+/** What a card puts in the box, or null when it needs an owner and there's none. */
+export function fillOf(e: Example, owner: string | null): string | null {
+  if (typeof e.fill === "function") return owner ? e.fill(owner) : null;
+  return e.fill ?? e.text;
+}
+
 export function Examples({
   roster,
+  owner = null,
   onPick,
   onRun,
   onReloadAndAsk,
   onOpenThread,
+  onOpenPage,
 }: {
   /** The account's remoras; a kind with none has no cards. */
   roster: RemoraView[];
+  /** The signed-in owner's address, for cards about their own wallet. */
+  owner?: string | null;
   onPick: (text: string) => void;
   /** Sends a command card's command. */
   onRun: (command: string) => void;
   onReloadAndAsk: (text: string) => void;
   onOpenThread: (remoraId: string, text: string) => void;
+  /** A Briefer's card opens its page. */
+  onOpenPage?: (remoraId: string) => void;
 }) {
   const [round, setRound] = useState(0);
   const scout = remoraFor(roster, "scout");
   const sentinel = remoraFor(roster, "sentinel");
+  const briefer = remoraFor(roster, "briefer");
+  const remoraOf = (t: ExampleTarget) =>
+    t === "scout" ? scout : t === "sentinel" ? sentinel : t === "briefer" ? briefer : null;
   const usable = POOL.filter(
-    (e) => e.target === "chat" || (e.target === "scout" ? scout : sentinel),
+    (e) =>
+      (e.target === "chat" || remoraOf(e.target)) &&
+      (e.target !== "briefer" || onOpenPage) &&
+      fillOf(e, owner) !== null,
   );
   const shown = exampleSet(usable, round);
   const pick = (e: Example) => {
-    const text = e.fill ?? e.text;
+    const text = fillOf(e, owner) ?? e.text;
     if (e.reload) return onReloadAndAsk(RELOAD_ASK);
-    const remora = e.target === "scout" ? scout : e.target === "sentinel" ? sentinel : null;
+    const remora = remoraOf(e.target);
+    if (remora && e.target === "briefer") return onOpenPage?.(remora.id);
     if (remora) return onOpenThread(remora.id, text);
     if (text.startsWith("/")) return onRun(text);
     onPick(text);
@@ -172,7 +234,7 @@ export function Examples({
       <ul className="grid w-full gap-2 sm:grid-cols-2" aria-label="Examples">
         {shown.map((e) => {
           const look = KIND_LOOK[e.kind];
-          const remora = e.target === "scout" ? scout : e.target === "sentinel" ? sentinel : null;
+          const remora = remoraOf(e.target);
           return (
             <li key={e.text} className="flex">
               <button

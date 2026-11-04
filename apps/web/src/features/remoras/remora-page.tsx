@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { day, soon } from "@/lib/when";
 import { Property, PropertyList, SettingsGroup, SettingsRow, SurfaceCard } from "@/openbot/pages";
 import { api } from "./api";
+import { BriefCard } from "./brief-card";
 import { budgetLine } from "./budget";
 import { CostCard } from "./cost-card";
 import { describeRemora, useTemplateCatalog } from "./describe";
@@ -726,7 +727,7 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
         <p className="text-md text-ob-muted">
           Retired: it can't act or pay. Its memory and receipts stay yours.
         </p>
-        {r.template === "scout" ? <SourcesSection r={r} /> : null}
+        {r.template !== "sentinel" ? <SourcesSection r={r} /> : null}
         <KeysSection r={r} />
       </div>
     );
@@ -736,6 +737,7 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
       <BrainSection r={r} reload={reload} />
       <BudgetSection r={r} reload={reload} layout="split" />
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
+      {/* ADR-0106: a Briefer's schedule is its brief's; its page shows it with Run now. */}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}
       <KeysSection r={r} />
       <DangerSection r={r} reload={reload} />
@@ -878,7 +880,9 @@ function Remora({ id }: { id: string }) {
               />
             </StatRow>
           ) : null}
-          {r.status === "retired" ? (
+          {r.template === "briefer" ? (
+            <BriefCard r={r} onDone={refreshFeed} readOnly={r.status === "retired"} />
+          ) : r.status === "retired" ? (
             r.template === "sentinel" ? (
               <TeachCard r={r} onDone={refreshFeed} readOnly />
             ) : null

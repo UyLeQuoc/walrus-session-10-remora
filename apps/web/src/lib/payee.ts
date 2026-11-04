@@ -8,6 +8,7 @@ const NAMES: Record<string, string> = {
   "reef:github": "Repo health",
   "reef:price": "Prices",
   "reef:weather": "Weather",
+  "reef:market": "Market data",
 };
 
 export function payeeName(ref: string): string {

@@ -71,7 +71,8 @@ const STEPS: Array<{ title: string; to?: string; detail: string }> = [
   {
     title: "Create a remora",
     to: "/remoras/new",
-    detail: "Pick a kind, set its budget, sign once. It starts in practice mode.",
+    detail:
+      "Pick a kind (a Researcher, a Wallet watcher, or a Briefer that sends a brief each morning), set its budget, sign once. It starts in practice mode.",
   },
   {
     title: "Use it",
