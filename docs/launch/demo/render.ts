@@ -42,7 +42,9 @@ const CAPTURE = join(HERE, "capture");
 const shots: Record<string, unknown> = {};
 for (const d of readdirSync(CAPTURE, { withFileTypes: true })) {
   const m = join(CAPTURE, d.name, "manifest.json");
-  if (d.isDirectory() && existsSync(m)) shots[d.name] = JSON.parse(readFileSync(m, "utf8"));
+  // A shot folder may be a link to another checkout's capture (a re-cut that films one new shot).
+  if ((d.isDirectory() || d.isSymbolicLink()) && existsSync(m))
+    shots[d.name] = JSON.parse(readFileSync(m, "utf8"));
 }
 writeFileSync(join(CAPTURE, "index.js"), `window.CAPTURE = ${JSON.stringify(shots)};\n`);
 console.log(`capture: ${Object.keys(shots).join(", ")}`);

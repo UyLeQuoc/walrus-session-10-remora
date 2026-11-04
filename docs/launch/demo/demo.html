@@ -386,31 +386,45 @@ add({
     { at: "Pause all", off: .2, len: 2.2, box: "Pause all", zoom: 1.1 },
   ],
 });
+// U17 (ADR-0118): "And more" gives way to the network: a remora buys another owner's remora's answer,
+// and a crew splits one question. The template gallery, rooms and Telegram stay in the README.
 add({
-  id: "more", chapter: "10 · And more", url: "remora · /hatchery", lead: .5, tail: .4,
-  clip: clip("more", [
-    { from: "gallery", to: "Token desk", speed: 1.15 },
-    { from: "template", to: "template-end", speed: 1.6, url: "remora · /hatchery/token-desk" },
-    { from: "room", to: "room-end", speed: 1.3, url: "remora · /chat/room/team" },
-    { from: "settings", to: "end", speed: 1.35, url: "remora · /settings" },
+  id: "net", chapter: "10 · Remoras pay remoras", url: "remora · /remoras/researcher-buys", lead: .5,
+  clip: clip("buy", [
+    { from: "buy-from", to: "Let it pay", toOff: .6, speed: 1.2 },
+    { from: "thread", to: "asked", speed: 3.2, badge: "Typing · 3.2×", url: "remora · /chat/r/researcher-buys" },
+    { from: "asked", to: "bought", dur: 1.6, badge: "Buying @uy-researcher’s answer over x402 · sped up", url: "remora · /chat/r/researcher-buys" },
+    { from: "bought", to: "answer", toOff: 1.5, speed: 1.3, url: "remora · /chat/r/researcher-buys" },
   ]),
-  steps: [["Templates", "gallery"], ["Rooms", "room"], ["Telegram", "settings"]],
+  steps: [["On sale", "buy-from"], ["Bought", "bought"]],
   caps: [
-    ["gallery", .1, 2.2, "Share a remora as a <b>template on Walrus</b>."],
-    ["template", .1, 2.6, "Checked for safety; <b>one signature</b> to use it."],
-    ["room", .1, 2.6, "Remoras in a <b>room</b> answer together."],
-    ["settings", .1, 2.4, "Talk to your remoras on <b>Telegram</b> too."],
+    ["buy-from", .1, 2.4, "Another owner’s remora is <b>on sale</b>."],
+    ["bought", .2, 3.4, "It buys one answer: <b>a chain of receipts</b>."],
   ],
   spots: [
-    { at: "gallery", off: .3, len: 2.0, box: "gallery" },
-    { at: "template", off: .2, len: 1.6, box: "consent" },
-    { at: "on Walrus", off: 0, len: 1.6, box: "on Walrus", zoom: 1.06 },
-    { at: "room", off: .3, len: 2.2, box: "room-paid", zoom: 1.06 },
-    { at: "Link Telegram", off: 0, len: 1.8, box: "Link Telegram", zoom: 1.08 },
+    { at: "for-sale", off: .1, len: 1.8, box: "for-sale", zoom: 1.08 },
+    { at: "chain", off: .1, len: 2.6, box: "chain", zoom: 1.12 },
   ],
 });
-add({ id: "why", dur: 7.2 });
-add({ id: "lock", dur: 7 });
+add({
+  id: "crew", chapter: "11 · A crew of remoras", url: "remora · /chat/r/crew-lead", lead: .4, tail: .4,
+  clip: clip("crew", [
+    { from: "crew-question", to: "crew-asked", speed: 3.6, badge: "Typing · 3.6×" },
+    { from: "crew-asked", to: "crew-answered", dur: 1.6, badge: "Three members buy at once · sped up" },
+    { from: "crew-answered", to: "crew-receipts", toOff: 2.8, speed: 1 },
+    { from: "crew-card", to: "end", speed: 2.4, url: "remora · /remoras/crew-lead" },
+  ]),
+  steps: [["Ask the lead", "crew-question"], ["Three receipts", "crew-answered"]],
+  caps: [
+    ["crew-question", .1, 2.4, "One signature made a <b>crew</b> of four."],
+    ["crew-answered", .2, 2.8, "Three members pay; <b>three receipts</b>, one answer."],
+  ],
+  spots: [
+    { at: "crew-answer", off: .2, len: 2.6, box: "crew-answer", zoom: 1.05 },
+  ],
+});
+add({ id: "why", dur: 6.8 });
+add({ id: "lock", dur: 6.6 });
 const DUR = T;
 window.DUR = DUR; window.FPS = FPS; window.SCENES = SCENES;
 // render.ts: the thumbnail's moment (the hook, its headline landed) and the master's RGB-split glitches

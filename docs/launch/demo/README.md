@@ -46,7 +46,7 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 `Researcher · examples` remoras earlier runs left, so the sidebar isn't a column of old ones. A partial
 re-capture (`DEMO_SHOTS`) without `create` keeps them.
 
-## Scenes (175 s, re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md))
+## Scenes (179.6 s; re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md); the network added Nov 5, [ADR-0118](../../adr/0118-video-network-scenes.md))
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
@@ -61,7 +61,8 @@ re-capture (`DEMO_SHOTS`) without `create` keeps them.
 | 07 · Claude Code pays too | A terminal frame with the real `claude -p` command and output, recorded in the capture (the token is in a temp `remora.json`, deleted after). Then the payment in the remora's thread |
 | 08 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
 | 09 · You stay in control | `/funds`: your USDC stays in your address; Pause all |
-| 10 · And more | The template gallery (ten on Walrus), a template's safety review, a room of remoras, Telegram in Settings |
+| 10 · Remoras pay remoras | A second owner's Researcher sees `@uy-researcher` on sale and lets it pay with one signature. "ask @uy-researcher is package 0x2 safe to depend on?" pays 0.01 USDC, and the chip shows the chain: → it paid Sui risk check 0.01 ([ADR-0118](../../adr/0118-video-network-scenes.md)) |
+| 11 · A crew of remoras | The Research crew (one signature). The lead's answer lists three members' receipts, and the Crew card shows each member's spend |
 | Why Remora | Bounded, Accountable, Learns, Yours |
 | Lockup | "Give an agent a budget, not your wallet."; the playground |
 

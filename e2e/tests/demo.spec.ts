@@ -12,9 +12,11 @@
  * records the boxes of the elements the video spotlights, so a re-capture needs no re-measuring.
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import {
   type Browser,
@@ -25,7 +27,7 @@ import {
   test,
 } from "@playwright/test";
 import { burner, testnet } from "../support/env";
-import { installTestWallet, WALLET_NAME } from "../support/test-wallet";
+import { connectAndSignIn, installTestWallet, WALLET_NAME } from "../support/test-wallet";
 
 // Playwright runs from e2e/ (as the audit does for its screenshots).
 const OUT = resolve(process.cwd(), "../docs/launch/demo/capture");
@@ -183,7 +185,7 @@ class Shot {
 }
 
 /** A page at the demo's size, as a fresh client so the local per-address limits never show. */
-async function newPage(browser: Browser, wallet: boolean) {
+async function newPage(browser: Browser, wallet: boolean | Ed25519Keypair) {
   const context = await browser.newContext({
     viewport: VIEW,
     deviceScaleFactor: DPR,
@@ -192,7 +194,7 @@ async function newPage(browser: Browser, wallet: boolean) {
   await context.setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
   await context.addInitScript((t) => localStorage.setItem("remora.theme", t), THEME);
   const page = await context.newPage();
-  if (wallet) await installTestWallet(page, burner());
+  if (wallet) await installTestWallet(page, wallet === true ? burner() : wallet);
   return page;
 }
 
@@ -758,6 +760,144 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await s.hold(2000);
   });
 
+  // 10. U17 (ADR-0118): remoras pay remoras, and a crew. Set up unfilmed: the burner's Researcher on
+  // sale as @uy-researcher, a second test owner's Researcher (E2E_BURNER2_KEY), and the Research crew
+  // imported with one signature and live.
+  const want = (n: string) => !only || only.includes(n);
+  const rotate = (page: Page) =>
+    page.context().setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+  const makeResearcher = async (page: Page, name: string) => {
+    await rotate(page);
+    await page.goto("/remoras/new");
+    await page.getByRole("radio", { name: /^Researcher/ }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Monthly limit (USDC)").fill("0.5");
+    await page.getByLabel("Most it pays at once (USDC)").fill("0.025");
+    await page.getByRole("button", { name: "Create Researcher" }).click();
+    await page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
+    const id = /\/remoras\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
+    await rotate(page);
+    await page.getByRole("button", { name: "Go live" }).click();
+    await expect(page.getByText("active").first()).toBeVisible({ timeout: 30_000 });
+    return id;
+  };
+  const send = (page: Page, path: string, method: string, body: unknown) =>
+    page.evaluate(
+      async ([p, m, b]) => {
+        const res = await fetch(p as string, {
+          method: m as string,
+          headers: { "x-remora-network": "testnet", "content-type": "application/json" },
+          body: b as string,
+        });
+        if (!res.ok) throw new Error(`${p}: ${res.status} ${await res.text()}`);
+        return res.json();
+      },
+      [path, method, JSON.stringify(body)],
+    );
+  if (want("buy")) {
+    const sellerId = await makeResearcher(owner, "Researcher · sells");
+    await send(owner, `/api/remoras/${sellerId}/sell`, "PUT", {
+      on: true,
+      slug: "uy-researcher",
+      price: "10000",
+      blurb: "Sui package checks, from a Researcher that pays its own sources",
+    });
+    const key = process.env.E2E_BURNER2_KEY;
+    if (!key) throw new Error("E2E_BURNER2_KEY is not set (U17's second testnet test owner)");
+    const buyer = await newPage(
+      browser,
+      Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(key).secretKey),
+    );
+    await buyer.goto("/remoras");
+    await connectAndSignIn(buyer);
+    const buyerId = await makeResearcher(buyer, "Researcher · buys");
+    await rotate(buyer);
+    await shot("buy", buyer, async (s) => {
+      await go(s, `/remoras/${buyerId}`);
+      const card = s.page.getByTestId("buy-from-card");
+      await card.scrollIntoViewIfNeeded();
+      await s.hold(1200, "buy-from");
+      const row = card.getByRole("listitem").filter({ hasText: "@uy-researcher" });
+      await s.box("for-sale", row);
+      await s.click(row.getByRole("button", { name: "Let it pay" }), "Let it pay");
+      await expect(row.getByText("may pay")).toBeVisible({ timeout: 120_000 });
+      s.mark("allowed");
+      await s.hold(1500);
+      await rotate(s.page);
+      await go(s, `/chat/r/${buyerId}`);
+      await s.hold(1200, "thread");
+      const box = s.page.getByLabel("Message");
+      await s.type(box, "ask @uy-researcher is package 0x2 safe to depend on?", "question");
+      await box.press("Enter");
+      s.mark("asked");
+      const chain = s.page.getByTestId("thread-upstream").first();
+      await expect(chain).toBeVisible({ timeout: 240_000 });
+      const answer = s.page.getByTestId("thread-remora").last();
+      await shows(answer, 60_000);
+      s.mark("bought");
+      await s.box(
+        "chain",
+        s.page
+          .locator('[data-testid=thread-chip][data-type="payment"]')
+          .filter({ has: chain })
+          .first(),
+      );
+      await s.hold(2500, "chain");
+      await s.box("answer", answer);
+      await s.hold(2500, "answer");
+    });
+  }
+
+  if (want("crew")) {
+    await rotate(owner);
+    await owner.goto("/remoras/import");
+    await owner
+      .getByRole("textbox", { name: "Team file" })
+      .fill(readFileSync(resolve(process.cwd(), "seed/templates/11-research-crew.md"), "utf8"));
+    await owner.getByRole("button", { name: "Preview" }).click();
+    await owner.getByRole("button", { name: /Create the team/ }).click();
+    await owner.waitForURL(/\/chat\/room\//, { timeout: 240_000 });
+    await rotate(owner);
+    const crew = (await remoras(owner)).filter(
+      (r) =>
+        r.status !== "retired" &&
+        ["Crew lead", "Onchain", "Markets", "Code"].includes(r.name) &&
+        (r.config as { crew?: unknown }).crew,
+    );
+    for (const r of crew)
+      if (r.status === "shadow") await send(owner, `/api/remoras/${r.id}/activate`, "POST", {});
+    const lead = crew.find((r) => r.name === "Crew lead");
+    if (lead)
+      await shot("crew", owner, async (s) => {
+        await rotate(s.page);
+        await go(s, `/chat/r/${lead.id}`);
+        await s.hold(1200, "crew-thread");
+        const box = s.page.getByLabel("Message");
+        await s.type(
+          box,
+          "Is package 0x2 safe, what's SUI worth, and how healthy is https://github.com/MystenLabs/walrus?",
+          "crew-question",
+        );
+        await box.press("Enter");
+        s.mark("crew-asked");
+        const answer = s.page
+          .getByTestId("thread-remora")
+          .filter({ hasText: /paid Sui risk check/ });
+        await expect(answer.last()).toBeVisible({ timeout: 300_000 });
+        s.mark("crew-answered");
+        await answer.last().scrollIntoViewIfNeeded();
+        await s.box("crew-answer", answer.last());
+        await s.hold(3500, "crew-receipts");
+        await rotate(s.page);
+        await go(s, `/remoras/${lead.id}`);
+        const card = s.page.getByTestId("crew-card");
+        await card.scrollIntoViewIfNeeded();
+        await s.hold(1000, "crew-card");
+        await s.box("crew-card", card);
+        await s.hold(2500, "crew-card-end");
+      });
+  }
+
   // 9. The Reef and the status page.
   await shot("reef", owner, async (s) => {
     await go(s, "/reef");
@@ -771,6 +911,8 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
   console.log(`demo shots: ${done.join(", ")}`);
   // Every shot asked for was recorded (all of them, without DEMO_SHOTS).
   expect(done).toEqual(
-    expect.arrayContaining(only ?? ["playground", "create", "thread", "brief", "claude", "more"]),
+    expect.arrayContaining(
+      only ?? ["playground", "create", "thread", "brief", "claude", "more", "buy", "crew"],
+    ),
   );
 });
