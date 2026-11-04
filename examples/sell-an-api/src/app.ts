@@ -1,19 +1,31 @@
 /**
  * E13 (ADR-0111): an API you sell to remoras, in about 20 lines. `x402` from `@remora/merchant`
  * answers 402 with the price and your address, then verifies and settles each payment through
- * Remora's public facilitator on Sui testnet, and only then runs your handler.
+ * Remora's public facilitator on Sui testnet, and only then runs your handler. The same 402 speaks
+ * MPP (ADR-0120), so @suimpp/mpp's clients can pay it too; `client` reads their payments over gRPC.
  */
-import { x402 } from "@remora/merchant";
+import { type DoorNetwork, x402 } from "@remora/merchant";
 import { Hono } from "hono";
 
 /** Circle's USDC on Sui testnet. */
 export const USDC_TESTNET =
   "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC";
 
+/** `PRICE` in USDC's smallest units, as a whole number. Unset, it's 5000 (0.005 USDC). */
+export function priceFrom(value: string | undefined): string {
+  const price = value?.trim() || "5000";
+  if (!/^\d+$/.test(price) || BigInt(price) === 0n)
+    throw new Error(
+      `PRICE is in USDC's smallest units, e.g. 5000 for 0.005 USDC (got "${price}").`,
+    );
+  return BigInt(price).toString();
+}
+
 export function createApp(o: {
   payTo: string;
   facilitatorUrl: string;
   price?: string;
+  client?: DoorNetwork["client"];
   fetch?: typeof fetch;
 }) {
   const app = new Hono();
@@ -23,7 +35,12 @@ export function createApp(o: {
       amount: o.price ?? "5000", // 0.005 USDC
       description: "A haiku about your question",
       networks: {
-        testnet: { payTo: o.payTo, asset: USDC_TESTNET, facilitatorUrl: o.facilitatorUrl },
+        testnet: {
+          payTo: o.payTo,
+          asset: USDC_TESTNET,
+          facilitatorUrl: o.facilitatorUrl,
+          ...(o.client ? { client: o.client } : {}),
+        },
       },
       ...(o.fetch ? { fetch: o.fetch } : {}),
     }),

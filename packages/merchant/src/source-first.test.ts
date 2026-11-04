@@ -1,5 +1,11 @@
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { encodeHeader, PAYMENT_HEADER } from "@remora/disc-sdk";
+import {
+  encodeHeader,
+  encodeMpp,
+  MPP_CHALLENGE_HEADER,
+  PAYMENT_HEADER,
+  parseChallenges,
+} from "@remora/disc-sdk";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { retryingFetch, SourceInputError, sourceFirst } from "./source-first.ts";
@@ -77,6 +83,29 @@ describe("sourceFirst (ADR-0106)", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ source: "fresh data" });
     expect(order).toEqual(["load before 0 facilitator calls"]);
+    expect(calls).toEqual(["/verify", "/settle"]);
+  });
+
+  it("treats an MPP credential as a payment: loads for its network, then MPP settles (ADR-0120)", async () => {
+    const calls: string[] = [];
+    const loaded: (string | null)[] = [];
+    const a = new Hono<{ Variables: { source: string; x402: PaidContext } }>();
+    a.get(
+      "/thing",
+      sourceFirst(async (_c, network) => {
+        loaded.push(network);
+        return "fresh data";
+      }),
+      x402(pay(calls)),
+      (c) => c.json({ source: c.get("source") }),
+    );
+    const unpaid = await a.request("/thing");
+    const [challenge] = parseChallenges(unpaid.headers.get(MPP_CHALLENGE_HEADER));
+    const credential = encodeMpp({ challenge, payload: { transaction: "dHg", signature: "c2ln" } });
+    const res = await a.request("/thing", { headers: { authorization: `Payment ${credential}` } });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ source: "fresh data" });
+    expect(loaded).toEqual(["testnet"]);
     expect(calls).toEqual(["/verify", "/settle"]);
   });
 });
