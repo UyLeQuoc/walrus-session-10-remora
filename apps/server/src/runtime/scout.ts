@@ -13,6 +13,7 @@ import { type PayOutcome, requestPayment } from "../tools/pay.ts";
 import { handoff, proposeSchedule } from "../tools/propose.ts";
 import { readTools } from "../tools/read.ts";
 import { modelIdFor, type UntrustedData, usdcLabel } from "./brain.ts";
+import { assign, crewMembers, isLead } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { admitMemories } from "./facts.ts";
 import { addUsage, REMORA_LIMITS, tokensToday } from "./limits.ts";
@@ -148,6 +149,70 @@ export interface ScoutResult {
   outcomes: PayOutcome[];
   /** What this turn paid, per service. */
   paid: { payee: string; amount: string; digest: string | null }[];
+  /** ADR-0114: a crew lead's answer: what each member paid for it. */
+  crew?: CrewReceipt[];
+}
+
+export interface CrewReceipt {
+  member: string;
+  memberId: string;
+  payee: string;
+  amount: string;
+  digest: string | null;
+}
+
+/**
+ * ADR-0114: a crew lead hands each planned purchase to the member that covers it, all at once, and
+ * answers from what they found, with every member's receipt. With no one to hand to, it answers as a
+ * Researcher would.
+ */
+async function leadAsk(
+  deps: RuntimeDeps,
+  lead: Remora,
+  question: string,
+  trigger: { kind: "message" | "cron" | "handoff" | "webhook"; ref: string },
+): Promise<ScoutResult> {
+  const members = await crewMembers(deps, lead);
+  const reef = deps.reef(lead.network).filter((e) => !isRemoraRef(e.ref));
+  const plan = assign(planBuys(question, reef), members);
+  if (!plan.size) return scoutAsk(deps, lead, question, trigger, { crewTurn: true });
+  const results = await Promise.all(
+    [...plan].map(async ([m, buys]) => ({
+      m,
+      res: await scoutAsk(
+        deps,
+        m,
+        question,
+        { kind: "handoff", ref: lead.id },
+        { crewTurn: true, plan: buys, noPay: true },
+      ),
+    })),
+  );
+  const crew: CrewReceipt[] = results.flatMap(({ m, res }) =>
+    res.paid.map((p) => ({ member: m.name, memberId: m.id, ...p })),
+  );
+  const data: UntrustedData[] = results.map(({ m, res }) => ({
+    source: m.name,
+    content: res.answer.slice(0, 2_000),
+    cost: usdcLabel(res.paid.reduce((n, p) => n + BigInt(p.amount), 0n).toString()),
+  }));
+  const receipts = crew.length
+    ? `\n\n${crew
+        .map(
+          (c) =>
+            `${c.member} paid ${payeeLabel(c.payee)} ${usdcLabel(c.amount)}${c.digest ? ` (${c.digest.slice(0, 8)}…)` : ""}`,
+        )
+        .join(" · ")}`
+    : "";
+  const out = await scoutAsk(deps, lead, question, trigger, {
+    crewTurn: true,
+    plan: [],
+    noPay: true,
+    data,
+    suffix: receipts,
+    payload: { crew },
+  });
+  return { ...out, crew };
 }
 
 const outcomeLine = (o: PayOutcome) =>
@@ -195,8 +260,22 @@ export async function scoutAsk(
      * never buys another remora's answer (depth 1), and has no handoffs or schedules.
      */
     sold?: { buyer: string };
+    /** ADR-0114: inside a crew's turn (so a lead doesn't hand out again). */
+    crewTurn?: boolean;
+    /** Buy exactly these instead of planning. */
+    plan?: PlannedBuy[];
+    /** The model gets no pay tool: only the planned purchases happen. */
+    noPay?: boolean;
+    /** More data for the model: a crew's members' answers. */
+    data?: UntrustedData[];
+    /** Appended to the answer, verbatim. */
+    suffix?: string;
+    /** Merged into the answer event's payload. */
+    payload?: Record<string, unknown>;
   } = {},
 ): Promise<ScoutResult> {
+  if (!opts.crewTurn && !opts.sold && !opts.playground && isLead(r))
+    return leadAsk(deps, r, question, trigger);
   if (r.status !== "active" && r.status !== "shadow") {
     throw new RemoraError("remora.not_active", `${r.name} is ${r.status}.`, 409);
   }
@@ -237,7 +316,7 @@ export async function scoutAsk(
   );
   lap("admitMs");
   const outcomes: PayOutcome[] = [];
-  const data: UntrustedData[] = [];
+  const data: UntrustedData[] = [...(opts.data ?? [])];
   const paidPayees: string[] = [];
   const paid: ScoutResult["paid"] = [];
   // ADR-0111: a remora never buys its own answer, and a sold answer never buys another remora's.
@@ -269,7 +348,7 @@ export async function scoutAsk(
     return o;
   };
   const planned: { payee: string; o: PayOutcome }[] = [];
-  for (const b of planBuys(question, reef))
+  for (const b of opts.plan ?? planBuys(question, reef))
     planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
   lap("payMs");
 
@@ -290,16 +369,20 @@ export async function scoutAsk(
       memories: memories.map((m) => m.text),
       ...(facts.length ? { facts } : {}),
       data,
-      pay: async ({ payee, url, reason }) => {
-        const o = await buy(payee, url, reason);
-        return o.kind === "paid"
-          ? {
-              source: payeeLabel(payee),
-              content: await o.response.clone().text(),
-              cost: usdcLabel(o.amount),
-            }
-          : outcomeLine(o);
-      },
+      ...(opts.noPay
+        ? {}
+        : {
+            pay: async ({ payee, url, reason }: { payee: string; url: string; reason: string }) => {
+              const o = await buy(payee, url, reason);
+              return o.kind === "paid"
+                ? {
+                    source: payeeLabel(payee),
+                    content: await o.response.clone().text(),
+                    cost: usdcLabel(o.amount),
+                  }
+                : outcomeLine(o);
+            },
+          }),
       tools:
         opts.playground || opts.sold
           ? chainOnly(
@@ -334,6 +417,7 @@ export async function scoutAsk(
   }
   const note = unpaidNote(planned);
   if (note) answer = `${answer}\n\n_${note}_`;
+  if (opts.suffix) answer = `${answer}${opts.suffix}`;
   lap("modelMs");
   await addUsage(deps.db, r.id, tokens);
   const spend = outcomes.map((o) => `${outcomeLine(o)}`).join("; ");
@@ -367,6 +451,7 @@ export async function scoutAsk(
         paidPayees,
         digests: outcomes.flatMap((o) => (o.kind === "paid" && o.digest ? [o.digest] : [])),
         ...(opts.sold ? { sale: { buyer: opts.sold.buyer } } : {}),
+        ...(opts.payload ?? {}),
         outcomes: outcomes.map((o) => ({ kind: o.kind, eventId: o.eventId })),
         admission,
       },

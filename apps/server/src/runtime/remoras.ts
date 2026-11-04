@@ -713,8 +713,11 @@ export function createRemoraService(deps: RemoraDeps) {
      * and paused remoras are included; the confirm retires them. A Disc already revoked elsewhere is
      * forgotten, like `retireTx` does.
      */
-    async retireAllTx(owner: string, network: SuiNetwork) {
-      const rows = (await listMine(owner, network)).filter((r) => r.status !== "retired");
+    async retireAllTx(owner: string, network: SuiNetwork, opts: { ids?: string[] } = {}) {
+      // ADR-0114: with `ids`, only those (a crew), still in one transaction.
+      const rows = (await listMine(owner, network)).filter(
+        (r) => r.status !== "retired" && (!opts.ids || opts.ids.includes(r.id)),
+      );
       if (!rows.length)
         throw new RemoraError("account.nothing_to_retire", "You have no remoras to retire.", 409);
       const tx = new Transaction();
@@ -751,8 +754,15 @@ export function createRemoraService(deps: RemoraDeps) {
      * Retires every remora whose Disc is gone (or that never had one). With a digest, it first checks
      * the owner sent it; a remora whose Disc is still live stays as it is.
      */
-    async confirmRetireAll(owner: string, network: SuiNetwork, digest?: string) {
-      const rows = (await listMine(owner, network)).filter((r) => r.status !== "retired");
+    async confirmRetireAll(
+      owner: string,
+      network: SuiNetwork,
+      digest?: string,
+      opts: { ids?: string[] } = {},
+    ) {
+      const rows = (await listMine(owner, network)).filter(
+        (r) => r.status !== "retired" && (!opts.ids || opts.ids.includes(r.id)),
+      );
       const withDisc = rows.find((r) => r.discId);
       if (withDisc && digest) await ownerTx(withDisc, digest);
       const retired: string[] = [];

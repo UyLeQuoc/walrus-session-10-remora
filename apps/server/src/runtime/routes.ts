@@ -58,6 +58,7 @@ import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
 import { briefNow, briefView, setBriefItems } from "./briefer.ts";
 import { remoraCost } from "./cost.ts";
+import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
@@ -404,6 +405,43 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
           "response" in o ? { ...o, response: undefined } : o,
         ),
       }),
+    );
+  });
+
+  // ── Crews (ADR-0114): the members, their spend, pause together, retire together ──
+  app.get("/api/remoras/:id/crew", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await crewView(rt, r));
+  });
+
+  app.post("/api/remoras/:id/crew/pause", async (c) => {
+    const { paused } = await body<{ paused?: unknown }>(c);
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!crewOf(r)) throw new RemoraError("crew.none", `${r.name} isn't in a crew.`, 404);
+    await pauseCrew(rt, r, paused !== false);
+    return c.json(await crewView(rt, await service.get(r.id, c.get("owner"))));
+  });
+
+  /** One transaction revokes every member's Disc; the confirm retires them. */
+  const crewIds = async (c: Context) => {
+    const r = await service.get(c.req.param("id") ?? "", c.get("owner"));
+    if (!crewOf(r)) throw new RemoraError("crew.none", `${r.name} isn't in a crew.`, 404);
+    return { r, ids: (await crewMembers(rt, r)).map((m) => m.id) };
+  };
+  app.post("/api/remoras/:id/crew/retire", async (c) => {
+    const { r, ids } = await crewIds(c);
+    return c.json(await service.retireAllTx(c.get("owner"), r.network, { ids }));
+  });
+  app.post("/api/remoras/:id/crew/retire/confirm", async (c) => {
+    const { digest } = await body<{ digest?: string }>(c);
+    const { r, ids } = await crewIds(c);
+    return c.json(
+      await service.confirmRetireAll(
+        c.get("owner"),
+        r.network,
+        digest ? digestOf(digest) : undefined,
+        { ids },
+      ),
     );
   });
 

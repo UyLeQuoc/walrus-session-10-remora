@@ -68,6 +68,15 @@ export const RemoraConfig = z.object({
   namespaces: z.array(z.string().min(1)),
   /** Its brain: a `MODEL_CATALOG` id; absent means the server default (D9, ADR-0042). */
   model: z.string().min(1).optional(),
+  /** ADR-0114: the crew it's in, its lead, and the services it buys for that lead. */
+  crew: z
+    .object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      leadId: z.string().min(1),
+      covers: z.array(z.string()).default([]),
+    })
+    .optional(),
 });
 
 export type ToolName = z.infer<typeof ToolName>;
