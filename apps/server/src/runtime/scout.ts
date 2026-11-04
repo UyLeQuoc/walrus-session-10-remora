@@ -242,7 +242,7 @@ export async function scoutAsk(
       .join("; ");
     const res = await deps.brain.answer({
       model: modelIdFor(r, deps.brain.answerModel),
-      persona: `${persona}\n\nThe only paid services, each at its own address (any other is refused): ${listedServices}. Answer without paying when nothing there helps.`,
+      persona: `${persona}\n\nPaid services you may buy from, each only at its own address (any other address is refused): ${listedServices}. Buy only when one of them adds data the question needs; otherwise answer from what you know, without paying.`,
       question,
       memories: memories.map((m) => m.text),
       ...(facts.length ? { facts } : {}),
