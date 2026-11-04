@@ -8,6 +8,8 @@ node_modules
 memwal
 reference
 docs
+# ADR-0117: except the dated load runs that /api/stats shows.
+!docs/spikes/*-u17-load.json
 scripts
 !scripts/railway-start.mts
 apps/web/*
