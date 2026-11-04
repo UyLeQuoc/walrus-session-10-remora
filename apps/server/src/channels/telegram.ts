@@ -76,7 +76,11 @@ export function telegramAdapter(): ChannelAdapter | null {
       if (runtime.webBase.startsWith("https://"))
         await bot.api
           .setChatMenuButton({
-            menu_button: { type: "web_app", text: "Remora", web_app: { url: `${runtime.webBase}/tg` } },
+            menu_button: {
+              type: "web_app",
+              text: "Remora",
+              web_app: { url: `${runtime.webBase}/tg` },
+            },
           })
           .catch((e) => console.error("[telegram] menu button", e));
       // Not `void bot.start()`: a 409 during a deploy overlap rejected it
