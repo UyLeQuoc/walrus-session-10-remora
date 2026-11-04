@@ -230,7 +230,7 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 | `simulateTransaction` | TransactionExecutionService | the gas station and Sonar dry-run before anything is signed | `apps/facilitator/src/facilitator.ts` |
 | `waitForTransaction` | LedgerService | wait for finality before confirming | `apps/facilitator/src/facilitator.ts`, `apps/server/src/playground/index.ts` |
 | `getBalance` | StateService | funds, the playground funder, sponsor gas | `apps/facilitator/src/config.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/playground/index.ts` (+2) |
-| `listBalances` | StateService | Scout's balance reads | `apps/server/src/runtime/schedules.ts`, `apps/server/src/tools/read.ts` |
+| `listBalances` | StateService | Scout's balance reads | `apps/merchants/src/wallet.ts`, `apps/server/src/runtime/schedules.ts`, `apps/server/src/tools/read.ts` |
 | `listCoins` | StateService | Detect funds (coins → address balance) | `apps/facilitator/src/facilitator.ts`, `apps/server/src/money/funds.ts` |
 | `signAndExecuteTransaction` | TransactionExecutionService | the SDK's sign-then-execute, for the playground funder and scripts | `apps/server/src/playground/index.ts` |
 <!-- tatum-calls:end -->
