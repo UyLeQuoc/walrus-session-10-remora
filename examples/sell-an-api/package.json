@@ -1,0 +1,22 @@
+{
+  "name": "@remora/example-sell-an-api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@remora/merchant": "workspace:*",
+    "hono": "^4.13.13"
+  }
+}

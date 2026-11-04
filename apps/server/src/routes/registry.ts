@@ -7,6 +7,7 @@ import { authRoutes } from "./auth.ts";
 import { chatRoutes } from "./chat.ts";
 import { connectRoutes } from "./connect.ts";
 import { conversationRoutes } from "./conversations.ts";
+import { facilitatorRoutes } from "./facilitator.ts";
 import { healthRoutes } from "./health.ts";
 import { memoryRoutes } from "./memory.ts";
 
@@ -26,6 +27,7 @@ export const ROUTE_GROUPS = [
   remoraRoutes,
   playgroundRoutes,
   mcpRoutes,
+  facilitatorRoutes,
 ] as const;
 
 export function registerRoutes(app: Hono): void {
