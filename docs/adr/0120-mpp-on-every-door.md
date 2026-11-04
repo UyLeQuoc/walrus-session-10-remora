@@ -108,7 +108,12 @@ What the drafts say (read on Nov 5):
   - **A settle-first MPP answer that fails after settling has no receipt** (the draft forbids one on
     an error), so the buyer finds the digest onchain. x402's response header still rides that error.
   - **The live exit is the lead's:** one MPP-paid call to a house service and one to a sale door on
-    testnet.
+    testnet. `apps/server/scripts/mpp-exit.ts` makes that call with the E2E burner, sending either
+    payload.
+  - **In production, the API's own doors advertise the facilitator's in-container gas station**
+    (`http://127.0.0.1:8798/gas`), for x402 and MPP alike, because `FACILITATOR_URL_TESTNET` is
+    internal. Buyers outside the container need the public one (`/api/facilitator/gas`). This
+    predates MPP and matters for B4's public page.
 - **Docs updated:** `docs/economy.md` (Pay over MPP too), `examples/sell-an-api/README.md`,
   `docs/deploy.md` and `.env.example` (`MPP_SECRET`).
 
