@@ -46,7 +46,7 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 `Researcher · examples` remoras earlier runs left, so the sidebar isn't a column of old ones. A partial
 re-capture (`DEMO_SHOTS`) without `create` keeps them.
 
-## Scenes (176 s, re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md))
+## Scenes (175 s, re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md))
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
