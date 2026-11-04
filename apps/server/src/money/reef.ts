@@ -102,6 +102,13 @@ export function payeeLabel(ref: string): string {
   // `reef:community-<slug>`, shown as "@<slug>".
   const listed = /^reef:(?:remora|community)-(.+)$/.exec(ref);
   if (listed) return `@${listed[1]}`;
+  // ADR-0125: an Errand's contact, `reef:contact-linh-tran`, reads as "Linh Tran".
+  const contact = /^reef:contact-(.+)$/.exec(ref);
+  if (contact)
+    return (contact[1] ?? "")
+      .split("-")
+      .map((w) => (w ? (w[0] ?? "").toUpperCase() + w.slice(1) : w))
+      .join(" ");
   return LABELS[ref] ?? ref.replace(/^reef:/, "");
 }
 

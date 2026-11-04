@@ -57,6 +57,7 @@ import { budgetLine } from "./budget";
 import { CostCard } from "./cost-card";
 import { CrewCard } from "./crew-card";
 import { describeRemora, useTemplateCatalog } from "./describe";
+import { ErrandCard } from "./errand-card";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
 import { ProposalCard } from "./proposal-card";
@@ -891,6 +892,8 @@ function Remora({ id }: { id: string }) {
             ) : null
           ) : r.template === "scout" ? (
             <AskCard r={r} onDone={refreshFeed} />
+          ) : r.template === "errand" ? (
+            <ErrandCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}

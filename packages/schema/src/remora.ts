@@ -68,6 +68,10 @@ export const RemoraConfig = z.object({
   namespaces: z.array(z.string().min(1)),
   /** Its brain: a `MODEL_CATALOG` id; absent means the server default (D9, ADR-0042). */
   model: z.string().min(1).optional(),
+  /** ADR-0125: an Errand's people, each also one of its Disc's payees (`reef:contact-<slug>`). */
+  contacts: z
+    .array(z.object({ name: z.string().min(1).max(40), address: SuiAddress, ref: ReefRef }))
+    .optional(),
   /** ADR-0114: the crew it's in, its lead, and the services it buys for that lead. */
   crew: z
     .object({

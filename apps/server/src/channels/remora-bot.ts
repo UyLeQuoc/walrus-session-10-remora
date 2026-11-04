@@ -16,6 +16,7 @@ import {
   remoras,
 } from "@remora/db";
 import type { RuntimeDeps } from "../runtime/deps.ts";
+import { errandAsk } from "../runtime/errand.ts";
 import { giveFeedback } from "../runtime/feedback.ts";
 import type { Button } from "../runtime/notify.ts";
 import { type Remora, RemoraError, type RemoraService } from "../runtime/remoras.ts";
@@ -59,6 +60,14 @@ export function createRemoraBot(d: RemoraBotDeps) {
     rows.find((r) => r.name.toLowerCase() === name.trim().toLowerCase() && r.status !== "retired");
 
   const ask = async (r: Remora, question: string): Promise<BotReply> => {
+    // ADR-0125: "Errand, pay Linh 2 USDC for lunch".
+    if (r.template === "errand") {
+      const res = await errandAsk(rt, r, question.slice(0, 500), {
+        kind: "message",
+        ref: "telegram",
+      });
+      return { text: res.answer, buttons: answerButtons(rt.webBase, r, res.eventId) };
+    }
     if (r.template !== "scout") return { text: `${r.name} doesn't answer questions. Try /teach.` };
     const res = await scoutAsk(rt, r, question.slice(0, 1_000), {
       kind: "message",
@@ -102,6 +111,7 @@ export function createRemoraBot(d: RemoraBotDeps) {
       "resume",
       "approvals",
       "panic",
+      "pay",
     ];
     if (cmd && !known.includes(cmd)) return null;
 
@@ -137,6 +147,12 @@ export function createRemoraBot(d: RemoraBotDeps) {
           if (!r) return { text: "You have no active Researcher." };
           if (!arg) return { text: `Ask ${r.name} something, e.g. /ask is 0x2 safe to depend on?` };
           return ask(r, arg);
+        }
+        case "pay": {
+          const r = rows.find((x) => x.template === "errand" && live(x));
+          if (!r) return { text: `You have no active Errand. Make one: ${web("/remoras/new")}` };
+          if (!arg) return { text: "Who and how much? e.g. /pay Linh 2 USDC for lunch" };
+          return ask(r, `pay ${arg}`);
         }
         case "teach": {
           const r = rows.find((x) => x.template === "sentinel" && live(x));

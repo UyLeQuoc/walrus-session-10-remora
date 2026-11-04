@@ -12,6 +12,7 @@ import { nextRun } from "../triggers/cron.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { briefQuestion } from "./brief-question.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { approveUnusual } from "./errand.ts";
 import { enqueue, type JobHandler } from "./jobs.ts";
 import type { Button } from "./notify.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -151,9 +152,12 @@ export async function approveRule(deps: RuntimeDeps, owner: string, approvalId: 
 /** The inbox's "Approve" for anything that isn't a payment: a proposed schedule or rule. */
 export async function approveYes(deps: RuntimeDeps, owner: string, approvalId: string) {
   const [row] = await deps.db
-    .select({ kind: approvals.kind })
+    .select({ kind: approvals.kind, payload: approvals.payload })
     .from(approvals)
     .where(eq(approvals.id, approvalId));
+  // ADR-0125: an unusual amount within an Errand's limits: the owner's yes lets it pay.
+  if (row?.kind === "over_limit_payment" && (row.payload as { viaDisc?: boolean }).viaDisc)
+    return approveUnusual(deps, owner, approvalId);
   return row?.kind === "rule"
     ? approveRule(deps, owner, approvalId)
     : approveSchedule(deps, owner, approvalId);

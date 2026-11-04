@@ -50,6 +50,7 @@ import {
   listingsOf,
   probeX402,
 } from "../money/community.ts";
+import { contactsOf } from "../money/contacts.ts";
 import { type Listings, SALE_SLUG } from "../money/listings.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
@@ -61,6 +62,7 @@ import { briefNow, briefView, setBriefItems } from "./briefer.ts";
 import { remoraCost } from "./cost.ts";
 import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
+import { errandAsk, usualFor } from "./errand.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
 import { learningSeries, proofBetween, proofsFor } from "./learning.ts";
@@ -270,6 +272,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       budget?: unknown;
       watch?: string[];
       items?: string[];
+      contacts?: { name?: string; address?: string }[];
     }>(c);
     if (b.watch && (!Array.isArray(b.watch) || b.watch.some((a) => !ADDRESS.test(a)))) {
       throw new RemoraError("funds.bad_address", "Every watched address must be 0x + hex.");
@@ -283,6 +286,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       ...(b.name ? { name: b.name } : {}),
       ...(budget !== undefined ? { budget } : {}),
       ...(b.watch ? { watch: b.watch } : {}),
+      ...(Array.isArray(b.contacts)
+        ? {
+            contacts: b.contacts.map((x) => ({
+              name: String(x?.name ?? ""),
+              address: String(x?.address ?? ""),
+            })),
+          }
+        : {}),
     });
     // ADR-0106: a Briefer starts with its list and its brief's schedule.
     if (out.remora.template === "briefer" && Array.isArray(b.items) && b.items.length)
@@ -401,6 +412,14 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const { question } = await body<{ question?: string }>(c);
     if (!question?.trim()) throw new RemoraError("ask.empty", "Ask a question.");
     const r = await service.get(c.req.param("id"), c.get("owner"));
+    // ADR-0125: an Errand takes payment requests in plain words.
+    if (r.template === "errand") {
+      const res = await errandAsk(rt, r, question.trim().slice(0, 500), {
+        kind: "message",
+        ref: "web",
+      });
+      return c.json(serialize({ ...res, receiptId: null, outcomes: [] }));
+    }
     if (!answersQuestions(r.template))
       throw new RemoraError("ask.unsupported", `${r.name} doesn't answer questions.`);
     const res = await scoutAsk(rt, r, question.trim().slice(0, 1_000), {
@@ -1062,6 +1081,37 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     }
     await rejectApproval(rt, c.get("owner"), c.req.param("id"));
     return c.json({ ok: true });
+  });
+
+  // ── An Errand's contacts (B1, ADR-0125) ───────────────────────────────────
+  app.get("/api/remoras/:id/contacts", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    const usual = await Promise.all(contactsOf(r).map((x) => usualFor(rt, r, x)));
+    return c.json({
+      contacts: contactsOf(r).map((x, i) => ({ ...x, usual: usual[i]?.toString() ?? null })),
+    });
+  });
+
+  app.post("/api/remoras/:id/contacts", async (c) => {
+    const b = await body<{ contacts?: { name?: string; address?: string }[] }>(c);
+    const list = (b.contacts ?? []).map((x) => ({
+      name: String(x.name ?? ""),
+      address: String(x.address ?? ""),
+    }));
+    return c.json(await service.contactsTx(c.req.param("id"), c.get("owner"), list));
+  });
+
+  app.post("/api/remoras/:id/contacts/confirm", async (c) => {
+    const b = await body<{ digest?: string; contacts?: { name?: string; address?: string }[] }>(c);
+    const list = (b.contacts ?? []).map((x) => ({
+      name: String(x.name ?? ""),
+      address: String(x.address ?? ""),
+    }));
+    return c.json({
+      remora: await view(
+        await service.confirmContacts(c.req.param("id"), c.get("owner"), digestOf(b.digest), list),
+      ),
+    });
   });
 
   // ── Budget proposals (E5, ADR-0124) ───────────────────────────────────────

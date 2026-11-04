@@ -150,6 +150,19 @@ export const ProposalsView = z.object({
 });
 export type ProposalsView = z.infer<typeof ProposalsView>;
 
+/** ADR-0125: an Errand's contacts, and what each is usually paid. */
+export const ContactsView = z.object({
+  contacts: z.array(
+    z.object({
+      name: z.string(),
+      address: z.string(),
+      ref: z.string(),
+      usual: z.string().nullable(),
+    }),
+  ),
+});
+export type ContactsView = z.infer<typeof ContactsView>;
+
 /** ADR-0114: a crew, its members and what each spent this month. */
 export const CrewView = z.object({
   crew: z.object({ id: z.string(), name: z.string(), leadId: z.string() }),
@@ -187,7 +200,26 @@ export const api = {
     budget?: unknown;
     watch?: string[];
     items?: string[];
+    contacts?: { name: string; address: string }[];
   }) => call("POST", "/api/remoras", CreateRemoraResponse, b),
+  contacts: (id: string) => call("GET", `/api/remoras/${id}/contacts`, ContactsView),
+  contactsTx: (id: string, contacts: { name: string; address: string }[]) =>
+    call("POST", `/api/remoras/${id}/contacts`, Tx, { contacts }),
+  contactsConfirm: (id: string, digest: string, contacts: { name: string; address: string }[]) =>
+    call("POST", `/api/remoras/${id}/contacts/confirm`, Remora, { digest, contacts }),
+  pay: (id: string, text: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/ask`,
+      z.object({
+        answer: z.string(),
+        eventId: z.string(),
+        outcome: z.string().optional(),
+        digest: z.string().nullable().optional(),
+        approvalId: z.string().optional(),
+      }),
+      { question: text },
+    ),
   brief: (id: string) => call("GET", `/api/remoras/${id}/brief`, BriefView),
   setBriefItems: (id: string, items: string[]) =>
     call("PUT", `/api/remoras/${id}/brief/items`, BriefView, { items }),

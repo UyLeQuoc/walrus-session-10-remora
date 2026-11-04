@@ -26,6 +26,13 @@ import {
 } from "@remora/disc-sdk";
 import { type Budget, isCatalogModel, RemoraConfig } from "@remora/schema";
 import type { RemoraSigner } from "@remora/signer";
+import {
+  type Contact,
+  contactEntries,
+  contactsOf,
+  listedFor,
+  toContact,
+} from "../money/contacts.ts";
 import type { Networks } from "../money/networks.ts";
 import { type ResolvedReef, reefRef } from "../money/reef.ts";
 import {
@@ -62,6 +69,15 @@ export interface RemoraDeps {
 
 /** Testnet-sized defaults; the owner can change them before signing (B7 later). */
 export function defaultBudget(slug: TemplateSlug, coinType: string): Budget | null {
+  // ADR-0125: an Errand pays people: 5 USDC a month, at most 1 a payment; its payees are contacts.
+  if (slug === "errand")
+    return {
+      coinType,
+      windowLimit: "5000000",
+      window: "month",
+      perPaymentCap: "1000000",
+      payees: [],
+    };
   if (!answersQuestions(slug)) return null;
   return {
     coinType,
@@ -130,6 +146,8 @@ export interface CreateInput {
   playground?: boolean;
   /** The Disc's lifetime cap in smallest units; default 12 × the monthly limit. */
   lifetimeCap?: bigint;
+  /** ADR-0125: an Errand's first contacts (it needs at least one payee). */
+  contacts?: { name: string; address: string }[];
 }
 
 export function createRemoraService(deps: RemoraDeps) {
@@ -147,10 +165,12 @@ export function createRemoraService(deps: RemoraDeps) {
   /** Reef refs → the unique addresses a Disc lists as payees. */
   function payeeAddresses(r: Remora, refs: string[]) {
     if (!refs.length) throw new RemoraError("payees.empty", "Pick at least one service.");
+    // ADR-0125: an Errand's contacts resolve from its own config, the rest from the Reef.
+    const listed = listedFor(deps, r);
     return [
       ...new Set(
         refs.map((ref) => {
-          const hit = deps.reef(r.network).find((e) => e.ref === ref);
+          const hit = listed.find((e) => e.ref === ref);
           if (!hit)
             throw new RemoraError(
               "reef.unknown_payee",
@@ -161,6 +181,30 @@ export function createRemoraService(deps: RemoraDeps) {
       ),
     ];
   }
+
+  /** ADR-0125: validated contacts, one per name, at most 20. */
+  function contactList(list: { name: string; address: string }[]): Contact[] {
+    if (!list.length) throw new RemoraError("contact.none", "Keep at least one person it may pay.");
+    if (list.length > 20) throw new RemoraError("contact.too_many", "At most 20 contacts.");
+    try {
+      const out = list.map((c) => toContact(c.name, c.address));
+      if (new Set(out.map((c) => c.ref)).size !== out.length)
+        throw new Error("Two contacts have the same name.");
+      return out;
+    } catch (err) {
+      throw new RemoraError("contact.invalid", (err as Error).message);
+    }
+  }
+
+  /** Its Reef payees as they are, with the contacts' refs in place of the old ones. */
+  const payeeRefsWith = (r: Remora, contacts: Contact[]) => [
+    ...new Set([
+      ...((r.config as { budget?: Budget }).budget?.payees ?? []).filter(
+        (p) => !contactsOf(r).some((c) => c.ref === p) && !p.startsWith("reef:contact-"),
+      ),
+      ...contacts.map((c) => c.ref),
+    ]),
+  ];
 
   async function mine(id: string, owner: string): Promise<Remora> {
     const [r] = await db.select().from(remoras).where(eq(remoras.id, id));
@@ -362,8 +406,20 @@ export function createRemoraService(deps: RemoraDeps) {
       const id = crypto.randomUUID();
       const keyId = id;
       const address = await deps.signer.create(keyId, input.network);
-      const budget =
+      let contacts: Contact[] = [];
+      try {
+        contacts = (input.contacts ?? []).map((c) => toContact(c.name, c.address));
+      } catch (err) {
+        throw new RemoraError("contact.invalid", (err as Error).message);
+      }
+      if (input.template === "errand" && !contacts.length)
+        throw new RemoraError("contact.none", "Add at least one person it may pay.");
+      const base =
         input.budget === undefined ? defaultBudget(input.template, cfg.coinType) : input.budget;
+      const budget =
+        base && contacts.length
+          ? { ...base, payees: [...new Set([...base.payees, ...contacts.map((c) => c.ref)])] }
+          : base;
       const name = (input.name ?? t.name).slice(0, 40);
       const triggers =
         input.template === "sentinel"
@@ -389,7 +445,10 @@ export function createRemoraService(deps: RemoraDeps) {
         identity: { address },
         namespaces: answersQuestions(input.template)
           ? ["me", "sources", "feedback", "receipts"]
-          : ["me", "rules", "episodes", "receipts"],
+          : input.template === "errand"
+            ? ["me", "feedback", "receipts"]
+            : ["me", "rules", "episodes", "receipts"],
+        ...(contacts.length ? { contacts } : {}),
       });
       const { status: _s, ...stored } = remoraConfig;
       const discName = `remora-${id.slice(0, 8)}`;
@@ -424,9 +483,16 @@ export function createRemoraService(deps: RemoraDeps) {
       }
       return {
         remora,
-        issue: issueArgs(discName, address, budget, deps.reef(input.network), now(), {
-          ...(input.lifetimeCap ? { lifetimeCap: input.lifetimeCap } : {}),
-        }),
+        issue: issueArgs(
+          discName,
+          address,
+          budget,
+          [...deps.reef(input.network), ...contactEntries({ config: { contacts } })],
+          now(),
+          {
+            ...(input.lifetimeCap ? { lifetimeCap: input.lifetimeCap } : {}),
+          },
+        ),
       };
     },
 
@@ -546,7 +612,7 @@ export function createRemoraService(deps: RemoraDeps) {
       if (!r.discId || !r.allowanceId || !r.capId || !r.discName) {
         throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
       }
-      const args = issueArgs(r.discName, r.address, budget, deps.reef(r.network), now());
+      const args = issueArgs(r.discName, r.address, budget, listedFor(deps, r), now());
       const tx: Transaction = buildRevokeAndReissue(
         discCfg(r.network),
         { discId: r.discId, capId: r.capId, allowanceId: r.allowanceId },
@@ -822,6 +888,55 @@ export function createRemoraService(deps: RemoraDeps) {
       await event(updated, "action", `${r.name} may now pay ${refs.length} services.`, {
         digest,
         payees: refs,
+      });
+      return updated;
+    },
+
+    /**
+     * ADR-0125: an Errand's contacts, as the full list it should have. Its Disc's payees become the
+     * contacts' addresses (plus any Reef services it already pays), set in place with one signature.
+     */
+    async contactsTx(id: string, owner: string, list: { name: string; address: string }[]) {
+      const r = await mine(id, owner);
+      if (!r.discId) throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
+      const contacts = contactList(list);
+      const refs = payeeRefsWith(r, contacts);
+      const tx = buildSetPayees(
+        discCfg(r.network),
+        r.discId,
+        payeeAddresses({ ...r, config: { ...r.config, contacts } }, refs),
+      );
+      tx.setSender(r.ownerAddress);
+      return { transaction: await tx.toJSON(), contacts };
+    },
+
+    async confirmContacts(
+      id: string,
+      owner: string,
+      digest: string,
+      list: { name: string; address: string }[],
+    ) {
+      const r = await mine(id, owner);
+      await ownerTx(r, digest);
+      const contacts = contactList(list);
+      const next = { ...r, config: { ...r.config, contacts } };
+      const refs = payeeRefsWith(r, contacts);
+      const want = payeeAddresses(next, refs);
+      const disc = await getDisc(deps.networks.client(r.network).core, r.discId ?? "");
+      const onchain = new Set(disc.payees.map((a) => normalizeSuiAddress(a)));
+      if (want.length !== onchain.size || want.some((a) => !onchain.has(a)))
+        throw new RemoraError("tx.not_payees", "That transaction didn't set these contacts.");
+      const budget = (r.config as { budget?: Budget }).budget;
+      const updated = await setRow(id, {
+        config: {
+          ...r.config,
+          contacts,
+          budget: { ...budget, payees: refs },
+        } as Record<string, unknown>,
+      });
+      await event(updated, "action", `${r.name} may now pay ${contacts.length} people.`, {
+        digest,
+        contacts: contacts.map((c) => c.name),
       });
       return updated;
     },

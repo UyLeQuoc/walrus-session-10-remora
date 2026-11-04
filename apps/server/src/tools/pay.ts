@@ -9,6 +9,7 @@
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, remoraEvents, sourceStats, sql } from "@remora/db";
 import { getDisc, toDiscError } from "@remora/disc-sdk";
+import { listedFor } from "../money/contacts.ts";
 import { isRemoraRef } from "../money/listings.ts";
 import { PaymentStopped, payWithDisc } from "../money/pay.ts";
 import { atListedAddress, payeeLabel } from "../money/reef.ts";
@@ -143,7 +144,9 @@ export async function requestPayment(
   // ADR-0109: before anything is fetched, an unlisted payee, or a listed one at an address that isn't
   // its own, is refused with Sonar's code and recorded (that's where an injection shows up). With the
   // safety check forced off (tests of the onchain layer), this goes too.
-  const listed = deps.reef(r.network).find((e) => e.ref === p.payee);
+  // ADR-0125: an Errand's contacts are listed too, each at its own address.
+  const reef = listedFor(deps, r);
+  const listed = reef.find((e) => e.ref === p.payee);
   if (!deps.sonarOff && !listed)
     return blocked("sonar.blocked", [`${p.payee} isn't a listed service`]);
   if (!deps.sonarOff && listed && !atListedAddress(p.url, listed.url))
@@ -188,7 +191,7 @@ export async function requestPayment(
     perPaymentCap: disc.perPaymentCap,
     paused: disc.paused,
     softLimit: BigInt(budget?.perPaymentCap ?? disc.perPaymentCap.toString()),
-    reef: deps.reef(r.network),
+    reef,
   };
   const base = intentBase({
     trigger: p.trigger,

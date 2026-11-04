@@ -56,6 +56,8 @@ function ApprovalCard({
     question?: string;
     human?: string;
     reason?: string;
+    viaDisc?: boolean;
+    usual?: string;
   };
   const cap = who?.config.budget?.perPaymentCap;
   const pay = async () => {
@@ -111,7 +113,12 @@ function ApprovalCard({
       actions={
         a.status === "pending" ? (
           <>
-            {a.kind === "over_limit_payment" ? (
+            {a.kind === "over_limit_payment" && p.viaDisc ? (
+              // ADR-0125: an unusual amount within an Errand's limits: a yes lets it pay.
+              <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
+                Let it pay{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
+              </Button>
+            ) : a.kind === "over_limit_payment" ? (
               <Button type="button" disabled={!!busy} onClick={() => void pay()}>
                 Pay once{p.amount ? ` (${usdc(p.amount)} USDC)` : ""}
               </Button>
@@ -159,7 +166,10 @@ function ApprovalCard({
               />
             ) : null}
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Wallet className="size-3.5" aria-hidden /> You pay it once, from your wallet
+              <Wallet className="size-3.5" aria-hidden />{" "}
+              {p.viaDisc
+                ? `Within its limit, but usually ${usdc(p.usual ?? "0")} USDC: it pays once you say yes`
+                : "You pay it once, from your wallet"}
             </p>
           </>
         ) : a.kind === "budget_change" ? (

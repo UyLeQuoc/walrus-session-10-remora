@@ -69,6 +69,21 @@ export const TEMPLATES = {
     starterMemories: [],
     examples: ["SUI and WAL prices", "weather in Hanoi", "github.com/MystenLabs/sui"],
   }),
+  // ADR-0125: the fourth kind pays people. Its payees are its owner's contacts, added with one
+  // signature each time; it remembers what each is usually paid and asks before an unusual amount.
+  errand: Template.parse({
+    schema: "remora.template/v1",
+    name: "Errand",
+    summary: "Pays the people you name, within its limit, and asks before anything unusual.",
+    persona:
+      "You are the owner's Errand. You pay the owner's contacts when asked, within your limit, with a memo for each payment. You never pay anyone who isn't a contact.",
+    tools: ["memory.recall", "memory.remember", "pay", "notify"],
+    triggers: [{ kind: "message" }],
+    budgetSuggestion: { monthlyUsd: [1, 20], perPaymentUsd: 1 },
+    payees: [],
+    starterMemories: [],
+    examples: ["Pay Linh 2 USDC for lunch", "Send Huy 0.5 USDC for the taxi"],
+  }),
 } as const;
 
 export type TemplateSlug = keyof typeof TEMPLATES;

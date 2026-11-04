@@ -5,7 +5,7 @@
  * and Scout answers with what was bought. The owner pays this gas themselves (ADR-0031).
  */
 import { Transaction } from "@mysten/sui/transactions";
-import { normalizeStructTag, toBase64 } from "@mysten/sui/utils";
+import { fromBase64, normalizeStructTag, toBase64 } from "@mysten/sui/utils";
 import { and, approvals, desc, eq, remoraEvents, remoras } from "@remora/db";
 import {
   decodeHeader,
@@ -18,6 +18,7 @@ import {
   toX402Network,
   X402_VERSION,
 } from "@remora/disc-sdk";
+import { isContactUrl } from "../money/contacts.ts";
 import { payeeLabel } from "../money/reef.ts";
 import { modelIdFor, usdcLabel } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -58,6 +59,14 @@ export async function listApprovals(deps: RuntimeDeps, owner: string, network: s
 export async function approvalPayTx(deps: RuntimeDeps, owner: string, id: string) {
   const { a, r } = await pendingOf(deps, owner, id);
   const url = String((a.payload as { url?: string }).url ?? "");
+  // ADR-0125: a payment to an Errand's contact has no merchant; the owner pays the contact directly.
+  if (isContactUrl(url)) {
+    const p = a.payload as { amount: string; payTo: string };
+    const coinType = deps.networks.config(r.network).usdcCoinType;
+    const tx = ownerPaymentTx(owner, coinType, { amount: p.amount, payTo: p.payTo });
+    const bytes = await tx.build({ client: deps.networks.client(r.network) });
+    return { transaction: toBase64(bytes), requirements: null };
+  }
   const http = deps.fetch ?? fetch;
   const first = await http(url);
   if (first.status !== 402)
@@ -116,6 +125,8 @@ export async function approvalPay(
     question?: string;
     amount?: string;
   };
+  if (isContactUrl(String(payload.url ?? "")))
+    return contactApprovalPay(deps, r, id, payload, signed);
   const http = deps.fetch ?? fetch;
   const res = await http(String(payload.url), {
     headers: {
@@ -216,6 +227,53 @@ export async function approvalPay(
     [paid?.id, e?.id].filter((x): x is string => !!x),
   ).catch((err) => deps.log.warn("room.follow_up_failed", { approval: id, error: err }));
   return { answer, digest: settle?.transaction ?? null, eventId: e?.id ?? "" };
+}
+
+/** ADR-0125: the owner's own payment to a contact, signed in the wallet; the server sends it. */
+async function contactApprovalPay(
+  deps: RuntimeDeps,
+  r: typeof remoras.$inferSelect,
+  id: string,
+  payload: { payee?: string; amount?: string; reason?: string; payTo?: string },
+  signed: { transaction: string; signature: string },
+) {
+  const res = await deps.networks.client(r.network).core.executeTransaction({
+    transaction: fromBase64(signed.transaction),
+    signatures: [signed.signature],
+    include: { effects: true, balanceChanges: true },
+  });
+  const done = res.Transaction ?? res.FailedTransaction;
+  if (!done.effects?.status.success)
+    throw new RemoraError("approval.payment_failed", "That payment failed onchain.");
+  const to = String(payload.payTo ?? "");
+  const got = (done.balanceChanges ?? []).some(
+    (b) => b.address === to && BigInt(b.amount) === BigInt(String(payload.amount ?? "0")),
+  );
+  if (!got) throw new RemoraError("approval.payment_failed", "That payment didn't reach them.");
+  await deps.networks.client(r.network).core.waitForTransaction({ digest: done.digest });
+  await deps.db
+    .update(approvals)
+    .set({ status: "approved", decidedAt: new Date() })
+    .where(eq(approvals.id, id));
+  const answer = `You paid ${payeeLabel(payload.payee ?? "")} ${Number(payload.amount ?? 0) / 1e6} USDC${payload.reason ? ` for ${payload.reason}` : ""}.`;
+  const [e] = await deps.db
+    .insert(remoraEvents)
+    .values({
+      remoraId: r.id,
+      network: r.network,
+      type: "payment",
+      summary: `You paid ${payload.amount} to ${payeeLabel(payload.payee ?? "")} (approved)`,
+      payload: {
+        payee: payload.payee,
+        amount: payload.amount,
+        digest: done.digest,
+        approvalId: id,
+        approvedBy: "owner",
+        memo: payload.reason ?? "",
+      },
+    })
+    .returning({ id: remoraEvents.id });
+  return { answer, digest: done.digest, eventId: e?.id ?? "" };
 }
 
 export async function rejectApproval(deps: RuntimeDeps, owner: string, id: string) {

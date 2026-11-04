@@ -7,6 +7,8 @@ const NAMES: Record<string, string> = {
   sentinel: "Wallet watcher",
   // ADR-0106: the third kind.
   briefer: "Briefer",
+  // ADR-0125: the fourth kind pays people.
+  errand: "Errand",
 };
 
 export function kindName(template: string): string {

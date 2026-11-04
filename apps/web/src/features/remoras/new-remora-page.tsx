@@ -48,6 +48,8 @@ function Wizard({ owner }: { owner: string }) {
   const [follow, setFollow] = useState(
     "SUI and WAL prices\nweather in Hanoi\ngithub.com/MystenLabs/walrus",
   );
+  // ADR-0125: an Errand's people, one "Name 0x…" per line.
+  const [people, setPeople] = useState("");
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState("");
   const list = Object.entries(templates.data?.templates ?? {}) as [string, Template][];
@@ -86,6 +88,9 @@ function Wizard({ owner }: { owner: string }) {
       return setError("Watch one or more Sui addresses (0x…).");
     if (slug === "briefer" && !briefItems.length)
       return setError("List at least one thing for its brief to follow.");
+    const contacts = parsePeople(people);
+    if (slug === "errand" && (!contacts.length || contacts.some((c) => !c.name)))
+      return setError('Add at least one person as "Name 0x…".');
     setStep("creating");
     const made = await api.create({
       template: slug,
@@ -93,6 +98,7 @@ function Wizard({ owner }: { owner: string }) {
       ...(budget ? { budget } : {}),
       ...(slug === "sentinel" ? { watch: addresses } : {}),
       ...(slug === "briefer" ? { items: briefItems } : {}),
+      ...(slug === "errand" ? { contacts } : {}),
     });
     if (!made.ok) {
       setStep("idle");
@@ -208,6 +214,13 @@ function Wizard({ owner }: { owner: string }) {
                     </Hint>
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {slug === "errand"
+                      ? parsePeople(people).map((c) => (
+                          <Badge key={c.address + c.name} variant="outline" title={c.address}>
+                            {c.name || "?"}
+                          </Badge>
+                        ))
+                      : null}
                     {(chosen?.payees ?? []).map((payee) => (
                       <Badge key={payee} variant="outline" title={payee}>
                         {payeeName(payee)}
@@ -229,6 +242,22 @@ function Wizard({ owner }: { owner: string }) {
                 <FieldDescription>
                   One per line: prices, a wallet (0x…), a GitHub repo, the weather in a city. Every
                   weekday at 8am it buys each one and sends one brief.
+                </FieldDescription>
+              </Field>
+            ) : null}
+            {slug === "errand" ? (
+              <Field>
+                <FieldLabel htmlFor="people">Who it may pay</FieldLabel>
+                <Textarea
+                  id="people"
+                  rows={3}
+                  placeholder={"Linh 0x…\nHuy 0x…"}
+                  value={people}
+                  onChange={(e) => setPeople(e.target.value)}
+                />
+                <FieldDescription>
+                  One per line: a name, then a Sui address. It pays only these people, within its
+                  limit, and asks you before an unusual amount.
                 </FieldDescription>
               </Field>
             ) : null}
@@ -309,4 +338,12 @@ export function NewRemoraPage() {
       {(owner) => <Wizard owner={owner} />}
     </RequireOwner>
   );
+}
+
+/** "Linh 0xabc" per line → contacts; a line without an address is skipped. */
+export function parsePeople(text: string): { name: string; address: string }[] {
+  return text
+    .split("\n")
+    .map((line) => /^(.*?)[\s,:]+(0x[0-9a-fA-F]{1,64})\s*$/.exec(line.trim()))
+    .flatMap((m) => (m ? [{ name: (m[1] ?? "").trim(), address: m[2] ?? "" }] : []));
 }
