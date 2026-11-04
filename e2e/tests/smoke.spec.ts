@@ -13,7 +13,8 @@ const appOnly = (path: string) => !(deployed && path === "/");
 
 const PAGES: [string, RegExp][] = [
   ["/", /Always-on agents you own/],
-  ["/chat", /Teach Wallet watcher/],
+  // ADR-0105: signed out, the chat's examples are its own (memory and proof); remora cards need a roster.
+  ["/chat", /Remember that I build on Sui testnet/],
   ["/onboarding", /Sign in with your wallet/],
   ["/remoras", /Sign in with your wallet to see your remoras/],
   ["/remoras/new", /Sign in with your wallet to see the create wizard/],

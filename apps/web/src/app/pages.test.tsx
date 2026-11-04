@@ -6,10 +6,12 @@
  * exactly what a judge clicking the live URL would hit. Each test mounts a page
  * with the network stubbed and asserts something a user would actually see.
  */
+
+import scoutViewJson from "@remora/schema/fixtures/remora-view.scout.json";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSyncExternalStore } from "react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTheme } from "../components/app/theme-choice.tsx";
 import { Logo } from "../components/logo.tsx";
@@ -238,21 +240,78 @@ describe("chat page", () => {
     );
   });
 
-  it("offers something to teach it before there is a conversation", async () => {
+  it("offers memory and proof examples that fill the box, before there is a conversation", async () => {
     render(
       <MemoryRouter>
         <ChatPage />
       </MemoryRouter>,
     );
-    // One message proves nothing here, so the first set is things to teach a remora.
-    const chip = screen.getByRole("button", { name: /Teach Wallet watcher/i });
-    expect(screen.queryByRole("button", { name: /Reload, then ask/i })).toBeNull();
+    // ADR-0105: without remoras, only what this chat does itself: remember, recall, prove.
+    const examples = within(screen.getByRole("list", { name: "Examples" }));
+    expect(examples.getAllByRole("button")).toHaveLength(4);
+    expect(examples.queryByRole("button", { name: /Researcher pays/ })).toBeNull();
+    expect(examples.queryByRole("button", { name: /Wallet watcher learns/ })).toBeNull();
 
-    await userEvent.click(chip);
+    await userEvent.click(examples.getByRole("button", { name: /Remember that I build on Sui/ }));
     expect(chatSend).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveProperty(
       "value",
-      "Teach Wallet watcher: ignore incoming SUI under 0.01",
+      "Remember that I build on Sui testnet and settle in USDC",
+    );
+    // A command card shows a question and runs the command that answers it (it only reads).
+    await userEvent.click(examples.getByRole("button", { name: /Where does my memory live/ }));
+    expect(chatSend).toHaveBeenCalledWith({ text: "/whoami" });
+  });
+
+  it("opens a remora's own thread with the example filled in, and deals more ideas", async () => {
+    const owner = `0x${"ab".repeat(32)}`;
+    const scout = {
+      ...scoutViewJson,
+      id: "11111111-1111-4111-8111-111111111111",
+      status: "active",
+    };
+    const watcher = {
+      ...scoutViewJson,
+      id: "22222222-2222-4222-8222-222222222222",
+      name: "Watcher",
+      template: "sentinel",
+      status: "shadow",
+    };
+    vi.stubGlobal(
+      "fetch",
+      stubFetch({
+        "/api/me": { mode: "owned", memoryEnabled: true, walletAddress: owner, signedIn: true },
+        "/api/remoras": { remoras: [scout, watcher] },
+      }),
+    );
+    function Draft() {
+      const state = useLocation().state as { draft?: string } | null;
+      return <p data-testid="draft">{state?.draft}</p>;
+    }
+    render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <Routes>
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/r/:id" element={<Draft />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    // One of each kind: pays, learns, remembers, proves.
+    const pays = await screen.findByRole("button", { name: /Researcher pays/ });
+    const examples = within(screen.getByRole("list", { name: "Examples" }));
+    expect(examples.getByRole("button", { name: /Wallet watcher learns/ })).toBeDefined();
+    expect(examples.getAllByRole("button")).toHaveLength(4);
+    const first = examples.getAllByRole("button").map((b) => b.textContent);
+    await userEvent.click(screen.getByRole("button", { name: /More ideas/ }));
+    expect(examples.getAllByRole("button").map((b) => b.textContent)).not.toEqual(first);
+    await userEvent.click(screen.getByRole("button", { name: /More ideas/ }));
+    await userEvent.click(screen.getByRole("button", { name: /More ideas/ }));
+    // Back to the first set, whose Researcher card opens the active Researcher's thread.
+    expect(pays.textContent).toContain("Is package 0x2 safe to depend on?");
+    await userEvent.click(screen.getByRole("button", { name: /Researcher pays/ }));
+    expect(chatSend).not.toHaveBeenCalled();
+    expect((await screen.findByTestId("draft")).textContent).toBe(
+      "Is package 0x2 safe to depend on?",
     );
   });
 
@@ -443,7 +502,7 @@ describe("chat page", () => {
     if (!greeting) throw new Error("greeting missing");
     const box = within(cluster as HTMLElement).getByRole("textbox");
     const suggestion = within(cluster as HTMLElement).getByRole("button", {
-      name: /Teach Wallet watcher/i,
+      name: /Remember that I build on Sui/i,
     });
     expect(showsAGreeting(greeting.textContent ?? "")).toBe(true);
     expect(greeting.querySelector("[data-slot='hello']")).toBeTruthy();
@@ -452,9 +511,9 @@ describe("chat page", () => {
     expect(greeting.className).toContain("text-center");
     expect(greeting.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(box.compareDocumentPosition(suggestion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(suggestion.getAttribute("data-slot")).toBe("button");
-    // openbot's small button (ADR-0069): 32px tall, 12px text.
-    expect(suggestion.getAttribute("data-size")).toBe("sm");
+    // ADR-0105: an example is a card that says what kind of thing it shows.
+    expect(suggestion.getAttribute("data-slot")).toBe("example");
+    expect(suggestion.getAttribute("data-kind")).toBe("remembers");
     expect(screen.getByRole("button", { name: /send/i })).toBeDefined();
     expect(screen.queryByText(/^Try one$/)).toBeNull();
     const seen = container.textContent ?? "";
@@ -1982,7 +2041,7 @@ describe("search engines", () => {
     );
     await waitFor(() => expect(document.title).toMatch(/^How Remora works/));
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(
-      "https://remora.vercel.app/guide",
+      "https://getremora.vercel.app/guide",
     );
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe(
       "index, follow",

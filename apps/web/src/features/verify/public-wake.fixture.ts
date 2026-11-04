@@ -31,5 +31,5 @@ export const PUBLIC_WAKE: PublicWake = {
 
 export const SHARE_LINK: ShareLink = {
   token: "pw_9fK2xQ7LmB4tRz",
-  url: "https://remora.vercel.app/p/pw_9fK2xQ7LmB4tRz",
+  url: "https://getremora.vercel.app/p/pw_9fK2xQ7LmB4tRz",
 };
