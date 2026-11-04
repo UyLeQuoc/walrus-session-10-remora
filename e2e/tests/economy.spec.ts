@@ -406,6 +406,9 @@ test("economy: the Connections page's JSON config works in a real claude -p, and
   await page.goto("/connections");
   const name = `Claude JSON ${Date.now().toString(36)}`;
   await page.getByLabel("Name").fill(name);
+  // remora_ask needs the pay scope: asking may buy data, inside the remora's limits.
+  const pay = page.getByRole("checkbox", { name: "Pay within its spending limit" });
+  if ((await pay.getAttribute("aria-checked")) !== "true") await pay.click();
   await page.getByRole("button", { name: "Create token" }).click();
   const json = (await page.getByTestId("token-json").textContent())?.trim() ?? "";
   expect(await page.getByTestId("token-cursor").getAttribute("href")).toMatch(/^cursor:\/\//);
@@ -438,6 +441,8 @@ test("economy: the Connections page's JSON config works in a real claude -p, and
     rmSync(dir, { recursive: true, force: true });
   }
   expect(out.length).toBeGreaterThan(20);
+  // It reached the remora through the config: not "there's no remora_ask tool".
+  expect(out).not.toMatch(/no `?remora_ask`? tool/i);
   writeFileSync(
     "test-results/economy.json",
     JSON.stringify(
