@@ -26,7 +26,7 @@
 <style>
   :root {
     --bg: #07070b; --bg2: #0c0c12; --panel: #111118; --panel2: #16161f; --line: rgba(255,255,255,.07);
-    --line2: rgba(255,255,255,.12); --text: #f4f4f8; --muted: #a3a3b4; --dim: #6e6e80;
+    --line2: rgba(255,255,255,.12); --text: #f4f4f8; --muted: #a3a3b4; --dim: #8b8b9c;
     --brand: #7c70ff; --brand2: #a59dff; --sui: #4da2ff; --teal: #2fd3c2; --pink: #ff6bc9; --amber: #ffb547;
     --ok: #3ddc84; --bad: #ff5a64;
     --display: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -242,11 +242,21 @@
   .job .rc, .ticker a { font-family: var(--mono); color: var(--teal); text-decoration: none; overflow-wrap: anywhere; }
   .job .rc:hover, .ticker a:hover { color: #fff; }
   .job.free .svc { border-color: rgba(61,220,132,.35); color: var(--ok); }
-  .job.free { grid-column: 1 / -1; }
+  .job.free { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 16px 20px; }
+  .job.free h3 { margin: 0; }
+  .job.free .foot { margin: 0 0 0 auto; padding: 0; }
+  .limit { max-width: 760px; margin: -24px auto 28px; padding: 20px 24px; display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; align-items: center; }
+  .limit .lv { font-family: var(--display); font-size: 15px; color: var(--muted); white-space: nowrap; }
+  .limit .lv b { font-size: 40px; font-weight: 600; letter-spacing: -.03em; color: #fff; }
+  .limit .lbar { height: 10px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .limit .lbar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--teal), var(--brand)); }
+  .limit .ll { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+  @media (pointer: coarse) { .job .rc { display: inline-flex; align-items: center; min-height: 40px; } }
   .ticker { margin-top: 26px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
   .ticker .row { display: flex; gap: 10px; width: max-content; animation: tick 70s linear infinite; }
   .ticker:hover .row { animation-play-state: paused; }
   .ticker a { display: inline-flex; gap: 8px; align-items: center; padding: 8px 13px; border-radius: 999px; border: 1px solid rgba(47,211,194,.2); background: rgba(47,211,194,.06); font-size: 12.5px; white-space: nowrap; }
+  .ticker a::after { content: "↗"; }
   .ticker a b { color: #e3e1ff; font-weight: 500; font-family: var(--sans); }
   .ticker .dup { display: contents; }
   .ticker-note { margin-top: 12px; text-align: center; font-size: 13px; color: var(--dim); }
@@ -301,7 +311,7 @@
       <div class="cta">
         <a class="btn white" data-link="playground" href="#">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.9-3.6 4.2-6 8-6 3.5 0 6 3 7.5 6-1.5 3-4 6-7.5 6-3.8 0-7.1-2.4-8-6Z"/><path d="M6.5 12 2 8v8Z"/><path d="M17 12h.01"/></svg>
-          Try a Researcher · $1 limit · no wallet</a>
+          Try a Researcher · 1 USDC limit · no wallet</a>
         <a class="btn ghost" href="#demo">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.6-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z"/></svg>
           Watch the demo</a>
@@ -337,7 +347,7 @@
             <div class="meter">
               <div class="row"><span>spent this month</span><b>0.58 of 1.00 USDC</b></div>
               <div class="bar"><span></span><div class="cap"></div></div>
-              <div class="lim">the limit, enforced by Sui ⟶ no further</div>
+              <div class="lim">Sui enforces the limit</div>
             </div>
           </div>
           <div class="body"><h3>All or nothing</h3><p class="was">Hand an agent your wallet key, or approve every click.</p>
@@ -387,7 +397,12 @@
   <section id="jobs">
     <div class="wrap">
       <div class="head rv"><span class="eyebrow">// what it can do</span><h2>One limit. <span class="soft">Many jobs.</span></h2>
-        <p class="sub">Each job here ran on Sui testnet on Nov 4, 2026. Every receipt opens on an explorer.</p></div>
+        <p class="sub">Each job ran on Sui testnet on Nov 4, 2026, and links its receipt.</p></div>
+      <div class="card limit rv">
+        <div class="lv"><b>0.07</b> <span>of 0.50 USDC</span></div>
+        <div class="lbar" role="img" aria-label="0.07 of a 0.50 USDC monthly limit used"><span style="width:14%"></span></div>
+        <div class="ll">One Researcher bought seven of these jobs on Nov 4, all inside its 0.50 USDC monthly limit. Sui enforces the limit, not the prompt.</div>
+      </div>
       <div class="jobs">
         <div class="card job rv" style="--c:var(--sui)"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div><h3>Check a package</h3><p class="q">“Is package 0x2 safe to depend on?”</p><div class="foot"><span class="svc">Sui risk check · 0.01 USDC</span><a class="rc" href="https://suiscan.xyz/testnet/tx/6A4fqFbgovyeBpZxRE6q1xLG5sa9guoPMRePjYFy3bFJ" target="_blank" rel="noopener">receipt 6A4f…3bFJ ↗</a></div></div>
         <div class="card job rv" style="--c:var(--teal)"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg></div><h3>X-ray a wallet</h3><p class="q">“What does wallet 0x…4757 hold?”</p><div class="foot"><span class="svc">Wallet X-ray · 0.01 USDC</span><a class="rc" href="https://suiscan.xyz/testnet/tx/FZyZ6UQkHA5Lr2rNCvxxLqJE2ZXgDPJiVFBGZuTvUfom" target="_blank" rel="noopener">receipt FZyZ…Ufom ↗</a></div></div>
@@ -401,9 +416,9 @@
         <div class="card job free rv" style="--c:var(--ok)"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.13 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/></svg></div><h3>Answer for free</h3><p class="q">“What does a Sui upgrade cap do?”</p><div class="foot"><span class="svc">No purchase · 0 USDC</span><span>it pays only when data helps</span></div></div>
       </div>
       <div class="ticker" aria-label="Receipts from recorded runs">
-        <div class="row"><a href="https://suiscan.xyz/testnet/tx/45J3vbtbHiRaMt6yL4w7EZWC65STQts46a24mzMHhQab" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · 45J3…hQab</a><a href="https://suiscan.xyz/testnet/tx/GbbeErVYvbvv8tH4tvH4DAYkmRDH5NA9cAuuKUZigpaz" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · Gbbe…gpaz</a><a href="https://suiscan.xyz/testnet/tx/6A4fqFbgovyeBpZxRE6q1xLG5sa9guoPMRePjYFy3bFJ" target="_blank" rel="noopener"><b>Sui risk check</b> 0.01 USDC · 6A4f…3bFJ</a><a href="https://suiscan.xyz/testnet/tx/6bUwJf2bBc7kQaKF9yGEftUNhd1sRwPRmmUK2VXoUws4" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · 6bUw…Uws4</a><a href="https://suiscan.xyz/testnet/tx/BreqDukTPEwToSqtaycuTUMYqJrWvXMoQfT4z4rxJnTo" target="_blank" rel="noopener"><b>Odds</b> 0.02 USDC · Breq…JnTo</a><a href="https://suiscan.xyz/testnet/tx/AoYmDFRYVkjCVw6WiY37ky36P3TGnmeT9u5R857BAetF" target="_blank" rel="noopener"><b>Brief</b> 0.01 USDC · AoYm…AetF</a><a href="https://suiscan.xyz/testnet/tx/FZyZ6UQkHA5Lr2rNCvxxLqJE2ZXgDPJiVFBGZuTvUfom" target="_blank" rel="noopener"><b>Wallet X-ray</b> 0.01 USDC · FZyZ…Ufom</a><a href="https://suiscan.xyz/testnet/tx/GA11KrmtjEVcBDPdbj5uTbBSFdUzDd4i5FTcVFsdPfnJ" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GA11…PfnJ</a><a href="https://suiscan.xyz/testnet/tx/CCvWkma632Pv49VssEU5cLemPcej5YX9DiA8SrL3Nvms" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · CCvW…Nvms</a><a href="https://suiscan.xyz/testnet/tx/EhUgsymNaACVRgaFAoQ283zbLPiFAQ3zNZkimzpbsYy1" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · EhUg…sYy1</a><a href="https://suiscan.xyz/testnet/tx/Aj8TkJey5k9X9gh8dsi8a693nAdqnb2cMpuUMTodXHVd" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · Aj8T…XHVd</a><a href="https://suiscan.xyz/testnet/tx/Dva51mdPk1JoMG5ydFcmX2TxKMimp1qEUwAzonwy3EtZ" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · Dva5…3EtZ</a><a href="https://suiscan.xyz/testnet/tx/BstmbczJULMFY276oEeD6wFWAw9UhL97mEjMVb263KXG" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · Bstm…3KXG</a><a href="https://suiscan.xyz/testnet/tx/7YGUu536qmJjcCiqU3Ta4XbFTXpCVh8621rhjC6bkGU1" target="_blank" rel="noopener"><b>Sui risk check</b> 0.01 USDC · 7YGU…kGU1</a><a href="https://suiscan.xyz/testnet/tx/kNU8UgQx4TQF1noGJMqChNRsM29xN1NDF9DDXuLZPb3" target="_blank" rel="noopener"><b>Wallet X-ray</b> 0.01 USDC · kNU8…ZPb3</a><a href="https://suiscan.xyz/testnet/tx/GUrXBKv32ozKxiJMubkNrEg6RZzDMPSRK2GLn1SmCur1" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GUrX…Cur1</a><a href="https://suiscan.xyz/testnet/tx/F6JRyi6yk1brXGoA6BqyygAxMsff5TgXknuec8tyyug3" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · F6JR…yug3</a><a href="https://suiscan.xyz/testnet/tx/7tWVfvQ64XAuTMyn5rWv3agNTSTXkqpLthvSzepBppgF" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · 7tWV…ppgF</a><a href="https://suiscan.xyz/testnet/tx/3xyXHgjyn3eqPDmqUbUU1NCnvmbRQTijSyA8yr6kMa2D" target="_blank" rel="noopener"><b>Walrus blob check</b> 0.005 USDC · 3xyX…Ma2D</a><span class="dup" aria-hidden="true"><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/45J3vbtbHiRaMt6yL4w7EZWC65STQts46a24mzMHhQab" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · 45J3…hQab</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/GbbeErVYvbvv8tH4tvH4DAYkmRDH5NA9cAuuKUZigpaz" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · Gbbe…gpaz</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/6A4fqFbgovyeBpZxRE6q1xLG5sa9guoPMRePjYFy3bFJ" target="_blank" rel="noopener"><b>Sui risk check</b> 0.01 USDC · 6A4f…3bFJ</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/6bUwJf2bBc7kQaKF9yGEftUNhd1sRwPRmmUK2VXoUws4" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · 6bUw…Uws4</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/BreqDukTPEwToSqtaycuTUMYqJrWvXMoQfT4z4rxJnTo" target="_blank" rel="noopener"><b>Odds</b> 0.02 USDC · Breq…JnTo</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/AoYmDFRYVkjCVw6WiY37ky36P3TGnmeT9u5R857BAetF" target="_blank" rel="noopener"><b>Brief</b> 0.01 USDC · AoYm…AetF</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/FZyZ6UQkHA5Lr2rNCvxxLqJE2ZXgDPJiVFBGZuTvUfom" target="_blank" rel="noopener"><b>Wallet X-ray</b> 0.01 USDC · FZyZ…Ufom</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/GA11KrmtjEVcBDPdbj5uTbBSFdUzDd4i5FTcVFsdPfnJ" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GA11…PfnJ</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/CCvWkma632Pv49VssEU5cLemPcej5YX9DiA8SrL3Nvms" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · CCvW…Nvms</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/EhUgsymNaACVRgaFAoQ283zbLPiFAQ3zNZkimzpbsYy1" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · EhUg…sYy1</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/Aj8TkJey5k9X9gh8dsi8a693nAdqnb2cMpuUMTodXHVd" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · Aj8T…XHVd</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/Dva51mdPk1JoMG5ydFcmX2TxKMimp1qEUwAzonwy3EtZ" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · Dva5…3EtZ</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/BstmbczJULMFY276oEeD6wFWAw9UhL97mEjMVb263KXG" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · Bstm…3KXG</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/7YGUu536qmJjcCiqU3Ta4XbFTXpCVh8621rhjC6bkGU1" target="_blank" rel="noopener"><b>Sui risk check</b> 0.01 USDC · 7YGU…kGU1</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/kNU8UgQx4TQF1noGJMqChNRsM29xN1NDF9DDXuLZPb3" target="_blank" rel="noopener"><b>Wallet X-ray</b> 0.01 USDC · kNU8…ZPb3</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/GUrXBKv32ozKxiJMubkNrEg6RZzDMPSRK2GLn1SmCur1" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GUrX…Cur1</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/F6JRyi6yk1brXGoA6BqyygAxMsff5TgXknuec8tyyug3" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · F6JR…yug3</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/7tWVfvQ64XAuTMyn5rWv3agNTSTXkqpLthvSzepBppgF" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · 7tWV…ppgF</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/3xyXHgjyn3eqPDmqUbUU1NCnvmbRQTijSyA8yr6kMa2D" target="_blank" rel="noopener"><b>Walrus blob check</b> 0.005 USDC · 3xyX…Ma2D</a></span></div>
+        <div class="row"><a href="https://suiscan.xyz/testnet/tx/GA11KrmtjEVcBDPdbj5uTbBSFdUzDd4i5FTcVFsdPfnJ" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GA11…PfnJ</a><a href="https://suiscan.xyz/testnet/tx/CCvWkma632Pv49VssEU5cLemPcej5YX9DiA8SrL3Nvms" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · CCvW…Nvms</a><a href="https://suiscan.xyz/testnet/tx/Aj8TkJey5k9X9gh8dsi8a693nAdqnb2cMpuUMTodXHVd" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · Aj8T…XHVd</a><a href="https://suiscan.xyz/testnet/tx/7YGUu536qmJjcCiqU3Ta4XbFTXpCVh8621rhjC6bkGU1" target="_blank" rel="noopener"><b>Sui risk check</b> 0.01 USDC · 7YGU…kGU1</a><a href="https://suiscan.xyz/testnet/tx/kNU8UgQx4TQF1noGJMqChNRsM29xN1NDF9DDXuLZPb3" target="_blank" rel="noopener"><b>Wallet X-ray</b> 0.01 USDC · kNU8…ZPb3</a><a href="https://suiscan.xyz/testnet/tx/GUrXBKv32ozKxiJMubkNrEg6RZzDMPSRK2GLn1SmCur1" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GUrX…Cur1</a><a href="https://suiscan.xyz/testnet/tx/F6JRyi6yk1brXGoA6BqyygAxMsff5TgXknuec8tyyug3" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · F6JR…yug3</a><a href="https://suiscan.xyz/testnet/tx/7tWVfvQ64XAuTMyn5rWv3agNTSTXkqpLthvSzepBppgF" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · 7tWV…ppgF</a><span class="dup" aria-hidden="true"><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/GA11KrmtjEVcBDPdbj5uTbBSFdUzDd4i5FTcVFsdPfnJ" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GA11…PfnJ</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/CCvWkma632Pv49VssEU5cLemPcej5YX9DiA8SrL3Nvms" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · CCvW…Nvms</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/Aj8TkJey5k9X9gh8dsi8a693nAdqnb2cMpuUMTodXHVd" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · Aj8T…XHVd</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/7YGUu536qmJjcCiqU3Ta4XbFTXpCVh8621rhjC6bkGU1" target="_blank" rel="noopener"><b>Sui risk check</b> 0.01 USDC · 7YGU…kGU1</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/kNU8UgQx4TQF1noGJMqChNRsM29xN1NDF9DDXuLZPb3" target="_blank" rel="noopener"><b>Wallet X-ray</b> 0.01 USDC · kNU8…ZPb3</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/GUrXBKv32ozKxiJMubkNrEg6RZzDMPSRK2GLn1SmCur1" target="_blank" rel="noopener"><b>Prices</b> 0.005 USDC · GUrX…Cur1</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/F6JRyi6yk1brXGoA6BqyygAxMsff5TgXknuec8tyyug3" target="_blank" rel="noopener"><b>Weather</b> 0.005 USDC · F6JR…yug3</a><a tabindex="-1" href="https://suiscan.xyz/testnet/tx/7tWVfvQ64XAuTMyn5rWv3agNTSTXkqpLthvSzepBppgF" target="_blank" rel="noopener"><b>Repo health</b> 0.01 USDC · 7tWV…ppgF</a></span></div>
       </div>
-      <p class="ticker-note">Real payments, from the runs that recorded this page and the demo.</p>
+      <p class="ticker-note">More real testnet payments from the demo runs.</p>
     </div>
   </section>
 
@@ -429,10 +444,10 @@
       <div class="stats">
         <div class="card stat rv" style="--c:var(--brand2)"><div class="v">360</div><div class="l">memories on Walrus Memory, mainnet</div><span class="s">bun run diagnose:memory · Oct 31</span></div>
         <div class="card stat rv" style="--c:var(--ok)"><div class="v">0</div><div class="l">overspends in 28 attacks, in CI</div><span class="s">bun run evals</span></div>
-        <div class="card stat rv" style="--c:var(--amber)"><div class="v">12</div><div class="l">kinds of Tatum gRPC call, and no JSON-RPC</div><span class="s">generated from the code, checked in CI</span></div>
-        <div class="card stat rv" style="--c:var(--teal)"><div class="v">0.01</div><div class="l">USDC per paid answer, over x402, settled on Sui</div><span class="s">our own exact facilitator</span></div>
-        <div class="card stat rv" style="--c:var(--sui)"><div class="v">25.3s</div><div class="l">from a 👎 to a rule on Walrus</div><span class="s">blob rbQ84ahd68FicrNgwK48mINczlYb6-lzncPWs9auMXw</span></div>
-        <div class="card stat rv" style="--c:var(--bad)"><div class="v">abort</div><div class="l">the injected payment, onchain</div><a class="s" href="https://suiscan.xyz/testnet/tx/7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV" target="_blank" rel="noopener">7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV ↗</a></div>
+        <div class="card stat rv" style="--c:var(--amber)"><div class="v">12</div><div class="l">kinds of Tatum gRPC call, and no JSON&#8209;RPC</div><span class="s">generated from the code, checked in CI</span></div>
+        <div class="card stat rv" style="--c:var(--teal)"><div class="v">0.005–0.02</div><div class="l">USDC per paid answer, over x402, settled on Sui</div><span class="s">our own exact facilitator</span></div>
+        <div class="card stat rv" style="--c:var(--sui)"><div class="v">25.3s</div><div class="l">from a 👎 to a rule on Walrus</div><span class="s">blob rbQ8…uMXw</span></div>
+        <div class="card stat rv" style="--c:var(--bad)"><div class="v">abort</div><div class="l">the injected payment, onchain</div><a class="s" href="https://suiscan.xyz/testnet/tx/7NYf3QGEX8UEbU7nBhv1egC6tZFoUq23NWZZSjoLnpSV" target="_blank" rel="noopener">tx 7NYf…LnpSV ↗</a></div>
       </div>
     </div>
   </section>
@@ -443,8 +458,8 @@
       <div class="gallery">
         <figure class="rv"><picture><source media="(max-width: 720px)" srcset="screens/memory-phone.jpg" width="824" height="1030"><img src="screens/memory.jpg" alt="The memory inspector: every blob on Walrus, and writes skipped as duplicates" loading="lazy" width="1440" height="900"></picture><figcaption>Memory: every blob on Walrus, and every skipped write</figcaption></figure>
         <figure class="rv"><picture><source media="(max-width: 720px)" srcset="screens/playground-phone.jpg" width="824" height="1030"><img src="screens/playground.jpg" alt="The playground: a Researcher with a 1 USDC spending limit and no wallet, after a paid answer" loading="lazy" width="1440" height="900"></picture><figcaption>Playground: a Researcher with a 1 USDC limit, no wallet</figcaption></figure>
-        <figure class="rv"><picture><source media="(max-width: 720px)" srcset="screens/reef-phone.jpg" width="824" height="1030"><img src="screens/reef.jpg" alt="Services: the paid services a remora may use, with their prices" loading="lazy" width="1440" height="900"></picture><figcaption>Services: what a remora may pay, and the price</figcaption></figure>
-        <figure class="rv"><picture><source media="(max-width: 720px)" srcset="screens/status-phone.jpg" width="824" height="1030"><img src="screens/status.jpg" alt="Status: Tatum, the relayer and the facilitator, in the open" loading="lazy" width="1440" height="900"></picture><figcaption>Status: Tatum, the relayer and the facilitator</figcaption></figure>
+        <figure class="rv"><picture><source media="(max-width: 720px)" srcset="screens/reef-phone.jpg" width="824" height="1030"><img src="screens/reef.jpg" alt="Services: the eight paid services a remora may use, with their prices" loading="lazy" width="1440" height="900"></picture><figcaption>Services: all eight a remora may pay, and the price</figcaption></figure>
+        <figure class="rv"><picture><source media="(max-width: 720px)" srcset="screens/status-phone.jpg" width="824" height="1030"><img src="screens/status.jpg" alt="Status: Tatum, the relayer and the facilitator, in the open" loading="lazy" width="1440" height="900"></picture><figcaption>Status: when Tatum is slow, it falls back to a public node</figcaption></figure>
       </div>
     </div>
   </section>
@@ -458,8 +473,8 @@
           <li>Walrus Memory on mainnet</li>
           <li>Every server-side Sui call through Tatum gRPC</li></ul></div>
         <div class="card rv" style="--c:var(--brand2)"><h3><i style="background:var(--brand2)"></i>Ours, labeled</h3><ul>
-          <li>The three paid services are our demo merchants</li>
-          <li>The playground's $1 spending limits come from our funder</li>
+          <li>All eight paid services are our demo merchants. Seven read live sources (Sui, Walrus, GitHub, CoinGecko, Open-Meteo, the page you name); the odds are a labeled sample</li>
+          <li>The playground's 1 USDC spending limits come from our funder</li>
           <li>The money rails were built the day before the window, and the README says so</li></ul></div>
         <div class="card rv" style="--c:var(--amber)"><h3><i style="background:var(--amber)"></i>Not yet</h3><ul>
           <li>Memory on your own Walrus account (a delegate per remora)</li>
@@ -478,7 +493,7 @@
       <h2>Give an agent a budget,<br>not your wallet.</h2>
       <p class="sub">It goes wherever you go. It cleans up after you. It never takes the wheel.</p>
       <div class="cta">
-        <a class="btn white" data-link="playground" href="#">Try a Researcher · $1 limit · no wallet</a>
+        <a class="btn white" data-link="playground" href="#">Try a Researcher · 1 USDC limit · no wallet</a>
         <a class="btn ghost" data-link="repo" href="https://github.com/UyLeQuoc/walrus-session-10-remora">Read the code</a>
         <a class="btn ghost" data-link="blog" href="#" hidden>Read the blog</a>
       </div>

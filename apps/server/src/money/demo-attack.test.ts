@@ -6,7 +6,7 @@ import { reefFor } from "./reef.ts";
 const env = { MERCHANTS_URL_TESTNET: "http://m.test", MERCHANT_PAYTO_TESTNET: "0x3e" };
 const ATTACKER = normalizeSuiAddress("0xa77ac");
 
-describe("the demo's attacker in the Reef (ADR-0108)", () => {
+describe("the demo's attacker in the Reef (ADR-0110)", () => {
   it("is listed only for a local testnet capture that asks for it", () => {
     const has = (e: Record<string, string>, n: "testnet" | "mainnet" = "testnet") =>
       reefFor(e, n).some((r) => r.slug === "market");

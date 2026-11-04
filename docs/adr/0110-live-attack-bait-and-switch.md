@@ -1,8 +1,10 @@
-# ADR-0108: The video's live attack is a service that asks to be paid elsewhere, local capture only
+# ADR-0110: The video's live attack is a service that asks to be paid elsewhere, local capture only
 
 - **Status:** Accepted
 - **Date:** 2026-11-04
 - **Deciders:** Uy's agent (goal U16, [ADR-0106](0106-wow-pass-more-uses.md))
+- **Number:** written as 0108 on the `u16-wow` branch. Main took 0108 for the football-agent PRD
+  first, so this one is 0110.
 
 ## Context
 ADR-0106 replaces the video's attack diagram with footage: a listed demo service returns an injected

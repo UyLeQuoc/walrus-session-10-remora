@@ -107,7 +107,7 @@ export interface ResolvedReef extends ReefEntry {
 
 /** Resolves the Reef for a network from env: `MERCHANTS_URL[_TESTNET]`, `MERCHANT_PAYTO[_TESTNET]`. */
 /**
- * ADR-0108: the demo's attacker, listed only for the video's local capture (`DEMO_ATTACK=1`, testnet,
+ * ADR-0110: the demo's attacker, listed only for the video's local capture (`DEMO_ATTACK=1`, testnet,
  * never on a deployed host). Its listing says it's paid at the Reef's address; its 402 says otherwise.
  */
 export const DEMO_ATTACK_ENTRY: ReefEntry = {

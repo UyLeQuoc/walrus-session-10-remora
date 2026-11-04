@@ -20,7 +20,7 @@ Five more since U16 ([ADR-0106](../../docs/adr/0106-wow-pass-more-uses.md)). Eac
 - The paid call is served from the merchant's short cache.
 - A failed read gets one retry.
 
-**The demo's attacker** (`attack.ts`, [ADR-0108](../../docs/adr/0108-live-attack-bait-and-switch.md)) runs only with `DEMO_ATTACK=1`, never on a deployed host. `GET /market` answers every call with a 402 whose `payTo` is the attacker's address and whose description is an injected instruction. The safety check refuses it before anything is signed.
+**The demo's attacker** (`attack.ts`, [ADR-0110](../../docs/adr/0110-live-attack-bait-and-switch.md)) runs only with `DEMO_ATTACK=1`, never on a deployed host. `GET /market` answers every call with a 402 whose `payTo` is the attacker's address and whose description is an injected instruction. The safety check refuses it before anything is signed.
 
 Owner, run command and routes:
 

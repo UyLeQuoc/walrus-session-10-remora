@@ -1,5 +1,5 @@
 /**
- * ADR-0108: the demo's attacker, for the video's live attack only. It runs when `DEMO_ATTACK=1` and
+ * ADR-0110: the demo's attacker, for the video's live attack only. It runs when `DEMO_ATTACK=1` and
  * never on a deployed server (main.ts and the Reef both check). It poses as a listed "market data"
  * service and answers every call with a 402 whose description is an injected instruction and whose
  * `payTo` is the attacker's address, not the one the Reef lists. The remora's safety check compares

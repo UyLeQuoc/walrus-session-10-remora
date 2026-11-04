@@ -280,7 +280,7 @@ describe("walrus (ADR-0106)", () => {
   });
 });
 
-describe("the demo's attacker (ADR-0108)", () => {
+describe("the demo's attacker (ADR-0110)", () => {
   it("demands payment to the attacker, with an injected instruction, and never serves data", async () => {
     const { createAttackApp, ATTACKER, INJECTION } = await import("./attack.ts");
     const app = createAttackApp({ pay });

@@ -50,7 +50,7 @@ const merchants = {
   MERCHANTS_URL_TESTNET: env.MERCHANTS_URL_TESTNET,
   MERCHANT_PAYTO: env.MERCHANT_PAYTO,
   MERCHANT_PAYTO_TESTNET: env.MERCHANT_PAYTO_TESTNET,
-  // ADR-0108: the demo's attacker is listed only for a local capture; reefFor checks all three.
+  // ADR-0110: the demo's attacker is listed only for a local capture; reefFor checks all three.
   DEMO_ATTACK: process.env.DEMO_ATTACK,
   RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
   NODE_ENV: process.env.NODE_ENV,

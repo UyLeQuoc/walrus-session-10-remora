@@ -104,7 +104,7 @@ export function planBuys(question: string, reef: ResolvedReef[]): PlannedBuy[] {
       url: `${weather.url}?city=${encodeURIComponent(city)}`,
       reason: `the forecast for ${city}`,
     });
-  // ADR-0108: the demo's attacker, listed only during the video's local capture.
+  // ADR-0110: the demo's attacker, listed only during the video's local capture.
   const market = by("market");
   if (market && /\bmarket (data|report|update)\b/i.test(question))
     out.push({ entry: market, url: market.url, reason: "market data" });

@@ -452,7 +452,7 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     });
 
   // ADR-0106: in its own thread, one question that buys three services, a question it answers free,
-  // and (ADR-0108, DEMO_ATTACK=1) a "market data" service that asks to be paid at the attacker's
+  // and (ADR-0110, DEMO_ATTACK=1) a "market data" service that asks to be paid at the attacker's
   // address: the safety check blocks it, and Why? shows it.
   const ownerAddress = burner().toSuiAddress();
   const fresh = async (s: Shot, sel: string) => s.page.locator(sel).count();

@@ -56,7 +56,7 @@ re-capture (`DEMO_SHOTS`) without `create` keeps them.
 | 03 · One question, three services | In its thread, one question buys a Sui risk check, a wallet X-ray and prices: three receipts. Then "What does a Sui upgrade cap do?" is answered free |
 | 04 · It learns from you | A Wallet watcher is taught in plain words. The capture then sends a real 0.001 SUI to the address it watches, and the new rule ignores it |
 | 05 · A brief every morning | A Briefer's list (prices, weather, a repo), Run now, and one brief with a receipt for each purchase |
-| 06 · An attack, live | `DEMO_ATTACK=1` ([ADR-0108](../../adr/0108-live-attack-bait-and-switch.md)): "Market data" demands payment to the attacker's address. The safety check blocks it before signing, and Why? shows the address it refused |
+| 06 · An attack, live | `DEMO_ATTACK=1` ([ADR-0110](../../adr/0110-live-attack-bait-and-switch.md)): "Market data" demands payment to the attacker's address. The safety check blocks it before signing, and Why? shows the address it refused |
 | The attack, in layers | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends; the onchain abort `7NYf3QGE…` |
 | 07 · Claude Code pays too | A terminal frame with the real `claude -p` command and output, recorded in the capture (the token is in a temp `remora.json`, deleted after). Then the payment in the remora's thread |
 | 08 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |

@@ -40,4 +40,4 @@ addresses the model invented, and a free answer looked like a failed purchase.
 
 ## Links
 - [ADR-0106](0106-wow-pass-more-uses.md)
-- [ADR-0108](0108-live-attack-bait-and-switch.md)
+- [ADR-0110](0110-live-attack-bait-and-switch.md)

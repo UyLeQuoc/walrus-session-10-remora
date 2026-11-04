@@ -106,7 +106,7 @@ app.route(
   "/",
   createWeatherApp({ pay: pay(process.env.WEATHER_PRICE ?? "5000", "Three-day forecast") }),
 );
-// ADR-0108: the demo's attacker, for the video's capture only; never on a deployed host.
+// ADR-0110: the demo's attacker, for the video's capture only; never on a deployed host.
 if (attackAllowed(process.env)) {
   app.route("/", createAttackApp({ pay: pay("5000", "Market data") }));
   log.warn("merchants.demo_attack", { route: "/market" });
