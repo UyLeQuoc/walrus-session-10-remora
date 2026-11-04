@@ -67,6 +67,7 @@ export function permissionsOf(team: TeamFile): TemplatePermissions[] {
         ...new Set([
           ...(kind?.triggers ?? []).map((t) => t.kind),
           ...(r.schedules.length && r.template === "scout" ? ["cron"] : []),
+          ...(r.template === "briefer" && r.items.length ? ["cron"] : []),
         ]),
       ],
       payees: [...(kind?.payees ?? [])],

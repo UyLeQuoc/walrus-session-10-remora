@@ -96,13 +96,6 @@ async function card(page: Page, text: string) {
   throw new Error(`no example card "${text}"`);
 }
 
-/** lib/payee.ts's names, back to the Reef refs a payment records. */
-const SERVICE: Record<string, string> = {
-  "Sui risk check": "reef:sui-risk",
-  Odds: "reef:odds",
-  Brief: "reef:brief",
-};
-
 test("examples: every suggestion in the chat and the playground does what it says", async ({
   page,
   browser,
@@ -125,14 +118,30 @@ test("examples: every suggestion in the chat and the playground does what it say
   await page.getByRole("button", { name: "Go live" }).click();
   await expect(page.getByText("active").first()).toBeVisible({ timeout: 30_000 });
 
+  // ADR-0106: a Briefer with a live limit too, following three things.
+  await page.goto("/remoras/new");
+  await page.getByRole("radio", { name: /^Briefer/ }).click();
+  await page.getByLabel("Name").fill("Briefer · examples");
+  await page
+    .getByLabel("What to follow")
+    .fill("SUI and WAL prices\nweather in Hanoi\ngithub.com/MystenLabs/walrus");
+  await page.getByLabel("Monthly limit (USDC)").fill("0.5");
+  await page.getByLabel("Most it pays at once (USDC)").fill("0.015");
+  await page.getByRole("button", { name: "Create Briefer" }).click();
+  await page.waitForURL(/\/remoras\/[0-9a-f-]{36}/, { timeout: 180_000 });
+  results.briefer = /\/remoras\/([0-9a-f-]{36})/.exec(page.url())?.[1];
+  await page.getByRole("button", { name: "Go live" }).click();
+  await expect(page.getByText("active").first()).toBeVisible({ timeout: 30_000 });
+
   // 1. The chat's cards. The burner has a live Researcher and a Wallet watcher, so all four kinds deal.
   const pool = await deck(page);
   results.chatCards = pool;
   expect(new Set(pool.map((e) => e.kind))).toEqual(
-    new Set(["pays", "learns", "remembers", "proves"]),
+    new Set(["pays", "learns", "remembers", "proves", "briefs"]),
   );
   for (const e of pool) {
-    const since = new Date(Date.now() - 1_000).toISOString();
+    // From now: the previous card's late events must not count for this one (same host clock).
+    const since = new Date().toISOString();
     const chatReply = () =>
       page.waitForResponse(
         (r) => r.url().endsWith("/api/chat") && r.request().method() === "POST",
@@ -163,6 +172,35 @@ test("examples: every suggestion in the chat and the playground does what it say
       results[e.text] = { answered: true, sent: JSON.parse(res.request().postData() ?? "{}") };
       continue;
     }
+    if (e.kind === "briefs") {
+      // A Briefer's card opens its page; Run now buys each item and posts one brief with receipts.
+      await (await card(page, e.text)).click();
+      await page.waitForURL(new RegExp(`/remoras/${results.briefer}`), { timeout: 30_000 });
+      const ran = page.waitForResponse(
+        (r) => r.url().endsWith("/brief/run") && r.request().method() === "POST",
+        { timeout: 240_000 },
+      );
+      await page.getByRole("button", { name: /Run now/ }).click();
+      const res = await ran;
+      expect(res.status(), e.text).toBe(200);
+      const { eventId } = (await res.json()) as { eventId: string };
+      const view = await api<{
+        last: { eventId: string; paid: { payee: string; digest: string | null }[] } | null;
+      }>(page, `/api/remoras/${results.briefer}/brief`);
+      expect(view.last?.eventId).toBe(eventId);
+      const paid = view.last?.paid ?? [];
+      expect(paid.length, "one receipt per item").toBeGreaterThanOrEqual(3);
+      // Each receipt checks out against Sui.
+      for (const p of paid) {
+        const v = await api<{ found: boolean; checks: { ok: boolean }[] }>(
+          page,
+          `/api/verify/${p.digest}`,
+        );
+        expect(v.found && v.checks.every((c) => c.ok), `${p.payee} ${p.digest}`).toBe(true);
+      }
+      results[e.text] = { remora: results.briefer, eventId, paid };
+      continue;
+    }
     await (await card(page, e.text)).click();
     if (e.kind === "remembers") {
       const box = page.getByLabel("Ask your remora");
@@ -181,7 +219,8 @@ test("examples: every suggestion in the chat and the playground does what it say
     const remoraId = /\/chat\/r\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
     if (e.kind === "pays") expect(remoraId, "the newest live Researcher").toBe(results.researcher);
     const box = page.getByLabel("Message");
-    await expect(box).toHaveValue(e.text);
+    // The box holds what the card fills: its text, or a fuller question (the owner's wallet, a link).
+    await expect(box).not.toHaveValue("");
     await expect(box).toBeEnabled({ timeout: 30_000 });
     await box.press("Enter");
     if (e.kind === "learns") {
@@ -201,6 +240,21 @@ test("examples: every suggestion in the chat and the playground does what it say
 
   // 2. The playground's suggestions, two questions a session (as a fresh visitor each time).
   const session = async () => {
+    // Two sessions at a time locally (PLAYGROUND_POOL=2), each live for its TTL: wait for a free one.
+    const probe = await browser.newContext();
+    await probe.setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+    const p = await probe.newPage();
+    await p.goto("/playground");
+    await expect
+      .poll(
+        async () =>
+          p.evaluate(
+            async () => ((await (await fetch("/api/playground")).json()) as { open: boolean }).open,
+          ),
+        { timeout: 300_000, intervals: [10_000] },
+      )
+      .toBe(true);
+    await probe.close();
     const ctx = await browser.newContext();
     await ctx.setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
     const visitor = await ctx.newPage();
@@ -218,6 +272,7 @@ test("examples: every suggestion in the chat and the playground does what it say
     ).map(async (b) => ({
       label: (await b.locator("span.text-xs").textContent()) ?? "",
       text: (await b.locator("span.text-sm").textContent()) ?? "",
+      services: ((await b.getAttribute("data-services")) ?? "").split(",").filter(Boolean),
     })),
   );
   results.playgroundCards = suggestions;
@@ -231,7 +286,8 @@ test("examples: every suggestion in the chat and the playground does what it say
         .getByRole("button")
         .filter({ hasText: q.text })
         .click();
-      await expect(visitor.getByLabel("Your question")).toHaveValue(q.text);
+      const asked = await visitor.getByLabel("Your question").inputValue();
+      expect(asked, q.text).not.toBe("");
       const answered = visitor.waitForResponse(
         (r) => r.url().endsWith("/api/playground/ask") && r.request().method() === "POST",
         { timeout: 240_000 },
@@ -242,23 +298,22 @@ test("examples: every suggestion in the chat and the playground does what it say
       const body = (await res.json()) as {
         session: { answers: { question: string; paid: { payee: string; amountUsdc: string }[] }[] };
       };
-      const paid = body.session.answers.find((a) => a.question === q.text)?.paid ?? [];
-      results[`playground: ${q.text}`] = { label: q.label, paid };
-      const service = Object.entries(SERVICE).find(([name]) => q.label.startsWith(name))?.[1];
-      if (service)
-        expect(
-          paid.map((p) => p.payee),
-          q.text,
-        ).toContain(service);
-      else expect(paid, q.text).toEqual([]);
+      const paid = body.session.answers.find((a) => a.question === asked)?.paid ?? [];
+      results[`playground: ${q.text}`] = { label: q.label, asked, paid };
+      // ADR-0106: each card pays exactly the services it names (none for the free one).
+      expect(paid.map((p) => p.payee).sort(), q.text).toEqual(
+        q.services.map((s) => `reef:${s}`).sort(),
+      );
     }
     await ctx.close();
   }
-  // Clean up: retire the Researcher this run made (the owner signs its revoke), so runs don't pile up.
-  await page.goto(`/remoras/${results.researcher}`);
-  await page.getByRole("tab", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Retire" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Retire" }).click();
-  await expect(page.getByText("retired").first()).toBeVisible({ timeout: 90_000 });
+  // Clean up: retire what this run made (the owner signs each revoke), so runs don't pile up.
+  for (const id of [results.researcher, results.briefer]) {
+    await page.goto(`/remoras/${id}`);
+    await page.getByRole("tab", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Retire" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Retire" }).click();
+    await expect(page.getByText("retired").first()).toBeVisible({ timeout: 90_000 });
+  }
   writeFileSync("test-results/examples.json", JSON.stringify(results, null, 2));
 });

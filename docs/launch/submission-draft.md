@@ -11,7 +11,7 @@
 | # | Item | Blocks | Who |
 |---|---|---|---|
 | 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). Left: the demo path twice on it (U9 exit) | "Working demo", the blog's `[deploy]` markers | Uy |
-| 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is re-captured and re-rendered on Nov 4 from the visual-first app ([ADR-0103](../adr/0103-visual-first-ui-pass.md)), with a new chapter "08 · And more" (templates on Walrus, rooms, Claude Code, Telegram; [ADR-0105](../adr/0105-examples-you-can-try.md)): 178 s, 1080p, every caption ten words or fewer, at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored; the master is `remora-demo.mp4`); the landing page plays the same file after the next deploy. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
+| 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is re-captured and re-rendered on Nov 4 from the visual-first app ([ADR-0103](../adr/0103-visual-first-ui-pass.md)), then re-cut around live proof ([ADR-0106](../adr/0106-wow-pass-more-uses.md)): one question buying three services, a free answer, a Briefer's morning brief, an attack blocked live, Claude Code paying over MCP, and more: 175 s, 1080p, every caption ten words or fewer, at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored; the master is `remora-demo.mp4`); the landing page plays the same file after the next deploy. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
 | 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)), right after a clean `bun run secrets:history` (clean on Oct 31, [ADR-0085](../adr/0085-scan-history-before-public.md)) | A required field and requirement 5 | Uy, Nov 9 |
 | 4 | **The blog published** ([draft](blog-draft.md)), with the `[deploy]` and `[dogfood]` markers replaced | Requirement 4 | Uy |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
@@ -87,7 +87,7 @@
 
 | Field | Required | Answer |
 |---|---|---|
-| Short demo video (2–3 min) | Yes | ⏳ Rendered (178 s, Nov 4, `docs/launch/demo/out/remora-demo-web.mp4`), not uploaded yet. Paste the link once Uy uploads it |
+| Short demo video (2–3 min) | Yes | ⏳ Rendered (175 s, Nov 4, `docs/launch/demo/out/remora-demo-web.mp4`), not uploaded yet. Paste the link once Uy uploads it |
 | GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora`. It's private until Nov 9 |
 | Additional documentation | No | The landing page, <https://getremora.vercel.app/about> ([ADR-0100](../adr/0100-landing-and-app-one-site.md)), and the blog URL once it's out |
 

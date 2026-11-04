@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { payeeName } from "@/lib/payee";
-import { explorerTx, formatUsdc } from "@/lib/usdc";
+import { explorerTx, usdc } from "@/lib/usdc";
 import type { PublicWake } from "./public-wake";
 import { fetchPublicWake, type PublicWakeResult } from "./share-api";
 import { allChecksOk, CheckList, ReceiptSummary, VerifyVerdict } from "./verify-result";
@@ -30,7 +30,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function actionLine(a: PublicWake["action"]): string {
-  return a.kind === "pay" ? `Pay ${formatUsdc(a.amount)} USDC to ${payeeName(a.payee)}` : a.kind;
+  return a.kind === "pay" ? `Pay ${usdc(a.amount)} USDC to ${payeeName(a.payee)}` : a.kind;
 }
 
 export function PublicWakeView({ wake }: { wake: PublicWake }) {

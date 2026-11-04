@@ -17,8 +17,9 @@ import {
   type TeamPreview,
 } from "@remora/schema";
 import { parseDocument, stringify, visit } from "yaml";
-import { TEMPLATES } from "../templates/index.ts";
+import { answersQuestions, TEMPLATES } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
+import { setBriefItems } from "./briefer.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
 import { defaultRoom } from "./rooms.ts";
@@ -109,8 +110,10 @@ export function previewTeam(markdown: string): TeamPreview {
     if (!paying && r.budget) warnings.push(`${r.name} is read-only: its budget is ignored.`);
     if (r.template !== "sentinel" && r.rules.length)
       warnings.push(`Only Wallet watchers learn rules: ${r.name}'s rules are ignored.`);
-    if (r.template !== "scout" && r.schedules.length)
+    if (!answersQuestions(r.template) && r.schedules.length)
       warnings.push(`Only Researchers answer on a schedule: ${r.name}'s schedules are ignored.`);
+    if (r.template !== "briefer" && r.items.length)
+      warnings.push(`Only Briefers follow a list: ${r.name}'s items are ignored.`);
     const b = paying ? (r.budget ?? { monthlyUsd: 1, perPaymentUsd: 0.05 }) : null;
     return {
       name: r.name,
@@ -124,14 +127,13 @@ export function previewTeam(markdown: string): TeamPreview {
         r.template === "sentinel"
           ? r.rules.map((text) => ({ text, understood: !!parseRule(text) }))
           : [],
-      schedules:
-        r.template === "scout"
-          ? r.schedules.map((s) => ({
-              when: s.when,
-              human: previewSchedule(s.when)?.human ?? null,
-              question: s.question,
-            }))
-          : [],
+      schedules: answersQuestions(r.template)
+        ? r.schedules.map((s) => ({
+            when: s.when,
+            human: previewSchedule(s.when)?.human ?? null,
+            question: s.question,
+          }))
+        : [],
       needsDisc: paying,
     };
   });
@@ -194,6 +196,12 @@ export async function applyTeam(
       for (const text of spec.rules) {
         await teach(deps, current, text).catch(() => skipped.push(`${current.name}: "${text}"`));
       }
+    }
+    // ADR-0106: a Briefer's list, with its brief's schedule paused like any imported one.
+    if (current.template === "briefer" && spec.items.length) {
+      await setBriefItems(deps, current, spec.items, { paused: true }).catch(() =>
+        skipped.push(`${current.name}: its list`),
+      );
     }
     if (current.template === "scout") {
       for (const s of spec.schedules) {
@@ -297,6 +305,7 @@ export async function exportTeam(
         model?: string;
         budget?: { windowLimit: string; perPaymentCap: string } | null;
         schedules?: { cron: string; question: string }[];
+        items?: string[];
       };
       const t = TEMPLATES[r.template as keyof typeof TEMPLATES];
       return {
@@ -315,7 +324,12 @@ export async function exportTeam(
         // Never the addresses this owner watches.
         watch: [],
         rules: rules.filter((x) => x.remoraId === r.id).map((x) => x.text),
-        schedules: (c.schedules ?? []).map((s) => ({ when: s.cron, question: s.question })),
+        // ADR-0106: a Briefer's list travels; its brief's schedule is rebuilt from it on import.
+        schedules:
+          r.template === "briefer"
+            ? []
+            : (c.schedules ?? []).map((s) => ({ when: s.cron, question: s.question })),
+        items: r.template === "briefer" ? (c.items ?? []) : [],
       };
     }),
     ...(opts.ids

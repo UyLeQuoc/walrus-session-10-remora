@@ -302,16 +302,14 @@ describe("chat page", () => {
     expect(examples.getByRole("button", { name: /Wallet watcher learns/ })).toBeDefined();
     expect(examples.getAllByRole("button")).toHaveLength(4);
     const first = examples.getAllByRole("button").map((b) => b.textContent);
+    expect(pays.textContent).toContain("Is package 0x2 safe to depend on?");
     await userEvent.click(screen.getByRole("button", { name: /More ideas/ }));
     expect(examples.getAllByRole("button").map((b) => b.textContent)).not.toEqual(first);
-    await userEvent.click(screen.getByRole("button", { name: /More ideas/ }));
-    await userEvent.click(screen.getByRole("button", { name: /More ideas/ }));
-    // Back to the first set, whose Researcher card opens the active Researcher's thread.
-    expect(pays.textContent).toContain("Is package 0x2 safe to depend on?");
+    // The next set's Researcher card opens the active Researcher's thread, filled in.
     await userEvent.click(screen.getByRole("button", { name: /Researcher pays/ }));
     expect(chatSend).not.toHaveBeenCalled();
     expect((await screen.findByTestId("draft")).textContent).toBe(
-      "Is package 0x2 safe to depend on?",
+      "What are the odds for tonight's match?",
     );
   });
 

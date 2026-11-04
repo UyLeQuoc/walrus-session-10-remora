@@ -33,6 +33,8 @@ export const TeamRemora = z.object({
   /** Sentinel rules in plain words, taught at import. */
   rules: z.array(z.string().min(1).max(500)).max(20).default([]),
   schedules: z.array(TeamSchedule).max(10).default([]),
+  /** Briefer (ADR-0106): what its brief follows, one line each ("SUI and WAL prices"). */
+  items: z.array(z.string().min(1).max(120)).max(6).default([]),
 });
 
 export const TeamFile = z.object({

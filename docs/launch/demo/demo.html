@@ -227,17 +227,17 @@ let T = 0;
 const add = (s) => { if (s.clip) s.dur = (s.lead ?? .8) + s.clip.dur + (s.tail ?? .5); s.t0 = T; s.t1 = T + s.dur; T = s.t1; SCENES.push(s); return s; };
 
 add({ id: "hook", dur: 6.8 });
-add({ id: "split", dur: 12 });
+add({ id: "split", dur: 9.6 });
 add({
   id: "play", chapter: "01 · Try it, no wallet", url: "remora · /playground", lead: .6,
   clip: clip("playground", [
     { from: "start", to: "Start my Researcher", speed: 1 },
     { from: "Start my Researcher", to: "disc-issued", dur: 3.0, badge: "Setting a 1 USDC limit onchain · sped up" },
-    { from: "disc-issued", to: "question", speed: 1 },
-    { from: "question", to: "Ask Researcher", speed: 2.6, badge: "Typing · 2.6×" },
+    { from: "disc-issued", to: "question", speed: 1.4 },
+    { from: "question", to: "Ask Researcher", speed: 3, badge: "Typing · 3×" },
     { from: "Ask Researcher", to: "answered", dur: 3.6, badge: "Paying over x402 · settling on Sui · sped up" },
-    { from: "answered", to: "Why? Check its receipt", speed: 1 },
-    { from: "Why? Check its receipt", to: "end", speed: 1 },
+    { from: "answered", to: "Why? Check its receipt", speed: 1.3 },
+    { from: "Why? Check its receipt", to: "end", speed: 1.3 },
   ]),
   caps: [
     ["what-is-remora", .1, 3.3, "A remora: an AI agent with <b>a limit Sui enforces</b>."],
@@ -256,13 +256,13 @@ add({
     { at: "verified", off: .5, len: 3.4, box: "verified" },
   ],
 });
-add({ id: "money", dur: 10.5 });
+// ADR-0106: "Where the money goes" is cut; the playground shows the same path in the app.
 add({
   id: "create", chapter: "02 · Your own remora", url: "remora · /remoras/new", lead: .6,
   clip: clip("create", [
     { from: "new", to: "Create Researcher", speed: 1.4, badge: "Filling the form · 1.4×" },
     { from: "Create Researcher", to: "created", dur: 3.0, badge: "One signature · confirming onchain · sped up" },
-    { from: "created", to: "end", speed: 1 },
+    { from: "created", to: "end", speed: 1.25 },
   ]),
   steps: [["Pick", "Researcher"], ["Limits", "monthly"], ["Sign", "Create Researcher"], ["Live", "live"]],
   caps: [
@@ -277,35 +277,33 @@ add({
   ],
 });
 add({
-  id: "scout", chapter: "03 · Ask, pay, see why", url: "remora · /remoras/scout-demo", lead: .6,
-  clip: clip("scout", [
-    { from: "remora", to: "question", speed: 1 },
-    { from: "question", to: "Ask", speed: 2.8, badge: "Typing · 2.8×" },
-    { from: "Ask", to: "answered", dur: 3.4, badge: "Buying a Sui risk check over x402 · sped up" },
-    { from: "answered", to: "Why?", speed: 1 },
-    { from: "Why?", to: "end", speed: 1.5 },
+  id: "multi", chapter: "03 · One question, three services", url: "remora · /chat/r/researcher", lead: .5,
+  clip: clip("thread", [
+    { from: "thread", to: "multi", speed: 1 },
+    { from: "multi", to: "multi-asked", speed: 3.2, badge: "Typing · 3.2×" },
+    { from: "multi-asked", to: "multi-answered", dur: 2.8, badge: "Buying from three services over x402 · sped up" },
+    { from: "multi-answered", to: "free", speed: 1.2 },
+    { from: "free", to: "free-answered", dur: 2.4, badge: "Answering · sped up" },
+    { from: "free-answered", to: "free-end", speed: 1.3 },
   ]),
-  steps: [["Ask", "question"], ["Pay", "answered"], ["Cost", "cost"], ["Why", "Why?"]],
+  steps: [["Ask", "multi"], ["Three paid", "multi-answered"], ["Free", "free-answered"]],
   caps: [
-    ["question", 0, 3.0, "Ask your Researcher. It pays within <b>its limit</b>."],
-    ["answered", .2, 3.2, "The answer says what it cost: <b>0.01 USDC</b>."],
-    ["cost", 0, 2.9, "The cost card adds it up."],
-    ["Why?", .4, 4.8, "<b>Why?</b> shows what it decided, and why."],
+    ["multi", 0, 2.6, "One question that needs <b>three services</b>."],
+    ["multi-answered", .2, 3.4, "<b>Three receipts</b>: risk check, wallet X-ray, prices."],
+    ["free-answered", .1, 2.6, "Nothing to buy? It answers <b>free</b>."],
   ],
   spots: [
-    { at: "answered", off: .5, len: 2.6, box: "answer" },
-    { at: "cost", off: .2, len: 2.6, box: "cost-card" },
-    // The receipt is a docked panel at the right edge, not a dialog, so it has no recorded box.
-    { at: "Why?", off: .8, len: 6.0, r: { x: 1086, y: 46, w: 346, h: 520 } },
+    { at: "multi-answered", off: .4, len: 3.0, box: "multi-paid", zoom: 1.06 },
+    { at: "free-answered", off: .2, len: 2.4, box: "free-answer" },
   ],
 });
 add({
   id: "teach", chapter: "04 · It learns from you", url: "remora · /remoras/sentinel", lead: .6,
   clip: clip("teach", [
     { from: "sentinel", to: "Teach", speed: 1.4 },
-    { from: "Teach", to: "transfer", speed: .9 },
+    { from: "Teach", to: "transfer", speed: 1.1 },
     { from: "transfer", to: "ignored", dur: 2.0, badge: "A real 0.001 SUI transfer arrives · sped up" },
-    { from: "ignored", to: "learning", speed: .9 },
+    { from: "ignored", to: "learning", speed: 1.1 },
   ]),
   steps: [["Teach", "rule"], ["Learned", "learned"], ["Applied", "ignored"]],
   caps: [
@@ -319,9 +317,56 @@ add({
   ],
 });
 add({
-  id: "memory", chapter: "05 · Memory you can read", url: "remora · /memory", lead: .6,
+  id: "brief", chapter: "05 · A brief every morning", url: "remora · /remoras/briefer", lead: .5,
+  clip: clip("brief", [
+    { from: "brief", to: "Run now", speed: 1 },
+    { from: "Run now", to: "brief-done", dur: 2.6, badge: "Buying three things over x402 · sped up" },
+    { from: "brief-done", to: "end", speed: 1.1 },
+  ]),
+  steps: [["Its list", "brief"], ["Run now", "Run now"], ["One brief", "brief-done"]],
+  caps: [
+    ["brief", .1, 2.4, "A <b>Briefer</b> follows prices, weather and a repo."],
+    ["Run now", 0, 2.4, "Each weekday morning, or now, it buys each."],
+    ["brief-done", .2, 4.2, "One brief, with <b>a receipt for each</b> purchase."],
+  ],
+  spots: [
+    { at: "brief", off: .2, len: 2.0, box: "brief-list" },
+    { at: "brief-done", off: .4, len: 3.8, box: "brief-last" },
+  ],
+});
+add({
+  id: "live", chapter: "06 · An attack, live", url: "remora · /chat/r/researcher", lead: .5,
+  clip: clip("thread", [
+    { from: "attack", to: "blocked", dur: 2.4, badge: "Asking for market data · sped up" },
+    { from: "blocked", to: "Why blocked", speed: 1.5 },
+    { from: "Why blocked", to: "end", speed: 1.4 },
+  ]),
+  steps: [["Ask", "attack"], ["Blocked", "blocked"], ["Why?", "Why blocked"]],
+  caps: [
+    ["attack", 0, 2.6, "A service demands payment to <b>another address</b>."],
+    ["blocked", .1, 2.4, "The safety check <b>blocks it</b> before signing."],
+    ["Why blocked", .4, 3.4, "<b>Why?</b> shows the address it refused."],
+  ],
+  spots: [
+    { at: "blocked", off: .2, len: 2.2, box: "blocked-chip", zoom: 1.08 },
+    // Why? is a docked panel at the right edge, not a dialog, so it has no recorded box.
+    { at: "Why blocked", off: .8, len: 3.4, r: { x: 1086, y: 46, w: 346, h: 560 } },
+  ],
+});
+add({ id: "attack", dur: 9.6 });
+// ADR-0106: Claude Code asks the same remora over MCP: its real output in a terminal, then the payment.
+add({ id: "claude-term", dur: 8.4 });
+add({
+  id: "claude", chapter: "07 · Claude Code pays too", url: "remora · /chat/r/researcher", lead: .4, tail: .4,
+  clip: clip("claude", [{ from: "claude-web", to: "end", speed: 1.1 }]),
+  caps: [["claude-web", .1, 3.2, "The same payment, in the remora's own thread."]],
+  spots: [{ at: "claude-web", off: .5, len: 2.6, box: "claude-paid", zoom: 1.08 }],
+});
+// ADR-0106: "Over the cap, it asks" is cut for time; approvals stay in the app and the README.
+add({
+  id: "memory", chapter: "08 · Memory you can read", url: "remora · /memory", lead: .6,
   clip: clip("memory", [
-    { from: "inspector", to: "end", speed: 1.1 },
+    { from: "inspector", to: "end", speed: 1.6 },
   ]),
   steps: [["Inspect", "inspector"], ["Matched", "later writes matched this"], ["Search", "results"]],
   caps: [
@@ -331,19 +376,8 @@ add({
   ],
   spots: [{ at: "later writes matched this", off: .2, len: 2.2, box: "later writes matched this", zoom: 1.08 }],
 });
-add({ id: "attack", dur: 13.5 });
 add({
-  id: "approvals", chapter: "06 · Over the cap, it asks", url: "remora · /approvals", lead: .5, tail: .4,
-  clip: clip("approvals", [{ from: "approvals", to: "end", speed: 1.15 }]),
-  steps: [["Asked", "approvals"], ["You decide", "Pay once"]],
-  caps: [["approvals", .1, 4.2, "Over its cap, it <b>asks you</b> first."]],
-  spots: [
-    { at: "approvals", off: .4, len: 1.6, box: "approval" },
-    { at: "Pay once", off: .2, len: 2.4, box: "Pay once", zoom: 1.08 },
-  ],
-});
-add({
-  id: "funds", chapter: "07 · You stay in control", url: "remora · /funds", lead: .5, tail: .4,
+  id: "funds", chapter: "09 · You stay in control", url: "remora · /funds", lead: .5, tail: .4,
   clip: clip("funds", [{ from: "funds", to: "end", speed: 1.15 }]),
   steps: [["Budgets", "funds"], ["Pause all", "Pause all"]],
   caps: [["funds", .1, 4.4, "Your USDC stays yours. <b>Pause all</b> at once."]],
@@ -353,20 +387,18 @@ add({
   ],
 });
 add({
-  id: "more", chapter: "08 · And more", url: "remora · /hatchery", lead: .5, tail: .4,
+  id: "more", chapter: "10 · And more", url: "remora · /hatchery", lead: .5, tail: .4,
   clip: clip("more", [
-    { from: "gallery", to: "Token desk", speed: 1.1 },
-    { from: "template", to: "template-end", speed: 1.4, url: "remora · /hatchery/token-desk" },
+    { from: "gallery", to: "Token desk", speed: 1.15 },
+    { from: "template", to: "template-end", speed: 1.6, url: "remora · /hatchery/token-desk" },
     { from: "room", to: "room-end", speed: 1.3, url: "remora · /chat/room/team" },
-    { from: "connections", to: "connections-end", speed: 1.3, url: "remora · /connections" },
     { from: "settings", to: "end", speed: 1.35, url: "remora · /settings" },
   ]),
-  steps: [["Templates", "gallery"], ["Rooms", "room"], ["Claude Code", "connections"], ["Telegram", "settings"]],
+  steps: [["Templates", "gallery"], ["Rooms", "room"], ["Telegram", "settings"]],
   caps: [
     ["gallery", .1, 2.2, "Share a remora as a <b>template on Walrus</b>."],
-    ["template", .1, 2.9, "Checked for safety; <b>one signature</b> to use it."],
+    ["template", .1, 2.6, "Checked for safety; <b>one signature</b> to use it."],
     ["room", .1, 2.6, "Remoras in a <b>room</b> answer together."],
-    ["connections", .1, 2.4, "<b>Claude Code</b> uses a remora, within its limits."],
     ["settings", .1, 2.4, "Talk to your remoras on <b>Telegram</b> too."],
   ],
   spots: [
@@ -374,11 +406,10 @@ add({
     { at: "template", off: .2, len: 1.6, box: "consent" },
     { at: "on Walrus", off: 0, len: 1.6, box: "on Walrus", zoom: 1.06 },
     { at: "room", off: .3, len: 2.2, box: "room-paid", zoom: 1.06 },
-    { at: "connections", off: .3, len: 2.4, box: "token" },
     { at: "Link Telegram", off: 0, len: 1.8, box: "Link Telegram", zoom: 1.08 },
   ],
 });
-add({ id: "why", dur: 8.5 });
+add({ id: "why", dur: 7.2 });
 add({ id: "lock", dur: 7 });
 const DUR = T;
 window.DUR = DUR; window.FPS = FPS; window.SCENES = SCENES;
@@ -387,7 +418,7 @@ window.DUR = DUR; window.FPS = FPS; window.SCENES = SCENES;
 window.THUMB = 4.2;
 {
   const sp = SCENES.find((s) => s.id === "split"), at = SCENES.find((s) => s.id === "attack");
-  window.GLITCH = [[sp.t0 + 5.6, sp.t0 + 5.67], ...[6.0, 8.0, 10.0].map((h) => [at.t0 + h, at.t0 + h + .05])];
+  window.GLITCH = [[sp.t0 + 5.6, sp.t0 + 5.67], ...[3.0, 4.6, 6.2].map((h) => [at.t0 + h, at.t0 + h + .05])];
 }
 
 // ───────────────────────────── scene DOM ─────────────────────────────
@@ -467,6 +498,27 @@ const PILLARS = [
   ["brain", "#31cf76", "Learns", "From your 👍 and 👎, as memories on Walrus."],
   ["user", "#42a0ff", "Yours", "Read, correct and export it. Use it in Claude Code."],
 ];
+// ADR-0106: Claude Code's real `claude -p` run, from the capture's notes (the token never shown).
+const CLAUDE = CAP.claude?.notes?.claude ?? null;
+const esc = (x) => String(x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const CL_CMD = CLAUDE
+  ? `claude -p "${CLAUDE.prompt}" --mcp-config remora.json --allowedTools mcp__remora__remora_ask`
+  : "";
+const CL_OUT = CLAUDE ? CLAUDE.output.split("\n").filter((l) => l.trim()).slice(0, 8) : [];
+const CL_WHO = CLAUDE?.ok ? "Claude Code" : "an MCP client";
+scene("claude-term", `
+  <div class="abs" style="left:0;right:0;top:120px;text-align:center"><span class="eyebrow">07 · ${CL_WHO} pays too</span></div>
+  <div class="card" id="ct-win" style="left:260px;top:190px;width:1400px;height:660px;overflow:hidden;background:#0b0b0e">
+    <div style="height:46px;display:flex;align-items:center;gap:9px;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <i style="width:13px;height:13px;border-radius:50%;background:#ff5f57"></i><i style="width:13px;height:13px;border-radius:50%;background:#febc2e"></i><i style="width:13px;height:13px;border-radius:50%;background:#28c840"></i>
+      <span class="mono" style="margin-left:14px;font-size:15px;color:var(--dim)">~/remora — zsh · recorded ${CLAUDE ? CLAUDE.at.slice(0, 10) : ""}</span></div>
+    <div class="mono" style="padding:28px 34px;font-size:21px;line-height:1.55;color:#e8e8ef">
+      <div><span style="color:#31cf76">$</span> <span id="ct-cmd"></span><span id="ct-caret" style="display:inline-block;width:11px;height:24px;background:#e8e8ef;vertical-align:-4px;margin-left:2px"></span></div>
+      <div id="ct-wait" style="margin-top:14px;color:var(--dim)">● remora_ask · paying within its limit…</div>
+      <div id="ct-out" style="margin-top:16px;white-space:pre-wrap">${CL_OUT.map((l, i) => `<div id="ct-l${i}" style="opacity:0">${esc(l)}</div>`).join("")}</div>
+    </div>
+  </div>
+`);
 scene("why", `
   <div class="abs" style="left:0;right:0;top:180px;text-align:center"><span class="eyebrow">Why Remora</span></div>
   ${headline([{ t: "Agents you can trust" }, { t: "with money.", style: "color:var(--brand)" }], "", "position:absolute;left:0;right:0;top:226px;text-align:center;font-size:76px")}
@@ -487,9 +539,9 @@ scene("lock", `
 
 // Captions: footage scenes by their marks, the others by local time.
 const STATIC_CAPS = {
-  split: [[1.2, 5.2, "Agents hold your key, or ask about every click."], [5.4, 11.6, "One injected sentence pays an attacker. A remora <b>can't</b>."]],
-  money: [[1.6, 10, "Its key spends only <b>within its limit</b>, to its payees."]],
-  attack: [[1.0, 5.6, "Bought data carried an <b>injected instruction</b>. The model obeyed."], [5.8, 13, "Two checks block it. Forced past both, <b>Sui aborts</b>."]],
+  split: [[1.0, 5.2, "Agents hold your key, or ask about every click."], [5.4, 9.4, "One injected sentence pays an attacker. A remora <b>can't</b>."]],
+  attack: [[.6, 2.9, "Every layer checks again, <b>even if the model obeys</b>."], [3.0, 9.4, "Two checks block it. Forced past both, <b>Sui aborts</b>."]],
+  "claude-term": [[.4, 4.2, `<b>${CL_WHO}</b> asks your remora, over MCP.`], [4.3, 8.2, "It pays <b>within its limit</b>, and says what it cost."]],
 };
 const CAPS = [];
 for (const s of SCENES) {
@@ -555,11 +607,21 @@ U.money = (lt) => {
 };
 U.attack = (lt) => {
   headAnim("attack-h", lt, .2);
-  for (let i = 0; i < 3; i++) $(`at-L${i}`).setAttribute("opacity", String(P(lt, 1.6 + i * .3, 2.2 + i * .3, E.out5)));
-  const hits = [6.0, 8.0, 10.0]; let px = 20;
+  for (let i = 0; i < 3; i++) $(`at-L${i}`).setAttribute("opacity", String(P(lt, .5 + i * .2, 1.0 + i * .2, E.out5)));
+  const hits = [3.0, 4.6, 6.2]; let px = 20;
   for (let i = 0; i < 3; i++) { const cx = 80 + i * 520 + 220; if (lt >= hits[i] - 1.8) px = lerp(i ? 80 + (i - 1) * 520 + 220 : 20, cx, P(lt, hits[i] - 1.8, hits[i], E.in)); $(`at-V${i}`).setAttribute("opacity", String(P(lt, hits[i], hits[i] + .3))); }
-  $("at-pkt").setAttribute("cx", px); $("at-pkt").setAttribute("cy", 150); $("at-pkt").setAttribute("opacity", String(P(lt, 4.0, 4.3) * (1 - P(lt, 10.2, 10.5))));
-  rise("at-res", lt, 10.6);
+  $("at-pkt").setAttribute("cx", px); $("at-pkt").setAttribute("cy", 150); $("at-pkt").setAttribute("opacity", String(P(lt, 1.1, 1.4) * (1 - P(lt, 6.4, 6.7))));
+  rise("at-res", lt, 6.8);
+};
+U["claude-term"] = (lt) => {
+  rise("ct-win", lt, .1, .6, 30);
+  const k = P(lt, .5, 2.6);
+  $("ct-cmd").textContent = CL_CMD.slice(0, Math.round(k * CL_CMD.length));
+  $("ct-caret").style.opacity = lt < 2.8 ? (Math.floor(lt * 2) % 2 ? ".2" : "1") : "0";
+  css("ct-wait", { o: P(lt, 2.8, 3.0) * (1 - P(lt, 3.8, 4.0)) });
+  CL_OUT.forEach((_, i) => {
+    css(`ct-l${i}`, { o: P(lt, 4.0 + i * .35, 4.3 + i * .35) });
+  });
 };
 U.why = (lt) => { headAnim("why-h", lt, .3); for (let i = 0; i < 4; i++) rise(`wy-${i}`, lt, 1.6 + i * .3, .7, 40); };
 U.lock = (lt) => {
@@ -747,7 +809,7 @@ async function renderAudio(sr = 48000) {
     for (let i = 0; i < (s.steps || []).length; i++) { const t = at(stepAt(s, i)); if (t !== null && t < s.t1) { tone(t, 79, .5, .07); tone(t + .07, 86, .6, .06); } }
   }
   const sp = SCENES.find((s) => s.id === "split"); if (sp) { tone(sp.t0 + 5.6, 40, .5, .45); tone(sp.t0 + 8.2, 76, .5, .1); tone(sp.t0 + 8.27, 83, .6, .09); }
-  const atk = SCENES.find((s) => s.id === "attack"); if (atk) for (const h of [6.0, 8.0, 10.0]) { tone(atk.t0 + h, 40, .4, .45); tone(atk.t0 + h, 64, .2, .05, "square"); }
+  const atk = SCENES.find((s) => s.id === "attack"); if (atk) for (const h of [3.0, 4.6, 6.2]) { tone(atk.t0 + h, 40, .4, .45); tone(atk.t0 + h, 64, .2, .05, "square"); }
   const buf = await ctx.startRendering();
   const L = buf.getChannelData(0), R = buf.getChannelData(1); const pcm = new Int16Array(L.length * 2);
   for (let i = 0; i < L.length; i++) { pcm[2 * i] = Math.max(-1, Math.min(1, L[i])) * 32767; pcm[2 * i + 1] = Math.max(-1, Math.min(1, R[i])) * 32767; }

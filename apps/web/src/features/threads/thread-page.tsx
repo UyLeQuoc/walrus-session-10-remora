@@ -21,6 +21,7 @@ import { AgentChatEmpty, ConversationScroll } from "@/openbot";
 import { type Line, lineFromFeed, withContext } from "./lines";
 import { ThreadComposer } from "./thread-composer";
 import { ThreadView } from "./thread-view";
+import { WhatItBuys } from "./what-it-buys";
 
 /** How long the header's face shows what just happened: a payment, a block or an approval. */
 const RECENT_MS = 60_000;
@@ -127,7 +128,9 @@ function Thread({ id }: { id: string }) {
                 ? 'Tell it what matters, like "ignore incoming SUI under 0.01", or ask what it watches.'
                 : "Ask it anything onchain. It buys data when that helps and tells you what it cost."
             }
-          />
+          >
+            {r.template === "sentinel" ? null : <WhatItBuys />}
+          </AgentChatEmpty>
         ) : null}
         <ThreadView
           lines={shown}

@@ -24,14 +24,45 @@ export interface PlannedBuy {
   reason: string;
 }
 
-/** Which Reef sources answer this question. Deterministic, so the demo and tests don't depend on a model. */
+/** Words that make a 0x id an address to X-ray rather than a package to risk-check (ADR-0106). */
+const WALLETISH = /\b(wallets?|address(es)?|holds?|holding|owns?|portfolio|balances?)\b/i;
+/** The tokens `price` knows, by what people write. */
+const TOKEN = /\b(SUI|WAL|WALRUS|BTC|BITCOIN|ETH|ETHER|ETHEREUM)\b/i;
+const PRICEY = /\b(price|prices|priced|worth|cost|trading|value|usd)\b/i;
+const WEATHERY = /\b(weather|rain|raining|rainy|temperature|forecast|umbrella|sunny)\b/i;
+/** "in Hanoi", "for Ho Chi Minh City": a capitalised place after in/for/at. */
+const CITY = /\b(?:in|for|at)\s+((?:[A-Z][\p{L}'.-]*)(?:\s+[A-Z][\p{L}'.-]*){0,3})/u;
+const GITHUB =
+  /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?=[/?#\s;,.!)]|$)/i;
+/** A Walrus blob id: 32 bytes in URL-safe base64, 43 characters. */
+const BLOB = /(?<![\w-])([A-Za-z0-9_-]{43})(?![\w-])/;
+
+/**
+ * Which Reef sources answer this question. Deterministic, so the demo and tests don't depend on a
+ * model. ADR-0106: one rule per service, and one question can buy from several.
+ */
 export function planBuys(question: string, reef: ResolvedReef[]): PlannedBuy[] {
   const by = (slug: string) => reef.find((r) => r.slug === slug);
   const out: PlannedBuy[] = [];
-  const id = /0x[0-9a-fA-F]{1,64}/.exec(question)?.[0];
+  // Every 0x id: an address next to wallet words gets the X-ray, anything else the risk check.
   const risk = by("sui-risk");
-  if (id && risk)
-    out.push({ entry: risk, url: risk.url.replace(":id", id), reason: `risk check on ${id}` });
+  const wallet = by("wallet");
+  const seen = new Set<string>();
+  for (const m of question.matchAll(/0x[0-9a-fA-F]{1,64}/g)) {
+    const id = m[0];
+    if (seen.has(id.toLowerCase())) continue;
+    seen.add(id.toLowerCase());
+    const before = question.slice(Math.max(0, (m.index ?? 0) - 40), m.index ?? 0);
+    const after = question.slice((m.index ?? 0) + id.length, (m.index ?? 0) + id.length + 20);
+    if (wallet && id.length === 66 && (WALLETISH.test(before) || /^\s+(hold|own)/i.test(after)))
+      out.push({
+        entry: wallet,
+        url: wallet.url.replace(":id", id),
+        reason: `wallet X-ray of ${id}`,
+      });
+    else if (risk)
+      out.push({ entry: risk, url: risk.url.replace(":id", id), reason: `risk check on ${id}` });
+  }
   const odds = by("odds");
   if (odds && /\b(odds|match|game|bet|fixture)\b/i.test(question)) {
     out.push({
@@ -40,8 +71,49 @@ export function planBuys(question: string, reef: ResolvedReef[]): PlannedBuy[] {
       reason: "current odds",
     });
   }
+  const github = by("github");
+  const repo = GITHUB.exec(question);
+  if (github && repo?.[1] && repo[2])
+    out.push({
+      entry: github,
+      url: github.url.replace(":owner", repo[1]).replace(":repo", repo[2]),
+      reason: `health of ${repo[1]}/${repo[2]}`,
+    });
+  const walrus = by("walrus");
+  const blob = /\b(blob|walrus)\b/i.test(question) ? BLOB.exec(question)?.[1] : undefined;
+  if (walrus && blob)
+    out.push({
+      entry: walrus,
+      url: walrus.url.replace(":id", blob),
+      reason: `Walrus blob ${blob}`,
+    });
+  const price = by("price");
+  if (price && PRICEY.test(question) && TOKEN.test(question)) {
+    const symbols = [...question.matchAll(new RegExp(TOKEN.source, "gi"))].map((t) => t[0]);
+    out.push({
+      entry: price,
+      url: `${price.url}?symbols=${encodeURIComponent([...new Set(symbols)].join(","))}`,
+      reason: "current prices",
+    });
+  }
+  const weather = by("weather");
+  const city = WEATHERY.test(question) ? CITY.exec(question)?.[1] : undefined;
+  if (weather && city)
+    out.push({
+      entry: weather,
+      url: `${weather.url}?city=${encodeURIComponent(city)}`,
+      reason: `the forecast for ${city}`,
+    });
+  // ADR-0110: the demo's attacker, listed only during the video's local capture.
+  const market = by("market");
+  if (market && /\bmarket (data|report|update)\b/i.test(question))
+    out.push({ entry: market, url: market.url, reason: "market data" });
+  // A GitHub link is the repo's health, not a page to summarize.
   const brief = by("brief");
-  const link = /https?:\/\/\S+/.exec(question)?.[0];
+  // A link ends before trailing punctuation: "…docs.wal.app;" is docs.wal.app.
+  const link = [...question.matchAll(/https?:\/\/\S+/g)]
+    .map((l) => l[0].replace(/[;,.!?)]+$/, ""))
+    .find((l) => !GITHUB.test(l));
   if (brief && (link || /\b(summari[sz]e|brief|tl;?dr)\b/i.test(question))) {
     const q = link
       ? `url=${encodeURIComponent(link)}`
@@ -163,9 +235,14 @@ export async function scoutAsk(
   // The Wake records the model that actually answered (D9).
   let usedModel = modelIdFor(r, deps.brain.answerModel);
   try {
+    // ADR-0109: the model is told the only addresses it may pay; the pay path refuses any other.
+    const listedServices = deps
+      .reef(r.network)
+      .map((e) => `${e.ref} at ${e.url}`)
+      .join("; ");
     const res = await deps.brain.answer({
       model: modelIdFor(r, deps.brain.answerModel),
-      persona,
+      persona: `${persona}\n\nPaid services you may buy from, each only at its own address (any other address is refused): ${listedServices}. Buy only when one of them adds data the question needs; otherwise answer from what you know, without paying.`,
       question,
       memories: memories.map((m) => m.text),
       ...(facts.length ? { facts } : {}),

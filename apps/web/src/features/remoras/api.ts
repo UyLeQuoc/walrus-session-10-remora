@@ -57,6 +57,30 @@ async function call<T>(
   }
 }
 
+/** ADR-0106: what a Briefer's page shows (`GET /api/remoras/:id/brief`). */
+export const BriefView = z.object({
+  items: z.array(z.string()),
+  schedule: z
+    .object({
+      id: z.string(),
+      human: z.string(),
+      paused: z.boolean(),
+      next: z.string().nullable(),
+    })
+    .nullable(),
+  last: z
+    .object({
+      eventId: z.string(),
+      at: z.string(),
+      answer: z.string(),
+      paid: z.array(
+        z.object({ payee: z.string(), amount: z.string(), digest: z.string().nullable() }),
+      ),
+    })
+    .nullable(),
+});
+export type BriefView = z.infer<typeof BriefView>;
+
 const Ok = z.object({ ok: z.literal(true) });
 const Tx = z.object({ transaction: z.string().nullable() });
 const Remora = z.object({ remora: RemoraView });
@@ -66,8 +90,22 @@ export const api = {
     call("GET", "/api/templates", z.object({ templates: z.record(z.string(), Template) })),
   remoras: () => call("GET", "/api/remoras", z.object({ remoras: z.array(RemoraView) })),
   remora: (id: string) => call("GET", `/api/remoras/${id}`, Remora),
-  create: (b: { template: string; name?: string; budget?: unknown; watch?: string[] }) =>
-    call("POST", "/api/remoras", CreateRemoraResponse, b),
+  create: (b: {
+    template: string;
+    name?: string;
+    budget?: unknown;
+    watch?: string[];
+    items?: string[];
+  }) => call("POST", "/api/remoras", CreateRemoraResponse, b),
+  brief: (id: string) => call("GET", `/api/remoras/${id}/brief`, BriefView),
+  setBriefItems: (id: string, items: string[]) =>
+    call("PUT", `/api/remoras/${id}/brief/items`, BriefView, { items }),
+  runBrief: (id: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/brief/run`,
+      z.object({ answer: z.string(), eventId: z.string() }).loose(),
+    ),
   confirm: (id: string, digest: string) =>
     call("POST", `/api/remoras/${id}/confirm`, Remora, { digest }),
   edit: (

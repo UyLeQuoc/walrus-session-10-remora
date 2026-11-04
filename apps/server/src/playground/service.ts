@@ -54,10 +54,11 @@ export const noMemory: RemoraMemory = {
 export const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 const ipHash = (p: PlaygroundDeps, ip: string) =>
   createHmac("sha256", p.secret).update(ip).digest("hex");
-const usdc = (units: bigint) => {
+/** "1.00", "0.01", and the digits a smaller price needs: "0.005", not "0.00" (ADR-0106). */
+export const usdc = (units: bigint) => {
   const whole = units / USDC_UNIT;
-  const cents = ((units % USDC_UNIT) * 100n) / USDC_UNIT;
-  return `${whole}.${cents.toString().padStart(2, "0")}`;
+  const frac = (units % USDC_UNIT).toString().padStart(6, "0").replace(/0+$/, "");
+  return `${whole}.${frac.padEnd(2, "0")}`;
 };
 
 function funderOf(p: PlaygroundDeps) {

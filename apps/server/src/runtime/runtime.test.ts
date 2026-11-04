@@ -53,6 +53,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createRemoraBot } from "../channels/remora-bot.ts";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import { atListedAddress } from "../money/reef.ts";
 import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
 import { type Brain, type UntrustedData, wrapUntrusted } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -108,6 +109,17 @@ const reef: ResolvedReef[] = [
     url: `${MERCHANT}/brief`,
     payTo: PAYTO,
   },
+  // ADR-0106: the services the scout template added, so its payees all resolve.
+  ...(["wallet", "walrus", "github", "price", "weather"] as const).map((slug) => ({
+    ref: `reef:${slug}` as const,
+    slug,
+    name: slug,
+    description: "",
+    path: `/${slug}`,
+    price: "5000",
+    url: `${MERCHANT}/${slug}`,
+    payTo: PAYTO,
+  })),
 ];
 
 describe("Scout planning", () => {
@@ -118,6 +130,55 @@ describe("Scout planning", () => {
     expect(p("Summarize https://example.com/post")).toEqual(["brief"]);
     expect(p("hello")).toEqual([]);
     expect(planBuys("check 0xabc", reef)[0]?.url).toBe(`${MERCHANT}/sui-risk/0xabc`);
+  });
+
+  it("ADR-0106: the model may buy a listed service only at its listed address", () => {
+    expect(atListedAddress(`${MERCHANT}/sui-risk/0x2`, `${MERCHANT}/sui-risk/:id`)).toBe(true);
+    expect(atListedAddress(`${MERCHANT}/price?symbols=SUI`, `${MERCHANT}/price`)).toBe(true);
+    expect(
+      atListedAddress(`${MERCHANT}/github/MystenLabs/sui`, `${MERCHANT}/github/:owner/:repo`),
+    ).toBe(true);
+    expect(atListedAddress("https://www.google.com/search?q=sui", `${MERCHANT}/brief`)).toBe(false);
+    expect(atListedAddress("https://reef.io/sui-risk", `${MERCHANT}/sui-risk/:id`)).toBe(false);
+    expect(atListedAddress(`${MERCHANT}/sui-risk`, `${MERCHANT}/sui-risk/:id`)).toBe(false);
+    expect(atListedAddress(`${MERCHANT}/price/../brief`, `${MERCHANT}/price`)).toBe(false);
+    expect(atListedAddress("not a url", `${MERCHANT}/price`)).toBe(false);
+  });
+
+  it("ADR-0106: one rule per new service, and several services in one question", () => {
+    // The fixture's new services take `:id` paths where the real Reef does.
+    const all: ResolvedReef[] = reef.map((e) =>
+      e.slug === "wallet" || e.slug === "walrus"
+        ? { ...e, path: `/${e.slug}/:id`, url: `${MERCHANT}/${e.slug}/:id` }
+        : e.slug === "github"
+          ? { ...e, path: "/github/:owner/:repo", url: `${MERCHANT}/github/:owner/:repo` }
+          : e,
+    );
+    const plan = (q: string) =>
+      planBuys(q, all).map((b) => `${b.entry.slug} ${b.url.slice(MERCHANT.length)}`);
+    const addr = `0x${"ab".repeat(32)}`;
+    const blob = "ZWTWU2C9j72KmioDHtoz236mLXlWs9rdIjY_UwgwL7Y";
+    expect(plan(`What does wallet ${addr} hold?`)).toEqual([`wallet /wallet/${addr}`]);
+    // A full id with no wallet words is still a package or object to risk-check.
+    expect(plan(`Is ${addr} safe to depend on?`)).toEqual([`sui-risk /sui-risk/${addr}`]);
+    expect(plan("How healthy is https://github.com/MystenLabs/sui?")).toEqual([
+      "github /github/MystenLabs/sui",
+    ]);
+    expect(plan(`Is Walrus blob ${blob} still readable?`)).toEqual([`walrus /walrus/${blob}`]);
+    expect(plan("What's the price of SUI and WAL?")).toEqual(["price /price?symbols=SUI%2CWAL"]);
+    expect(plan("Will it rain in Hanoi tomorrow?")).toEqual(["weather /weather?city=Hanoi"]);
+    expect(plan("Weather for Ho Chi Minh City this week?")).toEqual([
+      "weather /weather?city=Ho%20Chi%20Minh%20City",
+    ]);
+    // Three services from one question, each once.
+    expect(
+      plan(`Is package 0x2 safe, what does wallet ${addr} hold, and what's SUI worth?`).map(
+        (p) => p.split(" ")[0],
+      ),
+    ).toEqual(["sui-risk", "wallet", "price"]);
+    // Nothing to buy: answered free.
+    expect(plan("What does a Sui upgrade cap do?")).toEqual([]);
+    expect(plan("Is 43 characters of text a blob? no")).toEqual([]);
   });
 
   it("bought data carries its real cost into the prompt", () => {
@@ -1122,6 +1183,12 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
       ["sui-risk", "Onchain risk", "10000", PAYTO],
       ["odds", "Sports", "20000", PAYTO],
       ["brief", "Summaries", "10000", PAYTO],
+      // ADR-0106: the five added services, each with its category.
+      ["wallet", "Onchain", "5000", PAYTO],
+      ["walrus", "Storage", "5000", PAYTO],
+      ["github", "Code", "5000", PAYTO],
+      ["price", "Markets", "5000", PAYTO],
+      ["weather", "Everyday", "5000", PAYTO],
     ]);
     expect(services.every((x) => /^https:\/\//.test(x.docsUrl ?? ""))).toBe(true);
 

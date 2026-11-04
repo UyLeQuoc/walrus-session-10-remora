@@ -7,8 +7,11 @@ import { type PlaygroundSession, PlaygroundSession as SessionSchema } from "@rem
 import {
   Bot,
   Clock,
-  FileText,
+  CloudRain,
   Fish,
+  GitBranch,
+  HardDrive,
+  Layers,
   type LucideIcon,
   MessageCircleQuestion,
   Package,
@@ -17,7 +20,8 @@ import {
   Shield,
   Sparkles,
   Store,
-  Trophy,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -79,44 +83,88 @@ async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {
 export const lasts = (minutes: number) =>
   minutes < 120 ? `${minutes} minutes` : `${Math.round(minutes / 60)} hours`;
 
+/** A Walrus blob of ours that lives on testnet for 50 epochs: the Token desk template (ADR-0105). */
+export const SAMPLE_BLOB = "ZWTWU2C9j72KmioDHtoz236mLXlWs9rdIjY_UwgwL7Y";
+
 /**
- * ADR-0105: one question per paid service, and one it answers without paying, each run once on
- * testnet (examples.spec.ts). A card names what it uses and, once the Reef has answered, its price.
+ * ADR-0105, ADR-0106: a question per kind of thing the Researcher can buy, one that buys three at
+ * once, and one it answers without paying, each run on testnet (examples.spec.ts). A card names what
+ * it buys and, once the Reef has answered, the price. `ask` is what goes in the box when it differs
+ * from the card's text; the wallet cards ask about the Reef's own wallet, where every payment lands.
  */
 export const SUGGESTIONS: ReadonlyArray<{
   text: string;
-  service: string | null;
+  services: string[];
   icon: LucideIcon;
+  ask?: (reefWallet: string) => string;
 }> = [
-  { text: "Is package 0x2 safe to depend on?", service: "sui-risk", icon: Package },
-  { text: "What are the odds for tonight's match?", service: "odds", icon: Trophy },
-  { text: "Summarize https://docs.wal.app in three lines", service: "brief", icon: FileText },
-  { text: "What does a Sui upgrade cap do?", service: null, icon: Sparkles },
+  { text: "Is package 0x2 safe to depend on?", services: ["sui-risk"], icon: Package },
+  {
+    text: "What does the Reef's wallet hold?",
+    services: ["wallet"],
+    icon: Wallet,
+    ask: (w) => `What does wallet ${w} hold?`,
+  },
+  { text: "What are SUI and WAL worth right now?", services: ["price"], icon: TrendingUp },
+  { text: "Will it rain in Hanoi tomorrow?", services: ["weather"], icon: CloudRain },
+  {
+    text: "How healthy is MystenLabs/walrus on GitHub?",
+    services: ["github"],
+    icon: GitBranch,
+    ask: () => "How healthy is https://github.com/MystenLabs/walrus?",
+  },
+  {
+    text: "Is our Walrus blob still readable?",
+    services: ["walrus"],
+    icon: HardDrive,
+    ask: () => `Is Walrus blob ${SAMPLE_BLOB} still readable?`,
+  },
+  {
+    text: "Is 0x2 safe, what does the Reef's wallet hold, and what's SUI worth?",
+    services: ["sui-risk", "wallet", "price"],
+    icon: Layers,
+    ask: (w) => `Is package 0x2 safe, what does wallet ${w} hold, and what's SUI worth?`,
+  },
+  { text: "What does a Sui upgrade cap do?", services: [], icon: Sparkles },
 ];
 
 /** The cards under the question box: click one to fill the box. */
 function SuggestionCards({ current, onPick }: { current: string; onPick: (text: string) => void }) {
   const reef = useReefServices();
-  const price = (service: string) => reef.data?.find((x) => x.name === service)?.priceUsdc;
+  const listed = reef.data ?? [];
+  const wallet = listed[0]?.payTo;
+  const prices = (services: string[]) => {
+    const each = services.map((s) => listed.find((x) => x.name === s)?.priceUsdc);
+    return each.every(Boolean) ? each.reduce((n, p) => n + BigInt(p ?? "0"), 0n).toString() : null;
+  };
   return (
     <ul className="grid gap-2 sm:grid-cols-2" aria-label="Questions to try">
       {SUGGESTIONS.map((q) => {
-        const p = q.service ? price(q.service) : undefined;
+        // A card that asks about the Reef's wallet waits for the Reef to say which wallet it is.
+        const ask = q.ask ? (wallet ? q.ask(wallet) : null) : q.text;
+        if (!ask) return null;
+        const p = q.services.length ? prices(q.services) : null;
+        const label = !q.services.length
+          ? "No purchase needed"
+          : q.services.length === 1
+            ? payeeName(`reef:${q.services[0]}`)
+            : `${q.services.length} services`;
         return (
           <li key={q.text} className="flex">
             <button
               type="button"
-              aria-pressed={q.text === current}
+              aria-pressed={ask === current}
+              data-services={q.services.join(",")}
               className={cn(
                 "flex w-full items-start gap-3 rounded-ob-card border border-ob-border p-3 text-left transition-colors hover:bg-ob-control",
-                q.text === current && "border-ob-accent bg-ob-accent-soft/40",
+                ask === current && "border-ob-accent bg-ob-accent-soft/40",
               )}
-              onClick={() => onPick(q.text)}
+              onClick={() => onPick(ask)}
             >
               <span
                 className={cn(
                   "grid size-8 shrink-0 place-items-center rounded-ob-md [&_svg]:size-4",
-                  q.service
+                  q.services.length
                     ? "bg-ob-accent-soft text-ob-accent-text"
                     : "bg-ob-success-soft text-ob-success-text",
                 )}
@@ -126,7 +174,7 @@ function SuggestionCards({ current, onPick }: { current: string; onPick: (text: 
               </span>
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-xs text-ob-muted">
-                  {q.service ? payeeName(`reef:${q.service}`) : "No purchase needed"}
+                  {label}
                   {p ? <span className="tabular-nums"> · {usdc(p)} USDC</span> : null}
                 </span>
                 <span className="text-sm text-ob-text">{q.text}</span>

@@ -4,7 +4,14 @@
 
 import type { RemoraView } from "@remora/schema";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { exampleSet, POOL, rememberPendingAsk, remoraFor, takePendingAsk } from "./examples";
+import {
+  exampleSet,
+  fillOf,
+  POOL,
+  rememberPendingAsk,
+  remoraFor,
+  takePendingAsk,
+} from "./examples";
 
 describe("the question held across a reload", () => {
   beforeEach(() => {
@@ -49,14 +56,25 @@ describe("the example pool (ADR-0105)", () => {
   const view = (template: string, status: string, id: string) =>
     ({ id, template, status }) as unknown as RemoraView;
 
-  it("deals one of each kind per set of four, and wraps around", () => {
+  it("deals one of each kind in the first sets, and every card over enough rounds", () => {
     const sets = [0, 1, 2].map((n) => exampleSet(POOL, n));
     for (const set of sets)
       expect(new Set(set.map((e) => e.kind))).toEqual(
         new Set(["pays", "learns", "remembers", "proves"]),
       );
-    expect(new Set(sets.flat().map((e) => e.text)).size).toBe(POOL.length);
-    expect(exampleSet(POOL, 3)).toEqual(sets[0]);
+    const seen = new Set(
+      Array.from({ length: POOL.length }, (_, n) => exampleSet(POOL, n))
+        .flat()
+        .map((e) => e.text),
+    );
+    expect(seen.size).toBe(POOL.length);
+  });
+
+  it("asks about the owner's own wallet only when someone is signed in (ADR-0106)", () => {
+    const xray = POOL.find((e) => e.text === "X-ray my wallet");
+    if (!xray) throw new Error("no wallet card");
+    expect(fillOf(xray, null)).toBeNull();
+    expect(fillOf(xray, "0xabc")).toBe("What does wallet 0xabc hold?");
   });
 
   it("opens the live remora of a kind before one in practice, and none that is retired", () => {
@@ -74,8 +92,12 @@ describe("the example pool (ADR-0105)", () => {
     for (const e of POOL) {
       if (e.kind === "pays") expect(e.target).toBe("scout");
       else if (e.kind === "learns") expect(e.target).toBe("sentinel");
+      else if (e.kind === "briefs") expect(e.target).toBe("briefer");
       else expect(e.target).toBe("chat");
     }
-    expect(POOL.filter((e) => e.fill).every((e) => e.fill?.startsWith("/"))).toBe(true);
+    // A fill is a command, a full link, or a question about the owner's own wallet.
+    for (const e of POOL)
+      if (typeof e.fill === "string")
+        expect(e.fill.startsWith("/") || e.fill.includes("https://")).toBe(true);
   });
 });

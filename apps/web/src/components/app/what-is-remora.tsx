@@ -26,6 +26,14 @@ export const KINDS = [
     detail:
       "Watches your wallets and tells you only what matters. Teach it in plain words, like “ignore incoming SUI under 0.002”. It never pays.",
   },
+  // ADR-0106: the third kind.
+  {
+    mood: "thinking",
+    name: "Briefer",
+    tagline: "Buys what you follow, sends one brief",
+    detail:
+      "Every weekday morning it buys what's on your list (prices, a wallet, a repo, the weather) within its own limit, and sends one brief with a receipt for each purchase.",
+  },
 ] as const satisfies ReadonlyArray<{
   mood: RemoraMood;
   name: string;

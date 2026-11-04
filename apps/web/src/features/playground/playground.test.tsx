@@ -24,22 +24,21 @@ const render = (ui: React.ReactElement) =>
   );
 
 const reef = [
-  {
-    name: "sui-risk",
-    category: "Onchain risk",
-    priceUsdc: "10000",
-    payTo: "0x1",
-    docsUrl: "https://x.test",
-  },
-  { name: "odds", category: "Sports", priceUsdc: "20000", payTo: "0x2", docsUrl: "https://x.test" },
-  {
-    name: "brief",
-    category: "Summaries",
-    priceUsdc: "10000",
-    payTo: "0x3",
-    docsUrl: "https://x.test",
-  },
-];
+  ["sui-risk", "10000"],
+  ["odds", "20000"],
+  ["brief", "10000"],
+  ["wallet", "10000"],
+  ["walrus", "5000"],
+  ["github", "10000"],
+  ["price", "5000"],
+  ["weather", "5000"],
+].map(([name, priceUsdc]) => ({
+  name,
+  category: "Test",
+  priceUsdc,
+  payTo: `0x${"3e".repeat(32)}`,
+  docsUrl: "https://x.test",
+}));
 
 const session = PlaygroundSession.parse(sessionJson);
 const health = HealthReport.parse(healthJson);
@@ -121,7 +120,7 @@ describe("playground (H7)", () => {
     expect(calls.find((c) => c.url === "/api/playground/ask")?.token).toBe("tok-1");
   });
 
-  it("offers a question for each paid service with its Reef price, and one that needs no purchase", async () => {
+  it("offers a question per service, three at once and a free one, priced by the Reef", async () => {
     const fresh = { ...session, answers: [], spentUsdc: "0.00", questionsLeft: 3 };
     fakeApi({
       "GET /api/playground": open,
@@ -135,19 +134,24 @@ describe("playground (H7)", () => {
     );
     await userEvent.click(await screen.findByRole("button", { name: /Start my Researcher/ }));
     const cards = within(await screen.findByRole("list", { name: "Questions to try" }));
-    expect(cards.getAllByRole("button")).toHaveLength(SUGGESTIONS.length);
-    // ADR-0105: the price is the Reef's, never a guess.
-    expect((await cards.findByRole("button", { name: /Odds · 0\.02 USDC/ })).textContent).toContain(
-      "tonight's match",
+    // ADR-0106: the wallet cards wait for the Reef to name its wallet; then all eight show.
+    await waitFor(() => expect(cards.getAllByRole("button")).toHaveLength(SUGGESTIONS.length));
+    expect(cards.getByRole("button", { name: /Prices · 0\.005 USDC/ }).textContent).toContain(
+      "SUI and WAL",
     );
-    expect(cards.getByRole("button", { name: /Brief · 0\.01 USDC/ })).toBeDefined();
+    expect(cards.getByRole("button", { name: /3 services · 0\.025 USDC/ })).toBeDefined();
     expect(cards.getByRole("button", { name: /No purchase needed/ })).toBeDefined();
     // The first one starts in the box; a card fills it instead of asking.
     const box = screen.getByLabelText("Your question") as HTMLTextAreaElement;
     expect(box.value).toBe(SUGGESTIONS[0]?.text);
-    await userEvent.click(cards.getByRole("button", { name: /Brief/ }));
-    expect(box.value).toBe("Summarize https://docs.wal.app in three lines");
-    expect(cards.getByRole("button", { name: /Brief/ }).getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(cards.getByRole("button", { name: /Weather/ }));
+    expect(box.value).toBe("Will it rain in Hanoi tomorrow?");
+    // A wallet card asks about the Reef's own wallet, in full.
+    await userEvent.click(cards.getByRole("button", { name: /Wallet X-ray/ }));
+    expect(box.value).toBe(`What does wallet 0x${"3e".repeat(32)} hold?`);
+    expect(cards.getByRole("button", { name: /Wallet X-ray/ }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
   });
 
   it("says plainly when the questions are used up, and when the playground is resting", async () => {

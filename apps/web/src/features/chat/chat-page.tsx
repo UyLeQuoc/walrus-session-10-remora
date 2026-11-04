@@ -256,10 +256,12 @@ export function ChatPage() {
                   <div className="flex flex-col items-start gap-3">
                     <Examples
                       roster={(roster.data?.remoras ?? []).filter((r) => r.status !== "retired")}
+                      owner={owner}
                       onPick={setText}
                       onRun={send}
                       onReloadAndAsk={reloadAndAsk}
                       onOpenThread={openThread}
+                      onOpenPage={(id) => navigate(`/remoras/${id}`)}
                     />
                   </div>
                 )}

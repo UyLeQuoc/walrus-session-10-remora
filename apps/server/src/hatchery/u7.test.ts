@@ -34,6 +34,7 @@ import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import { REEF as LISTED_REEF } from "../money/reef.ts";
 import type { Brain } from "../runtime/brain.ts";
 import type { RuntimeDeps } from "../runtime/deps.ts";
 import { giveFeedback } from "../runtime/feedback.ts";
@@ -67,6 +68,8 @@ import {
 } from "./service.ts";
 import { createWalrusStore, type WalrusStore } from "./walrus.ts";
 
+const LISTED = LISTED_REEF.map((e) => e.slug);
+
 const PKG = normalizeSuiAddress("0xcc");
 const HATCH = normalizeSuiAddress("0x4a7c");
 const REGISTRY = normalizeSuiAddress("0x4a7c0");
@@ -74,7 +77,8 @@ const USDC = `${normalizeSuiAddress("0xa1ec")}::usdc::USDC`;
 const AUTHOR = normalizeSuiAddress(`0x7a${process.pid.toString(16)}`);
 const HATCHER = normalizeSuiAddress(`0x7b${process.pid.toString(16)}`);
 const PAYTO = normalizeSuiAddress("0x3e");
-const reef: ResolvedReef[] = ["sui-risk", "odds", "brief"].map((slug) => ({
+// ADR-0106: every listed service, as the scout template pays all of them.
+const reef: ResolvedReef[] = LISTED.map((slug) => ({
   ref: `reef:${slug}` as const,
   slug,
   name: slug,
@@ -440,7 +444,7 @@ describe.skipIf(!local)("U7 runtime (M1–M7, G5, L1, F4/F5)", () => {
     });
     expect(review.team.room).toBeUndefined();
     expect(review.removed.map((x) => x.field)).toEqual(["memories", "keys", "disc", "wakes"]);
-    expect(review.permissions[0]?.payees).toEqual(["reef:sui-risk", "reef:odds", "reef:brief"]);
+    expect(review.permissions[0]?.payees).toEqual(LISTED.map((slug) => `reef:${slug}`));
     expect(review.safety.verdict).toBe("pass");
     expect(review.markdown).not.toContain(AUTHOR.slice(2));
 
@@ -521,11 +525,14 @@ describe.skipIf(!local)("U7 runtime (M1–M7, G5, L1, F4/F5)", () => {
     const c = await consent(h, "testnet", templateId);
     const { markdown: _m, ...shape } = c;
     HatchConsent.parse(shape);
-    expect(c.payees).toEqual([
-      { ref: "reef:sui-risk", name: "sui-risk", priceUsdc: "0.01", known: true },
-      { ref: "reef:odds", name: "odds", priceUsdc: "0.02", known: true },
-      { ref: "reef:brief", name: "brief", priceUsdc: "0.01", known: true },
-    ]);
+    expect(c.payees).toEqual(
+      LISTED.map((slug) => ({
+        ref: `reef:${slug}`,
+        name: slug,
+        priceUsdc: slug === "odds" ? "0.02" : "0.01",
+        known: true,
+      })),
+    );
     expect(c).toMatchObject({ startsInShadow: true, signatures: 1 });
 
     const out = await hatchTx(h, HATCHER, "testnet", templateId);

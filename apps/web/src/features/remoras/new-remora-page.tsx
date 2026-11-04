@@ -45,17 +45,26 @@ function Wizard({ owner }: { owner: string }) {
   const [monthly, setMonthly] = useState("1");
   const [perPayment, setPerPayment] = useState("0.05");
   const [watch, setWatch] = useState(owner);
+  const [follow, setFollow] = useState(
+    "SUI and WAL prices\nweather in Hanoi\ngithub.com/MystenLabs/walrus",
+  );
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState("");
   const list = Object.entries(templates.data?.templates ?? {}) as [string, Template][];
   const chosen = templates.data?.templates[slug];
   const coinType = networks.find((n) => n.network === network)?.usdcCoinType;
   const busy = step !== "idle";
+  // ADR-0106: the Researcher and the Briefer spend within a budget; the Wallet watcher never pays.
+  const spends = slug !== "sentinel";
+  const briefItems = follow
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
 
   const create = async () => {
     setError("");
     let budget: unknown;
-    if (slug === "scout") {
+    if (spends) {
       const limit = parseUsdc(monthly);
       const cap = parseUsdc(perPayment);
       if (!limit || !cap || cap > limit)
@@ -75,12 +84,15 @@ function Wizard({ owner }: { owner: string }) {
       (!addresses.length || addresses.some((a) => !/^0x[0-9a-fA-F]{1,64}$/.test(a)))
     )
       return setError("Watch one or more Sui addresses (0x…).");
+    if (slug === "briefer" && !briefItems.length)
+      return setError("List at least one thing for its brief to follow.");
     setStep("creating");
     const made = await api.create({
       template: slug,
       ...(name.trim() ? { name: name.trim() } : {}),
       ...(budget ? { budget } : {}),
       ...(slug === "sentinel" ? { watch: addresses } : {}),
+      ...(slug === "briefer" ? { items: briefItems } : {}),
     });
     if (!made.ok) {
       setStep("idle");
@@ -161,7 +173,7 @@ function Wizard({ owner }: { owner: string }) {
               />
             </Field>
 
-            {slug === "scout" ? (
+            {spends ? (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
@@ -204,7 +216,23 @@ function Wizard({ owner }: { owner: string }) {
                   </div>
                 </div>
               </>
-            ) : (
+            ) : null}
+            {slug === "briefer" ? (
+              <Field>
+                <FieldLabel htmlFor="follow">What to follow</FieldLabel>
+                <Textarea
+                  id="follow"
+                  rows={4}
+                  value={follow}
+                  onChange={(e) => setFollow(e.target.value)}
+                />
+                <FieldDescription>
+                  One per line: prices, a wallet (0x…), a GitHub repo, the weather in a city. Every
+                  weekday at 8am it buys each one and sends one brief.
+                </FieldDescription>
+              </Field>
+            ) : null}
+            {slug === "sentinel" ? (
               <Field>
                 <FieldLabel htmlFor="watch">Addresses to watch</FieldLabel>
                 <Textarea
@@ -215,7 +243,7 @@ function Wizard({ owner }: { owner: string }) {
                 />
                 <FieldDescription>One per line. It only reads; it never pays.</FieldDescription>
               </Field>
-            )}
+            ) : null}
           </div>
 
           <aside aria-label="Summary" className="flex flex-col gap-3 lg:sticky lg:top-6">
@@ -227,7 +255,7 @@ function Wizard({ owner }: { owner: string }) {
               <Property term="Name">
                 <span className="block truncate">{name.trim() || chosen?.name || "—"}</span>
               </Property>
-              {slug === "scout" ? (
+              {spends ? (
                 <>
                   <Property term="Monthly limit">{monthly || "—"} USDC</Property>
                   <Property term="Most at once">{perPayment || "—"} USDC</Property>
@@ -240,9 +268,9 @@ function Wizard({ owner }: { owner: string }) {
                 <Property term="Budget">None, read-only</Property>
               )}
             </PropertyList>
-            {slug === "scout" ? <Badge variant="secondary">Enforced on Sui</Badge> : null}
+            {spends ? <Badge variant="secondary">Enforced on Sui</Badge> : null}
             <p className="rounded-ob-lg bg-ob-control-hover px-3 py-2.5 text-md text-ob-secondary">
-              {slug === "scout" ? (
+              {spends ? (
                 <>
                   You'll sign <strong>1 transaction</strong> to set its spending limit.
                 </>
