@@ -5,10 +5,12 @@
  */
 import { ExternalLink, SearchX, Waves } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
 import { Term } from "@/components/app/glossary";
 import { Page, PageHeader } from "@/components/app/page";
 import { Hash } from "@/components/hash";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
@@ -147,6 +149,11 @@ export function ReefPage() {
             This directory lists the paid services a remora may pay: what each one does, what a call
             costs and which address gets paid.
           </>
+        }
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/reef/new">List your API</Link>
+          </Button>
         }
       />
       {query.isPending ? (

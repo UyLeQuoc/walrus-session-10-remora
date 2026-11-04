@@ -29,7 +29,7 @@ import { api } from "@/features/remoras/api";
 import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { kindName } from "@/lib/kind";
 import { usdc } from "@/lib/usdc";
-import { connections, httpLine } from "./api";
+import { connections, cursorLink, httpLine, mcpJson, vscodeLink } from "./api";
 
 const SCOPES: { scope: McpScope; label: string; hint: string }[] = [
   { scope: "memory:read", label: "Read its memory", hint: "Search what the remora remembers." },
@@ -98,10 +98,27 @@ function Created({ c, onDone }: { c: McpTokenCreated; onDone: () => void }) {
           again.
         </p>
         <CopyRow label="Token" value={c.secret} testId="token-secret" />
+        <div className="flex flex-wrap gap-2" data-testid="token-installs">
+          <Button asChild variant="outline" size="sm">
+            <a href={cursorLink(c.httpUrl, c.secret)} data-testid="token-cursor">
+              Add to Cursor
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href={vscodeLink(c.httpUrl, c.secret)} data-testid="token-vscode">
+              Add to VS Code
+            </a>
+          </Button>
+        </div>
         <CopyRow
           label="Claude Code over HTTP"
           value={httpLine(c.httpUrl, c.secret)}
           testId="token-http"
+        />
+        <CopyRow
+          label="JSON config (Cursor, VS Code, Claude Desktop…)"
+          value={mcpJson(c.httpUrl, c.secret)}
+          testId="token-json"
         />
         <CopyRow
           label="Claude Code over stdio (from a clone of the repo)"

@@ -55,9 +55,11 @@ import { api } from "./api";
 import { BriefCard } from "./brief-card";
 import { budgetLine } from "./budget";
 import { CostCard } from "./cost-card";
+import { CrewCard } from "./crew-card";
 import { describeRemora, useTemplateCatalog } from "./describe";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
+import { BuyFromCard, SellCard } from "./sell-card";
 import { useBudget } from "./use-budget";
 
 const must = <T,>(r: { ok: true; data: T } | { ok: false; error: string }): T => {
@@ -891,6 +893,13 @@ function Remora({ id }: { id: string }) {
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}
+          {r.config.crew ? <CrewCard r={r} onChanged={reload} /> : null}
+          {r.template === "scout" || r.template === "briefer" ? (
+            <div className="grid items-start gap-8 lg:grid-cols-2">
+              <SellCard r={r} readOnly={r.status === "retired"} />
+              <BuyFromCard r={r} onChanged={reload} />
+            </div>
+          ) : null}
           <div className="grid items-start gap-8 lg:grid-cols-2">
             {r.config.budget ? <BudgetSection r={r} reload={reload} /> : null}
             <CostCard remoraId={r.id} />

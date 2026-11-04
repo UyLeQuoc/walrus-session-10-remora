@@ -77,6 +77,7 @@
         "@remora/db": "workspace:*",
         "@remora/disc-sdk": "workspace:*",
         "@remora/memory": "workspace:*",
+        "@remora/merchant": "workspace:*",
         "@remora/schema": "workspace:*",
         "@remora/signer": "workspace:*",
         "@slack/bolt": "^4.6.0",
@@ -88,7 +89,6 @@
         "zod": "^4.0.0",
       },
       "devDependencies": {
-        "@remora/merchant": "workspace:*",
         "@types/node": "^24.0.0",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
@@ -179,6 +179,21 @@
         "@remora/schema": "workspace:*",
         "@types/node": "^24.0.0",
         "typescript": "^5.9.3",
+      },
+    },
+    "examples/sell-an-api": {
+      "name": "@remora/example-sell-an-api",
+      "version": "0.0.1",
+      "dependencies": {
+        "@hono/node-server": "^2.1.5",
+        "@remora/merchant": "workspace:*",
+        "hono": "^4.13.13",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.12",
       },
     },
     "packages/chain": {
@@ -784,6 +799,8 @@
     "@remora/disc-sdk": ["@remora/disc-sdk@workspace:packages/disc-sdk"],
 
     "@remora/e2e": ["@remora/e2e@workspace:e2e"],
+
+    "@remora/example-sell-an-api": ["@remora/example-sell-an-api@workspace:examples/sell-an-api"],
 
     "@remora/facilitator": ["@remora/facilitator@workspace:apps/facilitator"],
 

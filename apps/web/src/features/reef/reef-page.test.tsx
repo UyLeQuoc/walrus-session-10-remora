@@ -3,6 +3,7 @@
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REEF_SERVICES } from "./fixtures";
 import { formatPrice } from "./reef";
@@ -50,7 +51,10 @@ function renderPage() {
     client,
     ...render(
       <QueryClientProvider client={client}>
-        <ReefPage />
+        {/* ADR-0113: the header links to /reef/new, so the page needs a router. */}
+        <MemoryRouter>
+          <ReefPage />
+        </MemoryRouter>
       </QueryClientProvider>,
     ),
   };

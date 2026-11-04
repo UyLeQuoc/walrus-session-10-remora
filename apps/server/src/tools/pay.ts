@@ -9,6 +9,7 @@
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 import { approvals, remoraEvents, sourceStats, sql } from "@remora/db";
 import { getDisc, toDiscError } from "@remora/disc-sdk";
+import { isRemoraRef } from "../money/listings.ts";
 import { PaymentStopped, payWithDisc } from "../money/pay.ts";
 import { atListedAddress, payeeLabel } from "../money/reef.ts";
 import { modelIdFor } from "../runtime/brain.ts";
@@ -54,7 +55,7 @@ export interface PayInput {
   payee: string;
   url: string;
   reason: string;
-  trigger: { kind: "message" | "cron" | "chain" | "handoff"; ref: string };
+  trigger: { kind: "message" | "cron" | "chain" | "handoff" | "webhook"; ref: string };
   question: string;
   memories: Recalled[];
   /**
@@ -63,6 +64,41 @@ export interface PayInput {
    * agent asks its owner explicitly with `approval_request`. Nothing is signed either way.
    */
   onAsk?: "approval" | "refuse";
+  /** ADR-0111: this turn answers a question someone bought, so it can't buy another remora's answer. */
+  sold?: boolean;
+}
+
+/** What a remora on sale says it paid for the answer it sold: its own receipts (ADR-0111). */
+export interface UpstreamPaid {
+  payee: string;
+  amount: string;
+  digest: string | null;
+}
+
+async function upstreamOf(response: Response): Promise<UpstreamPaid[]> {
+  const body = (await response
+    .clone()
+    .json()
+    .catch(() => null)) as { paid?: unknown } | null;
+  if (!Array.isArray(body?.paid)) return [];
+  return body.paid.slice(0, 8).flatMap((x: unknown) => {
+    const p = x as Partial<UpstreamPaid>;
+    return typeof p.payee === "string" &&
+      /^reef:[a-z0-9-]+$/.test(p.payee) &&
+      typeof p.amount === "string" &&
+      /^\d{1,12}$/.test(p.amount)
+      ? [
+          {
+            payee: p.payee,
+            amount: p.amount,
+            digest:
+              typeof p.digest === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(p.digest)
+                ? p.digest
+                : null,
+          },
+        ]
+      : [];
+  });
 }
 
 const reefLabel = (s: string) => (/^reef:[a-z0-9-]+$/.test(s) ? s : "reef:unknown");
@@ -113,6 +149,18 @@ export async function requestPayment(
     return blocked("sonar.blocked", [
       `${p.url} isn't ${payeeLabel(p.payee)}'s listed address (${listed.url})`,
     ]);
+  // ADR-0111: an owner's remoras hand questions to each other for free, and a sold answer never
+  // buys another remora's answer, so a purchase can't loop.
+  if (listed && isRemoraRef(listed.ref)) {
+    if (p.sold)
+      return blocked("sale.depth", [
+        `${payeeLabel(p.payee)} is a remora: a sold answer can't buy another remora's answer`,
+      ]);
+    if (normalizeSuiAddress(listed.payTo) === normalizeSuiAddress(r.ownerAddress))
+      return blocked("sale.self", [
+        `${payeeLabel(p.payee)} is yours: hand the question over instead of paying yourself`,
+      ]);
+  }
   if (r.status !== "active" && r.status !== "shadow")
     return blocked("remora.not_active", [`the remora is ${r.status}`]);
   if (!r.discId || !r.allowanceId)
@@ -220,10 +268,18 @@ export async function requestPayment(
         .remember(r, "receipts", "wake", JSON.stringify(receipt.wake))
         .catch((err) => log.warn("wake.memory_failed", { error: err }));
     }
+    const upstream = isRemoraRef(p.payee) ? await upstreamOf(response) : [];
     const eventId = await event(
       "payment",
       `Paid ${amount} to ${payeeLabel(p.payee)}`,
-      { payee: p.payee, amount, digest, url: p.url, status: response.status },
+      {
+        payee: p.payee,
+        amount,
+        digest,
+        url: p.url,
+        status: response.status,
+        ...(upstream.length ? { upstream } : {}),
+      },
       receipt?.id,
     );
     return { kind: "paid", response, digest, amount, receiptId: receipt?.id ?? null, eventId };

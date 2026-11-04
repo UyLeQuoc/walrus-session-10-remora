@@ -14,13 +14,16 @@ import { HomePage } from "../features/home/home-page";
 import { LabPage } from "../features/lab/lab-page";
 import { MemoryInspectorPage } from "../features/memory-inspector/memory-page";
 import { OnboardingPage } from "../features/onboarding/onboarding-page";
+import { ListApiPage } from "../features/reef/list-api-page";
 import { ReefPage } from "../features/reef/reef-page";
 import { NewRemoraPage } from "../features/remoras/new-remora-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
 import { SettingsPage } from "../features/settings/settings-page";
+import { StatsPage } from "../features/status/stats-page";
 import { StatusPage } from "../features/status/status-page";
 import { ImportTeamPage } from "../features/teams/import-page";
+import { TgPage } from "../features/tg/tg-page";
 import { RoomPage } from "../features/threads/room-page";
 import { ThreadPage } from "../features/threads/thread-page";
 import { PublicWakePage } from "../features/verify/public-wake-page";
@@ -65,5 +68,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "connections", element: <ConnectionsPage /> },
   { path: "status", element: <StatusPage /> },
   { path: "reef", element: <ReefPage /> },
+  { path: "reef/new", element: <ListApiPage /> },
+  { path: "stats", element: <StatsPage /> },
+  { path: "tg", element: <TgPage /> },
   { path: "p/:token", element: <PublicWakePage /> },
 ];

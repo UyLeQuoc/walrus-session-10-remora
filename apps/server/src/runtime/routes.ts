@@ -4,6 +4,7 @@
  * back unsigned; the wallet signs and executes them, then the matching `/confirm` reads the chain.
  * Errors are `{ error: { code, message } }` with a human sentence where copy has one (N6).
  */
+import { normalizeSuiAddress } from "@mysten/sui/utils";
 import type { SuiNetwork } from "@remora/chain";
 import {
   and,
@@ -20,6 +21,9 @@ import {
   sentinelRules,
   sourceStats,
 } from "@remora/db";
+import { decodeHeader, PAYMENT_RESPONSE_HEADER } from "@remora/disc-sdk";
+import { addressFromSignature } from "@remora/memory";
+import { type PaidContext, x402 } from "@remora/merchant";
 import { Budget } from "@remora/schema";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -38,6 +42,14 @@ import {
   shareLinks,
   shareReview,
 } from "../hatchery/service.ts";
+import {
+  COMMUNITY_PER_OWNER,
+  type CommunityListing,
+  listingMessage,
+  listingsOf,
+  probeX402,
+} from "../money/community.ts";
+import { type Listings, SALE_SLUG } from "../money/listings.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
@@ -46,6 +58,7 @@ import { previewSchedule } from "../triggers/schedule.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
 import { briefNow, briefView, setBriefItems } from "./briefer.ts";
 import { remoraCost } from "./cost.ts";
+import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
@@ -69,6 +82,7 @@ import {
   roomLines,
   roomView,
 } from "./rooms.ts";
+import { recordSale, type SaleInput, saleView, sellAnswer, setSale } from "./sales.ts";
 import {
   addSchedule,
   approveYes,
@@ -79,6 +93,7 @@ import {
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
+import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
 import { verifyWake } from "./verify.ts";
 import { publicWake, shareWake, unshareWake } from "./wake-share.ts";
@@ -105,6 +120,10 @@ export interface RemoraRouteDeps {
   operator?: { key: string; accountId: string; serverUrl: string };
   /** The Hatchery (M1–M7): Walrus storage and share links. */
   hatchery?: Omit<HatcheryDeps, "runtime" | "service">;
+  /** E11 (ADR-0111): remoras on sale. */
+  listings?: Listings;
+  /** H3 (ADR-0115): the owner behind a Telegram Mini App's signed launch data, or null. */
+  tgOwner?: (initData: string) => Promise<string | null>;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -186,6 +205,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     "/api/hatchery/:id/deprecate/*",
     "/api/wakes/*",
     "/api/account/*",
+    "/api/reef/probe",
+    "/api/reef/listings",
+    "/api/reef/listings/*",
   ]) {
     app.use(path, async (c, next) => {
       const owner = await d.owner(c);
@@ -387,6 +409,314 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         ),
       }),
     );
+  });
+
+  // ── The Telegram Mini App (H3, ADR-0115): no session, just Telegram's signed launch data ──
+  const tgOwner = async (c: Context) => {
+    const owner = d.tgOwner ? await d.tgOwner(c.req.header("x-telegram-init-data") ?? "") : null;
+    if (!owner)
+      throw new RemoraError(
+        "tg.unlinked",
+        "Open this from Remora's Telegram bot, after linking Telegram in Settings.",
+        403,
+      );
+    return owner;
+  };
+  app.get("/api/tg/me", async (c) => c.json(await tgOverview(rt, await tgOwner(c))));
+  app.post("/api/tg/pause", async (c) => {
+    const { paused } = await body<{ paused?: unknown }>(c);
+    const owner = await tgOwner(c);
+    await tgPauseAll(rt, owner, paused !== false);
+    return c.json(await tgOverview(rt, owner));
+  });
+
+  // ── Crews (ADR-0114): the members, their spend, pause together, retire together ──
+  app.get("/api/remoras/:id/crew", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(await crewView(rt, r));
+  });
+
+  app.post("/api/remoras/:id/crew/pause", async (c) => {
+    const { paused } = await body<{ paused?: unknown }>(c);
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!crewOf(r)) throw new RemoraError("crew.none", `${r.name} isn't in a crew.`, 404);
+    await pauseCrew(rt, r, paused !== false);
+    return c.json(await crewView(rt, await service.get(r.id, c.get("owner"))));
+  });
+
+  /** One transaction revokes every member's Disc; the confirm retires them. */
+  const crewIds = async (c: Context) => {
+    const r = await service.get(c.req.param("id") ?? "", c.get("owner"));
+    if (!crewOf(r)) throw new RemoraError("crew.none", `${r.name} isn't in a crew.`, 404);
+    return { r, ids: (await crewMembers(rt, r)).map((m) => m.id) };
+  };
+  app.post("/api/remoras/:id/crew/retire", async (c) => {
+    const { r, ids } = await crewIds(c);
+    return c.json(await service.retireAllTx(c.get("owner"), r.network, { ids }));
+  });
+  app.post("/api/remoras/:id/crew/retire/confirm", async (c) => {
+    const { digest } = await body<{ digest?: string }>(c);
+    const { r, ids } = await crewIds(c);
+    return c.json(
+      await service.confirmRetireAll(
+        c.get("owner"),
+        r.network,
+        digest ? digestOf(digest) : undefined,
+        { ids },
+      ),
+    );
+  });
+
+  // ── Selling answers (E11, ADR-0111) ───────────────────────────────────────
+  const listings = d.listings;
+  const sales = () => {
+    if (!listings) throw new RemoraError("sale.unavailable", "Selling isn't on here.", 409);
+    return listings;
+  };
+
+  app.get("/api/remoras/:id/sell", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json(serialize(await saleView(rt, sales(), r)));
+  });
+
+  app.put("/api/remoras/:id/sell", async (c) => {
+    const b = await body<SaleInput>(c);
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    await setSale(rt, sales(), r, b);
+    return c.json(serialize(await saleView(rt, sales(), await service.get(r.id, c.get("owner")))));
+  });
+
+  /** The payees its Disc allows, set with one owner signature (`disc::set_payees`). */
+  const payeeRefs = (v: unknown) => {
+    if (!Array.isArray(v) || v.some((x) => typeof x !== "string" || !/^reef:[a-z0-9-]+$/.test(x)))
+      throw new RemoraError("payees.bad", "Send the services as reef: references.");
+    return v as string[];
+  };
+  app.post("/api/remoras/:id/payees", async (c) => {
+    const { payees } = await body<{ payees?: unknown }>(c);
+    return c.json({
+      transaction: await service.payeesTx(c.req.param("id"), c.get("owner"), payeeRefs(payees)),
+    });
+  });
+  app.post("/api/remoras/:id/payees/confirm", async (c) => {
+    const b = await body<{ digest?: unknown; payees?: unknown }>(c);
+    return c.json({
+      remora: await view(
+        await service.confirmPayees(
+          c.req.param("id"),
+          c.get("owner"),
+          digestOf(b.digest),
+          payeeRefs(b.payees),
+        ),
+      ),
+    });
+  });
+
+  // ── List your API (E8, ADR-0113) ─────────────────────────────────────────
+  const allowPrivate = !process.env.RAILWAY_ENVIRONMENT && process.env.NODE_ENV !== "production";
+  const probeFor = (url: unknown) => {
+    const usdc = rt.networks.config("testnet").usdcCoinType;
+    if (typeof url !== "string" || !usdc)
+      throw new RemoraError("listing.bad_url", "Send the API's URL.");
+    return probeX402(url, { usdc, allowPrivate, ...(rt.fetch ? { fetch: rt.fetch } : {}) });
+  };
+  const listingSlug = (v: unknown) => {
+    const slug = String(v ?? "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+    if (!SALE_SLUG.test(slug))
+      throw new RemoraError(
+        "listing.bad_slug",
+        "Pick a name of 3–32 lowercase letters, digits or dashes, like haiku-shop.",
+      );
+    return slug;
+  };
+  const mineListed = async (owner: string) =>
+    (await service.list(owner, "testnet")).flatMap((r) =>
+      r.status === "retired" ? [] : listingsOf(r.config).map((l) => ({ ...l, remoraId: r.id })),
+    );
+
+  app.post("/api/reef/probe", async (c) => {
+    const b = await body<{ url?: unknown; slug?: unknown }>(c);
+    const slug = listingSlug(b.slug);
+    const probe = await probeFor(b.url);
+    const owner = normalizeSuiAddress(c.get("owner"));
+    return c.json({ probe, message: listingMessage({ ...probe, slug, lister: owner }) });
+  });
+
+  app.get("/api/reef/listings", async (c) =>
+    c.json({ listings: await mineListed(c.get("owner")) }),
+  );
+
+  app.post("/api/reef/listings", async (c) => {
+    const b = await body<{ url?: unknown; slug?: unknown; blurb?: unknown; signature?: unknown }>(
+      c,
+    );
+    const slug = listingSlug(b.slug);
+    const owner = normalizeSuiAddress(c.get("owner"));
+    // Probed again: the owner signed what the API asked for a moment ago, and it must still match.
+    const probe = await probeFor(b.url);
+    const message = listingMessage({ ...probe, slug, lister: owner });
+    const signer =
+      typeof b.signature === "string"
+        ? await addressFromSignature(message, b.signature, rt.networks.client("testnet"))
+        : null;
+    if (!signer || normalizeSuiAddress(signer) !== owner)
+      throw new RemoraError(
+        "listing.bad_signature",
+        "That signature isn't yours over this listing. Probe it again and sign.",
+      );
+    const mine = await mineListed(owner);
+    const again = mine.find((l) => l.slug === slug);
+    if (!again && (sales().taken(slug) || mine.length >= COMMUNITY_PER_OWNER))
+      throw new RemoraError(
+        "listing.taken",
+        sales().taken(slug)
+          ? `@${slug} is taken. Pick another name.`
+          : `You can list ${COMMUNITY_PER_OWNER} APIs.`,
+        409,
+      );
+    const holders = (await service.list(owner, "testnet"))
+      .filter((r) => r.status !== "retired")
+      .sort((a, z) => z.createdAt.getTime() - a.createdAt.getTime());
+    const holder = holders.find((r) => r.id === again?.remoraId) ?? holders[0];
+    if (!holder)
+      throw new RemoraError(
+        "listing.no_remora",
+        "Make a remora first: a listing lives with one of your remoras.",
+        409,
+      );
+    const listing: CommunityListing = {
+      ...probe,
+      slug,
+      blurb: String(b.blurb ?? "")
+        .trim()
+        .slice(0, 140),
+      network: "testnet",
+      lister: owner,
+      probedAt: new Date().toISOString(),
+      message,
+      signature: String(b.signature),
+    };
+    const kept = listingsOf(holder.config).filter((l) => l.slug !== slug);
+    await rt.db
+      .update(remoras)
+      .set({ config: { ...holder.config, listings: [...kept, listing] }, updatedAt: new Date() })
+      .where(eq(remoras.id, holder.id));
+    await rt.db.insert(remoraEvents).values({
+      remoraId: holder.id,
+      network: holder.network,
+      type: "action",
+      summary: `Listed @${slug} in the Reef (${probe.url}).`,
+      payload: { kind: "listing", slug, url: probe.url, payTo: probe.payTo, price: probe.price },
+    });
+    await sales().refresh();
+    return c.json({ listing: { ...listing, remoraId: holder.id } });
+  });
+
+  app.delete("/api/reef/listings/:slug", async (c) => {
+    const slug = listingSlug(c.req.param("slug"));
+    const owner = c.get("owner");
+    for (const r of await service.list(owner, "testnet")) {
+      const all = listingsOf(r.config);
+      if (!all.some((l) => l.slug === slug)) continue;
+      await rt.db
+        .update(remoras)
+        .set({
+          config: { ...r.config, listings: all.filter((l) => l.slug !== slug) },
+          updatedAt: new Date(),
+        })
+        .where(eq(remoras.id, r.id));
+    }
+    await sales().refresh();
+    return c.json({ ok: true });
+  });
+
+  /**
+   * The paid door: `GET /api/x402/r/:slug?q=`. No session: anyone's remora (or any x402 client) pays
+   * the owner's address, and the answer settles only once it's written.
+   */
+  app.get("/api/x402/r/:slug", async (c) => {
+    const slug = c.req.param("slug");
+    const network = listings
+      ? rt.networks
+          .list()
+          .map((n) => n.network)
+          .find((n) => !!listings.bySlug(n, slug))
+      : undefined;
+    const found = network ? listings?.bySlug(network, slug) : undefined;
+    if (!found)
+      return c.json(
+        { error: { code: "sale.not_found", message: `No remora sells as @${slug}.` } },
+        404,
+      );
+    const question = (c.req.query("q") ?? "").trim();
+    if (!question || question.length > 500)
+      return c.json(
+        {
+          error: {
+            code: "sale.bad_question",
+            message: "Ask a question of 1–500 characters (?q=).",
+          },
+        },
+        400,
+      );
+    const net = network ? rt.networks.config(network) : null;
+    if (!network || !net?.facilitatorUrl || !net.usdcCoinType)
+      return c.json(
+        { error: { code: "network.unavailable", message: "Payments are off here." } },
+        503,
+      );
+    const paid = x402({
+      amount: found.price,
+      description: `${found.name}'s answer`,
+      settle: "after",
+      maxTimeoutSeconds: 120,
+      ...(rt.fetch ? { fetch: rt.fetch } : {}),
+      networks: {
+        [network]: {
+          payTo: found.payTo,
+          asset: net.usdcCoinType,
+          facilitatorUrl: net.facilitatorUrl,
+        },
+      },
+    });
+    const early = await paid(c as never, async () => {
+      const payer = (c as unknown as { get(k: "x402"): PaidContext }).get("x402").payer;
+      const [seller] = await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId));
+      try {
+        if (!seller)
+          throw new RemoraError("sale.closed", `@${slug} isn't answering right now.`, 409);
+        const out = await sellAnswer(rt, seller, slug, question, payer);
+        c.res = c.json(out);
+      } catch (err) {
+        const e =
+          err instanceof RemoraError
+            ? err
+            : new RemoraError("sale.failed", `@${slug} couldn't answer, so nothing was charged.`);
+        if (!(err instanceof RemoraError)) rt.log.warn("sale.failed", { slug, error: err });
+        // Any non-2xx means the payment is never settled.
+        const status = e.code === "sale.timeout" ? 504 : e.code === "sale.failed" ? 502 : e.status;
+        c.res = c.json({ error: { code: e.code, message: e.message } }, status as 409);
+      }
+    });
+    if (early) return early;
+    const header = c.res.headers.get(PAYMENT_RESPONSE_HEADER);
+    if (c.res.status === 200 && header) {
+      const settled = decodeHeader<{ transaction?: string; payer?: string }>(header);
+      const out = (await c.res.clone().json()) as { eventId?: string };
+      const [seller] = await rt.db.select().from(remoras).where(eq(remoras.id, found.sellerId));
+      if (seller && settled.transaction)
+        await recordSale(rt, seller, {
+          slug,
+          buyer: settled.payer ?? "",
+          amount: found.price,
+          digest: settled.transaction,
+          eventId: out.eventId ?? "",
+        }).catch((err) => rt.log.warn("sale.record_failed", { slug, error: err }));
+    }
+    return c.res;
   });
 
   // ── The Briefer (ADR-0106): its list, Run now, and what its page shows ────────

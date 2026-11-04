@@ -51,11 +51,14 @@ import { MemoryKeyStore, RemoraSigner } from "@remora/signer";
 import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createRemoraBot } from "../channels/remora-bot.ts";
+import { createListings } from "../money/listings.ts";
 import { createNetworks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
 import { atListedAddress } from "../money/reef.ts";
+import { requestPayment } from "../tools/pay.ts";
 import { approvalPay, ownerPaymentTx, rejectApproval } from "./approvals.ts";
 import { type Brain, type UntrustedData, wrapUntrusted } from "./brain.ts";
+import { crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { createFactLedger, withFacts } from "./facts.ts";
 import { giveFeedback } from "./feedback.ts";
@@ -65,6 +68,7 @@ import type { Notice } from "./notify.ts";
 import { createRemoraService, type Remora } from "./remoras.ts";
 import { routeByText } from "./rooms.ts";
 import { createRemoraRoutes } from "./routes.ts";
+import { setSale } from "./sales.ts";
 import { approveSchedule, firstRun, JOB, remoraJobHandlers } from "./schedules.ts";
 import { planBuys, scoutAsk } from "./scout.ts";
 import { onChainEvent, teach } from "./sentinel.ts";
@@ -179,6 +183,33 @@ describe("Scout planning", () => {
     // Nothing to buy: answered free.
     expect(plan("What does a Sui upgrade cap do?")).toEqual([]);
     expect(plan("Is 43 characters of text a blob? no")).toEqual([]);
+  });
+
+  it('ADR-0111: "ask @slug" hands the whole question to that remora on sale, and buys nothing else', () => {
+    const seller: ResolvedReef = {
+      ref: "reef:remora-uy-researcher",
+      slug: "remora-uy-researcher",
+      name: "@uy-researcher",
+      description: "",
+      path: "/api/x402/r/uy-researcher",
+      price: "20000",
+      url: "http://api.test/api/x402/r/uy-researcher",
+      payTo: normalizeSuiAddress("0x5e11"),
+    };
+    const all = [...reef, seller];
+    const [only, ...rest] = planBuys("Ask @uy-researcher: is 0x2 safe, and what's SUI worth?", all);
+    expect(rest).toEqual([]);
+    expect(only?.entry.ref).toBe("reef:remora-uy-researcher");
+    expect(decodeURIComponent(only?.url.split("?q=")[1] ?? "")).toBe(
+      ": is 0x2 safe, and what's SUI worth?",
+    );
+    // An unknown @name, or an email address, falls through to the usual rules.
+    expect(planBuys("ask @nobody is 0x2 safe?", all).map((b) => b.entry.slug)).toEqual([
+      "sui-risk",
+    ]);
+    expect(planBuys("mail me@uy-researcher.dev about 0x2", all).map((b) => b.entry.slug)).toEqual([
+      "sui-risk",
+    ]);
   });
 
   it("bought data carries its real cost into the prompt", () => {
@@ -460,6 +491,238 @@ describe.skipIf(!local)("Scout + Sentinel runtime (C1, C2, I1, I2, N3, E4)", () 
     const r = await scoutAsk(deps(), shadow, "Is 0x2 safe to depend on?");
     expect(r.outcomes[0]?.kind).toBe("shadow");
     expect(facCalls.filter((c) => c.path === "/settle")).toHaveLength(0);
+  });
+
+  it("ADR-0111: a remora buys another owner's remora's answer, which pays its own source: a chain of receipts", async () => {
+    // The seller belongs to PAYTO, the address the fake Disc allows, so the buyer may pay it.
+    const made = await service.create({ owner: PAYTO, network: "testnet", template: "scout" });
+    created.push(made.remora.id);
+    const [seller] = await db
+      .update(remoras)
+      .set({
+        status: "active",
+        discId: normalizeSuiAddress("0xd2"),
+        allowanceId: normalizeSuiAddress("0xa12"),
+        capId: normalizeSuiAddress("0xcb"),
+      })
+      .where(eq(remoras.id, made.remora.id))
+      .returning();
+    if (!seller) throw new Error("no seller");
+    const SELL = "http://sell.test";
+    const listings = createListings({ db, base: SELL, log: createLogger({}, () => {}) });
+    const slug = `t${process.pid}`;
+    const recalls: string[][] = [];
+    const sellNetworks = createNetworks(
+      { TATUM_API_KEY_TESTNET: "t", FACILITATOR_URL_TESTNET: FAC },
+      {
+        testnet: {
+          remoraPackageId: PKG,
+          discRegistryId: normalizeSuiAddress("0x47"),
+          usdcCoinType: USDC,
+        },
+        mainnet: { remoraPackageId: null, discRegistryId: null, usdcCoinType: USDC },
+      },
+      () => client,
+    );
+    let routes: ReturnType<typeof createRemoraRoutes> | null = null;
+    const everywhere = (async (input: string | URL | Request, init?: RequestInit) =>
+      String(input).startsWith(SELL) && routes
+        ? routes.request(String(input), init)
+        : httpFetch(input, init)) as typeof fetch;
+    const world = deps({
+      networks: sellNetworks,
+      reef: (n) => [...reef, ...listings.entries(n)],
+      fetch: everywhere,
+      memory: {
+        recall: async (_r, _q, namespaces) => {
+          recalls.push(namespaces);
+          return [];
+        },
+        remember: async () => ({ saved: true, note: "" }),
+      },
+    });
+    routes = createRemoraRoutes({
+      service,
+      runtime: world,
+      owner: async () => null,
+      listings,
+    });
+    await setSale(world, listings, seller, {
+      on: true,
+      slug,
+      price: "10000",
+      blurb: "risk checks",
+    });
+    expect(listings.bySlug("testnet", slug)).toMatchObject({
+      ref: `reef:remora-${slug}`,
+      payTo: PAYTO,
+      url: `${SELL}/api/x402/r/${slug}`,
+    });
+    // The unpaid first call does no work.
+    const unpaid = await routes.request(`${SELL}/api/x402/r/${slug}?q=hi`);
+    expect(unpaid.status).toBe(402);
+
+    const settledBefore = facCalls.filter((c) => c.path === "/settle").length;
+    const r = await scoutAsk(world, scout, `ask @${slug} is 0x2 safe to depend on?`);
+    expect(r.outcomes[0]?.kind).toBe("paid");
+    expect(r.paid.map((p) => p.payee)).toEqual([`reef:remora-${slug}`]);
+    // Two settlements: the seller's own risk check, then the buyer's purchase (settled after).
+    expect(facCalls.filter((c) => c.path === "/settle").length - settledBefore).toBe(2);
+    const [pay] = await db
+      .select()
+      .from(remoraEvents)
+      .where(and(eq(remoraEvents.remoraId, scout.id), eq(remoraEvents.type, "payment")))
+      .orderBy(desc(remoraEvents.createdAt))
+      .limit(1);
+    expect((pay?.payload as { upstream?: unknown[] } | undefined)?.upstream).toEqual([
+      expect.objectContaining({ payee: "reef:sui-risk", amount: "10000" }),
+    ]);
+    const sales = await db
+      .select()
+      .from(remoraEvents)
+      .where(and(eq(remoraEvents.remoraId, seller.id), eq(remoraEvents.type, "action")))
+      .then((rows) => rows.filter((e) => (e.payload as { kind?: string }).kind === "sale"));
+    expect(sales).toHaveLength(1);
+    expect((sales[0]?.payload as { digest?: string } | undefined)?.digest).toMatch(/^Dg/);
+    // The buyer recalled as usual; the sold answer never read its owner's own memories.
+    expect(recalls).toEqual([
+      ["me", "sources", "feedback"],
+      ["sources", "feedback"],
+    ]);
+
+    // No loops: a sold turn can't buy a remora, and an owner can't pay its own remora.
+    const listing = listings.bySlug("testnet", slug);
+    const base = {
+      reason: "x",
+      trigger: { kind: "message" as const, ref: "t" },
+      question: "q",
+      memories: [],
+    };
+    const depth = await requestPayment(world, scout, {
+      ...base,
+      payee: listing?.ref ?? "",
+      url: `${listing?.url}?q=x`,
+      sold: true,
+    });
+    expect(depth.kind === "blocked" && depth.code).toBe("sale.depth");
+    const self = await requestPayment(world, seller, {
+      ...base,
+      payee: listing?.ref ?? "",
+      url: `${listing?.url}?q=x`,
+    });
+    expect(self.kind === "blocked" && self.code).toBe("sale.self");
+
+    // A seller that can't answer is never paid.
+    await db.update(remoras).set({ status: "paused" }).where(eq(remoras.id, seller.id));
+    const before = facCalls.filter((c) => c.path === "/settle").length;
+    const failed = await scoutAsk(world, scout, `ask @${slug} is 0x2 safe to depend on?`);
+    expect(failed.outcomes[0]).toMatchObject({ kind: "blocked", code: "x402.unsettled" });
+    expect(facCalls.filter((c) => c.path === "/settle").length).toBe(before);
+    await listings.refresh();
+    expect(listings.bySlug("testnet", slug)).toBeUndefined();
+    // Leave the shared scout's source counters as the other tests expect them.
+    await db
+      .delete(sourceStats)
+      .where(and(eq(sourceStats.remoraId, scout.id), eq(sourceStats.payee, `reef:remora-${slug}`)));
+  });
+
+  it("ADR-0114: a crew's lead hands each purchase to the member that covers it, and answers with every receipt", async () => {
+    const crewId = randomBytes(8).toString("hex");
+    // Its own owner, so the other tests' "newest Researcher" stays theirs.
+    const crewOwner = normalizeSuiAddress(`0xc5e${process.pid.toString(16)}`);
+    const make = async (name: string) => {
+      const m = await service.create({ owner: crewOwner, network: "testnet", template: "scout" });
+      created.push(m.remora.id);
+      const [row] = await db
+        .update(remoras)
+        .set({
+          name,
+          status: "active",
+          discId: normalizeSuiAddress(`0xd${created.length}`),
+          allowanceId: normalizeSuiAddress(`0xa${created.length}`),
+          capId: normalizeSuiAddress(`0xc${created.length}`),
+        })
+        .where(eq(remoras.id, m.remora.id))
+        .returning();
+      if (!row) throw new Error("no member");
+      return row;
+    };
+    const lead = await make("Crew lead");
+    const onchain = await make("Onchain");
+    const wallets = await make("Wallets");
+    for (const [m, covers] of [
+      [lead, []],
+      [onchain, ["sui-risk"]],
+      [wallets, ["wallet"]],
+    ] as const)
+      await db
+        .update(remoras)
+        .set({
+          config: {
+            ...m.config,
+            crew: { id: crewId, name: "Research crew", leadId: lead.id, covers },
+          },
+        })
+        .where(eq(remoras.id, m.id));
+    const [fresh] = await db.select().from(remoras).where(eq(remoras.id, lead.id));
+    if (!fresh) throw new Error("no lead");
+    // Its own merchant: the two services this question needs.
+    const shop = new Hono<{ Variables: { x402: PaidContext } }>();
+    const offer = (amount: string) =>
+      x402({
+        amount,
+        networks: { testnet: { payTo: PAYTO, asset: USDC, facilitatorUrl: FAC } },
+        fetch: facilitator,
+      });
+    shop.get("/sui-risk/:id", offer("10000"), (c) => c.json({ id: c.req.param("id"), age: "old" }));
+    shop.get("/wallet/:id", offer("10000"), (c) => c.json({ coins: ["SUI"] }));
+    const SHOP = "http://shop.test";
+    const crewReef: ResolvedReef[] = reef.map((e) =>
+      e.slug === "sui-risk" || e.slug === "wallet"
+        ? { ...e, path: `/${e.slug}/:id`, url: `${SHOP}/${e.slug}/:id` }
+        : e,
+    );
+    const world = deps({
+      reef: () => crewReef,
+      fetch: (async (input: string | URL | Request, init?: RequestInit) =>
+        String(input).startsWith(SHOP)
+          ? shop.request(String(input), init)
+          : httpFetch(input, init)) as typeof fetch,
+    });
+    const addr = `0x${"ab".repeat(32)}`;
+    const r = await scoutAsk(world, fresh, `Is 0x2 safe, and what does wallet ${addr} hold?`);
+    // The lead paid nothing itself; each member paid the service it covers, once.
+    expect(r.paid).toEqual([]);
+    expect(r.crew?.map((c) => `${c.member} ${c.payee}`).sort()).toEqual([
+      "Onchain reef:sui-risk",
+      "Wallets reef:wallet",
+    ]);
+    expect(r.answer).toMatch(/Onchain paid Sui risk check 0\.01 USDC/);
+    expect(r.answer).toMatch(/Wallets paid Wallet X-ray 0\.01 USDC/);
+    const [answer] = await db
+      .select()
+      .from(remoraEvents)
+      .where(and(eq(remoraEvents.remoraId, lead.id), eq(remoraEvents.type, "answer")));
+    expect((answer?.payload as { crew?: unknown[] } | undefined)?.crew).toHaveLength(2);
+    // Each member's own thread has its answer and its payment.
+    for (const m of [onchain, wallets]) {
+      const feed = await db.select().from(remoraEvents).where(eq(remoraEvents.remoraId, m.id));
+      expect(feed.map((e) => e.type)).toEqual(expect.arrayContaining(["payment", "answer"]));
+    }
+    // The crew view sums what they spent.
+    const view = await crewView(world, fresh);
+    expect(view.members).toHaveLength(3);
+    expect(view.spent).toBe("20000");
+    // Paused together, back together.
+    await pauseCrew(world, fresh, true);
+    const paused = await db
+      .select()
+      .from(remoras)
+      .where(inArray(remoras.id, [lead.id, onchain.id]));
+    expect(paused.map((m) => m.status)).toEqual(["paused", "paused"]);
+    await pauseCrew(world, fresh, false);
+    const back = await db.select().from(remoras).where(eq(remoras.id, wallets.id));
+    expect(back[0]?.status).toBe("active");
   });
 
   it("Sentinel learns a free-text rule and applies it", async () => {

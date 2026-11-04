@@ -60,6 +60,14 @@
 >    expiry. A Researcher pays for data over **x402**, through our own `exact` facilitator for Sui, which
 >    sponsors gas and settles on Sui. A prompt injection that fools the model still can't move money,
 >    because the Disc aborts the payment onchain. CI runs 28 attacks with 0 overspends.
+>
+>    Remoras also pay **each other**. A Researcher can sell its answers over x402 at its owner's
+>    address; another owner's remora buys one, and the seller pays its own sources: a chain of
+>    receipts. Anyone can list their own x402 API in the Reef, and any Sui x402 merchant can settle
+>    through our public testnet facilitator. One signature starts a crew, whose lead splits a question
+>    across its members, each paying from its own limit. Under load on Nov 4, 50 remoras made 1,000 paid calls
+>    on testnet (about 22 a minute, with the model out of the loop). 50 attempts over the cap or off
+>    the list were all stopped onchain, and with every Disc read back, there were 0 overspends.
 > 2. **Memory that learns, and that you can read,** on Walrus Memory (mainnet). Mark a ping 👎 and
 >    The Wallet watcher writes a rule, then stays quiet the next time. That decision's receipt cites the rule's
 >    blob. A facts ledger tracks which facts still hold and who said them. You can inspect, correct and

@@ -150,6 +150,11 @@ that memory.**
 | **Wallet watcher → Researcher** | A rule like "check airdrops with Scout" pings and hands the event to your Researcher, once, asking about the token's package. The Researcher's Wake cites the ping's Wake | `runtime.test.ts` (in-process, fake chain); on the deployed testnet at U9 ([ADR-0078](docs/adr/0078-sentinel-hands-off-to-scout.md)) | Oct 31 |
 | **Reality check** | A `Paid` from a remora's Disc with no Wake behind it alerts you within minutes: the sign of a leaked key | `runtime.test.ts` (in-process); [ADR-0077](docs/adr/0077-reality-check-unexplained-payments.md) | Oct 31 |
 | **Red team** | `bun run evals`: 10 agent attacks over MCP, 12 injected payments through Sonar, 6 poisoned templates through the Hatchery review. Each names the layer that stops it | [evals/](evals/README.md): **28 attacks, 0 overspends**, in CI ([ADR-0079](docs/adr/0079-red-team-evals.md)) | Oct 31 |
+| **Remoras pay remoras** | A Researcher goes on sale as `@name`. Another owner's remora asks "ask @name …" and pays its owner over x402; the answer settles only once it's written, and the seller pays its own sources from its own limit. The buyer's receipt shows the chain | [U17 exit](docs/spikes/2026-11-05-u17-exit.md): buyer `7vkXZTwF…` → seller's source `5pXu4RPf…`, both verified ([ADR-0112](docs/adr/0112-remoras-on-sale.md)) | Nov 4 |
+| **Anyone joins** | List any x402 API in the Reef with a signature; any Sui x402 merchant settles through our public testnet facilitator (`/api/facilitator`); [a merchant in about 20 lines](examples/sell-an-api) | [U17 exit](docs/spikes/2026-11-05-u17-exit.md): `@haiku` listed and bought once, `GQR9nDvQ…` ([ADR-0113](docs/adr/0113-community-listings-and-public-facilitator.md)) | Nov 4 |
+| **Crews** | One signature makes a crew. Its lead splits one question across its members, all at once; each pays from its own limit, and the answer lists every receipt. Pause or retire the crew together | [U17 exit](docs/spikes/2026-11-05-u17-exit.md): three members, three receipts ([ADR-0114](docs/adr/0114-crews.md)) | Nov 4 |
+| **At scale** | 50 remoras, 1,000 paid calls through the product's own pay path with the model out of the loop; 50 attempts over the cap or off the list, all aborted onchain; every Disc read back; live numbers on `/stats` | [load run](docs/spikes/2026-11-04-u17-load.json): 1,000/1,000 paid, about 22 a minute from 5 to 20 at once, **0 overspends**, about 0.001 SUI of sponsored gas a payment | Nov 4 |
+| **More doors** | Add a remora to Claude Code, Cursor or VS Code in one click; a Telegram Mini App shows receipts and pauses everything | [ADR-0115](docs/adr/0115-telegram-mini-app-and-mcp-links.md) (unit tested; the Mini App needs the deployed bot) | Nov 4 |
 | **What still holds** | Each memory's facts, with when they hold and who said them: your word beats an agent's guess, and a newer score replaces the old one. The Researcher reads only memories that still hold, yours first, and a write skipped as a duplicate is shown, not dropped | [F15 notes](docs/spikes/2026-10-31-f15-facts-admission.md): on Walrus Memory, the newer track record wins and the old one is left out, 4/4; [ADR-0086](docs/adr/0086-owner-memory-first-and-visible-duplicates.md) (in-process) | Oct 31 |
 
 ## How it fits together
@@ -242,7 +247,8 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
   - All server-side Sui I/O goes through Tatum. While our spent free plan answers `402`, it goes
     through the public fullnode instead, and health says so (ADR-0097).
 - **Ours, and labeled as ours.**
-  - The three Reef services are our demo merchants. `odds` is a cached snapshot, and it says so.
+  - The eight house services in the Reef are our demo merchants. Seven read live sources; `odds` is
+    a cached snapshot, and it says so. Remoras on sale and community APIs are their owners'.
   - The playground's $1 Discs come from our funder.
 - **Tested in-process, not yet on the deployed app:**
   - Sentinel → Scout;
@@ -251,7 +257,7 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 - **Not yet.**
   - Memory on your own Walrus account, with a delegate per remora. Until then, memories live in
     namespaces of the operator's account ([ADR-0030](docs/adr/0030-w2-memory-mode.md)).
-  - Walrus Sites, SuiNS names and the Telegram Mini App ([roadmap](#roadmap-not-built-yet)).
+  - Walrus Sites and SuiNS names ([roadmap](#roadmap-not-built-yet)).
   - The cost card's model line is an estimate, from total tokens.
 
 ## Quick start (local)
@@ -347,12 +353,12 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
   Splitter (C3–C9).
 - **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b,
   D6, D7).
-- **Money:** budget proposals, spend analytics, the merchant kit, Reef reputation, Remora-as-merchant,
-  the MPP adapter, a public facilitator (E5–E13).
+- **Money:** budget proposals, spend analytics, Reef reputation, the MPP adapter (E5, E6, E10,
+  E12). Remoras selling to remoras, community listings and the public facilitator are built (U17).
 - **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
 - **Proof:** Merkle batch anchors, auditor access (G4, G7).
-- **Channels:** voice and images, the Telegram Mini App, Walrus Sites, Discord/Slack/WhatsApp, EN/VI
-  (H2, H3, H6, H8, H9).
+- **Channels:** voice and images, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H6, H8, H9). The
+  Telegram Mini App is built (U17).
 - **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge
   (M2, M8–M12).
 - **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).

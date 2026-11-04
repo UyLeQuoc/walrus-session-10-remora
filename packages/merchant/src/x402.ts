@@ -2,6 +2,10 @@
  * `@remora/merchant`: turns a Hono route into an x402 service (E9). No payment header → `402` with
  * PaymentRequirements for every network the merchant serves. With one → verify and **settle first**
  * through the facilitator, then run the handler, so unpaid work never leaks.
+ *
+ * ADR-0111: `settle: "after"` is for work that can fail after it starts (a remora's sold answer):
+ * verify, run the handler, and settle only when it answered 2xx. A failed answer costs the buyer
+ * nothing, and an answer whose settlement fails is replaced by the 402, so it never leaks unpaid.
  */
 import {
   decodeHeader,
@@ -31,12 +35,15 @@ export interface X402Options {
   /** Require a Disc payment (`remora::disc::pay` + `Paid`). */
   disc?: boolean;
   maxTimeoutSeconds?: number;
+  /** `first` (the default): settle, then run the handler. `after`: run it, then settle on a 2xx. */
+  settle?: "first" | "after";
   fetch?: typeof fetch;
 }
 
 export interface PaidContext {
   network: SuiNetworkName;
   payer: string;
+  /** The settled digest. With `settle: "after"` it's empty while the handler runs. */
   transaction: string;
   intent?: string;
 }
@@ -94,6 +101,24 @@ export function x402(o: X402Options): MiddlewareHandler<{ Variables: { x402: Pai
 
     const verified = await call<VerifyResponse>("/verify");
     if (!verified.isValid) return required(c, verified.invalidReason ?? "invalid payment");
+    if (o.settle === "after") {
+      c.set("x402", {
+        network,
+        payer: verified.payer ?? "",
+        transaction: "",
+        ...(verified.intent ? { intent: verified.intent } : {}),
+      });
+      await next();
+      if (c.res.status < 200 || c.res.status >= 300) return;
+      const done = await call<SettleResponse & { error?: { message?: string } }>("/settle");
+      if (!done.success || !done.transaction) {
+        c.res = undefined;
+        c.res = required(c, done.errorReason ?? done.error?.message ?? "settlement failed");
+        return;
+      }
+      c.header(PAYMENT_RESPONSE_HEADER, encodeHeader(done));
+      return;
+    }
     const settled = await call<SettleResponse & { error?: { message?: string } }>("/settle");
     if (!settled.success || !settled.transaction)
       return required(c, settled.errorReason ?? settled.error?.message ?? "settlement failed");

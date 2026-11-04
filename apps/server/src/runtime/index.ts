@@ -19,13 +19,16 @@ import {
 import { parseKek, RemoraSigner } from "@remora/signer";
 import type { Context } from "hono";
 import { sendNotice, telegramBot } from "../channels/telegram-bot.ts";
+import { verifyInitData } from "../channels/tg-init-data.ts";
 import { db, modelFor, operator } from "../context.ts";
 import { env } from "../env/load.ts";
 import { onIndexedEvents } from "../hatchery/service.ts";
 import { createWalrusStore } from "../hatchery/walrus.ts";
 import { createLinkCode } from "../identity/link.ts";
+import { personByChannel } from "../identity/persons.ts";
 import { signedInOwner } from "../identity/session.ts";
 import { log, networks } from "../money/index.ts";
+import { createListings } from "../money/listings.ts";
 import { createSuiUsd } from "../money/rates.ts";
 import { reefFor } from "../money/reef.ts";
 import { startWatcher } from "../triggers/watch.ts";
@@ -55,7 +58,16 @@ const merchants = {
   RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
   NODE_ENV: process.env.NODE_ENV,
 };
-const reef = (n: Parameters<typeof reefFor>[1]) => reefFor(merchants, n);
+/** E11 (ADR-0111): remoras on sale, in the Reef beside the house services, paid at `/api/x402/r/…`. */
+export const listings = createListings({
+  db,
+  base: env.API_BASE_URL ?? `http://localhost:${env.PORT}`,
+  log,
+});
+const reef = (n: Parameters<typeof reefFor>[1]) => [
+  ...reefFor(merchants, n),
+  ...listings.entries(n),
+];
 const answer = createModel({ apiKey: env.OPENROUTER_API_KEY, model: env.LLM_MODEL });
 const small = createModel({
   apiKey: env.OPENROUTER_API_KEY,
@@ -137,6 +149,13 @@ export const remoraRoutes = createRemoraRoutes({
   operator,
   hatchery,
   written,
+  listings,
+  // H3 (ADR-0115): the Mini App's owner, from Telegram's signed launch data and the A5 link.
+  tgOwner: async (initData: string) => {
+    const user = env.TELEGRAM_BOT_TOKEN ? verifyInitData(initData, env.TELEGRAM_BOT_TOKEN) : null;
+    if (!user) return null;
+    return (await personByChannel("telegram", user.id))?.walletAddress ?? null;
+  },
   telegramLinked: async (owner: string) => {
     const [row] = await db
       .select({ id: channelIdentities.id })
@@ -167,7 +186,8 @@ export const remoraJobs: Record<string, JobHandler> = remoraJobHandlers(runtime)
 
 /** Starts one chain watcher per available network (D1). Returns a stop function. */
 export function startRemoraRuntime(): () => void {
-  if (env.WATCHER !== "on") return () => {};
+  const stopListings = listings.start();
+  if (env.WATCHER !== "on") return stopListings;
   const stops = networks
     .list()
     .filter((n) => n.available)
@@ -188,6 +208,7 @@ export function startRemoraRuntime(): () => void {
     );
   log.info("remora.runtime", { watchers: stops.length });
   return () => {
+    stopListings();
     for (const s of stops) s();
   };
 }

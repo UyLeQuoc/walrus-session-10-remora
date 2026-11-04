@@ -7,6 +7,7 @@
  * - `export` writes the owner's team back, without keys, memories, Disc or allowance ids, or the
  *   addresses Sentinels watch.
  */
+import { randomUUID } from "node:crypto";
 import type { SuiNetwork } from "@remora/chain";
 import { and, eq, inArray, remoras, rooms, sentinelRules } from "@remora/db";
 import {
@@ -20,6 +21,7 @@ import { parseDocument, stringify, visit } from "yaml";
 import { answersQuestions, TEMPLATES } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
 import { setBriefItems } from "./briefer.ts";
+import type { Crew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
 import { defaultRoom } from "./rooms.ts";
@@ -212,6 +214,26 @@ export async function applyTeam(
       }
     }
   }
+  // ADR-0114: a crew. Every member knows its crew, its lead and what it covers.
+  const crewLead = team.crew ? made.find((r) => r.name === team.crew?.lead) : undefined;
+  if (team.crew && !crewLead) skipped.push(`the crew's lead "${team.crew.lead}" isn't in the team`);
+  if (crewLead) {
+    const crewId = randomUUID();
+    for (const [i, r] of made.entries()) {
+      const [fresh] = await deps.db.select().from(remoras).where(eq(remoras.id, r.id));
+      if (!fresh) continue;
+      const crew: Crew = {
+        id: crewId,
+        name: team.name,
+        leadId: crewLead.id,
+        covers: team.remoras[i]?.covers ?? [],
+      };
+      await deps.db
+        .update(remoras)
+        .set({ config: { ...fresh.config, crew } })
+        .where(eq(remoras.id, r.id));
+    }
+  }
   const room = await defaultRoom(deps.db, owner, network);
   const lead = team.room?.lead ? made.find((r) => r.name === team.room?.lead) : undefined;
   const roomSet = {
@@ -306,6 +328,7 @@ export async function exportTeam(
         budget?: { windowLimit: string; perPaymentCap: string } | null;
         schedules?: { cron: string; question: string }[];
         items?: string[];
+        crew?: Crew;
       };
       const t = TEMPLATES[r.template as keyof typeof TEMPLATES];
       return {
@@ -330,8 +353,15 @@ export async function exportTeam(
             ? []
             : (c.schedules ?? []).map((s) => ({ when: s.cron, question: s.question })),
         items: r.template === "briefer" ? (c.items ?? []) : [],
+        // ADR-0114: what this member buys for its crew's lead.
+        covers: c.crew?.covers ?? [],
       };
     }),
+    // ADR-0114: a crew travels with its lead.
+    ...(() => {
+      const lead = mine.find((r) => (r.config as { crew?: Crew }).crew?.leadId === r.id);
+      return lead ? { crew: { lead: names.get(lead.id) ?? lead.name } } : {};
+    })(),
     ...(opts.ids
       ? {}
       : {

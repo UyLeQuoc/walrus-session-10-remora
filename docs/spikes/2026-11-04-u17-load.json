@@ -1,0 +1,105 @@
+{
+  "at": "2026-11-04T16:10:47.885Z",
+  "network": "testnet",
+  "label": "The payment rails under load, with the model out of the loop (no answer or check model).",
+  "node": "Tatum gRPC, with the public fullnode as fallback (ADR-0097)",
+  "remoras": 50,
+  "teams": [
+    "7go4gxcRiawFpYx41bDfwpWvNCwTLQoRWmn24GaeXa9W",
+    "6MZvAY75vgEVTUsVxE5AEAaSGJVyAxffMqVf4Ku674Yg",
+    "87FYqcR4HiaraKfXjsKUgFGDhgJxNz4XX15FG9zSU9qu",
+    "3w3ZtDq6BK1kX76ybz3tHVWUBYy325b35DhACk5xXMvG",
+    "HzbQKkNaeGZ22df8Wjdef4NZnNbcWTb3eUUrceoZyvd2"
+  ],
+  "steps": [
+    {
+      "concurrency": 1,
+      "calls": 40,
+      "paid": 40,
+      "seconds": 146.2,
+      "paymentsPerMinute": 16.4,
+      "p50Ms": 3654,
+      "p95Ms": 4685,
+      "p99Ms": 5910,
+      "outcomes": {
+        "paid": 40
+      }
+    },
+    {
+      "concurrency": 5,
+      "calls": 160,
+      "paid": 160,
+      "seconds": 428.8,
+      "paymentsPerMinute": 22.4,
+      "p50Ms": 13334,
+      "p95Ms": 14016,
+      "p99Ms": 15104,
+      "outcomes": {
+        "paid": 160
+      }
+    },
+    {
+      "concurrency": 10,
+      "calls": 300,
+      "paid": 300,
+      "seconds": 804.1,
+      "paymentsPerMinute": 22.4,
+      "p50Ms": 26666,
+      "p95Ms": 28000,
+      "p99Ms": 31108,
+      "outcomes": {
+        "paid": 300
+      }
+    },
+    {
+      "concurrency": 20,
+      "calls": 500,
+      "paid": 500,
+      "seconds": 1378.2,
+      "paymentsPerMinute": 21.8,
+      "p50Ms": 53334,
+      "p95Ms": 62765,
+      "p99Ms": 79012,
+      "outcomes": {
+        "paid": 500
+      }
+    }
+  ],
+  "paidCalls": 1000,
+  "paidUsdc": "5830000",
+  "allPaid": {
+    "p50Ms": 32770,
+    "p95Ms": 54340,
+    "p99Ms": 76337
+  },
+  "mustFail": {
+    "attempts": 50,
+    "stopped": 50,
+    "outcomes": {
+      "blocked:x402.gas_station_refused": 50
+    },
+    "reasons": [
+      "reef:market: simulation_failed:disc.payee_not_allowed: Transaction resolution failed: MoveAbort in 1st command, 'EPayeeNotAllowed': Payee is not on the allowlist, in '0xcc05",
+      "reef:odds: simulation_failed:disc.over_per_payment_cap: Transaction resolution failed: MoveAbort in 1st command, 'EOverPaymentCap': Payment exceeds the per-payment cap, in"
+    ]
+  },
+  "failuresByCode": {
+    "blocked:x402.gas_station_refused": 50
+  },
+  "overspends": 0,
+  "overspendDetail": {
+    "discsOverLimit": [],
+    "paymentsOverCap": 0
+  },
+  "spentOnchainUsdc": "5830000",
+  "ownerUsdcSpent": "5830000",
+  "sponsorMistUsed": "1003585700",
+  "sponsorMistPerPayment": "1003585",
+  "sampleDigests": [
+    "5BsDi5WJYNnKfodyrmRKeWuWVKVDMLtq2Xbu8MaSg2Ws",
+    "8e1GU4cHXmmUaFDNLeZd3n2eAHnqsu58k2AYqEux1rTw",
+    "BH1G6SpTWZ9chexDapZq7N1H8LfKGAE9kr7abM8Fy3N9",
+    "BFtd2sdTwT1cK9VTs3SXF8aaj347b9GgsENV6AMmQv8b",
+    "81RH1QW8qnQYsBDjxvm1A6UmGYehG7ByySVde8mAko36"
+  ]
+}

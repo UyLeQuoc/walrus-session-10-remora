@@ -81,6 +81,49 @@ export const BriefView = z.object({
 });
 export type BriefView = z.infer<typeof BriefView>;
 
+/** ADR-0111: a remora's answers on sale, and what it has sold. */
+export const SaleView = z.object({
+  sale: z
+    .object({ on: z.boolean(), slug: z.string(), price: z.string(), blurb: z.string() })
+    .nullable(),
+  listed: z.boolean(),
+  ref: z.string().nullable(),
+  url: z.string().nullable(),
+  path: z.string().nullable(),
+  sold: z.array(
+    z.object({
+      at: z.string(),
+      buyer: z.string(),
+      amount: z.string(),
+      digest: z.string().nullable(),
+    }),
+  ),
+  earned: z.string(),
+});
+export type SaleView = z.infer<typeof SaleView>;
+
+/** ADR-0114: a crew, its members and what each spent this month. */
+export const CrewView = z.object({
+  crew: z.object({ id: z.string(), name: z.string(), leadId: z.string() }),
+  members: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      template: z.string(),
+      status: z.string(),
+      lead: z.boolean(),
+      covers: z.array(z.string()),
+      limit: z.string().nullable(),
+      perPayment: z.string().nullable(),
+      spent: z.string(),
+      payments: z.number(),
+    }),
+  ),
+  limit: z.string(),
+  spent: z.string(),
+});
+export type CrewView = z.infer<typeof CrewView>;
+
 const Ok = z.object({ ok: z.literal(true) });
 const Tx = z.object({ transaction: z.string().nullable() });
 const Remora = z.object({ remora: RemoraView });
@@ -106,6 +149,24 @@ export const api = {
       `/api/remoras/${id}/brief/run`,
       z.object({ answer: z.string(), eventId: z.string() }).loose(),
     ),
+  crew: (id: string) => call("GET", `/api/remoras/${id}/crew`, CrewView),
+  pauseCrew: (id: string, paused: boolean) =>
+    call("POST", `/api/remoras/${id}/crew/pause`, CrewView, { paused }),
+  retireCrewTx: (id: string) => call("POST", `/api/remoras/${id}/crew/retire`, Tx),
+  retireCrewConfirm: (id: string, digest: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/crew/retire/confirm`,
+      z.object({ retired: z.array(z.string()) }),
+      { digest },
+    ),
+  sale: (id: string) => call("GET", `/api/remoras/${id}/sell`, SaleView),
+  setSale: (id: string, b: { on?: boolean; slug?: string; price?: string; blurb?: string }) =>
+    call("PUT", `/api/remoras/${id}/sell`, SaleView, b),
+  payeesTx: (id: string, payees: string[]) =>
+    call("POST", `/api/remoras/${id}/payees`, Tx, { payees }),
+  payeesConfirm: (id: string, digest: string, payees: string[]) =>
+    call("POST", `/api/remoras/${id}/payees/confirm`, Remora, { digest, payees }),
   confirm: (id: string, digest: string) =>
     call("POST", `/api/remoras/${id}/confirm`, Remora, { digest }),
   edit: (
