@@ -9,6 +9,8 @@ const NAMES: Record<string, string> = {
   briefer: "Briefer",
   // ADR-0125: the fourth kind pays people.
   errand: "Errand",
+  // ADR-0129: the fifth kind keeps recurring paid feeds honest.
+  keeper: "Subscriptions keeper",
 };
 
 export function kindName(template: string): string {

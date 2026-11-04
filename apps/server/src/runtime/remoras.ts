@@ -79,7 +79,7 @@ export function defaultBudget(slug: TemplateSlug, coinType: string): Budget | nu
       perPaymentCap: "1000000",
       payees: [],
     };
-  if (!answersQuestions(slug)) return null;
+  if (!answersQuestions(slug) && slug !== "keeper") return null;
   return {
     coinType,
     windowLimit: "1000000",
@@ -444,11 +444,12 @@ export function createRemoraService(deps: RemoraDeps) {
         budget,
         status: "shadow",
         identity: { address },
-        namespaces: answersQuestions(input.template)
-          ? ["me", "sources", "feedback", "receipts"]
-          : input.template === "errand"
-            ? ["me", "feedback", "receipts"]
-            : ["me", "rules", "episodes", "receipts"],
+        namespaces:
+          answersQuestions(input.template) || input.template === "keeper"
+            ? ["me", "sources", "feedback", "receipts"]
+            : input.template === "errand"
+              ? ["me", "feedback", "receipts"]
+              : ["me", "rules", "episodes", "receipts"],
         ...(contacts.length ? { contacts } : {}),
       });
       const { status: _s, ...stored } = remoraConfig;

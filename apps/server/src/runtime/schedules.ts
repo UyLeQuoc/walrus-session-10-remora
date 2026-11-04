@@ -15,6 +15,7 @@ import { saveConfig } from "./config-versions.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { approveUnusual } from "./errand.ts";
 import { enqueue, type JobHandler } from "./jobs.ts";
+import { payHikeOnce, runKeeper } from "./keeper.ts";
 import type { Button } from "./notify.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { scoutAsk } from "./scout.ts";
@@ -67,10 +68,10 @@ export async function addSchedule(
   question: string,
   opts: { paused?: boolean } = {},
 ) {
-  if (!answersQuestions(r.template))
+  if (!answersQuestions(r.template) && r.template !== "keeper")
     throw new RemoraError(
       "schedule.unsupported",
-      "Only Researchers and Briefers answer on a schedule.",
+      "Only Researchers, Briefers and Keepers run on a schedule.",
     );
   const p = previewSchedule(when);
   if (!p) throw new RemoraError("schedule.unparsed", `I can't read "${when}" as a schedule.`);
@@ -158,6 +159,12 @@ export async function approveYes(deps: RuntimeDeps, owner: string, approvalId: s
     .select({ kind: approvals.kind, payload: approvals.payload })
     .from(approvals)
     .where(eq(approvals.id, approvalId));
+  // ADR-0129: a Keeper's price hike, paid once at the new price.
+  if (
+    row?.kind === "over_limit_payment" &&
+    (row.payload as { kind?: string }).kind === "price_hike"
+  )
+    return payHikeOnce(deps, owner, approvalId);
   // ADR-0125: an unusual amount within an Errand's limits: the owner's yes lets it pay.
   if (row?.kind === "over_limit_payment" && (row.payload as { viaDisc?: boolean }).viaDisc)
     return approveUnusual(deps, owner, approvalId);
@@ -290,6 +297,15 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
       // From this run's slot, so a worker that picks it up early never queues the same slot again.
       await queueNext(deps, r, s, new Date(Math.max(Date.now(), job.runAt.getTime())));
       if (r.status !== "active" && r.status !== "shadow") return;
+      // ADR-0129: a Keeper's schedule charges its subscriptions.
+      if (r.template === "keeper") {
+        const run = await runKeeper(deps, r, s.human);
+        await deps.notifier.send(r.ownerAddress, {
+          text: `${r.name} (${s.human}):\n${run.answer}`,
+          buttons: answerButtons(deps.webBase, r, run.eventId),
+        });
+        return;
+      }
       await askAndTell(deps, r, s.question, { kind: "cron", ref: s.id }, `${r.name} (${s.human}):`);
     },
     [JOB.ask]: async (payload) => {

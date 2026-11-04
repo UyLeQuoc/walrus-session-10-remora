@@ -181,6 +181,32 @@ export const ReviewsView = z.object({
 });
 export type ReviewsView = z.infer<typeof ReviewsView>;
 
+/** ADR-0129: a Keeper's subscriptions, and the price hikes waiting for a decision. */
+export const SubscriptionsView = z.object({
+  subscriptions: z.array(
+    z.object({
+      id: z.string(),
+      ref: z.string(),
+      url: z.string(),
+      usual: z.string().nullable(),
+      failures: z.number(),
+      paused: z.boolean().optional(),
+    }),
+  ),
+  hikes: z
+    .array(
+      z.object({
+        approvalId: z.string(),
+        summary: z.string(),
+        subscriptionId: z.string(),
+        amount: z.string(),
+        usual: z.string(),
+      }),
+    )
+    .optional(),
+});
+export type SubscriptionsView = z.infer<typeof SubscriptionsView>;
+
 /** ADR-0125: an Errand's contacts, and what each is usually paid. */
 export const ContactsView = z.object({
   contacts: z.array(
@@ -283,6 +309,25 @@ export const api = {
       `/api/remoras/${id}/crew/retire/confirm`,
       z.object({ retired: z.array(z.string()) }),
       { digest },
+    ),
+  subscriptions: (id: string) => call("GET", `/api/remoras/${id}/subscriptions`, SubscriptionsView),
+  subscribe: (id: string, ref: string, url?: string) =>
+    call("POST", `/api/remoras/${id}/subscriptions`, SubscriptionsView, {
+      ref,
+      ...(url ? { url } : {}),
+    }),
+  unsubscribe: (id: string, sid: string) =>
+    call("DELETE", `/api/remoras/${id}/subscriptions/${sid}`, SubscriptionsView),
+  acceptPrice: (id: string, sid: string, amount: string, approvalId?: string) =>
+    call("POST", `/api/remoras/${id}/subscriptions/${sid}/accept`, SubscriptionsView, {
+      amount,
+      ...(approvalId ? { approvalId } : {}),
+    }),
+  runKeeper: (id: string) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/subscriptions/run`,
+      z.object({ answer: z.string(), eventId: z.string() }),
     ),
   setShare: (id: string, stats: boolean) =>
     call("PUT", `/api/remoras/${id}/share`, Remora, { stats }),

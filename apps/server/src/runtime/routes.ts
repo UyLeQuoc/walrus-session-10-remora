@@ -64,6 +64,13 @@ import type { RuntimeDeps } from "./deps.ts";
 import { errandAsk, usualFor } from "./errand.ts";
 import { giveFeedback } from "./feedback.ts";
 import type { InspectorRow } from "./inspector.ts";
+import {
+  acceptPrice,
+  addSubscription,
+  removeSubscription,
+  runKeeper,
+  subscriptionsOf,
+} from "./keeper.ts";
 import { learningSeries, proofBetween, proofsFor } from "./learning.ts";
 import { mountLedger } from "./ledger-routes.ts";
 import { MemoryTimeout } from "./memory.ts";
@@ -1147,6 +1154,60 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     }
     await rejectApproval(rt, c.get("owner"), c.req.param("id"));
     return c.json({ ok: true });
+  });
+
+  // ── A Keeper's subscriptions (B2, ADR-0129) ───────────────────────────────
+  const keeperOf = async (c: Context) => {
+    const r = await service.get(c.req.param("id") ?? "", c.get("owner"));
+    if (r.template !== "keeper")
+      throw new RemoraError("keeper.only", `${r.name} doesn't keep subscriptions.`);
+    return r;
+  };
+  app.get("/api/remoras/:id/subscriptions", async (c) => {
+    const r = await keeperOf(c);
+    const hikes = await rt.db
+      .select()
+      .from(approvals)
+      .where(and(eq(approvals.remoraId, r.id), eq(approvals.status, "pending")));
+    return c.json({
+      subscriptions: subscriptionsOf(r),
+      hikes: hikes
+        .filter((a) => (a.payload as { kind?: string }).kind === "price_hike")
+        .map((a) => ({ approvalId: a.id, summary: a.summary, ...(a.payload as object) })),
+    });
+  });
+  app.post("/api/remoras/:id/subscriptions", async (c) => {
+    const r = await keeperOf(c);
+    const b = await body<{ ref?: string; url?: string }>(c);
+    const next = await addSubscription(rt, r, {
+      ref: String(b.ref ?? ""),
+      ...(b.url ? { url: b.url } : {}),
+    });
+    // Its first subscription starts its daily run.
+    if (!((next.config as { schedules?: unknown[] }).schedules ?? []).length)
+      await addSchedule(rt, next, "every day at 8am", "charge my subscriptions");
+    return c.json({ subscriptions: subscriptionsOf(next) });
+  });
+  app.delete("/api/remoras/:id/subscriptions/:sid", async (c) => {
+    const r = await keeperOf(c);
+    return c.json({
+      subscriptions: subscriptionsOf(await removeSubscription(rt, r, c.req.param("sid"))),
+    });
+  });
+  app.post("/api/remoras/:id/subscriptions/:sid/accept", async (c) => {
+    const r = await keeperOf(c);
+    const b = await body<{ amount?: string; approvalId?: string }>(c);
+    const next = await acceptPrice(rt, r, c.req.param("sid"), String(b.amount ?? ""));
+    if (b.approvalId)
+      await rt.db
+        .update(approvals)
+        .set({ status: "rejected", decidedAt: new Date() })
+        .where(and(eq(approvals.id, b.approvalId), eq(approvals.remoraId, r.id)));
+    return c.json({ subscriptions: subscriptionsOf(next) });
+  });
+  app.post("/api/remoras/:id/subscriptions/run", async (c) => {
+    const r = await keeperOf(c);
+    return c.json(serialize(await runKeeper(rt, r, "now")));
   });
 
   // ── Sharing counts with the Reef's reputation (E10, ADR-0127) ─────────────

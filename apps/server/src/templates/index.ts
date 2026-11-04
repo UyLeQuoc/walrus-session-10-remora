@@ -84,6 +84,29 @@ export const TEMPLATES = {
     starterMemories: [],
     examples: ["Pay Linh 2 USDC for lunch", "Send Huy 0.5 USDC for the taxi"],
   }),
+  // ADR-0129: the fifth kind pays recurring x402 charges and remembers what each normally costs.
+  keeper: Template.parse({
+    schema: "remora.template/v1",
+    name: "Subscriptions keeper",
+    summary: "Pays your recurring paid feeds, remembers their usual price, and stops on a hike.",
+    persona:
+      "You are the owner's Subscriptions keeper. You pay the owner's recurring paid services at their usual price, and you never pay a price hike without asking.",
+    tools: ["memory.recall", "memory.remember", "pay", "notify", "schedule"],
+    triggers: [{ kind: "cron", cron: "0 1 * * *", human: "every day at 8am" }],
+    budgetSuggestion: { monthlyUsd: [1, 10], perPaymentUsd: 0.05 },
+    payees: [
+      "reef:sui-risk",
+      "reef:odds",
+      "reef:brief",
+      "reef:wallet",
+      "reef:walrus",
+      "reef:github",
+      "reef:price",
+      "reef:weather",
+    ],
+    starterMemories: [],
+    examples: ["The SUI price every morning", "A paid feed you listed in the Reef"],
+  }),
 } as const;
 
 export type TemplateSlug = keyof typeof TEMPLATES;

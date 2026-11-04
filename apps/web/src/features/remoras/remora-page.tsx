@@ -63,6 +63,7 @@ import { FeedList } from "./feed-list";
 import { HistorySection } from "./history-section";
 import { RequireOwner, useLoad } from "./hooks";
 import { HooksCard } from "./hooks-card";
+import { KeeperCard } from "./keeper-card";
 import { ProposalCard } from "./proposal-card";
 import { ReviewCard } from "./review-card";
 import { BuyFromCard, SellCard } from "./sell-card";
@@ -941,6 +942,8 @@ function Remora({ id }: { id: string }) {
             <AskCard r={r} onDone={refreshFeed} />
           ) : r.template === "errand" ? (
             <ErrandCard r={r} onDone={refreshFeed} />
+          ) : r.template === "keeper" ? (
+            <KeeperCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}
