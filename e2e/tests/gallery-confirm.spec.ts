@@ -45,8 +45,7 @@ test("gallery: the curated templates are confirmed to this deployment by their a
   const listed = async () =>
     new Set(
       (
-        (await call<{ templates: { name: string }[] }>(page, "/api/hatchery")).body
-          ?.templates ?? []
+        (await call<{ templates: { name: string }[] }>(page, "/api/hatchery")).body?.templates ?? []
       ).map((t) => t.name),
     );
   const before = await listed();
