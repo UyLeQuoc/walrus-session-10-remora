@@ -4,7 +4,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CapsuleCard } from "./capsule-card";
 import { ErrandCard } from "./errand-card";
+import { KeeperCard } from "./keeper-card";
 import { ProposalCard } from "./proposal-card";
 
 // The wallet signs in the browser; here it just hands back a digest.
@@ -168,5 +170,85 @@ describe("the Errand (ADR-0125)", () => {
     expect(calls.find((c) => c.key.startsWith("POST"))?.body).toEqual({
       question: "pay Linh 0.10 USDC for lunch",
     });
+  });
+});
+
+describe("the Subscriptions keeper (ADR-0129)", () => {
+  const keeper = { ...scout, template: "keeper" };
+  it("shows a hike it stopped on, and accepting it sends the new price", async () => {
+    const calls = serve({
+      [`GET /api/remoras/${scout.id}/subscriptions`]: {
+        subscriptions: [
+          {
+            id: "s1",
+            ref: "reef:community-haiku",
+            url: "http://h.test/haiku",
+            usual: "5000",
+            failures: 0,
+          },
+        ],
+        hikes: [
+          {
+            approvalId: "ap1",
+            summary: "Price hike: @haiku 0.005 → 0.006 USDC",
+            subscriptionId: "s1",
+            amount: "6000",
+            usual: "5000",
+          },
+        ],
+      },
+      "GET /api/reef/services": [],
+      [`POST /api/remoras/${scout.id}/subscriptions/s1/accept`]: { subscriptions: [], hikes: [] },
+    });
+    render(
+      <MemoryRouter>
+        <KeeperCard r={keeper} />
+      </MemoryRouter>,
+    );
+    expect((await screen.findByTestId("keeper-hike")).textContent).toContain(
+      "Price hike: @haiku 0.005 → 0.006 USDC",
+    );
+    expect(screen.getByTestId("keeper-usual").textContent).toBe("usually 0.005 USDC");
+    await userEvent.click(screen.getByTestId("keeper-accept"));
+    await vi.waitFor(() =>
+      expect(calls.find((c) => c.key.endsWith("/s1/accept"))?.body).toEqual({
+        amount: "6000",
+        approvalId: "ap1",
+      }),
+    );
+  });
+});
+
+describe("memory capsules (ADR-0130)", () => {
+  it("shows an offer, and accepting it is one click", async () => {
+    const calls = serve({
+      [`GET /api/remoras/${scout.id}/capsules`]: {
+        lent: [],
+        offered: [
+          {
+            capsuleId: "0xcap",
+            count: 2,
+            expiresMs: Date.parse("2026-11-08T00:00:00Z"),
+            from: { remora: "Researcher · u18", owner: "0x1" },
+          },
+        ],
+        reading: [],
+      },
+      [`POST /api/remoras/${scout.id}/capsules/0xcap/accept`]: { remora: scoutJson },
+    });
+    render(
+      <MemoryRouter>
+        <CapsuleCard r={scout} />
+      </MemoryRouter>,
+    );
+    expect((await screen.findByTestId("capsule-offered")).textContent).toContain(
+      "Offered: 2 memories from Researcher · u18 until 2026-11-08",
+    );
+    await userEvent.click(screen.getByTestId("capsule-accept"));
+    await vi.waitFor(() =>
+      expect(
+        calls.some((c) => c.key === `POST /api/remoras/${scout.id}/capsules/0xcap/accept`),
+      ).toBe(true),
+    );
   });
 });
