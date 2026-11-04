@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Address, Problem, Stat, StatRow } from "@/components/visual";
@@ -61,6 +62,7 @@ import { ErrandCard } from "./errand-card";
 import { FeedList } from "./feed-list";
 import { RequireOwner, useLoad } from "./hooks";
 import { ProposalCard } from "./proposal-card";
+import { ReviewCard } from "./review-card";
 import { BuyFromCard, SellCard } from "./sell-card";
 import { useBudget } from "./use-budget";
 
@@ -642,6 +644,42 @@ function SourcesSection({ r }: { r: RemoraView }) {
   );
 }
 
+/** ADR-0127: whether its counts feed the Reef's reputation. Counts only, never content. */
+function ShareSection({ r, reload }: { r: RemoraView; reload: () => void }) {
+  const on = Boolean((r.config as { share?: { stats?: boolean } }).share?.stats);
+  const [busy, setBusy] = useState(false);
+  const flip = async (next: boolean) => {
+    setBusy(true);
+    const out = await api.setShare(r.id, next);
+    setBusy(false);
+    if (!out.ok) return void toast.error(out.error);
+    reload();
+  };
+  return (
+    <Section
+      layout="split"
+      title="Share with the Reef"
+      description="Its paid calls, refusals, your ratings and timings feed each service's 7-day score. Never a question, an answer or an amount."
+    >
+      <SettingsGroup>
+        <SettingsRow
+          title="Share its counts"
+          description={on ? "On: the Reef counts its calls." : "Off: nothing leaves this remora."}
+          actions={
+            <Switch
+              id="share-stats"
+              aria-label="Share its counts with the Reef"
+              checked={on}
+              disabled={busy || r.status === "retired"}
+              onCheckedChange={(next) => void flip(next)}
+            />
+          }
+        />
+      </SettingsGroup>
+    </Section>
+  );
+}
+
 function KeysSection({ r }: { r: RemoraView }) {
   const limit = useBudget(r.id, Boolean(r.discId) && r.status !== "retired");
   const limitGone =
@@ -743,6 +781,9 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
       {/* ADR-0106: a Briefer's schedule is its brief's; its page shows it with Run now. */}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}
+      {r.template === "scout" || r.template === "briefer" ? (
+        <ShareSection r={r} reload={reload} />
+      ) : null}
       <KeysSection r={r} />
       <DangerSection r={r} reload={reload} />
     </div>
@@ -933,6 +974,7 @@ function Remora({ id }: { id: string }) {
         </TabsContent>
 
         <TabsContent value="learning" className="flex flex-col gap-8 pt-5">
+          {r.template === "sentinel" ? null : <ReviewCard r={r} />}
           <LearningSection remoraId={r.id} />
         </TabsContent>
 

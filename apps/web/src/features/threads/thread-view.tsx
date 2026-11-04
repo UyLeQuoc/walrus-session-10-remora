@@ -10,11 +10,13 @@ import {
   Coins,
   EyeOff,
   Info,
+  Scale,
   Settings2,
   ShieldX,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  TriangleAlert,
   Unplug,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -50,6 +52,9 @@ const CHIP_TONE: Partial<
   blocked: "danger",
   shadow: "warning",
   rule_learned: "accent",
+  proposal: "accent",
+  review: "accent",
+  price_hike: "warning",
 };
 
 const CHIP_ICON: Partial<Record<NonNullable<Line["type"]>, ReactNode>> = {
@@ -60,6 +65,9 @@ const CHIP_ICON: Partial<Record<NonNullable<Line["type"]>, ReactNode>> = {
   episode: <Brain />,
   handoff: <ArrowRightLeft />,
   config_changed: <Settings2 />,
+  proposal: <Scale />,
+  review: <Sparkles />,
+  price_hike: <TriangleAlert />,
 };
 
 function Feedback({ line }: { line: Line }) {

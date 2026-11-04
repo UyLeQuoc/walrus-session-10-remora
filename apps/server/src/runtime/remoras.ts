@@ -726,6 +726,23 @@ export function createRemoraService(deps: RemoraDeps) {
       return updated;
     },
 
+    /** ADR-0127: whether this remora's counts feed the Reef's reputation. Counts only, never content. */
+    async setShare(id: string, owner: string, stats: boolean) {
+      const r = await mine(id, owner);
+      const prev = r.config as Record<string, unknown> & { revision?: number };
+      const next = { ...prev, share: { stats }, revision: (prev.revision ?? 1) + 1 };
+      const updated = await setRow(id, { config: next });
+      await event(
+        updated,
+        "config_changed",
+        stats
+          ? `${r.name} shares its counts with the Reef.`
+          : `${r.name} stopped sharing its counts with the Reef.`,
+        { previous: prev, revision: next.revision },
+      );
+      return updated;
+    },
+
     /** N10: one owner transaction pauses every Disc on this network; Disc-less remoras pause on confirm. */
     async panicTx(owner: string, network: SuiNetwork) {
       const rows = await db

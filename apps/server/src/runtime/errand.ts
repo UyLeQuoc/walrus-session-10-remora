@@ -29,7 +29,7 @@ export interface PayRequestText {
 
 const units = (v: string) => {
   const [w = "0", f = ""] = v.replace(",", ".").split(".");
-  return BigInt(w) * 1_000_000n + BigInt((f + "000000").slice(0, 6));
+  return BigInt(w) * 1_000_000n + BigInt(`${f}000000`.slice(0, 6));
 };
 
 /**

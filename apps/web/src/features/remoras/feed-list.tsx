@@ -33,6 +33,9 @@ const KIND: Record<FeedItem["type"], EventKind> = {
   rule_learned: "learned",
   handoff: "handoff",
   config_changed: "edited",
+  proposal: "waiting",
+  review: "learned",
+  price_hike: "waiting",
 };
 
 /** A sentence for the item; amounts in USDC where the payload has one. */

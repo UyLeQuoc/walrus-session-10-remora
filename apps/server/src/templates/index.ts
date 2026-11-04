@@ -74,7 +74,7 @@ export const TEMPLATES = {
   errand: Template.parse({
     schema: "remora.template/v1",
     name: "Errand",
-    summary: "Pays the people you name, within its limit, and asks before anything unusual.",
+    summary: "Pays the people you list, within its limit, and asks before anything unusual.",
     persona:
       "You are the owner's Errand. You pay the owner's contacts when asked, within your limit, with a memo for each payment. You never pay anyone who isn't a contact.",
     tools: ["memory.recall", "memory.remember", "pay", "notify"],

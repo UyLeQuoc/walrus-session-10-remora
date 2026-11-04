@@ -1,7 +1,7 @@
 /**
  * E5 (ADR-0124): a remora proposes its own budget. Rules in code decide when and what; the model only
  * writes the one-line reason, from the numbers and the memories it's shown, and a proposal that cites
- * no memory isn't made. A proposal is an approval of kind `budget_change`: accepting is the owner's one
+ * fewer than two memories isn't made. A proposal is an approval of kind `budget_change`: accepting is the owner's one
  * signature (revoke and reissue, `budgetTx`), declining is one click, and either way the outcome is
  * written back to memory, so the next proposal reads how the last one ended.
  */
@@ -454,7 +454,7 @@ export async function checkProposal(
     return { skipped: "declined less than 7 days ago" };
 
   const cites = await citedMemories(deps, r);
-  if (!cites.length) return { skipped: "no memory to cite yet" };
+  if (cites.length < 2) return { skipped: "fewer than two memories to cite yet" };
 
   const to: Budget = {
     ...budget,
@@ -515,7 +515,7 @@ async function proposalOf(deps: Pick<RuntimeDeps, "db">, owner: string, id: stri
     .from(approvals)
     .innerJoin(remoras, eq(remoras.id, approvals.remoraId))
     .where(eq(approvals.id, id));
-  if (!row || row.a.kind !== "budget_change")
+  if (row?.a.kind !== "budget_change")
     throw new RemoraError("proposal.not_found", "No such proposal.", 404);
   if (normalizeSuiAddress(row.r.ownerAddress) !== normalizeSuiAddress(owner))
     throw new RemoraError("remora.not_owner", "That isn't yours.", 403);

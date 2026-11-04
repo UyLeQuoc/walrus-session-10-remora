@@ -35,6 +35,20 @@ export const ReefService = z.object({
    */
   kind: z.enum(["house", "remora", "community"]).optional(),
   description: z.string().max(200).optional(),
+  /** ADR-0127: its `reef:<slug>`, and its 7-day score from shared counts. Absent on older servers. */
+  ref: z.string().optional(),
+  score: z
+    .object({
+      status: z.enum(["new", "scored"]),
+      calls: z.number().int(),
+      owners: z.number().int(),
+      usefulPct: z.number().nullable(),
+      settledPct: z.number().nullable(),
+      medianMs: z.number().nullable(),
+      days: z.number().int(),
+      line: z.string(),
+    })
+    .optional(),
 });
 export const ReefServices = z.array(ReefService);
 

@@ -10,7 +10,9 @@ import {
   channelIdentities,
   count,
   eq,
+  inArray,
   isNotNull,
+  ownerSettings,
   people,
   receipts,
   remoras,
@@ -31,6 +33,7 @@ import { log, networks } from "../money/index.ts";
 import { createListings } from "../money/listings.ts";
 import { createSuiUsd } from "../money/rates.ts";
 import { reefFor } from "../money/reef.ts";
+import { createReputation } from "../money/reputation.ts";
 import { startWatcher } from "../triggers/watch.ts";
 import { createBrain } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
@@ -43,6 +46,7 @@ import { createRemoraMemory } from "./memory.ts";
 import { memoryIndexFor } from "./memory-controls.ts";
 import { createNotifier } from "./notify.ts";
 import { createRemoraService } from "./remoras.ts";
+import { nextMonday9, queueWeeklyReview } from "./review.ts";
 import { createRemoraRoutes } from "./routes.ts";
 import { remoraJobHandlers } from "./schedules.ts";
 import { onChainEvent } from "./sentinel.ts";
@@ -63,6 +67,12 @@ export const listings = createListings({
   db,
   base: env.API_BASE_URL ?? `http://localhost:${env.PORT}`,
   log,
+});
+/** E10 (ADR-0127): the Reef's 7-day scores from shared counts, refreshed every 5 minutes. */
+export const reputation = createReputation({
+  db,
+  log,
+  networks: networks.list().map((n) => n.network),
 });
 const reef = (n: Parameters<typeof reefFor>[1]) => [
   ...reefFor(merchants, n),
@@ -115,6 +125,7 @@ export const runtime: RuntimeDeps = {
   dailyTokens: env.REMORA_DAILY_TOKENS,
   webBase: env.WEB_BASE_URL,
   suiUsd: createSuiUsd({ apiKey: env.TATUM_API_KEY ?? env.TATUM_API_KEY_TESTNET }),
+  reputation: (n) => reputation.scores(n),
 };
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });
@@ -185,9 +196,26 @@ export const remoraRoutes = createRemoraRoutes({
 export const remoraJobs: Record<string, JobHandler> = remoraJobHandlers(runtime);
 
 /** Starts one chain watcher per available network (D1). Returns a stop function. */
+/** F10 (ADR-0128): every live remora has its next Monday review queued (idempotent per week). */
+async function queueReviews() {
+  const rows = await db
+    .select({ r: remoras, timezone: ownerSettings.timezone })
+    .from(remoras)
+    .leftJoin(ownerSettings, eq(ownerSettings.ownerAddress, remoras.ownerAddress))
+    .where(and(inArray(remoras.status, ["active", "shadow"]), eq(remoras.playground, false)));
+  for (const { r, timezone } of rows)
+    await queueWeeklyReview(runtime, r, nextMonday9(new Date(), timezone ?? "UTC"));
+}
+
 export function startRemoraRuntime(): () => void {
   const stopListings = listings.start();
-  if (env.WATCHER !== "on") return stopListings;
+  const stopReputation = reputation.start();
+  void queueReviews().catch((err) => log.warn("review.queue_failed", { error: err }));
+  if (env.WATCHER !== "on")
+    return () => {
+      stopListings();
+      stopReputation();
+    };
   const stops = networks
     .list()
     .filter((n) => n.available)
@@ -209,6 +237,7 @@ export function startRemoraRuntime(): () => void {
   log.info("remora.runtime", { watchers: stops.length });
   return () => {
     stopListings();
+    stopReputation();
     for (const s of stops) s();
   };
 }

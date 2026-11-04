@@ -5,6 +5,7 @@ import type { Db } from "@remora/db";
 import type { RemoraSigner } from "@remora/signer";
 import type { Networks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
+import type { ReefScore } from "../money/reputation.ts";
 import type { Brain } from "./brain.ts";
 import type { FactLedger } from "./facts.ts";
 import type { SlidingLimiter } from "./limits.ts";
@@ -38,4 +39,6 @@ export interface RuntimeDeps {
   sonarOff?: boolean;
   fetch?: typeof fetch;
   buildKind?: (tx: Transaction) => Promise<Uint8Array>;
+  /** E10 (ADR-0127): the Reef's 7-day scores from shared counts; absent, nothing is skipped. */
+  reputation?: (network: SuiNetwork) => Map<string, ReefScore>;
 }

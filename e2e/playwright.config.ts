@@ -81,6 +81,10 @@ export default defineConfig({
     ...(process.env.ECONOMY === "1"
       ? [{ name: "economy", testMatch: /economy\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // U18 (ADR-0119): the goal's exits on testnet (U18=1; spends well under 1 testnet USDC).
+    ...(process.env.U18 === "1"
+      ? [{ name: "u18", testMatch: /u18\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
+      : []),
     // U17: confirm the curated templates to a deployment's gallery (GALLERY=1, with E2E_BASE_URL).
     ...(process.env.GALLERY === "1"
       ? [

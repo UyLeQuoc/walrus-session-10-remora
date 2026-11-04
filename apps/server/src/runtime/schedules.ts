@@ -6,7 +6,7 @@
  * The owner sets schedules directly; a remora can only propose one, as an approval (N2).
  */
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { approvals, eq, remoraEvents, remoras, sentinelRules } from "@remora/db";
+import { approvals, eq, ownerSettings, remoraEvents, remoras, sentinelRules } from "@remora/db";
 import { answersQuestions } from "../templates/index.ts";
 import { nextRun } from "../triggers/cron.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
@@ -25,6 +25,7 @@ import { JOB } from "../tools/propose.ts";
 import { PAID_CHECK } from "../triggers/indexer.ts";
 import { PROPOSAL_CHECK, proposalCheckHandler } from "./proposals.ts";
 import { paidCheckHandler } from "./reality.ts";
+import { REVIEW_WEEKLY, weeklyReviewHandler } from "./review.ts";
 
 export interface Schedule {
   id: string;
@@ -307,6 +308,13 @@ export function remoraJobHandlers(deps: RuntimeDeps): Record<string, JobHandler>
     },
     [PAID_CHECK]: paidCheckHandler(deps),
     [PROPOSAL_CHECK]: proposalCheckHandler(deps),
+    [REVIEW_WEEKLY]: weeklyReviewHandler(deps, async (owner) => {
+      const [s] = await deps.db
+        .select({ timezone: ownerSettings.timezone })
+        .from(ownerSettings)
+        .where(eq(ownerSettings.ownerAddress, owner));
+      return s?.timezone ?? "UTC";
+    }),
   };
 }
 

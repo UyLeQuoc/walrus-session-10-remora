@@ -138,6 +138,8 @@ export async function requestPayment(
       code,
       reasons,
       url: p.url,
+      // ADR-0127: the Reef's reputation counts a service's refusals after its 402.
+      payee: reefLabel(p.payee),
     }),
   });
 
@@ -201,6 +203,7 @@ export async function requestPayment(
     prompt: p.reason,
   });
   let shadow = false;
+  const started = Date.now();
   try {
     const { response, receipt } = await payWithDisc(
       {
@@ -282,6 +285,8 @@ export async function requestPayment(
         digest,
         url: p.url,
         status: response.status,
+        // ADR-0127: from the first request to the settled answer, for the Reef's median.
+        ms: Date.now() - started,
         ...(upstream.length ? { upstream } : {}),
       },
       receipt?.id,

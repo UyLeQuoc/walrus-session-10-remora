@@ -84,6 +84,7 @@ import {
   proposalTx,
 } from "./proposals.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
+import { reviewsOf, writeReview } from "./review.ts";
 import {
   defaultRoom,
   postToRoom,
@@ -1129,6 +1130,16 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     return c.json({ ok: true });
   });
 
+  // ── Sharing counts with the Reef's reputation (E10, ADR-0127) ─────────────
+  app.put("/api/remoras/:id/share", async (c) => {
+    const b = await body<{ stats?: boolean }>(c);
+    if (typeof b.stats !== "boolean")
+      throw new RemoraError("share.bad", "Say whether to share its counts (stats: true or false).");
+    return c.json({
+      remora: await view(await service.setShare(c.req.param("id"), c.get("owner"), b.stats)),
+    });
+  });
+
   // ── An Errand's contacts (B1, ADR-0125) ───────────────────────────────────
   app.get("/api/remoras/:id/contacts", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
@@ -1158,6 +1169,20 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         await service.confirmContacts(c.req.param("id"), c.get("owner"), digestOf(b.digest), list),
       ),
     });
+  });
+
+  // ── The weekly review (F10, ADR-0128) ─────────────────────────────────────
+  app.get("/api/remoras/:id/reviews", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    return c.json({ reviews: await reviewsOf(rt, r) });
+  });
+
+  app.post("/api/remoras/:id/reviews", async (c) => {
+    const r = await service.get(c.req.param("id"), c.get("owner"));
+    if (!rt.limiter.take(`review:${r.id}`, { limit: 3, ms: 3_600_000 }).allowed)
+      throw new RemoraError("review.busy", "Three reviews an hour is enough; try later.", 409);
+    await writeReview(rt, r);
+    return c.json({ reviews: await reviewsOf(rt, r) });
   });
 
   // ── Budget proposals (E5, ADR-0124) ───────────────────────────────────────
@@ -1493,9 +1518,10 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   });
 
   // Public, like the Reef itself: what a remora may pay, and to which address on this network.
-  app.get("/api/reef/services", (c) =>
-    c.json(reefServices(rt.reef(resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER))))),
-  );
+  app.get("/api/reef/services", (c) => {
+    const network = resolveNetwork(rt.networks, c.req.header(NETWORK_HEADER));
+    return c.json(reefServices(rt.reef(network), rt.reputation?.(network)));
+  });
 
   app.post("/api/wakes/:id/share", async (c) =>
     c.json(await shareWake(rt, c.get("owner"), c.req.param("id"))),

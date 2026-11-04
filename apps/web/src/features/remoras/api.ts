@@ -150,6 +150,30 @@ export const ProposalsView = z.object({
 });
 export type ProposalsView = z.infer<typeof ProposalsView>;
 
+/** ADR-0128: a remora's weekly "What I learned", with the numbers behind it. */
+export const ReviewsView = z.object({
+  reviews: z.array(
+    z.object({
+      id: z.string(),
+      at: z.string(),
+      lines: z.array(z.string()),
+      previousId: z.string().nullable(),
+      blobId: z.string().nullable(),
+      facts: z.object({
+        from: z.string(),
+        to: z.string(),
+        days: z.array(z.object({ date: z.string(), spent: z.string() })),
+        spent: z.string(),
+        limit: z.string().nullable(),
+        useful: z.number(),
+        noise: z.number(),
+        answers: z.number(),
+      }),
+    }),
+  ),
+});
+export type ReviewsView = z.infer<typeof ReviewsView>;
+
 /** ADR-0125: an Errand's contacts, and what each is usually paid. */
 export const ContactsView = z.object({
   contacts: z.array(
@@ -240,6 +264,10 @@ export const api = {
       z.object({ retired: z.array(z.string()) }),
       { digest },
     ),
+  setShare: (id: string, stats: boolean) =>
+    call("PUT", `/api/remoras/${id}/share`, Remora, { stats }),
+  reviews: (id: string) => call("GET", `/api/remoras/${id}/reviews`, ReviewsView),
+  writeReview: (id: string) => call("POST", `/api/remoras/${id}/reviews`, ReviewsView),
   proposals: (id: string) => call("GET", `/api/remoras/${id}/proposals`, ProposalsView),
   checkProposals: (id: string) => call("POST", `/api/remoras/${id}/proposals/check`, ProposalsView),
   proposalTx: (approvalId: string) => call("POST", `/api/approvals/${approvalId}/proposal-tx`, Tx),

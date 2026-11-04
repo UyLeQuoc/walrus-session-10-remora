@@ -217,7 +217,9 @@ describe.skipIf(!local)("budget proposals end to end in Postgres (E5)", () => {
 
     const opts = { now: NOW, read } as unknown as Parameters<typeof checkProposal>[2];
     // No memory to cite yet: no proposal.
-    expect(await checkProposal(deps, r, opts)).toEqual({ skipped: "no memory to cite yet" });
+    expect(await checkProposal(deps, r, opts)).toEqual({
+      skipped: "fewer than two memories to cite yet",
+    });
 
     await db.insert(receipts).values({
       network: "testnet",
@@ -231,14 +233,24 @@ describe.skipIf(!local)("budget proposals end to end in Postgres (E5)", () => {
       intentHash: randomUUID(),
       createdAt: at,
     });
-    await db.insert(remoraMemories).values({
-      remoraId: r.id,
-      namespace: "receipts",
-      type: "wake",
-      blobId: "blob-wake-1",
-      status: "stored",
-      createdAt: new Date(at.getTime() + 2_000),
-    });
+    await db.insert(remoraMemories).values([
+      {
+        remoraId: r.id,
+        namespace: "receipts",
+        type: "wake",
+        blobId: "blob-wake-1",
+        status: "stored",
+        createdAt: new Date(at.getTime() + 2_000),
+      },
+      {
+        remoraId: r.id,
+        namespace: "sources",
+        type: "source",
+        blobId: "blob-source-1",
+        status: "stored",
+        createdAt: new Date(at.getTime() + 3_000),
+      },
+    ]);
 
     const first = await checkProposal(deps, r, opts);
     expect(first).toHaveProperty("proposalId");
@@ -246,6 +258,7 @@ describe.skipIf(!local)("budget proposals end to end in Postgres (E5)", () => {
     expect(open?.summary).toBe("Lower its monthly limit 0.50 → 0.08 USDC");
     expect(open?.cites).toEqual([
       expect.objectContaining({ blobId: "blob-wake-1", label: "paid 0.01 USDC to Sui risk check" }),
+      expect.objectContaining({ blobId: "blob-source-1", label: "a source score it wrote" }),
     ]);
     expect(open?.reason).toBe("I spent 0.07 of 0.50 in two weeks.");
     expect(told.at(-1)).toContain("Researcher proposes: Lower its monthly limit");
