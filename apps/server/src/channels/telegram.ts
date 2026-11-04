@@ -3,7 +3,7 @@ import { handleIncoming } from "../chat/turn.ts";
 import { describeFailure } from "../copy/index.ts";
 import { redeemLinkCode } from "../identity/link.ts";
 import { personByChannel, resolvePerson } from "../identity/persons.ts";
-import { remoraService, runtime } from "../runtime/index.ts";
+import { remoraService, runtime, steer } from "../runtime/index.ts";
 import { telegramHandler } from "./handlers.ts";
 import { keepPolling } from "./polling.ts";
 import { createRemoraBot } from "./remora-bot.ts";
@@ -30,6 +30,7 @@ export function telegramAdapter(): ChannelAdapter | null {
   const remora = createRemoraBot({
     runtime,
     service: remoraService,
+    steer,
     ownerOf: async (id) => (await personByChannel(CHANNEL, id))?.walletAddress ?? null,
     link: async (id, name, code) => {
       const person = await resolvePerson(CHANNEL, id, name);

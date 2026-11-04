@@ -72,7 +72,13 @@ async function sentinelStatus(deps: RuntimeDeps, r: Remora, question: string): P
 }
 
 /** The owner's line in a 1-1 thread, then the remora's reply. */
-export async function postMessage(deps: RuntimeDeps, r: Remora, text: string) {
+export async function postMessage(
+  deps: RuntimeDeps,
+  r: Remora,
+  text: string,
+  /** C2 (ADR-0123): a chat command answers with its change card's event; null lets the line go on. */
+  steer?: (here: Remora, text: string) => Promise<string[] | null>,
+) {
   const [m] = await deps.db
     .insert(remoraEvents)
     .values({
@@ -84,6 +90,8 @@ export async function postMessage(deps: RuntimeDeps, r: Remora, text: string) {
     })
     .returning({ id: remoraEvents.id });
   const messageId = m?.id ?? "";
+  const steered = await steer?.(r, text);
+  if (steered) return { messageId, eventIds: steered };
   const reply = await runRemora(deps, r, text, { kind: "message", ref: `thread:${messageId}` });
   return { messageId, ...reply };
 }

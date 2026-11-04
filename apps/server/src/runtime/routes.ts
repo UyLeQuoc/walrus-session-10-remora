@@ -874,7 +874,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const { text } = await body<{ text?: string }>(c);
     if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
     const r = await service.get(c.req.param("id"), c.get("owner"));
-    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000)), 201);
+    return c.json(await postMessage(rt, r, text.trim().slice(0, 1_000), d.steer?.inThread), 201);
   });
 
   const myRoom = async (c: Context): Promise<RoomRow> => {
@@ -965,7 +965,7 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const room = await myRoom(c);
     const { text } = await body<{ text?: string }>(c);
     if (!text?.trim()) throw new RemoraError("message.empty", "Say something.");
-    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000)), 201);
+    return c.json(await postToRoom(rt, room, text.trim().slice(0, 1_000), d.steer?.inRoom), 201);
   });
 
   // ── Teams from Markdown (ADR-0042) ────────────────────────────────────────
