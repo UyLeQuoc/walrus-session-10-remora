@@ -27,8 +27,11 @@ export default async function globalSetup() {
 
   let discs = await listOwnerDiscs(client.core, cfg, owner);
   // Remoras from earlier W2 runs leave their Discs behind when a run stops early; revoke them so the
-  // Disc panel (read over public gRPC-web) stays small.
-  for (const d of discs.filter((x) => x.disc.name.startsWith("remora-"))) {
+  // Disc panel (read over public gRPC-web) stays small. `E2E_KEEP_DISCS=1` keeps them, for a rerun of
+  // later U18 exits that use the remoras an earlier run made.
+  const leftovers =
+    process.env.E2E_KEEP_DISCS === "1" ? [] : discs.filter((x) => x.disc.name.startsWith("remora-"));
+  for (const d of leftovers) {
     const r = await client.signAndExecuteTransaction({
       transaction: buildRevoke(cfg, {
         discId: d.disc.id,

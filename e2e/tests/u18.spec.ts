@@ -1,6 +1,8 @@
 /**
  * U18 (ADR-0119): the goal's exits on testnet, against the local stack. Opt in with
- * `U18=1 bun run --filter @remora/e2e e2e -- --project=u18`. It spends well under 1 testnet USDC.
+ * `U18=1 bun run --filter @remora/e2e e2e -- --project=u18`. It spends well under 1 testnet USDC. To rerun
+ * only later tests (`--grep`), set `E2E_KEEP_DISCS=1`: the global setup otherwise revokes the Discs
+ * of the remoras an earlier run made.
  *
  * - A1: a Researcher with a tight limit spends most of it, proposes a raise citing its memories, and
  *   the owner accepts with one signature; the new limit is read back from Sui.
