@@ -1,0 +1,73 @@
+Goal U17, Remora at scale (ADR-0111). A judge sees a network, not one agent:
+- remoras sell to remoras, a chain of receipts;
+- anyone lists an API, any merchant uses our facilitator;
+- one signature starts a crew;
+- more doors;
+- 1,000+ paid calls with 0 overspends.
+Then deploy.
+
+Uy's agent does every part (ADR-0107). Decide, write an ADR, keep going; anything for Uy goes on the final list.
+
+Source of truth: docs/goals/uy-17-scale.md; read it and the files it lists.
+
+Time (Vietnam):
+- Nov 5: A, D1. Nov 6: B, C.
+- Nov 7 to 18:00: D2-D3, then code freeze. Nov 7-8: E.
+- If short on time: A1+A3, D, B, C1, C2, A2, C3, video.
+
+Setup:
+- Work in a git worktree on origin/main, branch u17-scale; copy .env in, never commit it.
+- Never touch Uy's docs/README.md or docs/ideas/track-1-hunch-prd.md.
+- Check the burner's USDC and the sponsor's SUI first.
+- Make a second test owner (E2E_BURNER2_KEY, local .env), funded by the burner.
+
+A. An open Reef:
+- A1: a Researcher or Briefer sells answers at GET /x402/r/:slug, paid to its owner's address.
+  - Add x402 settle "after" (verify, answer, settle only on 2xx) to @remora/merchant, with tests.
+  - No self-buy, depth 1, no buyer question in the seller's memory.
+  - Reef lists remora:<slug>; planner rule "ask @slug"; the buyer adds the payee with one signature (buildSetPayees).
+  - Exit: the second owner buys from the burner's remora, which pays its sources; all receipts verify.
+- A2: /reef/new probes an x402 URL and lists it as community, with no schema push (ADR).
+- A3: a public, documented testnet facilitator with rate limits and a gas cap per payTo; examples/sell-an-api, tested, paid once.
+
+B. Crews: team apply (one signature) plus a lead.
+- The lead splits planned buys across members in parallel; each pays from its own Disc; one answer cites every receipt.
+- A crew view: spend per member, pause, revoke all in one PTB.
+- A "Research crew" template via SEED=1.
+- Exit: one question, three members, three receipts.
+
+C. More doors:
+- C1: Cursor/VS Code install links and a JSON config on Connections; tests; a real claude -p.
+- C2: Telegram Mini App at /tg: initData HMAC check, remoras, receipts, approvals, Pause all.
+- C3: SuiNS leaf names on testnet, resolved over gRPC LookupName; ADR for the SDK, or cut it.
+
+D. Load:
+- D1: split the sponsor into N gas coins.
+- D2: LOAD=1 drives the rails with the model out of the loop.
+  - 50 remoras, concurrency 1 to 5 to 10 to 20, 1,000+ paid calls, 50+ attempts that must fail.
+  - Record payments/min, p50/p95/p99, SUI per payment, failures by code.
+  - Overspends must be 0: every Disc's spend read back over gRPC.
+  - Save the dated JSON; retire the 50.
+- D3: /stats and /api/stats, from data only.
+
+E. Ship:
+- Landing: open Reef, crews, doors, "At scale" (dated numbers); a new screenshot-only reviewer (1440, Pixel 7); fix blockers and majors.
+- Docs, then a PR; merge when CI is green.
+- Deploy per docs/deploy.md:
+  - diagnose, railway up, vercel deploy, health/deep, e2e:main on the live site;
+  - DEMO_ATTACK unset; template confirms; the bot's menu button;
+  - roll back on failure.
+  - No agent schema push: if needed, stop and list it.
+- Optional: a video scene by Nov 8 12:00, at most 180 s.
+
+Rules:
+- No fake numbers or receipts; everything comes from a dated run.
+- Sui gRPC only. Testnet only. No new dependency without an ADR.
+- E2E specs keep their assertions and demo.spec's mark and box names.
+- No db:push, force-push, .env/keys in commits, reference/ edits, printed secrets. Never kill ports 8787/5173.
+- Never rewrite an accepted ADR; check main's newest ADR number first.
+- Before each push: rebase on origin/main; typecheck, lint, test, check-links, tatum-calls --check.
+
+Finish:
+- docs/spikes/<date>-u17-exit.md: receipts per part, load numbers, the deploy, what was cut, the list for Uy.
+- Stop every server, remove the worktree. End with a short Vietnamese summary for Uy.
