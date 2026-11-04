@@ -85,6 +85,16 @@ export default defineConfig({
     ...(process.env.U18 === "1"
       ? [{ name: "u18", testMatch: /u18\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // U18 D: one answer bought on a deployment's public page (U18_LIVE=1, with E2E_BASE_URL).
+    ...(process.env.U18_LIVE === "1"
+      ? [
+          {
+            name: "u18live",
+            testMatch: /u18-live\.spec\.ts/,
+            use: { ...devices["Desktop Chrome"] },
+          },
+        ]
+      : []),
     // U17: confirm the curated templates to a deployment's gallery (GALLERY=1, with E2E_BASE_URL).
     ...(process.env.GALLERY === "1"
       ? [

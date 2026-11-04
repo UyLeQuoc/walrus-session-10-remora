@@ -2,6 +2,8 @@
  * Testnet preconditions for the flow: the burner owns at least one Disc (so the Disc panel and the
  * panic button have something to act on) and holds some USDC in coins (so "Move" has work to do).
  */
+
+import { createDb, isNotNull, remoras } from "@remora/db";
 import {
   buildIssue,
   buildRevoke,
@@ -28,11 +30,13 @@ export default async function globalSetup() {
   let discs = await listOwnerDiscs(client.core, cfg, owner);
   // Remoras from earlier W2 runs leave their Discs behind when a run stops early; revoke them so the
   // Disc panel (read over public gRPC-web) stays small. `E2E_KEEP_DISCS=1` keeps them, for a rerun of
-  // later U18 exits that use the remoras an earlier run made.
+  // later U18 exits that use the remoras an earlier run made. Only Discs of this database's remoras:
+  // the burner also owns production's remoras, and their Discs aren't ours to revoke (ADR-0133).
+  const local = await localDiscIds();
   const leftovers =
     process.env.E2E_KEEP_DISCS === "1"
       ? []
-      : discs.filter((x) => x.disc.name.startsWith("remora-"));
+      : discs.filter((x) => x.disc.name.startsWith("remora-") && local.has(x.disc.id));
   for (const d of leftovers) {
     const r = await client.signAndExecuteTransaction({
       transaction: buildRevoke(cfg, {
@@ -71,4 +75,20 @@ export default async function globalSetup() {
   console.log(
     `[e2e] burner ${owner}: ${funds.coinBalance} USDC in coins, ${funds.addressBalance} in the address balance`,
   );
+}
+
+/** The Disc ids of the remoras in the local database (the one the local server uses). */
+async function localDiscIds() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return new Set<string>();
+  const db = createDb(url);
+  try {
+    const rows = await db
+      .select({ discId: remoras.discId })
+      .from(remoras)
+      .where(isNotNull(remoras.discId));
+    return new Set(rows.map((r) => r.discId as string));
+  } finally {
+    await db.$client.end();
+  }
 }
