@@ -5,7 +5,7 @@
  */
 import type { RemoraView } from "@remora/schema";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import { toast } from "sonner";
 import { ShellHeaderEnd, ShellHeaderStart, useShellTitle } from "@/app/shell";
 import { RemoraAvatar, type RemoraMood, remoraMood } from "@/components/app/remora-avatar";
@@ -42,6 +42,8 @@ export function threadMood(
 
 function Thread({ id }: { id: string }) {
   const remora = useLoad(() => api.remora(id), [id]);
+  // ADR-0105: an example from the chat arrives as a draft; it fills the box and isn't sent.
+  const draft = (useLocation().state as { draft?: unknown } | null)?.draft;
   const [waiting, setWaiting] = useState(false);
   const [pending, setPending] = useState<Line | null>(null);
   const feed = useLoad(
@@ -141,6 +143,7 @@ function Thread({ id }: { id: string }) {
             : `${r?.name ?? "This remora"} is ${r?.status ?? "loading"}.`
         }
         disabled={!live || waiting}
+        initialText={typeof draft === "string" ? draft : undefined}
         onSend={(t) => void send(t)}
       />
     </div>

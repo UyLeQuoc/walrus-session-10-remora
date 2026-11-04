@@ -525,6 +525,29 @@ test("U7 exit: Hatchery on Walrus, one-signature hatch, Proof of Learning, memor
   await ctxB.close();
   await retire(page, scout.id);
   await api(page, `/api/remoras/${sentinel.id}/retire/confirm`, "POST", {});
+  // ADR-0105: its author deprecates the test template onchain, so test runs don't fill the gallery,
+  // which hides deprecated templates.
+  const dep = await call<{ transaction: string }>(
+    page,
+    `/api/hatchery/${templateId}/deprecate`,
+    "POST",
+  );
+  expect(dep.status, dep.text).toBe(200);
+  const dr = await testnet().signAndExecuteTransaction({
+    transaction: Transaction.from(dep.body.transaction),
+    signer: kp,
+    include: { effects: true },
+  });
+  const ddone = dr.Transaction ?? dr.FailedTransaction;
+  await testnet().core.waitForTransaction({ digest: ddone.digest });
+  results.deprecateDigest = ddone.digest;
+  const gone = await api<{ listing: { deprecated: boolean } }>(
+    page,
+    `/api/hatchery/${templateId}/deprecate/confirm`,
+    "POST",
+    { digest: ddone.digest },
+  );
+  expect(gone.listing.deprecated).toBe(true);
   results.signatures = wallet.signed.length;
   mkdirSync("test-results", { recursive: true });
   writeFileSync("test-results/u7-exit.json", JSON.stringify(results, null, 2));

@@ -13,6 +13,7 @@
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { Transaction } from "@mysten/sui/transactions";
 import {
   type Browser,
   type CDPSession,
@@ -21,7 +22,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { burner } from "../support/env";
+import { burner, testnet } from "../support/env";
 import { installTestWallet, WALLET_NAME } from "../support/test-wallet";
 
 // Playwright runs from e2e/ (as the audit does for its screenshots).
@@ -207,13 +208,75 @@ type R = {
   name: string;
   template: string;
   status: string;
-  config: { budget?: unknown };
+  config: {
+    budget?: unknown;
+    triggers?: { kind: string; addresses?: string[] }[];
+  };
 };
 async function remoras(page: Page): Promise<R[]> {
   return page.evaluate(async () => {
     const res = await fetch("/api/remoras", { headers: { "x-remora-network": "testnet" } });
     return res.ok ? ((await res.json()) as { remoras: R[] }).remoras : [];
   });
+}
+
+/** Sends `mist` SUI from the burner to `to` (as w2.spec does) and waits for it to be final. */
+async function sendSui(to: string, mist: bigint): Promise<string> {
+  const tx = new Transaction();
+  const [coin] = tx.splitCoins(tx.gas, [mist]);
+  tx.transferObjects([coin as never], to);
+  const r = await testnet().signAndExecuteTransaction({
+    transaction: tx,
+    signer: burner(),
+    include: { effects: true },
+  });
+  const done = r.Transaction ?? r.FailedTransaction;
+  if (!done.effects?.status.success) throw new Error(`transfer failed: ${done.digest}`);
+  await testnet().core.waitForTransaction({ digest: done.digest });
+  return done.digest;
+}
+
+/**
+ * Retires the remoras earlier demo and examples runs left (ADR-0105), so the sidebar the video films
+ * shows the new Researcher, not a column of old ones. The owner signs a revoke when a limit is still
+ * live; one the suite's global setup already revoked retires without a transaction.
+ */
+async function retireLeftovers(page: Page) {
+  const post = (path: string, body: unknown = {}) =>
+    page.evaluate(
+      async ([p, b]) => {
+        const res = await fetch(p as string, {
+          method: "POST",
+          headers: { "x-remora-network": "testnet", "content-type": "application/json" },
+          body: b as string,
+        });
+        if (!res.ok) throw new Error(`${p}: ${res.status} ${await res.text()}`);
+        return (await res.json()) as { transaction?: string | null };
+      },
+      [path, JSON.stringify(body)],
+    );
+  const stale = (await remoras(page)).filter(
+    (r) => r.status !== "retired" && /^Researcher · (demo|examples)$/.test(r.name),
+  );
+  for (const r of stale) {
+    // Each retire counts as its own client, so the cleanup never spends the shots' request budget.
+    await page.context().setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+    const { transaction } = await post(`/api/remoras/${r.id}/retire`);
+    if (!transaction) {
+      await post(`/api/remoras/${r.id}/retire/confirm`);
+      continue;
+    }
+    const out = await testnet().signAndExecuteTransaction({
+      transaction: Transaction.from(transaction),
+      signer: burner(),
+      include: { effects: true },
+    });
+    const done = out.Transaction ?? out.FailedTransaction;
+    await testnet().core.waitForTransaction({ digest: done.digest });
+    await post(`/api/remoras/${r.id}/retire/confirm`, { digest: done.digest });
+  }
+  await page.context().setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+  console.log(`demo: retired ${stale.length} leftover remoras`);
 }
 
 /**
@@ -320,6 +383,9 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     true,
   );
 
+  // Only when the new Researcher is filmed: a partial re-capture must keep the one the others show.
+  if (!only || only.includes("create")) await retireLeftovers(owner);
+
   // 3. A Scout with its own Disc from one signature, then live. (The suite's global setup revokes
   // leftover Discs, so the demo makes a fresh one rather than reusing an old Scout.)
   let created = "";
@@ -394,8 +460,15 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       const learned = s.page.getByText(/Learned: ignore incoming SUI under 0.002/).first();
       if (await shows(learned, 15_000)) await s.box("learned", learned);
       await s.hold(2500, "learned");
+      // ADR-0105: a real 0.001 SUI transfer to the address it watches, for the new rule to skip, so
+      // the chapter never leans on an old event the feed may have scrolled away.
+      const watched = sentinel.config.triggers?.find((t) => t.kind === "chain")?.addresses?.[0];
+      if (watched) {
+        s.mark("transfer");
+        await sendSui(watched, 1_000_000n);
+      }
       const ignored = s.page.getByText(/Ignored: Received/).first();
-      if (await shows(ignored, 3_000)) {
+      if (await shows(ignored, 150_000)) {
         await s.to(ignored, "ignored");
         await s.hold(2500, "ignored");
       }
@@ -450,6 +523,54 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     await s.hold(2500);
   });
 
+  // 10. And more (ADR-0105): templates on Walrus, a room of remoras, Claude Code, Telegram. Nothing
+  // here pays; each part ends on a mark so the video can cut the page loads between them.
+  await shot("more", owner, async (s) => {
+    await go(s, "/hatchery");
+    await s.hold(1200, "gallery");
+    await s.box("gallery", s.page.getByRole("list", { name: "Templates" }));
+    await s.hold(1500);
+    const desk = s.page.getByTestId("hatchery-card").filter({ hasText: "Token desk" }).first();
+    await s.click(desk.getByRole("link"), "Token desk");
+    // The consent is read back from Walrus; mark the page once it has.
+    await expect(
+      s.page.getByTestId("consent").getByTestId("template-permissions").first(),
+    ).toBeVisible({ timeout: 60_000 });
+    s.mark("template");
+    await s.box("consent", s.page.getByTestId("consent"));
+    await s.hold(2000);
+    await s.to(s.page.getByTestId("template-blob"), "on Walrus");
+    await s.hold(1800);
+    s.mark("template-end");
+    const { rooms } = (await s.page.evaluate(async () =>
+      (await fetch("/api/rooms", { headers: { "x-remora-network": "testnet" } })).json(),
+    )) as { rooms: { id: string }[] };
+    if (rooms[0]) {
+      await go(s, `/chat/room/${rooms[0].id}`);
+      await s.hold(1500, "room");
+      const paid = s.page.getByTestId("thread-chip").filter({ hasText: /Paid/ }).last();
+      if (await shows(paid, 5_000)) await s.box("room-paid", paid);
+      await s.hold(2000);
+      s.mark("room-end");
+    }
+    await go(s, "/connections");
+    await s.hold(1200, "connections");
+    const token = s.page
+      .getByTestId("token")
+      .filter({ hasText: "token live" })
+      .filter({ hasText: "Pays" })
+      .first();
+    if (await shows(token, 5_000)) await s.box("token", token);
+    await s.hold(2200);
+    s.mark("connections-end");
+    await go(s, "/settings");
+    const telegram = s.page.getByRole("button", { name: "Link Telegram" });
+    await telegram.scrollIntoViewIfNeeded();
+    await s.hold(800, "settings");
+    await s.to(telegram, "Link Telegram");
+    await s.hold(2000);
+  });
+
   // 9. The Reef and the status page.
   await shot("reef", owner, async (s) => {
     await go(s, "/reef");
@@ -462,5 +583,5 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
 
   console.log(`demo shots: ${done.join(", ")}`);
   // Every shot asked for was recorded (all of them, without DEMO_SHOTS).
-  expect(done).toEqual(expect.arrayContaining(only ?? ["playground", "create", "scout"]));
+  expect(done).toEqual(expect.arrayContaining(only ?? ["playground", "create", "scout", "more"]));
 });

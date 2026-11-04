@@ -7,12 +7,17 @@ import { type PlaygroundSession, PlaygroundSession as SessionSchema } from "@rem
 import {
   Bot,
   Clock,
+  FileText,
   Fish,
+  type LucideIcon,
   MessageCircleQuestion,
+  Package,
   ReceiptText,
   Send,
   Shield,
+  Sparkles,
   Store,
+  Trophy,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -27,9 +32,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Flow, Meter, Receipt, Stat, Steps } from "@/components/visual";
 import { Markdown } from "@/features/chat/markdown";
+import { useReefServices } from "@/features/reef/hooks";
 import { apiFetch, errorMessage } from "@/lib/api";
 import { payeeName } from "@/lib/payee";
-import { explorerTx } from "@/lib/usdc";
+import { explorerTx, usdc } from "@/lib/usdc";
+import { cn } from "@/lib/utils";
 
 const TOKEN_KEY = "remora.playground";
 const Availability = z.object({
@@ -72,7 +79,65 @@ async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {
 export const lasts = (minutes: number) =>
   minutes < 120 ? `${minutes} minutes` : `${Math.round(minutes / 60)} hours`;
 
-const SUGGESTIONS = ["Is package 0x2 safe to depend on?", "What are the odds for tonight's match?"];
+/**
+ * ADR-0105: one question per paid service, and one it answers without paying, each run once on
+ * testnet (examples.spec.ts). A card names what it uses and, once the Reef has answered, its price.
+ */
+export const SUGGESTIONS: ReadonlyArray<{
+  text: string;
+  service: string | null;
+  icon: LucideIcon;
+}> = [
+  { text: "Is package 0x2 safe to depend on?", service: "sui-risk", icon: Package },
+  { text: "What are the odds for tonight's match?", service: "odds", icon: Trophy },
+  { text: "Summarize https://docs.wal.app in three lines", service: "brief", icon: FileText },
+  { text: "What does a Sui upgrade cap do?", service: null, icon: Sparkles },
+];
+
+/** The cards under the question box: click one to fill the box. */
+function SuggestionCards({ current, onPick }: { current: string; onPick: (text: string) => void }) {
+  const reef = useReefServices();
+  const price = (service: string) => reef.data?.find((x) => x.name === service)?.priceUsdc;
+  return (
+    <ul className="grid gap-2 sm:grid-cols-2" aria-label="Questions to try">
+      {SUGGESTIONS.map((q) => {
+        const p = q.service ? price(q.service) : undefined;
+        return (
+          <li key={q.text} className="flex">
+            <button
+              type="button"
+              aria-pressed={q.text === current}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-ob-card border border-ob-border p-3 text-left transition-colors hover:bg-ob-control",
+                q.text === current && "border-ob-accent bg-ob-accent-soft/40",
+              )}
+              onClick={() => onPick(q.text)}
+            >
+              <span
+                className={cn(
+                  "grid size-8 shrink-0 place-items-center rounded-ob-md [&_svg]:size-4",
+                  q.service
+                    ? "bg-ob-accent-soft text-ob-accent-text"
+                    : "bg-ob-success-soft text-ob-success-text",
+                )}
+                aria-hidden
+              >
+                <q.icon />
+              </span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-xs text-ob-muted">
+                  {q.service ? payeeName(`reef:${q.service}`) : "No purchase needed"}
+                  {p ? <span className="tabular-nums"> · {usdc(p)} USDC</span> : null}
+                </span>
+                <span className="text-sm text-ob-text">{q.text}</span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export function PlaygroundPage() {
   const [session, setSession] = useState<PlaygroundSession | null>(null);
@@ -80,7 +145,7 @@ export function PlaygroundPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [question, setQuestion] = useState(SUGGESTIONS[0] ?? "");
+  const [question, setQuestion] = useState(SUGGESTIONS[0]?.text ?? "");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -356,6 +421,7 @@ export function PlaygroundPage() {
                     onChange={(e) => setQuestion(e.target.value)}
                     rows={2}
                   />
+                  <SuggestionCards current={question} onPick={setQuestion} />
                   <div className="flex flex-wrap items-center gap-3">
                     <Button
                       type="button"
@@ -364,17 +430,6 @@ export function PlaygroundPage() {
                     >
                       <Send /> Ask Researcher
                     </Button>
-                    {SUGGESTIONS.filter((s) => s !== question).map((s) => (
-                      <Button
-                        key={s}
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setQuestion(s)}
-                      >
-                        {s}
-                      </Button>
-                    ))}
                     {busy ? (
                       <span className="flex items-center gap-3 text-md text-ob-muted">
                         <Spinner /> {busy}

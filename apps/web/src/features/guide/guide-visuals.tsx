@@ -216,7 +216,7 @@ export function ClaudeCodeSteps() {
 }
 
 const CHANNELS = [
-  { icon: Globe, name: "Web", detail: "remora.vercel.app", href: null },
+  { icon: Globe, name: "Web", detail: "getremora.vercel.app", href: null },
   { icon: Send, name: "Telegram", detail: TELEGRAM_BOT.handle, href: TELEGRAM_BOT.url },
   {
     icon: MessagesSquare,

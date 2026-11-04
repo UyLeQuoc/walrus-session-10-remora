@@ -42,7 +42,11 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 
 `capture/` and `out/` are gitignored.
 
-## Scenes (161 s, re-captured Nov 4 from the visual-first app, [ADR-0103](../../adr/0103-visual-first-ui-pass.md))
+**Before it films the new Researcher,** the capture retires the `Researcher · demo` and
+`Researcher · examples` remoras earlier runs left, so the sidebar isn't a column of old ones. A partial
+re-capture (`DEMO_SHOTS`) without `create` keeps them.
+
+## Scenes (178 s, re-captured Nov 4 from the visual-first app, [ADR-0103](../../adr/0103-visual-first-ui-pass.md), with "08 · And more", [ADR-0105](../../adr/0105-examples-you-can-try.md))
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
@@ -51,11 +55,12 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 | Where the money goes | Your address → its spending limit → the x402 facilitator → a paid service; the remora's key holds 0 SUI |
 | 02 · Your own remora | `/remoras/new`: 0.50 a month, ≤ 0.015 a payment, one signature, practice mode, Go live |
 | 03 · Ask, pay, see why | A paid answer from its own Disc, the cost card, Why? → the Wake |
-| 04 · It learns from you | Teach a Wallet watcher in plain words; a small transfer it was taught to skip, ignored |
+| 04 · It learns from you | Teach a Wallet watcher in plain words. The capture then sends a real 0.001 SUI to the address it watches, and the new rule ignores it |
 | 05 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
 | The attack | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends |
 | 06 · Over the cap, it asks | `/approvals`: pay once from your own wallet |
 | 07 · You stay in control | `/funds`: your USDC stays in your address; Pause all |
+| 08 · And more | Real footage of four more parts of the app:<ul><li>the template gallery (six templates on Walrus);</li><li>a template's consent ("Passed the safety review", one signature to use it);</li><li>a room where remoras answer together;</li><li>a connection Claude Code uses within its limits;</li><li>Telegram in Settings.</li></ul> |
 | Why Remora | Bounded, Accountable, Learns, Yours |
 | Lockup | "Give an agent a budget, not your wallet."; the playground |
 
@@ -65,6 +70,8 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
     `clip("playground", [{ from: "Ask Scout", to: "answered", dur: 3.6, badge: … }])`.
   - Its steps, captions and spotlights are keyed to marks too, so a re-capture keeps the cut.
   - A missing mark logs a warning when you render.
+- **A chapter over several pages** gives each segment its own `url` for the address bar, and ends each
+  part on a mark placed after its hold, so the cut skips the page loads.
 - **Captions.**
   - `caps: [[mark, offset, seconds, html]]`.
   - One shows at a time, and `<b>` is highlighted.

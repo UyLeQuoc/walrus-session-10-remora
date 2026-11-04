@@ -179,6 +179,26 @@ describe("gallery and hatch (M4, M5)", () => {
     await waitFor(() => expect(calls.some((c) => c.url === "/api/hatchery?q=pack")).toBe(true));
   });
 
+  it("hides blocked and deprecated templates until asked", async () => {
+    const id = (n: string) => `0x${n.repeat(64)}`;
+    fakeApi({
+      "GET /api/hatchery": {
+        templates: [
+          listing,
+          { ...listing, templateId: id("a"), name: "Old desk", deprecated: true },
+          { ...listing, templateId: id("b"), name: "Free money", safety: "block" },
+        ],
+      },
+    });
+    at("/hatchery", "/hatchery", <HatcheryPage />);
+    // ADR-0105: a deprecated template can't be used, so it waits with the blocked ones.
+    expect(await screen.findAllByTestId("hatchery-card")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Show hidden (2)" }));
+    const cards = screen.getAllByTestId("hatchery-card").map((c) => c.textContent);
+    expect(cards).toHaveLength(3);
+    expect(cards.join(" ")).toContain("deprecated");
+  });
+
   it("shows the consent screen and hatches with one signature", async () => {
     const calls = fakeApi({
       ...signedIn,

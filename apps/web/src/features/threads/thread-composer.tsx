@@ -18,15 +18,18 @@ export function ThreadComposer({
   onSend,
   mentions,
   toolbar,
+  initialText,
 }: {
   placeholder: string;
   disabled?: boolean;
+  /** Text the box opens with (an example from the chat, ADR-0105). */
+  initialText?: string;
   onSend: (text: string) => void;
   /** Rooms: member names offered after `@`. */
   mentions?: string[];
   toolbar?: ReactNode;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText ?? "");
   const q = mentions ? mentionQuery(text) : null;
   const options =
     q === null

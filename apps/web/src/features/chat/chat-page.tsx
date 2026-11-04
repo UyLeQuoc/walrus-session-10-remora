@@ -2,7 +2,7 @@ import type { RemoraView } from "@remora/schema";
 import type { UIMessage } from "ai";
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useNewChatTick, useOpenTick, useShellTitle } from "@/app/shell";
 import { AsciiOcean, type SharkSpec } from "@/components/ascii-ocean";
@@ -184,6 +184,11 @@ export function ChatPage() {
     !roster.loading &&
     !(roster.data?.remoras ?? []).some((r) => r.status !== "retired");
 
+  // ADR-0105: a Researcher or Wallet watcher example opens that remora's thread, filled in.
+  const navigate = useNavigate();
+  const openThread = (remoraId: string, value: string) =>
+    navigate(`/chat/r/${remoraId}`, { state: { draft: value } });
+
   const reloadAndAsk = (value: string) => {
     clearActiveChat();
     rememberPendingAsk(value);
@@ -249,7 +254,13 @@ export function ChatPage() {
                   />
                 ) : (
                   <div className="flex flex-col items-start gap-3">
-                    <Examples taught={false} onPick={setText} onReloadAndAsk={reloadAndAsk} />
+                    <Examples
+                      roster={(roster.data?.remoras ?? []).filter((r) => r.status !== "retired")}
+                      onPick={setText}
+                      onRun={send}
+                      onReloadAndAsk={reloadAndAsk}
+                      onOpenThread={openThread}
+                    />
                   </div>
                 )}
               </div>

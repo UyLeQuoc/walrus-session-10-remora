@@ -9,7 +9,7 @@ describe("pageHead", () => {
       path: "/guide",
       index: true,
     });
-    expect(head.canonical).toBe("https://remora.vercel.app/guide");
+    expect(head.canonical).toBe("https://getremora.vercel.app/guide");
     expect(head.robots).toBe("index, follow");
   });
 

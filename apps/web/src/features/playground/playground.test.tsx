@@ -5,12 +5,41 @@
 import { HealthReport, PlaygroundSession } from "@remora/schema";
 import healthJson from "@remora/schema/fixtures/health.report.json";
 import sessionJson from "@remora/schema/fixtures/playground.session.json";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as rtlRender, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HealthBoard } from "@/features/lab/health-board";
-import { lasts, PlaygroundPage } from "./playground-page";
+import { lasts, PlaygroundPage, SUGGESTIONS } from "./playground-page";
+
+/** The playground reads the Reef's prices through react-query, as the app does under its providers. */
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      {ui}
+    </QueryClientProvider>,
+  );
+
+const reef = [
+  {
+    name: "sui-risk",
+    category: "Onchain risk",
+    priceUsdc: "10000",
+    payTo: "0x1",
+    docsUrl: "https://x.test",
+  },
+  { name: "odds", category: "Sports", priceUsdc: "20000", payTo: "0x2", docsUrl: "https://x.test" },
+  {
+    name: "brief",
+    category: "Summaries",
+    priceUsdc: "10000",
+    payTo: "0x3",
+    docsUrl: "https://x.test",
+  },
+];
 
 const session = PlaygroundSession.parse(sessionJson);
 const health = HealthReport.parse(healthJson);
@@ -90,6 +119,35 @@ describe("playground (H7)", () => {
     );
     expect(screen.getByTestId("playground-questions").textContent).toBe("2");
     expect(calls.find((c) => c.url === "/api/playground/ask")?.token).toBe("tok-1");
+  });
+
+  it("offers a question for each paid service with its Reef price, and one that needs no purchase", async () => {
+    const fresh = { ...session, answers: [], spentUsdc: "0.00", questionsLeft: 3 };
+    fakeApi({
+      "GET /api/playground": open,
+      "GET /api/reef/services": reef,
+      "POST /api/playground/session": { session: fresh, token: "tok-1" },
+    });
+    render(
+      <MemoryRouter>
+        <PlaygroundPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /Start my Researcher/ }));
+    const cards = within(await screen.findByRole("list", { name: "Questions to try" }));
+    expect(cards.getAllByRole("button")).toHaveLength(SUGGESTIONS.length);
+    // ADR-0105: the price is the Reef's, never a guess.
+    expect((await cards.findByRole("button", { name: /Odds · 0\.02 USDC/ })).textContent).toContain(
+      "tonight's match",
+    );
+    expect(cards.getByRole("button", { name: /Brief · 0\.01 USDC/ })).toBeDefined();
+    expect(cards.getByRole("button", { name: /No purchase needed/ })).toBeDefined();
+    // The first one starts in the box; a card fills it instead of asking.
+    const box = screen.getByLabelText("Your question") as HTMLTextAreaElement;
+    expect(box.value).toBe(SUGGESTIONS[0]?.text);
+    await userEvent.click(cards.getByRole("button", { name: /Brief/ }));
+    expect(box.value).toBe("Summarize https://docs.wal.app in three lines");
+    expect(cards.getByRole("button", { name: /Brief/ }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("says plainly when the questions are used up, and when the playground is resting", async () => {

@@ -35,12 +35,14 @@ export function HatcheryPage() {
     () => api.hatchery({ ...(query ? { q: query } : {}), ...(kind ? { kind } : {}) }),
     [query, kind],
   );
-  const [showBlocked, setShowBlocked] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const all = list.data?.templates ?? [];
   // ADR-0103: templates the safety review blocked are hidden until asked for, so the gallery isn't
-  // half red; the count stays visible.
-  const blocked = all.filter((t) => t.safety === "block").length;
-  const templates = showBlocked ? all : all.filter((t) => t.safety !== "block");
+  // half red; the count stays visible. ADR-0105: so are the ones their author deprecated, which
+  // nobody can use any more.
+  const usable = (t: (typeof all)[number]) => t.safety !== "block" && !t.deprecated;
+  const hidden = all.filter((t) => !usable(t)).length;
+  const templates = showHidden ? all : all.filter(usable);
   return (
     <Page title="Templates" description="Remoras people shared, to copy into your own account.">
       <PageHeader
@@ -71,15 +73,16 @@ export function HatcheryPage() {
           <ToggleGroupItem value="scout">Researcher</ToggleGroupItem>
           <ToggleGroupItem value="sentinel">Wallet watcher</ToggleGroupItem>
         </ToggleGroup>
-        {blocked ? (
+        {hidden ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            aria-pressed={showBlocked}
-            onClick={() => setShowBlocked((v) => !v)}
+            aria-pressed={showHidden}
+            title="Blocked by the safety review, or deprecated by their author"
+            onClick={() => setShowHidden((v) => !v)}
           >
-            {showBlocked ? "Hide blocked" : `Show blocked (${blocked})`}
+            {showHidden ? "Hide blocked and deprecated" : `Show hidden (${hidden})`}
           </Button>
         ) : null}
       </div>
