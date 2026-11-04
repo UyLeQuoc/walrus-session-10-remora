@@ -368,9 +368,7 @@ const result = {
     /** What the Disc said, one example per kind of attempt. */
     reasons: [
       ...new Set(
-        calls
-          .filter((c) => c.step === failStep && c.reason)
-          .map((c) => `${c.payee}: ${c.reason}`),
+        calls.filter((c) => c.step === failStep && c.reason).map((c) => `${c.payee}: ${c.reason}`),
       ),
     ].slice(0, 4),
   },
