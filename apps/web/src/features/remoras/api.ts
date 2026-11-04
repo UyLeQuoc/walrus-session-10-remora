@@ -7,6 +7,9 @@ import {
   ApprovalPayTx,
   ApprovalRequest,
   BudgetMeter,
+  ConfigHistory,
+  ConfigRestore,
+  ConfigVersionDiff,
   CreateRemoraResponse,
   FeedItem,
   HatchConsent,
@@ -173,6 +176,12 @@ export const api = {
     id: string,
     b: { name?: string; persona?: string; watch?: string[]; model?: string | null },
   ) => call("PATCH", `/api/remoras/${id}`, Remora, b),
+  // ── N11 (ADR-0122): config history ──
+  history: (id: string) => call("GET", `/api/remoras/${id}/history`, ConfigHistory),
+  historyDiff: (id: string, version: string) =>
+    call("GET", `/api/remoras/${id}/history/${version}`, ConfigVersionDiff),
+  restore: (id: string, version: string) =>
+    call("POST", `/api/remoras/${id}/history/${version}/restore`, ConfigRestore),
   activate: (id: string) => call("POST", `/api/remoras/${id}/activate`, Remora),
   pause: (id: string, paused: boolean) =>
     call(

@@ -58,6 +58,7 @@ import { CostCard } from "./cost-card";
 import { CrewCard } from "./crew-card";
 import { describeRemora, useTemplateCatalog } from "./describe";
 import { FeedList } from "./feed-list";
+import { HistorySection } from "./history-section";
 import { RequireOwner, useLoad } from "./hooks";
 import { BuyFromCard, SellCard } from "./sell-card";
 import { useBudget } from "./use-budget";
@@ -437,7 +438,7 @@ function IdentitySection({ r, reload }: { r: RemoraView; reload: () => void }) {
     try {
       must(await api.edit(r.id, { name, persona }));
       reload();
-      toast.success("Saved. The previous version is in the feed.");
+      toast.success("Saved. The previous version is in History.");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -731,17 +732,20 @@ function SettingsTab({ r, reload }: { r: RemoraView; reload: () => void }) {
         </p>
         {r.template !== "sentinel" ? <SourcesSection r={r} /> : null}
         <KeysSection r={r} />
+        <HistorySection r={r} reload={reload} readOnly />
       </div>
     );
   return (
     <div className="flex flex-col gap-8 lg:gap-10">
-      <IdentitySection r={r} reload={reload} />
+      {/* A restore (History) changes these from outside the form, so the form starts again. */}
+      <IdentitySection key={`identity-${r.updatedAt}`} r={r} reload={reload} />
       <BrainSection r={r} reload={reload} />
-      <BudgetSection r={r} reload={reload} layout="split" />
+      <BudgetSection key={`budget-${r.updatedAt}`} r={r} reload={reload} layout="split" />
       {r.template === "scout" ? <SchedulesSection r={r} /> : null}
       {/* ADR-0106: a Briefer's schedule is its brief's; its page shows it with Run now. */}
       {r.template === "scout" ? <SourcesSection r={r} /> : null}
       <KeysSection r={r} />
+      <HistorySection r={r} reload={reload} />
       <DangerSection r={r} reload={reload} />
     </div>
   );

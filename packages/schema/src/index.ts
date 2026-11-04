@@ -12,6 +12,7 @@ export * from "./events.ts";
 export * from "./facts.ts";
 export * from "./funds.ts";
 export * from "./hatchery.ts";
+export * from "./history.ts";
 export * from "./launch.ts";
 export * from "./learning.ts";
 export * from "./mcp.ts";
