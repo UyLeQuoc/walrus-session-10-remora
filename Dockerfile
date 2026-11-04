@@ -31,6 +31,8 @@ COPY apps/server apps/server
 COPY apps/facilitator apps/facilitator
 COPY apps/merchants apps/merchants
 COPY scripts/railway-start.mts scripts/railway-start.mts
+# ADR-0117: the dated load runs, which /api/stats shows as they were measured.
+COPY docs/spikes/*-u17-load.json docs/spikes/
 
 ENV NODE_ENV=production PORT=8787
 EXPOSE 8787
