@@ -30,6 +30,7 @@ track only: Smart Agents for Real Life**.
 | [spikes/](spikes/) | **Exit records:** timings, digests and findings for each goal's testnet exit |
 | [event-rules.md](event-rules.md) | The full event rules in English: dates, eligibility, submission form, requirements, judging, prizes |
 | [ideas/tracks-1-and-3.md](ideas/tracks-1-and-3.md) | Receipts (Track 1) and Kitty (Track 3) on Remora's rails, what an extra entry costs. Being built in this repo (U11, [ADR-0060](adr/0060-build-receipts-and-kitty.md)); entering them is not decided |
+| [prd/football-agent-track-2.md](prd/football-agent-track-2.md) | **Proposed football vertical (VI):** VAR / Touchline research agent, football API sources and costs, code reuse audit, personal prediction journal, learning, payments, acceptance criteria and rollout gates. Planning only; the existing ship set and submission stay unchanged ([ADR-0108](adr/0108-football-agent-prd.md)) |
 | [archive/](archive/) | Parked ideas for the other tracks (Called It, Tuesday, Tab, Oath, Mandate). Reference only |
 
 ## Key facts
