@@ -119,6 +119,7 @@ import {
 } from "./schedules.ts";
 import { scoutAsk } from "./scout.ts";
 import { teach } from "./sentinel.ts";
+import { confirmPayLink, payLinkOf } from "./splitter.ts";
 import type { Steer } from "./steer.ts";
 import { mountSteer } from "./steer-routes.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
@@ -727,6 +728,28 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         buyer: x.buyer ? `${x.buyer.slice(0, 6)}…${x.buyer.slice(-4)}` : "",
       })),
     });
+  });
+
+  // ── B3 (ADR-0132): a pay link from a split, paid from anyone's wallet ─────
+  app.get("/api/public/pay/:token", async (c) => {
+    const found = await payLinkOf(rt, c.req.param("token"));
+    if (!found)
+      return c.json({ error: { code: "paylink.not_found", message: "No such pay link." } }, 404);
+    const { r, link } = found;
+    return c.json({
+      name: link.name,
+      amount: link.amount,
+      memo: link.memo,
+      to: r.ownerAddress,
+      from: r.name,
+      network: r.network,
+      asset: rt.networks.config(r.network).usdcCoinType,
+      paidDigest: link.paidDigest ?? null,
+    });
+  });
+  app.post("/api/public/pay/:token/paid", async (c) => {
+    const b = await body<{ digest?: string }>(c);
+    return c.json(await confirmPayLink(rt, c.req.param("token"), digestOf(b.digest)));
   });
 
   app.get("/api/x402/r/:slug", async (c) => {

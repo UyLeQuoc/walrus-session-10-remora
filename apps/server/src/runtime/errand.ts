@@ -16,6 +16,7 @@ import {
 import { requestPayment } from "../tools/pay.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
+import { splitAsk } from "./splitter.ts";
 
 /** At this many times a contact's usual payment, it asks first. */
 export const UNUSUAL_FACTOR = 3n;
@@ -218,6 +219,16 @@ export async function errandAsk(
   const names = contactsOf(r)
     .map((c) => c.name)
     .join(", ");
+  // ADR-0132: "I paid 12 for dinner for Linh and me", "balances", "settle up".
+  const split = await splitAsk(deps, r, text);
+  if (split) {
+    const answer = split.lines.join("\n");
+    return {
+      answer,
+      outcome: "paid",
+      eventId: await reply(deps, r, text, answer, { split: true }),
+    };
+  }
   const parsed = parsePayText(text);
   if (!parsed || parsed.amount <= 0n) {
     const answer = `Tell me who and how much, e.g. "pay ${contactsOf(r)[0]?.name ?? "Linh"} 2 USDC for lunch". I can pay: ${names || "nobody yet"}.`;
