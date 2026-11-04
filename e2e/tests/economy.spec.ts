@@ -11,7 +11,9 @@
  *
  * What happened goes to `test-results/economy.json`, for the exit note.
  */
-import { writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { expect, type Page, test } from "@playwright/test";
@@ -44,6 +46,15 @@ const api = <T>(page: Page, path: string, init: { method?: string; body?: unknow
     },
     { p: path, method: init.method, body: init.body },
   ) as Promise<T>;
+
+/** What an earlier test in this file wrote, if it ran. */
+const prior = (): Record<string, unknown> => {
+  try {
+    return JSON.parse(readFileSync("test-results/economy.json", "utf8"));
+  } catch {
+    return {};
+  }
+};
 
 function burner2() {
   const raw = process.env.E2E_BURNER2_KEY;
@@ -187,4 +198,190 @@ test("economy: a remora buys another owner's remora's answer, and every receipt 
   }
   await ctx.close();
   writeFileSync("test-results/economy.json", JSON.stringify(results, null, 2));
+});
+
+test("economy: an owner lists an API, and a remora buys it once through the public facilitator", async ({
+  page,
+}) => {
+  test.setTimeout(15 * 60_000);
+  // examples/sell-an-api, paid to the second test owner, settling through this server's public
+  // facilitator (/api/facilitator, ADR-0113).
+  const payTo = burner2().toSuiAddress();
+  const shop = spawn("npx", ["tsx", "examples/sell-an-api/src/main.ts"], {
+    cwd: resolve(import.meta.dirname, "../.."),
+    env: {
+      ...process.env,
+      PAY_TO: payTo,
+      FACILITATOR_URL: "http://localhost:8797/api/facilitator",
+      PORT: "8790",
+    },
+    stdio: "ignore",
+  });
+  try {
+    await expect
+      .poll(
+        async () => (await fetch("http://localhost:8790/haiku").catch(() => null))?.status ?? 0,
+        { timeout: 60_000 },
+      )
+      .toBe(402);
+    await installTestWallet(page, burner());
+    await page.goto("/remoras");
+    await connectAndSignIn(page);
+    await retireLeftovers(page, "Researcher · buys an API");
+    const buyer = await researcher(page, "Researcher · buys an API");
+
+    // List it: the server reads its 402, the owner signs what was found.
+    await rotate(page);
+    await page.goto("/reef/new");
+    const form = page.getByTestId("list-api");
+    await form.getByLabel("Its URL").fill("http://localhost:8790/haiku");
+    await form.getByLabel("Its name in the Reef").fill("haiku");
+    await form.getByLabel("One line about it").fill("A haiku about your question");
+    await form.getByRole("button", { name: "Check it" }).click();
+    await expect(page.getByTestId("list-api-found")).toContainText("0.005 USDC", {
+      timeout: 30_000,
+    });
+    await form.getByRole("button", { name: "Sign and list" }).click();
+    await expect(page.getByTestId("list-api-done")).toBeVisible({ timeout: 30_000 });
+
+    // Let the Researcher pay it (one signature), then buy once.
+    await rotate(page);
+    await page.goto(`/remoras/${buyer}`);
+    const row = page
+      .getByTestId("buy-from-card")
+      .getByRole("listitem")
+      .filter({ hasText: "@haiku" });
+    await row.getByRole("button", { name: "Let it pay" }).click();
+    await expect(row.getByText("may pay")).toBeVisible({ timeout: 120_000 });
+    const since = new Date().toISOString();
+    await rotate(page);
+    await page.goto(`/chat/r/${buyer}`);
+    await page.getByLabel("Message").fill("ask @haiku walrus memory");
+    await page.getByLabel("Message").press("Enter");
+    type Ev = { type: string; payload: Record<string, unknown> };
+    let pay: Ev | undefined;
+    await expect
+      .poll(
+        async () => {
+          await rotate(page);
+          const { events } = await api<{ events: Ev[] }>(
+            page,
+            `/api/feed?remora=${buyer}&after=${encodeURIComponent(since)}&limit=50`,
+          );
+          pay = events.find((e) => e.type === "payment");
+          return pay ? "paid" : (events.find((e) => e.type === "blocked")?.payload.code ?? "");
+        },
+        { timeout: 240_000, intervals: [4_000] },
+      )
+      .toBe("paid");
+    const p = pay?.payload as { payee: string; amount: string; digest: string };
+    expect(p.payee).toBe("reef:community-haiku");
+    const v = await api<{ found: boolean; checks: { ok: boolean }[] }>(
+      page,
+      `/api/verify/${p.digest}`,
+    );
+    expect(v.found && v.checks.every((c) => c.ok), p.digest).toBe(true);
+    const listed = prior();
+    writeFileSync(
+      "test-results/economy.json",
+      JSON.stringify(
+        { ...listed, api: { url: "http://localhost:8790/haiku", payTo, paid: p } },
+        null,
+        2,
+      ),
+    );
+    if (process.env.ECONOMY_KEEP !== "1") await retire(page, buyer);
+  } finally {
+    shop.kill();
+  }
+});
+
+test("economy: a crew's lead splits one question across three members, three receipts", async ({
+  page,
+}) => {
+  test.setTimeout(20 * 60_000);
+  await installTestWallet(page, burner());
+  await page.goto("/remoras");
+  await connectAndSignIn(page);
+  for (const name of ["Crew lead", "Onchain", "Markets", "Code"]) await retireLeftovers(page, name);
+
+  // One signature makes all four (ADR-0114).
+  await rotate(page);
+  await page.goto("/remoras/import");
+  await page
+    .getByRole("textbox", { name: "Team file" })
+    .fill(
+      readFileSync(resolve(import.meta.dirname, "../seed/templates/11-research-crew.md"), "utf8"),
+    );
+  await page.getByRole("button", { name: "Preview" }).click();
+  await page.getByRole("button", { name: /Create the team/ }).click();
+  await page.waitForURL(/\/chat\/room\//, { timeout: 240_000 });
+
+  await rotate(page);
+  const { remoras } = await api<{
+    remoras: { id: string; name: string; status: string; config: { crew?: { leadId: string } } }[];
+  }>(page, "/api/remoras");
+  const crew = remoras.filter((r) => r.config.crew && r.status !== "retired");
+  expect(crew.map((r) => r.name).sort()).toEqual(["Code", "Crew lead", "Markets", "Onchain"]);
+  const lead = crew.find((r) => r.name === "Crew lead");
+  for (const r of crew) {
+    await rotate(page);
+    await api(page, `/api/remoras/${r.id}/activate`, { method: "POST" });
+  }
+
+  const since = new Date().toISOString();
+  const question =
+    "Is package 0x2 safe, what's SUI worth, and how healthy is https://github.com/MystenLabs/walrus?";
+  await rotate(page);
+  await page.goto(`/chat/r/${lead?.id}`);
+  await page.getByLabel("Message").fill(question);
+  await page.getByLabel("Message").press("Enter");
+  type Ev = { type: string; payload: Record<string, unknown> };
+  let answer: Ev | undefined;
+  await expect
+    .poll(
+      async () => {
+        await rotate(page);
+        const { events } = await api<{ events: Ev[] }>(
+          page,
+          `/api/feed?remora=${lead?.id}&after=${encodeURIComponent(since)}&limit=50`,
+        );
+        answer = events.find((e) => e.type === "answer");
+        return Boolean(answer);
+      },
+      { timeout: 300_000, intervals: [5_000] },
+    )
+    .toBe(true);
+  const receipts = (answer?.payload.crew ?? []) as {
+    member: string;
+    payee: string;
+    amount: string;
+    digest: string;
+  }[];
+  expect(receipts.map((r) => `${r.member} ${r.payee}`).sort()).toEqual([
+    "Code reef:github",
+    "Markets reef:price",
+    "Onchain reef:sui-risk",
+  ]);
+  for (const r of receipts) {
+    const v = await api<{ found: boolean; checks: { ok: boolean }[] }>(
+      page,
+      `/api/verify/${r.digest}`,
+    );
+    expect(v.found && v.checks.every((c) => c.ok), `${r.member} ${r.digest}`).toBe(true);
+  }
+  const listed = prior();
+  writeFileSync(
+    "test-results/economy.json",
+    JSON.stringify({ ...listed, crew: { question, lead: lead?.id, receipts } }, null, 2),
+  );
+
+  // The crew page sums the spend; one signature retires all four.
+  await rotate(page);
+  await page.goto(`/remoras/${lead?.id}`);
+  await expect(page.getByTestId("crew-card")).toContainText("Onchain", { timeout: 30_000 });
+  if (process.env.ECONOMY_KEEP !== "1") {
+    await page.getByRole("button", { name: /Retire the crew/ }).click();
+    await expect(page.getByTestId("crew-card")).toContainText("retired", { timeout: 120_000 });
+  }
 });

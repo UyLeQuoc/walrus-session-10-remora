@@ -11,6 +11,7 @@ import {
   people,
   sql,
 } from "@remora/db";
+
 import { createSuiClient, fetchRelayerConfig, readAccount } from "@remora/memory";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -18,6 +19,7 @@ import { loadToken } from "../connect/tokens.ts";
 import { db } from "../context.ts";
 import { env } from "../env/load.ts";
 import { mergePersons, personByWallet } from "../identity/persons.ts";
+import { latestLoadRun, railStats } from "../ops/rail-stats.ts";
 
 const doneBody = z.object({
   accountId: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
@@ -53,6 +55,10 @@ export const connectRoutes = new Hono()
       people: row?.people ?? 0,
       accountId: env.MEMWAL_ACCOUNT_ID,
       network: env.SUI_NETWORK,
+      // U17 D3 (ADR-0111): the payment rails, per network, and the latest dated load run.
+      rails: await railStats(db),
+      loadRun: latestLoadRun(),
+      at: new Date().toISOString(),
     };
     statsCache = { at: Date.now(), body };
     return c.json(body);

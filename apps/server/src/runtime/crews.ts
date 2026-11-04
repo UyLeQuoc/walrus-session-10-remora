@@ -24,15 +24,21 @@ export const crewOf = (r: Remora): Crew | null => {
 
 export const isLead = (r: Remora) => crewOf(r)?.leadId === r.id;
 
-/** Everyone in this remora's crew, the lead included, retired ones left out. */
-export async function crewMembers(deps: RuntimeDeps, r: Remora): Promise<Remora[]> {
+/** Everyone in this remora's crew, the lead included; retired ones only with `withRetired`. */
+export async function crewMembers(
+  deps: RuntimeDeps,
+  r: Remora,
+  opts: { withRetired?: boolean } = {},
+): Promise<Remora[]> {
   const crew = crewOf(r);
   if (!crew) return [];
   const mine = await deps.db
     .select()
     .from(remoras)
     .where(and(eq(remoras.ownerAddress, r.ownerAddress), eq(remoras.network, r.network)));
-  return mine.filter((m) => m.status !== "retired" && crewOf(m)?.id === crew.id);
+  return mine.filter(
+    (m) => (opts.withRetired || m.status !== "retired") && crewOf(m)?.id === crew.id,
+  );
 }
 
 /**
@@ -62,7 +68,8 @@ export function assign(planned: PlannedBuy[], members: Remora[]): Map<Remora, Pl
 export async function crewView(deps: RuntimeDeps, r: Remora) {
   const crew = crewOf(r);
   if (!crew) throw new RemoraError("crew.none", `${r.name} isn't in a crew.`, 404);
-  const members = await crewMembers(deps, r);
+  // A retired crew still shows who was in it, and what each spent.
+  const members = await crewMembers(deps, r, { withRetired: true });
   const since = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
   const rows: {
     id: string;
