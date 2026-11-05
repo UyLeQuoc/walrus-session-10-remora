@@ -1,14 +1,25 @@
 {
   "name": "@remora/disc-sdk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
+  "description": "Pay x402 and MPP services on Sui through a Disc, an onchain spending limit for an agent (remora::disc).",
+  "license": "MIT",
+  "keywords": [
+    "sui",
+    "x402",
+    "mpp",
+    "agent-payments",
+    "allowance",
+    "remora"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "build:npm": "rm -rf dist && tsc -p tsconfig.build.json && bun ../../scripts/build-npm.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -16,6 +27,7 @@
     "vitest": "^4.1.12"
   },
   "dependencies": {
+    "@mysten/bcs": "^2.1.2",
     "@mysten/sui": "^2.33.2"
   }
 }

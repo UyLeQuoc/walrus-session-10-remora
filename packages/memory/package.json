@@ -14,7 +14,7 @@
     "diagnose": "tsx scripts/doctor.ts"
   },
   "dependencies": {
-    "@mysten-incubation/memwal": "^0.1.8",
+    "@mysten-incubation/memwal": "0.1.12",
     "@mysten/seal": "^1.4.13",
     "@mysten/sui": "^2.33.2",
     "@noble/ed25519": "^2.3.0",

@@ -1,14 +1,26 @@
 {
   "name": "@remora/merchant",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
+  "description": "Sell any Hono route for USDC on Sui: x402 and MPP on the same 402, settled through a facilitator before your handler runs.",
+  "license": "MIT",
+  "keywords": [
+    "sui",
+    "x402",
+    "mpp",
+    "hono",
+    "paywall",
+    "agent-payments",
+    "remora"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "build:npm": "bun run --filter @remora/disc-sdk build:npm && rm -rf dist && tsc -p tsconfig.build.json && bun ../../scripts/build-npm.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
