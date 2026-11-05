@@ -214,7 +214,19 @@ test("E2: three test owners share counts and make paid calls; the Reef scores tw
   for (const o of owners) {
     const page = await (await browser.newContext()).newPage();
     await as(page, o.kp);
-    const { remoras } = await api<{ remoras: Row[] }>(page, "/api/remoras");
+    const { remoras } = await api<{ remoras: (Row & { updatedAt?: string })[] }>(
+      page,
+      "/api/remoras",
+    );
+    if (o.label === "burner")
+      save({
+        inventory: remoras.map((x) => ({
+          id: x.id,
+          name: x.name,
+          status: x.status,
+          updatedAt: x.updatedAt ?? null,
+        })),
+      });
     const onChain = await discsOnChain(o.kp.toSuiAddress());
     let r = remoras.find(
       (x) =>
