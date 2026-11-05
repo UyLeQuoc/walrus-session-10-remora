@@ -44,12 +44,24 @@ export async function encryptCapsule(
   packageId: string,
   plain: CapsulePlain,
 ): Promise<{ keyId: Uint8Array; ciphertext: Uint8Array }> {
+  return sealToFreshKey(sui, packageId, new TextEncoder().encode(JSON.stringify(plain)));
+}
+
+/**
+ * Any bytes to a fresh 32-byte key id under the capsule package: the Seal id is the key id itself,
+ * which `capsule::seal_approve` requires. U19 B1 (ADR-0145) seals an auditor's Wake bundle this way.
+ */
+export async function sealToFreshKey(
+  sui: ClientWithCoreApi,
+  packageId: string,
+  data: Uint8Array,
+): Promise<{ keyId: Uint8Array; ciphertext: Uint8Array }> {
   const keyId = crypto.getRandomValues(new Uint8Array(32));
   const { encryptedObject } = await sealFor(sui).encrypt({
     threshold: TESTNET_KEY_SERVERS.length,
     packageId,
     id: toHex(keyId),
-    data: new TextEncoder().encode(JSON.stringify(plain)),
+    data,
   });
   return { keyId, ciphertext: encryptedObject };
 }
