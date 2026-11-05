@@ -5,7 +5,8 @@
  * - A replay on production: the burner's Researcher plans its own past questions three ways
  *   (never pays, never writes memory).
  * - The x402 discovery catalog lists the live Reef.
- * - An auditor page: burner2 opens the auditor link the burner made and matches its receipts.
+ * - An auditor page: the burner shares its Researcher's Wakes with burner2, whose browser decrypts them
+ *   and matches every receipt against Sui; then the burner revokes, and a reload is refused.
  *
  * What happened goes to `exit-results/u19-live.json` (gitignored), for the exit note.
  */
@@ -116,4 +117,39 @@ test("U19 live: a replay on production plans past questions three ways and buys 
   const after = await api<{ events: unknown[] }>(page, `/api/feed?remora=${r?.id}&type=payment`);
   expect(after.events.length, "a replay pays nothing").toBe(before.events.length);
   save({ replay: { remora: r?.id, runId, questions, totals: run?.totals } });
+});
+
+test("U19 live: burner2 opens an auditor page for the burner's Researcher and matches its receipts", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(15 * 60_000);
+  expect(process.env.E2E_BASE_URL, "a deployment only").toBeTruthy();
+  const { b1 } = await import("./u19-b1.part");
+  const fresh = () => `10.29.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+  let researcher = "";
+  await b1(page, browser, {
+    signedIn: async (p) => {
+      await installTestWallet(p, burner());
+      await p.goto("/remoras");
+      await connectAndSignIn(p);
+      const { remoras } = await api<{ remoras: { id: string; name: string; status: string }[] }>(
+        p,
+        "/api/remoras",
+      );
+      researcher =
+        remoras.find((x) => x.name === "Researcher · reef" && x.status === "active")?.id ?? "";
+    },
+    rotate: async () => {},
+    api,
+    key: (name) => {
+      const raw = process.env[name];
+      if (!raw) throw new Error(`${name} is not set`);
+      return Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(raw).secretKey);
+    },
+    save: (patch) => save({ auditor: patch }),
+    prior: () => ({ researcher }),
+    byName: async () => researcher,
+    freshClient: fresh,
+  });
 });
