@@ -665,3 +665,109 @@ test("B1: an auditor reads the Researcher's Wakes, then the burner revokes", asy
   test.setTimeout(10 * 60_000);
   await b1(page, browser, { signedIn, rotate, api, key, save, prior, byName, freshClient });
 });
+
+test("A4 + A3: an import shows with its source and the next answer cites it; a tidy merges and raises a conflict", async ({
+  page,
+}) => {
+  test.setTimeout(20 * 60_000);
+  await signedIn(page);
+  const id =
+    (prior() as { researcher?: string }).researcher || (await byName(page, "Researcher · u19"));
+  expect(id, "A made the Researcher").toBeTruthy();
+  type Preview = {
+    previewId: string;
+    sha8: string;
+    source: string;
+    candidates: { i: number; text: string; flag: string | null }[];
+    defaultNamespace: string;
+  };
+  const imported: { file: string; source: string; written: unknown; flagged: string[] }[] = [];
+  for (const file of ["CLAUDE.md", "conversations.json"]) {
+    const text = readFileSync(
+      resolve(ROOT, "apps/server/src/runtime/fixtures/import", file),
+      "utf8",
+    );
+    await rotate(page);
+    const p = await api<Preview>(page, `/api/remoras/${id}/import/preview`, {
+      method: "POST",
+      body: { fileName: file, text },
+    });
+    expect(p.previewId, JSON.stringify(p).slice(0, 300)).toBeTruthy();
+    // The owner ticks what isn't flagged as an instruction; the injected line stays unticked.
+    const ticked = p.candidates
+      .filter((c) => !c.flag)
+      .map((c) => c.i)
+      .slice(0, 20);
+    const flagged = p.candidates.filter((c) => c.flag).map((c) => c.text);
+    await rotate(page);
+    const out = await api(page, `/api/remoras/${id}/import/commit`, {
+      method: "POST",
+      body: { previewId: p.previewId, ticked, namespace: p.defaultNamespace },
+    });
+    imported.push({ file, source: p.source, written: out, flagged });
+  }
+  expect(imported[0]?.flagged.some((t) => /ignore your rules/i.test(t))).toBe(true);
+  // The lines land on Walrus Memory with their source.
+  const claude = imported[0]?.source ?? "SOURCE: import CLAUDE.md";
+  const found = await until<{ results: { text: string; blobId: string }[] }>(
+    page,
+    `/api/remoras/${id}/memory?q=${encodeURIComponent("odds questions team named")}`,
+    (m) => m.results.some((x) => x.text.includes(claude)),
+    300_000,
+  );
+  const line = found.results.find((x) => x.text.includes(claude));
+  // The next answer reads it: its Wake cites an imported blob.
+  await rotate(page);
+  const a = await api<{ answer: string; receiptId: string | null }>(
+    page,
+    `/api/remoras/${id}/ask`,
+    {
+      method: "POST",
+      body: { question: "From my notes: when do odds questions matter to me?" },
+    },
+  );
+  const wake = await api<{ wake: { intent: { memories: { blobId: string }[] } } }>(
+    page,
+    `/api/verify/${a.receiptId}`,
+  );
+  const cites = wake.wake.intent.memories.map((m) => m.blobId);
+  const importedBlobs = found.results
+    .filter((x) => x.text.includes("SOURCE: import"))
+    .map((x) => x.blobId);
+  expect(
+    cites.some((b) => importedBlobs.includes(b)),
+    JSON.stringify({ cites, importedBlobs }),
+  ).toBe(true);
+  // The injected line was never acted on: no new contact or payee, no approval from it.
+  const remora = await api<{ remora: { config: { budget?: { payees?: string[] } } } }>(
+    page,
+    `/api/remoras/${id}`,
+  );
+  expect(JSON.stringify(remora.remora.config.budget?.payees ?? [])).not.toContain("deadbeef");
+
+  // A3: one tidy over the A run's notes.
+  await rotate(page);
+  type Tidy = {
+    merged: { service?: string; from?: string[] }[];
+    conflicts: string[];
+    note?: string;
+    open?: { id: string }[];
+  };
+  const t = await api<Tidy>(page, `/api/remoras/${id}/tidy`, { method: "POST" });
+  let resolved: unknown = null;
+  const conflictId = t.conflicts?.[0];
+  if (conflictId) {
+    await rotate(page);
+    resolved = await api(page, `/api/approvals/${conflictId}/conflict-resolve`, {
+      method: "POST",
+      body: { keep: "b" },
+    });
+  }
+  save({
+    a4: { imported, line, answer: a.answer.slice(0, 300), receiptId: a.receiptId, cites },
+    a3: { tidy: t, resolved },
+  });
+  expect((t.merged?.length ?? 0) + (t.conflicts?.length ?? 0), JSON.stringify(t)).toBeGreaterThan(
+    0,
+  );
+});
