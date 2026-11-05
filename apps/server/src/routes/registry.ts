@@ -7,6 +7,7 @@ import { authRoutes } from "./auth.ts";
 import { chatRoutes } from "./chat.ts";
 import { connectRoutes } from "./connect.ts";
 import { conversationRoutes } from "./conversations.ts";
+import { discoveryRoutes } from "./discovery.ts";
 import { facilitatorRoutes } from "./facilitator.ts";
 import { healthRoutes } from "./health.ts";
 import { memoryRoutes } from "./memory.ts";
@@ -27,6 +28,8 @@ export const ROUTE_GROUPS = [
   remoraRoutes,
   playgroundRoutes,
   mcpRoutes,
+  // ADR-0141: before facilitatorRoutes, whose guard answers 503 for /api/facilitator/* without one.
+  discoveryRoutes,
   facilitatorRoutes,
   hookRoutes,
 ] as const;

@@ -28,6 +28,7 @@ import {
   X402_VERSION,
 } from "@remora/disc-sdk";
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { type BazaarExtension, bazaarExtension, type DoorDiscovery } from "./discovery.ts";
 import { checkDigest, type MppOptions, mppDoor } from "./mpp.ts";
 
 export interface DoorNetwork {
@@ -53,7 +54,14 @@ export interface X402Options {
   settle?: "first" | "after";
   /** MPP beside x402 (ADR-0120), on unless `false`. */
   mpp?: MppOptions | false;
+  /** ADR-0141: the 402 carries x402's Bazaar extension (`extensions.bazaar`) describing the door. */
+  discovery?: DoorDiscovery;
   fetch?: typeof fetch;
+}
+
+/** A door's 402 body: x402's, plus the extensions it declares (ADR-0141). */
+export interface DoorPaymentRequired extends PaymentRequired {
+  extensions?: { bazaar?: BazaarExtension };
 }
 
 export interface PaidContext {
@@ -86,11 +94,13 @@ const answered = (c: Context) => c.res.status >= 200 && c.res.status < 300;
 export function x402(o: X402Options): MiddlewareHandler<{ Variables: { x402: PaidContext } }> {
   const http = o.fetch ?? fetch;
   const mpp = o.mpp === false ? null : mppDoor(o, o.mpp ?? {});
+  const extensions = o.discovery ? { bazaar: bazaarExtension(o.discovery) } : undefined;
   const required = (c: Context, error: string) => {
-    const body: PaymentRequired = {
+    const body: DoorPaymentRequired = {
       x402Version: X402_VERSION,
       accepts: requirementsFor(o, c.req.url),
       error,
+      ...(extensions ? { extensions } : {}),
     };
     return c.json(body, 402, mpp ? mpp.headers(c) : {});
   };

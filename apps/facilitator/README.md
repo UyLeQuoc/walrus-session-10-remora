@@ -28,6 +28,8 @@ to it (`apps/server/src/routes/facilitator.ts`).
     `{ paymentPayload, paymentRequirements }`;
   - `POST /api/facilitator/gas`, the gas station your buyers' clients call (`extra.gasStation` in
     your 402).
+  - `GET /api/facilitator/discovery/resources`, the Reef as an x402 Bazaar catalog
+    ([ADR-0141](../../docs/adr/0141-x402-discovery-catalog.md)).
 - **Limits:**
   - `sui:testnet` only;
   - 200 settlements per `payTo` per UTC day. This caps the gas we sponsor for one merchant; the

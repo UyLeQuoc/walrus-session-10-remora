@@ -38,6 +38,29 @@ Sui enforces.
   `https://getremora.vercel.app/api/facilitator`. Its buyers get sponsored gas there too. The
   limits are in [apps/facilitator](../apps/facilitator/README.md#public-facilitator-testnet).
 - **A merchant in about 20 lines:** [examples/sell-an-api](../examples/sell-an-api).
+- **Start your own from it:** once it's on npm, `npx create-remora my-api` copies it into a
+  project of its own, on the npm packages `@getremora/merchant` and `@getremora/disc-sdk`
+  ([ADR-0140](adr/0140-create-remora-publishable-packages.md)).
+
+## Discovery ([ADR-0141](adr/0141-x402-discovery-catalog.md))
+- **The catalog:** `GET https://getremora.vercel.app/api/facilitator/discovery/resources`, in the
+  x402 Bazaar's list shape (`x402Version`, `items`, `pagination`), so x402 indexers can find the
+  Reef.
+  - Each item has its URL, `type: "http"`, the payment requirements its own 402 states, and
+    `lastUpdated`. Its `metadata` has the name, the description and the Reef score.
+  - Page with `limit` (up to 100) and `offset`. Filter with `type`, `payTo`, `network` and `scheme`.
+- **What's listed:** only verified listings on testnet.
+  - House doors, while their merchants answer.
+  - Community APIs, while their 402 still asks for the listed price at the listed address.
+  - Remoras on sale.
+
+  Retired or unreachable entries drop out at the next check (every 5 minutes). Production lists
+  public URLs only, so the house doors appear once the merchants have one.
+- **Paid doors describe themselves:** their 402 carries `extensions.bazaar`, an example input and
+  output with a JSON Schema, so a caller doesn't guess the query.
+- **Entries are data:** a remora that finds a service in the catalog still pays it only if its Disc
+  lists the payee, at the listed address ([ADR-0109](adr/0109-pay-only-at-listed-address.md)).
+  Finding a service never adds a payee.
 
 ## Pay over MPP too ([ADR-0120](adr/0120-mpp-on-every-door.md))
 Every paid door speaks x402 and MPP, the Payment HTTP auth scheme
