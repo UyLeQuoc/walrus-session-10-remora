@@ -1,5 +1,5 @@
 /** F14·ui: the Connections page on a fake API answering from the contract fixtures. */
-import { McpCall, McpToken, McpTokenCreated } from "@remora/schema";
+import { McpCall, McpServerView, McpToken, McpTokenCreated } from "@remora/schema";
 import calls from "@remora/schema/fixtures/mcp.calls.json";
 import token from "@remora/schema/fixtures/mcp.token.json";
 import created from "@remora/schema/fixtures/mcp.token-created.json";
@@ -38,7 +38,7 @@ function fakeStorage() {
   };
 }
 
-function fakeApi(tokens: unknown[]) {
+function fakeApi(tokens: unknown[], extra: Record<string, unknown> = {}) {
   const sent: { method: string; url: string; body: unknown }[] = [];
   vi.stubGlobal(
     "fetch",
@@ -56,6 +56,7 @@ function fakeApi(tokens: unknown[]) {
         [`POST /api/mcp/tokens/${TOKEN.id}/revoke`]: {
           token: { ...TOKEN, revokedAt: "2026-10-25T05:00:00Z" },
         },
+        ...extra,
       };
       const hit = answers[`${method} ${url}`];
       return hit === undefined
@@ -137,6 +138,47 @@ describe("Connections (F14·ui)", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Revoke", hidden: false }));
     await waitFor(() =>
       expect(sent.some((s) => s.url === `/api/mcp/tokens/${TOKEN.id}/revoke`)).toBe(true),
+    );
+  });
+});
+
+describe("MCP servers a remora reads (ADR-0143)", () => {
+  const SERVER = McpServerView.parse({
+    id: "a1b2c3d4e5f6",
+    url: "https://mcp.context7.com/mcp",
+    name: "context7",
+    tools: [],
+    host: "mcp.context7.com",
+    offered: [{ name: "query-docs", description: "Answers questions from docs.", args: "q" }],
+    hidden: 2,
+    hasToken: true,
+    addedAt: "2026-11-05T00:00:00Z",
+  });
+  const base = `/api/remoras/${FIXTURE_SCOUT.id}/mcp`;
+
+  it("shows only the read-only tools, ticks one, and connects a new server with a token", async () => {
+    const sent = fakeApi([TOKEN], {
+      [`GET ${base}`]: { servers: [SERVER] },
+      [`PUT ${base}/${SERVER.id}/tools`]: { server: { ...SERVER, tools: ["query-docs"] } },
+      [`POST ${base}`]: { server: SERVER },
+    });
+    page();
+    const card = await screen.findByTestId("mcp-server");
+    expect(card.textContent).toContain("context7");
+    expect(card.textContent).toContain("token set");
+    expect(card.textContent).toContain("2 more tools aren't marked read-only");
+    await userEvent.click(within(card).getByRole("checkbox", { name: "Let it use query-docs" }));
+    await waitFor(() =>
+      expect(sent.find((x) => x.method === "PUT")?.body).toEqual({ tools: ["query-docs"] }),
+    );
+    await userEvent.type(screen.getByLabelText("Server URL"), "https://mcp.deepwiki.com/mcp");
+    await userEvent.type(screen.getByLabelText("Token (optional)"), "sk-1");
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() =>
+      expect(sent.find((x) => x.method === "POST" && x.url === base)?.body).toEqual({
+        url: "https://mcp.deepwiki.com/mcp",
+        token: "sk-1",
+      }),
     );
   });
 });

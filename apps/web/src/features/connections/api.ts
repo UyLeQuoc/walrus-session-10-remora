@@ -1,5 +1,5 @@
 /** F14 (ADR-0066): the owner's MCP token API, parsed with its `packages/schema` contract. */
-import { McpCall, type McpScope, McpToken, McpTokenCreated } from "@remora/schema";
+import { McpCall, type McpScope, McpServerView, McpToken, McpTokenCreated } from "@remora/schema";
 import { z } from "zod";
 import type { Result } from "@/features/remoras/api";
 import { apiFetch, errorMessage } from "@/lib/api";
@@ -33,6 +33,19 @@ export const connections = {
     call("POST", `/api/mcp/tokens/${id}/revoke`, z.object({ token: McpToken })),
   calls: (id: string) =>
     call("GET", `/api/mcp/tokens/${id}/calls`, z.object({ calls: z.array(McpCall) })),
+};
+
+/** ADR-0143: a remora's read-only MCP servers (`/api/remoras/:id/mcp…`). Views never carry a token. */
+const OneServer = z.object({ server: McpServerView });
+export const mcpServers = {
+  list: (remora: string) =>
+    call("GET", `/api/remoras/${remora}/mcp`, z.object({ servers: z.array(McpServerView) })),
+  add: (remora: string, b: { url: string; name?: string; token?: string }) =>
+    call("POST", `/api/remoras/${remora}/mcp`, OneServer, b),
+  tick: (remora: string, server: string, tools: string[]) =>
+    call("PUT", `/api/remoras/${remora}/mcp/${server}/tools`, OneServer, { tools }),
+  remove: (remora: string, server: string) =>
+    call("DELETE", `/api/remoras/${remora}/mcp/${server}`, z.object({ ok: z.literal(true) })),
 };
 
 /** The Claude Code line for the HTTP transport: works from anywhere the server is reachable. */

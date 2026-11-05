@@ -37,10 +37,52 @@ export class FetchRefused extends Error {
   }
 }
 
+type Resolve = (host: string) => Promise<string[]>;
+
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+/** Every address `host` resolves to, or a refusal when there are none or one is private. */
+async function publicAddresses(host: string, resolve: Resolve | undefined, refusal: string) {
+  const lookupAll =
+    resolve ?? (async (h: string) => (await lookup(h, { all: true })).map((a) => a.address));
+  const addresses = isIP(host) ? [host] : await lookupAll(host).catch(() => []);
+  if (!addresses.length) throw new FetchRefused("unreachable", "That host doesn't resolve.");
+  if (addresses.some(isPrivateAddress)) throw new FetchRefused("private_address", refusal);
+  return addresses;
+}
+
+/**
+ * ADR-0143: one request to a URL an owner configured (an MCP server): https only, no credentials in
+ * the URL, every resolved address public, no redirects. `allowLocal` (development only, never in
+ * production) also lets it reach localhost, over http or https. The caller sets the timeout.
+ */
+export async function safeFetch(
+  url: string,
+  init: RequestInit,
+  o: { fetch?: typeof fetch; resolve?: Resolve; allowLocal?: boolean } = {},
+): Promise<Response> {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    throw new FetchRefused("bad_url", "That isn't a URL.");
+  }
+  if (u.username || u.password)
+    throw new FetchRefused("bad_url", "Leave credentials out of the URL.");
+  const host = u.hostname.replace(/^\[|\]$/g, "");
+  const local = !!o.allowLocal && LOOPBACK_HOSTS.has(host);
+  if (u.protocol !== "https:" && !(local && u.protocol === "http:"))
+    throw new FetchRefused("bad_url", "Only https URLs.");
+  if (!local && (host === "localhost" || host.endsWith(".localhost")))
+    throw new FetchRefused("private_address", "Only public servers can be reached.");
+  if (!local) await publicAddresses(host, o.resolve, "Only public servers can be reached.");
+  return (o.fetch ?? fetch)(u, { ...init, redirect: "manual" });
+}
+
 /** Fetches a public page as text: http(s) only, public addresses only, no redirects, size-capped. */
 export async function fetchPage(
   url: string,
-  o: { fetch?: typeof fetch; resolve?: (host: string) => Promise<string[]> } = {},
+  o: { fetch?: typeof fetch; resolve?: Resolve } = {},
 ): Promise<string> {
   let u: URL;
   try {
@@ -51,12 +93,7 @@ export async function fetchPage(
   if (u.protocol !== "http:" && u.protocol !== "https:")
     throw new FetchRefused("bad_url", "Only http and https pages.");
   const host = u.hostname.replace(/^\[|\]$/g, "");
-  const resolve =
-    o.resolve ?? (async (h: string) => (await lookup(h, { all: true })).map((a) => a.address));
-  const addresses = isIP(host) ? [host] : await resolve(host).catch(() => []);
-  if (!addresses.length) throw new FetchRefused("unreachable", "That host doesn't resolve.");
-  if (addresses.some(isPrivateAddress))
-    throw new FetchRefused("private_address", "Only public pages can be summarized.");
+  await publicAddresses(host, o.resolve, "Only public pages can be summarized.");
   const res = await (o.fetch ?? fetch)(u, {
     redirect: "manual",
     signal: AbortSignal.timeout(8_000),

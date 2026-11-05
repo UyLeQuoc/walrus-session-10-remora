@@ -63,6 +63,30 @@ export class RemoraSigner {
     );
   }
 
+  /**
+   * ADR-0143: a secret the owner gave one of the remora's connections (an MCP server's bearer
+   * token), sealed like the remora's key. The associated data names the remora and the connection,
+   * and never matches a remora key's, so this can't open one.
+   */
+  sealSecret(remoraId: string, name: string, secret: string): Sealed {
+    const raw = new TextEncoder().encode(secret);
+    try {
+      return seal(raw, this.#kek, secretAad(remoraId, name));
+    } finally {
+      raw.fill(0);
+    }
+  }
+
+  /** Throws when the blob was sealed for another remora or connection, or was changed. */
+  openSecret(remoraId: string, name: string, sealed: Sealed): string {
+    const raw = open(sealed, this.#kek, secretAad(remoraId, name));
+    try {
+      return new TextDecoder().decode(raw);
+    } finally {
+      raw.fill(0);
+    }
+  }
+
   async #withKeypair<T>(remoraId: string, use: (kp: Ed25519Keypair) => Promise<T>): Promise<T> {
     const k = await this.store.get(remoraId);
     if (!k) throw new Error(`no key for remora ${remoraId}`);
@@ -83,6 +107,7 @@ export class RemoraSigner {
 }
 
 const aad = (remoraId: string) => `remora-key:${remoraId}`;
+const secretAad = (remoraId: string, name: string) => `remora-secret:${remoraId}:${name}`;
 
 /** In-memory store for tests and scripts. */
 export class MemoryKeyStore implements KeyStore {

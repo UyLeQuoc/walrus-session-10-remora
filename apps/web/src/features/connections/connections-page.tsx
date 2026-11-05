@@ -30,6 +30,7 @@ import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { kindName } from "@/lib/kind";
 import { usdc } from "@/lib/usdc";
 import { connections, cursorLink, httpLine, mcpJson, vscodeLink } from "./api";
+import { McpServers } from "./mcp-servers";
 
 const SCOPES: { scope: McpScope; label: string; hint: string }[] = [
   { scope: "memory:read", label: "Read its memory", hint: "Search what the remora remembers." },
@@ -472,6 +473,9 @@ export function ConnectionsPage() {
                 )}
               </Section>
               {tokens.length ? form : null}
+              <Section title="MCP servers your remoras read">
+                <McpServers />
+              </Section>
             </>
           );
         }}
