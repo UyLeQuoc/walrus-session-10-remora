@@ -794,34 +794,47 @@ test("A3: two notes that disagree become a question, and the owner's answer sett
   await signedIn(page);
   const id =
     (prior() as { researcher?: string }).researcher || (await byName(page, "Researcher · u19"));
-  // The owner now rates two unrated Sui risk answers noise: its note flips from useful to noise.
-  const feed = await api<{
-    events: { id: string; feedback: string | null; payload: { paidPayees?: string[] } }[];
-  }>(page, `/api/feed?remora=${id}&type=answer&limit=100`);
-  const unrated = feed.events
-    .filter((e) => !e.feedback && (e.payload.paidPayees ?? []).includes("reef:sui-risk"))
-    .slice(0, 2);
-  expect(unrated.length).toBe(2);
-  for (const e of unrated) {
-    await rotate(page);
-    await api(page, `/api/events/${e.id}/feedback`, { method: "POST", body: { verdict: "noise" } });
+  type Open = { id: string; summary: string; a: { label: string }; b: { label: string } };
+  type Tidy = { conflicts?: (string | Open)[] };
+  const openOf = (t: Tidy) => (t.conflicts ?? []).filter((c): c is Open => typeof c === "object");
+  // An earlier run may have left one open; otherwise the owner rates two Sui risk answers noise,
+  // and its note flips from useful to noise.
+  let open = openOf(await api<Tidy>(page, `/api/remoras/${id}/tidy`));
+  let rated: string[] = [];
+  if (!open.length) {
+    const feed = await api<{
+      events: { id: string; feedback: string | null; payload: { paidPayees?: string[] } }[];
+    }>(page, `/api/feed?remora=${id}&type=answer&limit=100`);
+    const unrated = feed.events
+      .filter((e) => !e.feedback && (e.payload.paidPayees ?? []).includes("reef:sui-risk"))
+      .slice(0, 2);
+    expect(unrated.length).toBe(2);
+    rated = unrated.map((e) => e.id);
+    for (const e of unrated) {
+      await rotate(page);
+      await api(page, `/api/events/${e.id}/feedback`, {
+        method: "POST",
+        body: { verdict: "noise" },
+      });
+    }
+    // The two new notes take about half a minute to land; a tidy is allowed six times an hour.
+    for (let i = 0; i < 4 && !open.length; i++) {
+      await page.waitForTimeout(60_000);
+      await rotate(page);
+      await api<Tidy>(page, `/api/remoras/${id}/tidy`, { method: "POST" });
+      open = openOf(await api<Tidy>(page, `/api/remoras/${id}/tidy`));
+    }
   }
-  type Tidy = { conflicts: string[]; note?: string };
-  // The two new notes take about half a minute to land; a tidy is allowed six times an hour.
-  let t: Tidy = { conflicts: [] };
-  for (let i = 0; i < 4 && !t.conflicts?.length; i++) {
-    await page.waitForTimeout(60_000);
-    await rotate(page);
-    t = await api<Tidy>(page, `/api/remoras/${id}/tidy`, { method: "POST" });
-  }
-  expect(t.conflicts?.length, JSON.stringify(t).slice(0, 300)).toBeGreaterThan(0);
-  const conflictId = t.conflicts[0] as string;
+  const conflict = open[0];
+  expect(conflict, "a conflict to settle").toBeTruthy();
   await rotate(page);
-  const resolved = await api(page, `/api/approvals/${conflictId}/conflict-resolve`, {
-    method: "POST",
-    body: { keep: "a" },
-  });
-  save({ a3Conflict: { rated: unrated.map((e) => e.id), tidy: t, conflictId, resolved } });
+  const resolved = await api<{ error?: unknown }>(
+    page,
+    `/api/approvals/${conflict?.id}/conflict-resolve`,
+    { method: "POST", body: { keep: "a" } },
+  );
+  expect(resolved.error, JSON.stringify(resolved)).toBeUndefined();
+  save({ a3Conflict: { rated, conflict, resolved } });
 });
 
 /** The owner's wallet, in Node: what the page's wallet would sign, signed with the test key. */
