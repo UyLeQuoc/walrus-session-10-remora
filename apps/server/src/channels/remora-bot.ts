@@ -24,6 +24,7 @@ import { answerButtons } from "../runtime/schedules.ts";
 import { scoutAsk } from "../runtime/scout.ts";
 import { teach } from "../runtime/sentinel.ts";
 import type { Steer } from "../runtime/steer.ts";
+import { spendRequest } from "../runtime/treasury.ts";
 import { isTemplateSlug, TEMPLATES } from "../templates/index.ts";
 
 /** ADR-0101: a remora's kind in plain words ("Researcher", "Wallet watcher"). */
@@ -70,6 +71,16 @@ export function createRemoraBot(d: RemoraBotDeps) {
         ref: "telegram",
       });
       return { text: res.answer, buttons: answerButtons(rt.webBase, r, res.eventId) };
+    }
+    // C3 (ADR-0148): "Treasurer, pay 0.30 to huy.sui for design" becomes an approval to sign.
+    if (r.template === "treasurer") {
+      const res = await spendRequest(rt, r, question, { kind: "owner", channel: "telegram" });
+      return {
+        text: res.answer,
+        buttons: res.approvalId
+          ? [{ label: "Pay from my wallet", url: web(`/remoras/${r.id}`) }]
+          : [],
+      };
     }
     if (r.template !== "scout") return { text: `${r.name} doesn't answer questions. Try /teach.` };
     const res = await scoutAsk(rt, r, question.slice(0, 1_000), {

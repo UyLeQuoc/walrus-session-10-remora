@@ -111,7 +111,7 @@ export function HooksCard({ r }: { r: RemoraView }) {
       hint="A price trigger is checked every 5 minutes and wakes it once per crossing. A webhook wakes it on a POST signed with its secret; the body is data for the answer, never instructions. Outbound hooks are signed (Remora-Signature: t=…,v1=HMAC-SHA256 of t.body); reject anything more than 5 minutes old."
     >
       <div className="flex flex-col gap-6" data-testid="hooks-card">
-        {v.wakes ? (
+        {(v.prices ?? v.wakes) ? (
           <Part icon={<TrendingUp />} title="Wake on a price">
             <SettingsGroup
               as="ul"
