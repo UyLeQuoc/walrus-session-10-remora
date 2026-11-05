@@ -62,3 +62,42 @@ export type McpScope = z.infer<typeof McpScope>;
 export type McpToken = z.infer<typeof McpToken>;
 export type McpTokenCreated = z.infer<typeof McpTokenCreated>;
 export type McpCall = z.infer<typeof McpCall>;
+
+/**
+ * ADR-0143: a read-only tool on an MCP server a remora's owner connected (the other direction from
+ * the tokens above: the remora is the client). `args` is the tool's input schema in a line.
+ */
+export const McpServerTool = z.object({
+  name: z.string().min(1).max(120),
+  title: z.string().max(120).optional(),
+  description: z.string().max(400),
+  args: z.string().max(300),
+});
+
+/**
+ * ADR-0143: one MCP server in a remora's config: its URL, the label the model calls it by, and the
+ * tools the owner ticked. The bearer token, sealed at rest, and the cached tool list are kept beside
+ * it on the server and never parsed into a view.
+ */
+export const McpServerEntry = z.object({
+  id: z.string().min(1).max(40),
+  url: z.url(),
+  name: z.string().min(1).max(40),
+  tools: z.array(z.string().min(1).max(120)).max(20).default([]),
+});
+
+/** `GET /api/remoras/:id/mcp`: one server as its owner sees it. Never carries the token. */
+export const McpServerView = McpServerEntry.extend({
+  /** Host and port, as `mcp:<host>/<tool>` cites it. */
+  host: z.string().min(1),
+  /** The tools marked read-only (and not destructive), which are the only ones it may tick. */
+  offered: z.array(McpServerTool),
+  /** How many of the server's tools aren't offered because they aren't marked read-only. */
+  hidden: z.number().int().nonnegative(),
+  hasToken: z.boolean(),
+  addedAt: IsoDateTime,
+});
+
+export type McpServerTool = z.infer<typeof McpServerTool>;
+export type McpServerEntry = z.infer<typeof McpServerEntry>;
+export type McpServerView = z.infer<typeof McpServerView>;

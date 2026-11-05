@@ -107,7 +107,7 @@
         "@dnd-kit/utilities": "^3.2.2",
         "@fontsource-variable/inter": "5.3.0",
         "@hookform/resolvers": "^5.9.1",
-        "@mysten-incubation/memwal": "^0.1.8",
+        "@mysten-incubation/memwal": "0.1.12",
         "@mysten/dapp-kit": "^1.1.17",
         "@mysten/enoki": "^1.2.29",
         "@mysten/seal": "^1.4.13",
@@ -229,6 +229,18 @@
         "vitest": "^4.1.12",
       },
     },
+    "packages/create-remora": {
+      "name": "create-remora",
+      "version": "0.1.0",
+      "bin": {
+        "create-remora": "./src/cli.ts",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.12",
+      },
+    },
     "packages/db": {
       "name": "@remora/db",
       "version": "0.0.1",
@@ -247,8 +259,9 @@
     },
     "packages/disc-sdk": {
       "name": "@remora/disc-sdk",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
+        "@mysten/bcs": "^2.1.2",
         "@mysten/sui": "^2.33.2",
       },
       "devDependencies": {
@@ -270,7 +283,7 @@
       "name": "@remora/memory",
       "version": "0.0.1",
       "dependencies": {
-        "@mysten-incubation/memwal": "^0.1.8",
+        "@mysten-incubation/memwal": "0.1.12",
         "@mysten/seal": "^1.4.13",
         "@mysten/sui": "^2.33.2",
         "@noble/ed25519": "^2.3.0",
@@ -287,7 +300,7 @@
     },
     "packages/merchant": {
       "name": "@remora/merchant",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
         "@mysten/sui": "^2.33.2",
         "@remora/disc-sdk": "workspace:*",
@@ -602,7 +615,7 @@
 
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
-    "@mysten-incubation/memwal": ["@mysten-incubation/memwal@0.1.8", "", { "dependencies": { "@noble/ed25519": "^2.3.0", "@noble/hashes": "^2.0.0" }, "peerDependencies": { "@mysten/seal": ">=1.1.0", "@mysten/sui": ">=2.5.0", "@mysten/walrus": ">=1.0.3", "ai": ">=4.0.0", "zod": "^3.23.0 || ^4.0.0" }, "optionalPeers": ["@mysten/walrus", "ai", "zod"] }, "sha512-bABizNL15EbQY4FGHvolCkKRtBfnHJQhI41e7PTZCdYE8KE6rcOummTu12wcNXeYHCR4Umpjqi73oZ2OQXfYDA=="],
+    "@mysten-incubation/memwal": ["@mysten-incubation/memwal@0.1.12", "", { "dependencies": { "@noble/ed25519": "^2.3.0", "@noble/hashes": "^2.0.0" }, "peerDependencies": { "@mysten/seal": ">=1.1.0", "@mysten/sui": ">=2.5.0", "@mysten/walrus": ">=1.0.3", "ai": ">=4.0.0", "zod": "^3.23.0 || ^4.0.0" }, "optionalPeers": ["@mysten/walrus", "ai", "zod"] }, "sha512-fH0jhiWSPbxdmDYgVcr7sbywAoDtbKjPJHH6cs3u50AOxRyHmjw5d1ZQEpOBSy13baZfYFEWOHMwoGXzGxbMbA=="],
 
     "@mysten/bcs": ["@mysten/bcs@2.1.2", "", { "dependencies": { "@mysten/utils": "^0.4.1", "@scure/base": "^2.3.0" } }, "sha512-fv6lyuZMTHN0xRlu4GYiV/UXUrdJDOHbXm1KfZYEU0sy/t+22yTrTVtWnAQv1Km7eyB3qHhwIrAG2aem4JMocw=="],
 
@@ -1161,6 +1174,8 @@
     "cookie": ["cookie@1.1.1", "", {}, "sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ=="],
 
     "cookie-signature": ["cookie-signature@1.2.2", "", {}, "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg=="],
+
+    "create-remora": ["create-remora@workspace:packages/create-remora"],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "3.1.1", "shebang-command": "2.0.0", "which": "2.0.2" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 

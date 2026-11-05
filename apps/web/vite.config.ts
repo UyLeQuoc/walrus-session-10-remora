@@ -14,6 +14,8 @@ export default defineConfig({
     port: Number(process.env.WEB_PORT ?? 5173),
     proxy: {
       "/api": process.env.REMORA_API_URL ?? `http://localhost:${process.env.PORT ?? 8787}`,
+      // ADR-0149: the template badge, served by the API like the production rewrite.
+      "/badge": process.env.REMORA_API_URL ?? `http://localhost:${process.env.PORT ?? 8787}`,
     },
   },
 });

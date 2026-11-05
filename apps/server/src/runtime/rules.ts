@@ -29,6 +29,8 @@ export interface ChainEvent {
   amount: bigint;
   decimals: number;
   digest: string;
+  /** C3 (ADR-0148): the other side of the transfer, when the watcher could tell. */
+  counterparty?: string;
 }
 
 const symbolOf = (coinType: string) => coinType.split("::").pop()?.toUpperCase() ?? coinType;

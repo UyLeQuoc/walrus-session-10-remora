@@ -1,4 +1,4 @@
-# Remora's open economy (U17, U18)
+# Remora's open economy (U17 to U19)
 
 Remoras can buy from more than the eight house services ([ADR-0111](adr/0111-scale-pass.md)). Every
 purchase goes through the same rails: an x402 payment through the remora's Disc, under a limit that
@@ -38,6 +38,29 @@ Sui enforces.
   `https://getremora.vercel.app/api/facilitator`. Its buyers get sponsored gas there too. The
   limits are in [apps/facilitator](../apps/facilitator/README.md#public-facilitator-testnet).
 - **A merchant in about 20 lines:** [examples/sell-an-api](../examples/sell-an-api).
+- **Start your own from it:** once it's on npm, `npx create-remora my-api` copies it into a
+  project of its own, on the npm packages `@getremora/merchant` and `@getremora/disc-sdk`
+  ([ADR-0140](adr/0140-create-remora-publishable-packages.md)).
+
+## Discovery ([ADR-0141](adr/0141-x402-discovery-catalog.md))
+- **The catalog:** `GET https://getremora.vercel.app/api/facilitator/discovery/resources`, in the
+  x402 Bazaar's list shape (`x402Version`, `items`, `pagination`), so x402 indexers can find the
+  Reef.
+  - Each item has its URL, `type: "http"`, the payment requirements its own 402 states, and
+    `lastUpdated`. Its `metadata` has the name, the description and the Reef score.
+  - Page with `limit` (up to 100) and `offset`. Filter with `type`, `payTo`, `network` and `scheme`.
+- **What's listed:** only verified listings on testnet.
+  - House doors, while their merchants answer.
+  - Community APIs, while their 402 still asks for the listed price at the listed address.
+  - Remoras on sale.
+
+  Retired or unreachable entries drop out at the next check (every 5 minutes). Production lists
+  public URLs only, so the house doors appear once the merchants have one.
+- **Paid doors describe themselves:** their 402 carries `extensions.bazaar`, an example input and
+  output with a JSON Schema, so a caller doesn't guess the query.
+- **Entries are data:** a remora that finds a service in the catalog still pays it only if its Disc
+  lists the payee, at the listed address ([ADR-0109](adr/0109-pay-only-at-listed-address.md)).
+  Finding a service never adds a payee.
 
 ## Pay over MPP too ([ADR-0120](adr/0120-mpp-on-every-door.md))
 Every paid door speaks x402 and MPP, the Payment HTTP auth scheme
@@ -80,6 +103,27 @@ every 30 s.
   - "settle up" pays what you owe a contact through the Errand. For what others owe you, it makes a
     pay link (`/pay/<token>`): a page they pay from their own wallet, gas sponsored and settled by
     the public facilitator.
+
+## Pay a name, or a photo of a bill ([ADR-0144](adr/0144-pay-a-sui-name.md), [ADR-0138](adr/0138-bill-from-a-photo.md))
+- **A `.sui` name.** An Errand's contact can be added by name (`linh.sui`, `@linh`). The server
+  resolves it over Sui's gRPC NameService and the owner signs for the **address**; the contact keeps
+  the name and when it was resolved. Before each payment the name is resolved again: if it points
+  anywhere else, or can't be checked, nothing is paid and the Errand says what changed. Receipts, the
+  Reef and public receipts show names beside addresses (cached an hour).
+- **A photo of a bill.** On the Errand's card or in Telegram, the vision model reads `{merchant,
+  total, currency, date, items}` into a card: split half (an expense, then a pay link) or pay a
+  contact (the Errand's limits; 3x the usual asks first). An unclear total or another currency makes
+  it ask for the amount. Only the owner's tap acts; text in the photo that asks for anything is quoted
+  on the card and never followed. The photo isn't kept; one line is remembered once the owner acts.
+
+## A Treasurer for a team's wallets ([ADR-0148](adr/0148-treasurer.md))
+- It holds no Disc and never pays. It watches up to 10 team addresses on the same checkpoint stream as
+  the Wallet watcher and writes a 7-day report: in, out, moves inside the team, the top
+  counterparties and the runway (balance ÷ average daily outflow). Weekly, or "Report now"; a
+  redacted copy can be shared at `/t/<token>`.
+- A request to pay ("pay 0.30 to huy.sui for design") from the owner's chat, Telegram or a signed
+  webhook is read by a fixed grammar, checked against the contacts (a `.sui` name is resolved again)
+  and the limits, and becomes an approval. The owner pays it from their own wallet.
 
 ## Subscriptions that notice a price hike ([ADR-0129](adr/0129-subscriptions-keeper.md))
 A Subscriptions keeper charges its subscriptions every day at 8am. Before each charge it reads the

@@ -5,7 +5,7 @@ import { createLogger, createTatumSuiClient, suiFallbackUrl } from "@remora/chai
 import { createModel } from "@remora/core";
 import type { SuiNetworkName } from "@remora/disc-sdk";
 import { loadEnv } from "@remora/memory";
-import type { X402Options } from "@remora/merchant";
+import { type DoorDiscovery, HOUSE_DOORS, type X402Options } from "@remora/merchant";
 import { DEPLOYMENTS } from "@remora/schema";
 import { generateText } from "ai";
 import { Hono } from "hono";
@@ -46,9 +46,14 @@ for (const network of ["testnet", "mainnet"] as const) {
 const disc = process.env.MERCHANT_REQUIRE_DISC === "1";
 // ADR-0120: every route speaks MPP too. Without MPP_SECRET, challenges are bound per process.
 const mpp = process.env.MPP_SECRET ? { secret: process.env.MPP_SECRET } : {};
-const pay = (amount: string, description: string): X402Options => ({
+// ADR-0141: each house door's 402 names what it sells and describes its input (`extensions.bazaar`).
+const pay = (
+  amount: string,
+  door: { description: string; discovery?: DoorDiscovery },
+): X402Options => ({
   amount,
-  description,
+  description: door.description,
+  ...(door.discovery ? { discovery: door.discovery } : {}),
   networks,
   disc,
   mpp,
@@ -75,18 +80,15 @@ const app = new Hono();
 app.route(
   "/",
   createSuiRiskApp({
-    pay: pay(process.env.SUI_RISK_PRICE ?? "10000", "Sui object risk report"),
+    pay: pay(process.env.SUI_RISK_PRICE ?? "10000", HOUSE_DOORS["sui-risk"]),
     clients,
   }),
 );
-app.route(
-  "/",
-  createOddsApp({ pay: pay(process.env.ODDS_PRICE ?? "20000", "Cached sports-odds snapshot") }),
-);
+app.route("/", createOddsApp({ pay: pay(process.env.ODDS_PRICE ?? "20000", HOUSE_DOORS.odds) }));
 app.route(
   "/",
   createBriefApp({
-    pay: pay(process.env.BRIEF_PRICE ?? "10000", "Short summary"),
+    pay: pay(process.env.BRIEF_PRICE ?? "10000", HOUSE_DOORS.brief),
     ...(summarize ? { summarize } : {}),
   }),
 );
@@ -94,26 +96,26 @@ app.route(
 app.route(
   "/",
   createWalletApp({
-    pay: pay(process.env.WALLET_PRICE ?? "10000", "Sui wallet X-ray"),
+    pay: pay(process.env.WALLET_PRICE ?? "10000", HOUSE_DOORS.wallet),
     clients,
   }),
 );
 app.route(
   "/",
-  createWalrusApp({ pay: pay(process.env.WALRUS_PRICE ?? "5000", "Walrus blob check") }),
+  createWalrusApp({ pay: pay(process.env.WALRUS_PRICE ?? "5000", HOUSE_DOORS.walrus) }),
 );
 app.route(
   "/",
-  createGithubApp({ pay: pay(process.env.GITHUB_PRICE ?? "10000", "GitHub repo health") }),
+  createGithubApp({ pay: pay(process.env.GITHUB_PRICE ?? "10000", HOUSE_DOORS.github) }),
 );
-app.route("/", createPriceApp({ pay: pay(process.env.PRICE_PRICE ?? "5000", "Token prices") }));
+app.route("/", createPriceApp({ pay: pay(process.env.PRICE_PRICE ?? "5000", HOUSE_DOORS.price) }));
 app.route(
   "/",
-  createWeatherApp({ pay: pay(process.env.WEATHER_PRICE ?? "5000", "Three-day forecast") }),
+  createWeatherApp({ pay: pay(process.env.WEATHER_PRICE ?? "5000", HOUSE_DOORS.weather) }),
 );
 // ADR-0110: the demo's attacker, for the video's capture only; never on a deployed host.
 if (attackAllowed(process.env)) {
-  app.route("/", createAttackApp({ pay: pay("5000", "Market data") }));
+  app.route("/", createAttackApp({ pay: pay("5000", { description: "Market data" }) }));
   log.warn("merchants.demo_attack", { route: "/market" });
 }
 const port = Number(process.env.MERCHANTS_PORT ?? 8799);

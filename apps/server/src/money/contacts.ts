@@ -21,6 +21,9 @@ export interface Contact {
   name: string;
   address: string;
   ref: string;
+  /** C1 (ADR-0144): the `.sui` name it was added by, resolved again before each payment. */
+  suins?: string;
+  resolvedAt?: string;
 }
 
 export const isContactRef = (ref: string) => ref.startsWith(CONTACT_REF_PREFIX);
@@ -36,7 +39,11 @@ export const contactSlug = (name: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 32);
 
-export function toContact(name: string, address: string): Contact {
+export function toContact(
+  name: string,
+  address: string,
+  by?: { suins?: string; resolvedAt?: string },
+): Contact {
   const clean = name.trim().replace(/\s+/g, " ").slice(0, 40);
   const slug = contactSlug(clean);
   if (!slug) throw new Error("A contact needs a name with a letter or a digit.");
@@ -46,6 +53,9 @@ export function toContact(name: string, address: string): Contact {
     name: clean,
     address: normalizeSuiAddress(address.trim()),
     ref: `${CONTACT_REF_PREFIX}${slug}`,
+    ...(by?.suins
+      ? { suins: by.suins, resolvedAt: by.resolvedAt ?? new Date().toISOString() }
+      : {}),
   };
 }
 

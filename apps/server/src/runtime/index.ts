@@ -36,9 +36,17 @@ import { createSuiUsd } from "../money/rates.ts";
 import { reefFor } from "../money/reef.ts";
 import { createReputation } from "../money/reputation.ts";
 import { startWatcher } from "../triggers/watch.ts";
+import {
+  type AnchorDeps,
+  anchorJobHandlers,
+  createAnchorChain,
+  nextHour,
+  queueAnchorRun,
+} from "./anchors.ts";
 import { createBrain } from "./brain.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { createFactLedger, withFacts } from "./facts.ts";
+import { heartbeatJob, queueHeartbeat, RULE_HEARTBEAT } from "./heartbeat.ts";
 import { type HooksDeps, hookJobHandlers, startHooks } from "./hooks.ts";
 import { createHookRoutes } from "./hooks-routes.ts";
 import { inspect } from "./inspector.ts";
@@ -54,6 +62,8 @@ import { createRemoraRoutes } from "./routes.ts";
 import { remoraJobHandlers } from "./schedules.ts";
 import { onChainEvent } from "./sentinel.ts";
 import { createSteer, steerModel } from "./steer.ts";
+import { onTreasuryFlow } from "./treasury.ts";
+import { createTreasuryRoutes } from "./treasury-routes.ts";
 
 const signer = new RemoraSigner(new PgKeyStore(db), parseKek(env.KEY_ENCRYPTION_KEY));
 const merchants = {
@@ -78,7 +88,8 @@ export const reputation = createReputation({
   log,
   networks: networks.list().map((n) => n.network),
 });
-const reef = (n: Parameters<typeof reefFor>[1]) => [
+/** The Reef on a network: the house doors, then community APIs and remoras on sale (ADR-0141 lists it). */
+export const reef = (n: Parameters<typeof reefFor>[1]) => [
   ...reefFor(merchants, n),
   ...listings.entries(n),
 ];
@@ -131,9 +142,25 @@ export const runtime: RuntimeDeps = {
   suiUsd: createSuiUsd({ apiKey: env.TATUM_API_KEY ?? env.TATUM_API_KEY_TESTNET }),
   reputation: (n) => reputation.scores(n),
   refreshReputation: () => reputation.refresh(),
+  // ADR-0143: localhost MCP servers only in development, as hooks do (ADR-0121).
+  mcp: { allowLocal: !process.env.RAILWAY_ENVIRONMENT && process.env.NODE_ENV !== "production" },
 };
 
 export const remoraService = createRemoraService({ db, networks, signer, reef, log });
+
+/** B2 (ADR-0139): Merkle anchors, signed by each remora's key, gas from the gas station's sponsor. */
+const anchors: AnchorDeps = {
+  db,
+  log,
+  chain: createAnchorChain({
+    networks,
+    signTransaction: (keyId, bytes) => signer.signTransaction(keyId, bytes),
+    sponsorKey: (n) =>
+      n === "testnet" ? env.SPONSOR_PRIVATE_KEY_TESTNET : env.SPONSOR_PRIVATE_KEY,
+    maxGasBudget: BigInt(env.SPONSOR_MAX_GAS_BUDGET),
+    log,
+  }),
+};
 
 /** U18 C1 + C2 (ADR-0123): drafts and chat commands on the small parse model. */
 /** ADR-0125: a chat command adds contacts to the ones an Errand already has (one signature). */
@@ -192,6 +219,7 @@ export const remoraRoutes = createRemoraRoutes({
   written,
   listings,
   steer,
+  anchors,
   // H3 (ADR-0115): the Mini App's owner, from Telegram's signed launch data and the A5 link.
   tgOwner: async (initData: string) => {
     const user = env.TELEGRAM_BOT_TOKEN ? verifyInitData(initData, env.TELEGRAM_BOT_TOKEN) : null;
@@ -232,6 +260,13 @@ const hooks: HooksDeps = {
   base: env.API_BASE_URL ?? env.WEB_BASE_URL,
   production: !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production",
 };
+/** C3 (ADR-0148): the Treasurer's card, setup, reports and its public redacted links. */
+export const treasuryRoutes = createTreasuryRoutes({
+  service: remoraService,
+  runtime,
+  owner: async (c: Context) => (await signedInOwner(c))?.owner ?? null,
+});
+
 export const hookRoutes = createHookRoutes({
   service: remoraService,
   hooks,
@@ -240,7 +275,11 @@ export const hookRoutes = createHookRoutes({
 
 export const remoraJobs: Record<string, JobHandler> = {
   ...remoraJobHandlers(runtime),
+  // A2 (ADR-0137): the daily rule heartbeat.
+  [RULE_HEARTBEAT]: heartbeatJob(runtime),
   ...hookJobHandlers(hooks),
+  // B2 (ADR-0139): the hourly Merkle anchor run.
+  ...anchorJobHandlers(anchors),
 };
 
 /** Starts one chain watcher per available network (D1). Returns a stop function. */
@@ -251,14 +290,19 @@ async function queueReviews() {
     .from(remoras)
     .leftJoin(ownerSettings, eq(ownerSettings.ownerAddress, remoras.ownerAddress))
     .where(and(inArray(remoras.status, ["active", "shadow"]), eq(remoras.playground, false)));
-  for (const { r, timezone } of rows)
+  for (const { r, timezone } of rows) {
     await queueWeeklyReview(runtime, r, nextMonday9(new Date(), timezone ?? "UTC"));
+    if ((r.config as { budget?: unknown }).budget) await queueHeartbeat(runtime, r.id);
+  }
 }
 
 export function startRemoraRuntime(): () => void {
   const stopListings = listings.start();
   const stopReputation = reputation.start();
   void queueReviews().catch((err) => log.warn("review.queue_failed", { error: err }));
+  void queueAnchorRun(db, nextHour(new Date())).catch((err) =>
+    log.warn("anchor.queue_failed", { error: err }),
+  );
   const stopHooks = startHooks(hooks);
   if (env.WATCHER !== "on")
     return () => {
@@ -280,7 +324,9 @@ export function startRemoraRuntime(): () => void {
             .select()
             .from(remoras)
             .where(and(eq(remoras.id, remoraId), isNotNull(remoras.address)));
-          if (r) await onChainEvent(runtime, r, e, checkpoint);
+          // C3 (ADR-0148): a Treasurer keeps the flow for its report; a Sentinel triages it.
+          if (r?.template === "treasurer") await onTreasuryFlow(runtime, r, e, checkpoint);
+          else if (r) await onChainEvent(runtime, r, e, checkpoint);
         },
       }),
     );

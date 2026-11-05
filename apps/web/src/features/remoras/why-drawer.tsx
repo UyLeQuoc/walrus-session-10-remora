@@ -23,6 +23,7 @@ import { payeeName } from "@/lib/payee";
 import { plainEvent } from "@/lib/readable";
 import { explorerTx, usdc } from "@/lib/usdc";
 import { api } from "./api";
+import { mcpCitations } from "./why-mcp";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -125,6 +126,8 @@ export function WhyButton({ eventId, compact = false }: { eventId: string; compa
     error: string;
     /** G5: the proof this decision is the "after" of, if any. */
     proof: ProofOfLearning | null;
+    /** ADR-0143: the MCP tools the answer called. */
+    mcp: string[];
   } | null>(null);
   const [showProof, setShowProof] = useState(false);
   const [docked, setDocked] = useState(false);
@@ -136,7 +139,14 @@ export function WhyButton({ eventId, compact = false }: { eventId: string; compa
     if (state) return;
     const r = await api.why(eventId);
     if (!r.ok)
-      return setState({ view: null, wakeId: null, summary: "", error: r.error, proof: null });
+      return setState({
+        view: null,
+        wakeId: null,
+        summary: "",
+        error: r.error,
+        proof: null,
+        mcp: [],
+      });
     const w = r.data.wake;
     const proofs = w ? await api.proofs(r.data.event.remoraId) : null;
     setState({
@@ -145,6 +155,7 @@ export function WhyButton({ eventId, compact = false }: { eventId: string; compa
         : null,
       wakeId: w?.id ?? null,
       summary: r.data.event.summary,
+      mcp: mcpCitations(r.data.event.payload),
       error: "",
       proof: (proofs?.ok && proofs.data.proofs.find((p) => p.after.receiptId === w?.id)) || null,
     });
@@ -171,6 +182,17 @@ export function WhyButton({ eventId, compact = false }: { eventId: string; compa
           </Button>
           {showProof ? <ProofView proof={state.proof} /> : null}
         </div>
+      ) : null}
+      {state?.mcp.length ? (
+        <dl className="px-4" data-testid="why-mcp">
+          <Row label="MCP tools">
+            {state.mcp.map((m) => (
+              <code key={m} className="block text-xs">
+                {m}
+              </code>
+            ))}
+          </Row>
+        </dl>
       ) : null}
       {state?.view ? <WakeDetails view={state.view} /> : null}
       {owns && state?.wakeId ? (

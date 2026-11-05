@@ -29,6 +29,11 @@ export interface DiagnoseDeps {
    * `/config` don't (ADR-0055). Resolves false when no operator account is configured.
    */
   recall?: () => Promise<boolean>;
+  /**
+   * A0 (ADR-0135): the last 7 days of stored writes we recorded, against the SDK's `listMemories()`.
+   * Null when no operator account is configured.
+   */
+  memoryIndex?: () => Promise<{ written: number; listed: number; missing: string[] } | null>;
   walrus: { publisher: string | null; aggregator: string };
   fetchStatus: (url: string) => Promise<number>;
   facilitator?: string | null;
@@ -186,6 +191,33 @@ export async function diagnose(d: DiagnoseDeps): Promise<DiagnoseReport> {
         status: "degraded",
         detail: (err as Error).message.slice(0, 120),
         fix: "Run bun run diagnose:memory for the full check.",
+      });
+    }
+  }
+
+  if (d.memoryIndex) {
+    try {
+      const idx = await d.memoryIndex();
+      if (idx)
+        items.push(
+          idx.missing.length
+            ? {
+                ...ok("memory index", ""),
+                status: "degraded",
+                detail: `written ${idx.written} · on Walrus Memory ${idx.listed} · missing ${idx.missing.length} (${idx.missing.slice(0, 3).join(", ")})`,
+                fix: "Writes from the last minute are still settling; a gap that stays means the relayer lost them. Nothing is re-written.",
+              }
+            : ok(
+                "memory index",
+                `written ${idx.written} · on Walrus Memory ${idx.listed} · missing 0 (last 7 days)`,
+              ),
+        );
+    } catch (err) {
+      items.push({
+        ...ok("memory index", ""),
+        status: "degraded",
+        detail: (err as Error).message.slice(0, 160),
+        fix: "listMemories() failed; run bun run diagnose:memory.",
       });
     }
   }

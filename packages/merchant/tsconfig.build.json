@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": { "@remora/disc-sdk": ["../disc-sdk/dist/index.d.ts"] }
+  },
+  "exclude": ["src/**/*.test.ts"]
+}

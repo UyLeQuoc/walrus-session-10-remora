@@ -29,6 +29,7 @@ import { api } from "./api";
 import { DescribeJob } from "./describe-job";
 import { formFromDraft, setupFromForm } from "./draft-form";
 import { RequireOwner, useLoad } from "./hooks";
+import { parseWatch, treasuryApi } from "./treasury-api";
 
 type Step = "idle" | "creating" | "signing" | "confirming";
 const STEP_TEXT: Record<Step, string> = {
@@ -54,6 +55,10 @@ function Wizard({ owner }: { owner: string }) {
   );
   // ADR-0125: an Errand's people, one "Name 0x…" per line.
   const [people, setPeople] = useState("");
+  // C3 (ADR-0148): a Treasurer's team addresses ("Ops 0x…" or "huy.sui") and its request limits.
+  const [team, setTeam] = useState(`Me ${owner}`);
+  const [perRequest, setPerRequest] = useState("1");
+  const [monthlyAsk, setMonthlyAsk] = useState("10");
   // C1: what a draft adds beyond the picker's fields; empty when it came from the picker.
   const [payees, setPayees] = useState<string[] | null>(null);
   const [persona, setPersona] = useState("");
@@ -67,7 +72,7 @@ function Wizard({ owner }: { owner: string }) {
   const coinType = networks.find((n) => n.network === network)?.usdcCoinType;
   const busy = step !== "idle";
   // ADR-0106: the Researcher and the Briefer spend within a budget; the Wallet watcher never pays.
-  const spends = slug !== "sentinel";
+  const spends = slug !== "sentinel" && slug !== "treasurer";
   const briefItems = follow
     .split("\n")
     .map((x) => x.trim())
@@ -118,6 +123,7 @@ function Wizard({ owner }: { owner: string }) {
     const contacts = parsePeople(people);
     if (slug === "errand" && (!contacts.length || contacts.some((c) => !c.name)))
       return setError('Add at least one person as "Name 0x…".');
+    if (slug === "treasurer") return createTreasurer();
     setStep("creating");
     const made = await api.create({
       template: slug,
@@ -151,6 +157,30 @@ function Wizard({ owner }: { owner: string }) {
       else if (set.data.skipped.length) toast(`Not set: ${set.data.skipped.join("; ")}`);
     }
     navigate(`/remoras/${id}?new=1`);
+  };
+
+  /** C3 (ADR-0148): no Disc, so nothing to sign; the server resolves `.sui` names. */
+  const createTreasurer = async () => {
+    const watchList = parseWatch(team);
+    if (!watchList.length || watchList.length > 10)
+      return setError("Watch 1 to 10 team addresses, one per line (0x… or name.sui).");
+    const per = parseUsdc(perRequest);
+    const month = parseUsdc(monthlyAsk);
+    if (!per || !month || per > month)
+      return setError("Set a monthly limit and a smaller limit per request.");
+    setStep("creating");
+    const made = await treasuryApi.create({
+      ...(name.trim() ? { name: name.trim() } : {}),
+      watch: watchList,
+      contacts: parsePeople(people, true),
+      perRequestCap: per.toString(),
+      monthlyCap: month.toString(),
+    });
+    if (!made.ok) {
+      setStep("idle");
+      return setError(made.error);
+    }
+    navigate(`/remoras/${made.data.remora.id}?new=1`);
   };
 
   // ADR-0103: the two limits as one number you can picture, from what you typed: how many payments
@@ -298,6 +328,58 @@ function Wizard({ owner }: { owner: string }) {
                 </FieldDescription>
               </Field>
             ) : null}
+            {slug === "treasurer" ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="team">Team addresses</FieldLabel>
+                  <Textarea
+                    id="team"
+                    rows={3}
+                    placeholder={"Ops 0x…\nDesign huy.sui"}
+                    value={team}
+                    onChange={(e) => setTeam(e.target.value)}
+                  />
+                  <FieldDescription>
+                    Up to 10, one per line: a label, then 0x… or a .sui name. It watches them on Sui
+                    and reports in, out and runway every Monday.
+                  </FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="treasury-people">Who requests may pay</FieldLabel>
+                  <Textarea
+                    id="treasury-people"
+                    rows={2}
+                    placeholder={"Huy huy.sui\nLinh 0x…"}
+                    value={people}
+                    onChange={(e) => setPeople(e.target.value)}
+                  />
+                  <FieldDescription>
+                    A request to anyone else is turned down. Every request, even yours, waits for
+                    you to pay it from your own wallet.
+                  </FieldDescription>
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="per-request">Most per request (USDC)</FieldLabel>
+                    <Input
+                      id="per-request"
+                      inputMode="decimal"
+                      value={perRequest}
+                      onChange={(e) => setPerRequest(e.target.value)}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="monthly-ask">Requests a month (USDC)</FieldLabel>
+                    <Input
+                      id="monthly-ask"
+                      inputMode="decimal"
+                      value={monthlyAsk}
+                      onChange={(e) => setMonthlyAsk(e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </>
+            ) : null}
             {slug === "sentinel" ? (
               <Field>
                 <FieldLabel htmlFor="watch">Addresses to watch</FieldLabel>
@@ -353,6 +435,8 @@ function Wizard({ owner }: { owner: string }) {
                 <>
                   You'll sign <strong>1 transaction</strong> to set its spending limit.
                 </>
+              ) : slug === "treasurer" ? (
+                <>No signature needed. It never pays; you sign each payment yourself.</>
               ) : (
                 <>No signature needed. A Wallet watcher only reads.</>
               )}
@@ -447,10 +531,16 @@ export function NewRemoraPage() {
   );
 }
 
-/** "Linh 0xabc" per line → contacts; a line without an address is skipped. */
-export function parsePeople(text: string): { name: string; address: string }[] {
+/**
+ * "Linh 0xabc" per line → contacts; a line without an address is skipped. With `names`, "Huy huy.sui"
+ * counts too, resolved by the server (C3, ADR-0148).
+ */
+export function parsePeople(text: string, names = false): { name: string; address: string }[] {
+  const re = names
+    ? /^(.*?)[\s,:]+(0x[0-9a-fA-F]{1,64}|@[a-z0-9-]{3,63}|(?:[a-z0-9-]{1,63}\.)+sui)\s*$/i
+    : /^(.*?)[\s,:]+(0x[0-9a-fA-F]{1,64})\s*$/;
   return text
     .split("\n")
-    .map((line) => /^(.*?)[\s,:]+(0x[0-9a-fA-F]{1,64})\s*$/.exec(line.trim()))
+    .map((line) => re.exec(line.trim()))
     .flatMap((m) => (m ? [{ name: (m[1] ?? "").trim(), address: m[2] ?? "" }] : []));
 }

@@ -248,6 +248,19 @@ describe("slots and values", () => {
     expect(parseSourceLine("brief was useless today", at)).toBeNull();
   });
 
+  it("a tidy note reads as the record it restates, not a new value (A3, ADR-0147)", () => {
+    const at = "2026-11-07T00:00:00Z";
+    const tidy = parseSourceLine(
+      "SOURCE reef:brief · 9 calls · 2 useful · 7 noise · $0.010 per useful answer · as_of 2026-11-07 · SOURCE: tidy of blobA, blobB, blobC",
+      at,
+    );
+    expect(tidy?.value).toBe("9 calls · 2 useful · 7 noise · $0.010 per useful answer");
+    // Any other provenance stays in the value: only a tidy note restates a record.
+    expect(
+      parseSourceLine("SOURCE reef:brief · 3 calls · SOURCE: import notes.md 0a1b2c3d", at)?.value,
+    ).toBe("3 calls · SOURCE: import notes.md 0a1b2c3d");
+  });
+
   it("a newer track record from the runtime supersedes the last one", () => {
     const at = (d: string) => `2026-10-${d}T00:00:00Z`;
     const line = (n: number, d: string) => ({

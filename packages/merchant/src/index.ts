@@ -3,6 +3,7 @@
  * (ADR-0026), and speaks MPP on the same door (ADR-0120).
  */
 
+export * from "./discovery.ts";
 export * from "./mpp.ts";
 export * from "./prices.ts";
 export * from "./safe-fetch.ts";

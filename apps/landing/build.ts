@@ -58,20 +58,15 @@ if (existsSync(video)) {
 }
 
 if (!into) {
-  // Walrus Sites: cache the assets hard, keep the page fresh.
-  writeFileSync(
-    join(DIST, "ws-resources.json"),
-    `${JSON.stringify(
-      {
-        site_name: "Remora",
-        headers: {
-          "/index.html": { "Cache-Control": "max-age=300" },
-          "/config.js": { "Cache-Control": "max-age=300" },
-        },
-      },
-      null,
-      2,
-    )}\n`,
+  // Walrus Sites (ADR-0142): the committed ws-resources.json, with headers only for files this build
+  // has (the video and its poster ship only when rendered). It has no object_id: `site-builder
+  // deploy` writes the new site's id into dist's copy, and the README keeps the testnet one.
+  const ws = JSON.parse(readFileSync(join(HERE, "ws-resources.json"), "utf8")) as {
+    headers: Record<string, Record<string, string>>;
+  };
+  ws.headers = Object.fromEntries(
+    Object.entries(ws.headers).filter(([path]) => existsSync(join(DIST, path))),
   );
+  writeFileSync(join(DIST, "ws-resources.json"), `${JSON.stringify(ws, null, 2)}\n`);
 }
 console.log(`built ${into ? join(DIST, "landing.html") : DIST}`);

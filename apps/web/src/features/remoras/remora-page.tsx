@@ -43,10 +43,13 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Address, Problem, Stat, StatRow } from "@/components/visual";
+import { AuditCard } from "@/features/audit/audit-card";
 import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById, priceLabel } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
 import { LearningSection } from "@/features/learning/learning";
+import { ReplaySection } from "@/features/replay/replay-section";
+import { RuleCard } from "@/features/replay/rule-card";
 import { payeeName } from "@/lib/payee";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
@@ -68,6 +71,8 @@ import { KeeperCard } from "./keeper-card";
 import { ProposalCard } from "./proposal-card";
 import { ReviewCard } from "./review-card";
 import { BuyFromCard, SellCard } from "./sell-card";
+import { TemplateUpdateCard } from "./template-update-card";
+import { TreasurerCard } from "./treasurer-card";
 import { useBudget } from "./use-budget";
 
 const must = <T,>(r: { ok: true; data: T } | { ok: false; error: string }): T => {
@@ -93,7 +98,7 @@ function useOwnerTx() {
   return { run, busy, go };
 }
 
-type Tab = "overview" | "activity" | "learning" | "settings";
+type Tab = "overview" | "activity" | "learning" | "replay" | "settings";
 
 /** Pause/resume needs the shared signer; kept separate from the menu so the JSX stays flat. */
 function PauseButton({ r, reload }: { r: RemoraView; reload: () => void }) {
@@ -911,6 +916,7 @@ function Remora({ id }: { id: string }) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="learning">Learning</TabsTrigger>
+          {r.template === "scout" ? <TabsTrigger value="replay">Replay</TabsTrigger> : null}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -945,10 +951,15 @@ function Remora({ id }: { id: string }) {
             <ErrandCard r={r} onDone={refreshFeed} />
           ) : r.template === "keeper" ? (
             <KeeperCard r={r} onDone={refreshFeed} />
+          ) : r.template === "treasurer" ? (
+            // C3 (ADR-0148): its watch list, last report and requests to pay from your wallet.
+            <TreasurerCard r={r} onDone={refreshFeed} />
           ) : (
             <TeachCard r={r} onDone={refreshFeed} />
           )}
           {r.config.crew ? <CrewCard r={r} onChanged={reload} /> : null}
+          {/* D3 (ADR-0150): its template has a new version; nothing shows when it hasn't. */}
+          <TemplateUpdateCard r={r} onChanged={reload} open={Boolean(params.get("update"))} />
           {r.template === "scout" || r.template === "briefer" ? (
             <div className="grid items-start gap-8 lg:grid-cols-2">
               <SellCard r={r} readOnly={r.status === "retired"} />
@@ -957,6 +968,9 @@ function Remora({ id }: { id: string }) {
           ) : null}
           {r.config.budget && r.discId ? (
             <ProposalCard r={r} onChanged={reload} open={Boolean(params.get("proposal"))} />
+          ) : null}
+          {r.template === "scout" && r.config.budget && r.discId ? (
+            <RuleCard r={r} onChanged={reload} />
           ) : null}
           <div className="grid items-start gap-8 lg:grid-cols-2">
             {r.config.budget ? <BudgetSection r={r} reload={reload} /> : null}
@@ -981,15 +995,23 @@ function Remora({ id }: { id: string }) {
             </Button>
           </div>
           <FeedList items={events} />
+          {/* B1 (ADR-0145): lend an auditor read access to these Wakes. */}
+          <AuditCard r={r} />
         </TabsContent>
 
         <TabsContent value="learning" className="flex flex-col gap-8 pt-5">
-          {r.template === "sentinel" ? null : <ReviewCard r={r} />}
+          {r.template === "sentinel" || r.template === "treasurer" ? null : <ReviewCard r={r} />}
           {r.template === "scout" || r.template === "briefer" ? (
             <CapsuleCard r={r} onChanged={reload} />
           ) : null}
           <LearningSection remoraId={r.id} />
         </TabsContent>
+
+        {r.template === "scout" ? (
+          <TabsContent value="replay" className="flex flex-col gap-8 pt-5">
+            <ReplaySection r={r} />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="settings" className="pt-5">
           <SettingsTab r={r} reload={reload} />

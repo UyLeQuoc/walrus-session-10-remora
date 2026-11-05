@@ -23,3 +23,6 @@ curl -i "http://localhost:8790/haiku?q=walrus"   # 402: 0.005 USDC to PAY_TO, su
 
 To let remoras find it, list its URL in the Reef from the app's **List your API** page. A remora's
 owner then lets it pay your address with one signature, and asks "ask @haiku …".
+
+To start your own API from this one, run `npx create-remora my-api` once it's on npm
+([packages/create-remora](../../packages/create-remora/README.md), [ADR-0140](../../docs/adr/0140-create-remora-publishable-packages.md)).

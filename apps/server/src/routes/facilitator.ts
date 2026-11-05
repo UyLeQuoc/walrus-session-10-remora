@@ -58,6 +58,7 @@ export function createFacilitatorRoutes(o: {
         verify: "POST /api/facilitator/verify",
         settle: "POST /api/facilitator/settle",
         gas: "POST /api/facilitator/gas",
+        discovery: "GET /api/facilitator/discovery/resources",
       },
       limits,
       docs: DOCS,

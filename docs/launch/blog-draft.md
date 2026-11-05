@@ -97,6 +97,32 @@ The Proof view shows both decisions side by side. The only difference between th
 and both decisions link to `/verify`. In Claude Code, the same rule comes back word for word through
 Remora's MCP server.
 
+### The same ten questions, three times (Nov 5)
+The test I wanted for "it learned": ask the same questions again and see whether it would buy
+differently, and why.
+
+My Researcher answered ten questions on testnet and paid for data each time: odds with and without a
+team, prices, a package check, a repo. I rated the answers. Three odds answers that named no team were
+noise; the two that named a team were useful. All three price answers were noise.
+
+Two things came out of that:
+- Its daily check proposed a rule, *"Skip odds unless the question names a team"*, citing five of
+  its notes on odds. A rule can only make it spend less or ask more, so I accepted it with a tap.
+- Its note on Prices said *"3 calls · 0 useful · 3 noise"*, so it stopped buying Prices on its own,
+  and says which note made it.
+
+Then a replay planned the same ten questions three ways. A replay never pays, writes memory or
+messages anyone:
+
+| Memory | Planned services | Planned spend |
+|---|---|---|
+| none | 10 | 0.135 USDC |
+| as it was before the first question | 10 | 0.135 USDC |
+| today's | 4 | 0.060 USDC |
+
+Each of the six differences cites a blob on Walrus Memory: the rule's notes or the Prices note. The
+odds question that named Arsenal and Chelsea still buys odds, because the rule doesn't apply to it.
+
 ### Remembering is the easy part
 Rules were the easy case. Scores are harder.
 
@@ -200,6 +226,15 @@ App-bound allowances work, with four gotchas:
   indexer builds history from those.
 - **Gas.** The SDK pays gas from the address balance when it can, which would eat the budget. That's why
   every payment is sponsored.
+
+Since then, more ways to pay (U17 to U19, all on testnet):
+- remoras sell their answers to other remoras over x402, and a crew's lead splits a question across
+  its members, each paying from its own limit; under load, 50 remoras made 1,000 paid calls with 0
+  overspends;
+- an Errand pays people, by address or by `.sui` name (checked again before every payment), splits
+  bills with pay links, and reads a bill from a photo (the photo's text is never an instruction);
+- every paid door also speaks MPP, and the Reef is listed in the x402 discovery catalog, where
+  `disc.fetch` found a service and paid it.
 
 ## Red team: 28 attacks, 0 overspends
 `bun run evals` runs in CI, and each attack names the layer that stops it:

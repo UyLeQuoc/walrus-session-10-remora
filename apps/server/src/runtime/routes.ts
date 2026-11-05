@@ -14,6 +14,7 @@ import {
   gt,
   inArray,
   lt,
+  ne,
   ownerSettings,
   receipts,
   remoraEvents,
@@ -28,6 +29,8 @@ import { Budget } from "@remora/schema";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { placeholders, render } from "../copy/keys.ts";
+import { mountTemplateExtras } from "../hatchery/extras-routes.ts";
+import { RATED_EVENT } from "../hatchery/ratings.ts";
 import {
   confirmDeprecate,
   confirmHatch,
@@ -42,6 +45,8 @@ import {
   shareLinks,
   shareReview,
 } from "../hatchery/service.ts";
+import { declineTemplateUpdate } from "../hatchery/updates.ts";
+import { mountMcpServers } from "../mcp/servers-routes.ts";
 import {
   COMMUNITY_PER_OWNER,
   type CommunityListing,
@@ -50,13 +55,18 @@ import {
   probeX402,
 } from "../money/community.ts";
 import { contactsOf } from "../money/contacts.ts";
+import { saleDoor } from "../money/discovery.ts";
 import { type Listings, SALE_SLUG, salePath } from "../money/listings.ts";
+import { canonicalName, isSuiName, resolveName } from "../money/names.ts";
 import { NETWORK_HEADER, NetworkUnavailableError, resolveNetwork } from "../money/networks.ts";
 import { reefServices } from "../money/reef.ts";
 import { isOpsError, recordError } from "../ops/signals.ts";
 import { answersQuestions } from "../templates/index.ts";
 import { previewSchedule } from "../triggers/schedule.ts";
+import { mountAnchors } from "./anchor-routes.ts";
+import { ANCHOR_EVENT, type AnchorDeps } from "./anchors.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
+import { mountAudits } from "./audit-routes.ts";
 import { briefNow, briefView, setBriefItems } from "./briefer.ts";
 import {
   acceptCapsule,
@@ -72,7 +82,8 @@ import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { errandAsk, usualFor } from "./errand.ts";
 import { giveFeedback } from "./feedback.ts";
-import type { InspectorRow } from "./inspector.ts";
+import { mountImportTidy } from "./import-tidy-routes.ts";
+import { type InspectorRow, indexCheck } from "./inspector.ts";
 import {
   acceptPrice,
   addSubscription,
@@ -91,6 +102,7 @@ import {
   forgetNamespace,
   recentDuplicates,
   setHidden,
+  storedBlobs,
 } from "./memory-controls.ts";
 import {
   checkProposal,
@@ -100,6 +112,7 @@ import {
   proposalTx,
 } from "./proposals.ts";
 import { type Remora, RemoraError, type RemoraService } from "./remoras.ts";
+import { mountReplay } from "./replay-routes.ts";
 import { reviewsOf, writeReview } from "./review.ts";
 import {
   defaultRoom,
@@ -125,6 +138,8 @@ import { mountSteer } from "./steer-routes.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
 import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
+import { dismissConflict } from "./tidy.ts";
+import { spendRequest } from "./treasury.ts";
 import { verifyWake } from "./verify.ts";
 import { publicWake, shareWake, unshareWake } from "./wake-share.ts";
 
@@ -156,6 +171,8 @@ export interface RemoraRouteDeps {
   tgOwner?: (initData: string) => Promise<string | null>;
   /** U18 C1 + C2 (ADR-0123): describe the job, chat commands and their change cards. */
   steer?: Steer;
+  /** B2 (ADR-0139): Merkle anchors for Wakes that didn't pay; absent, `POST …/anchor` isn't mounted. */
+  anchors?: AnchorDeps;
 }
 
 const ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
@@ -446,6 +463,11 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         kind: "message",
         ref: "web",
       });
+      return c.json(serialize({ ...res, receiptId: null, outcomes: [] }));
+    }
+    // C3 (ADR-0148): a Treasurer turns the owner's request into an approval, never a payment.
+    if (r.template === "treasurer") {
+      const res = await spendRequest(rt, r, question, { kind: "owner", channel: "web" });
       return c.json(serialize({ ...res, receiptId: null, outcomes: [] }));
     }
     if (!answersQuestions(r.template))
@@ -793,9 +815,9 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     })();
     const paid = x402({
       amount: found.price,
-      description: `${found.name}'s answer`,
+      // ADR-0141: the description, timeout and discovery the facilitator's catalog states too.
+      ...saleDoor(found.name),
       settle: "after",
-      maxTimeoutSeconds: 120,
       ...(rt.fetch ? { fetch: rt.fetch } : {}),
       networks: {
         [network]: {
@@ -979,6 +1001,12 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       .where(
         and(
           inArray(remoraEvents.remoraId, ids),
+          // ADR-0139: anchor batches are records for verify, not feed items; ADR-0136: replays are
+          // plans, shown on the Replay tab.
+          ne(remoraEvents.type, ANCHOR_EVENT),
+          ne(remoraEvents.type, "replay.ran"),
+          // ADR-0149: a rating is the template's, not a thing the remora did.
+          ne(remoraEvents.type, RATED_EVENT),
           ...(type ? [inArray(remoraEvents.type, type.split(","))] : []),
           ...(valid(before) ? [lt(remoraEvents.createdAt, new Date(before as string))] : []),
           ...(valid(after) ? [gt(remoraEvents.createdAt, new Date(after as string))] : []),
@@ -1178,6 +1206,21 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       .from(approvals)
       .where(eq(approvals.id, c.req.param("id")));
     // E5: declining a budget proposal is remembered, with the owner's reason if they gave one.
+    // ADR-0147: declining a conflict leaves both notes or rules as they are.
+    if (a?.kind === "rule_conflict")
+      return c.json(await dismissConflict(rt, c.get("owner"), c.req.param("id")));
+    // ADR-0150: declining a template update is remembered, and that version isn't offered again.
+    if (a?.kind === "template_update") {
+      const b = await body<{ reason?: string }>(c);
+      return c.json(
+        await declineTemplateUpdate(
+          { runtime: rt, service },
+          c.get("owner"),
+          c.req.param("id"),
+          String(b.reason ?? ""),
+        ),
+      );
+    }
     if (a?.kind === "budget_change") {
       const b = await body<{ reason?: string }>(c);
       return c.json(
@@ -1312,21 +1355,43 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     });
   });
 
+  // C1 (ADR-0144): an address can be a `.sui` name; it's resolved here, and the contact keeps the
+  // name, the address the owner signs for, and when it was resolved.
+  type ContactIn = { name?: string; address?: string; suins?: string; resolvedAt?: string };
+  const contactsIn = async (id: string, owner: string, list: ContactIn[]) => {
+    const r = await service.get(id, owner);
+    const core = rt.networks.client(r.network).core;
+    return Promise.all(
+      list.map(async (x) => {
+        const name = String(x.name ?? "");
+        const address = String(x.address ?? "").trim();
+        if (isSuiName(address)) {
+          const suins = canonicalName(address);
+          const at = await resolveName(core, suins).catch(() => {
+            throw new RemoraError("name.unreachable", `Couldn't look up ${suins} just now.`, 409);
+          });
+          if (!at) throw new RemoraError("name.unknown", `${suins} doesn't point to an address.`);
+          return { name, address: at, suins, resolvedAt: new Date().toISOString() };
+        }
+        return {
+          name,
+          address,
+          ...(x.suins ? { suins: String(x.suins) } : {}),
+          ...(x.resolvedAt ? { resolvedAt: String(x.resolvedAt) } : {}),
+        };
+      }),
+    );
+  };
+
   app.post("/api/remoras/:id/contacts", async (c) => {
-    const b = await body<{ contacts?: { name?: string; address?: string }[] }>(c);
-    const list = (b.contacts ?? []).map((x) => ({
-      name: String(x.name ?? ""),
-      address: String(x.address ?? ""),
-    }));
+    const b = await body<{ contacts?: ContactIn[] }>(c);
+    const list = await contactsIn(c.req.param("id"), c.get("owner"), b.contacts ?? []);
     return c.json(await service.contactsTx(c.req.param("id"), c.get("owner"), list));
   });
 
   app.post("/api/remoras/:id/contacts/confirm", async (c) => {
-    const b = await body<{ digest?: string; contacts?: { name?: string; address?: string }[] }>(c);
-    const list = (b.contacts ?? []).map((x) => ({
-      name: String(x.name ?? ""),
-      address: String(x.address ?? ""),
-    }));
+    const b = await body<{ digest?: string; contacts?: ContactIn[] }>(c);
+    const list = await contactsIn(c.req.param("id"), c.get("owner"), b.contacts ?? []);
     return c.json({
       remora: await view(
         await service.confirmContacts(c.req.param("id"), c.get("owner"), digestOf(b.digest), list),
@@ -1430,7 +1495,17 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
     const mismatches = Object.entries(written)
       .filter(([n, count]) => (stored.counts[n] ?? 0) < count)
       .map(([n, count]) => ({ namespace: n, written: count, relayer: stored.counts[n] ?? 0 }));
-    return c.json({ namespaces, ...stored, written, mismatches, results: found, duplicates });
+    // A0 (ADR-0135): per namespace, what our index recorded as stored against `listMemories()`.
+    const index = indexCheck(await storedBlobs(rt.db, r), stored.rows, namespaces);
+    return c.json({
+      namespaces,
+      ...stored,
+      written,
+      mismatches,
+      index,
+      results: found,
+      duplicates,
+    });
   });
 
   // ── M1–M7: the Hatchery ────────────────────────────────────────────────────
@@ -1854,6 +1929,17 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
 
   // ADR-0122: statements and config history.
   mountLedger(app, { service, runtime: rt, listings: d.listings });
+  // A1/A2 (ADR-0136, ADR-0137): the replay bench and rule proposals.
+  mountReplay(app, { service, runtime: rt });
+  // B2 (ADR-0139): anchor the Wakes that didn't pay now.
+  if (d.anchors) mountAnchors(app, { service, anchors: d.anchors });
+  mountMcpServers(app, { service, runtime: rt });
+  // B1 (ADR-0145): share Wakes with an auditor; `GET /api/audit/:capsuleId` is public.
+  mountAudits(app, { service, runtime: rt });
+  // D2 + D3 (ADR-0149, ADR-0150): ratings, the author's view, the badge, template updates.
+  mountTemplateExtras(app, { hatchery: hatch, owner: d.owner });
+  // A4 + A3 (ADR-0146, ADR-0147): import into memory, and tidy it.
+  mountImportTidy(app, { service, runtime: rt, ...(d.operator ? { operator: d.operator } : {}) });
 
   // Mounted beside the other groups, which carry no typed variables.
   return app as unknown as Hono;

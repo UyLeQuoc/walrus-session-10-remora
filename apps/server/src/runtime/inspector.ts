@@ -36,7 +36,13 @@ export function listAccount(
   const now = opts.now ?? Date.now();
   const cached = listings.get(operator.accountId);
   if (cached && now - cached.at < (opts.maxAgeMs ?? 30_000)) return cached.rows;
-  const list = opts.list ?? (() => new RelayerExtras(operator).allMemories());
+  // ADR-0135: the SDK's own walk first; our signed listing only if the relayer refuses it.
+  const list =
+    opts.list ??
+    (() => {
+      const extras = new RelayerExtras(operator);
+      return extras.listAll().catch(() => extras.allMemories());
+    });
   const rows = list()
     .catch(() => list())
     .catch((err) => {
@@ -74,4 +80,39 @@ export async function inspect(
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   for (const row of rows) counts[row.namespace] = (counts[row.namespace] ?? 0) + 1;
   return { rows, counts };
+}
+
+export interface IndexCheck {
+  namespace: string;
+  /** Blobs our index recorded as stored for this namespace. */
+  written: number;
+  /** Of those, how many the relayer's listing has. */
+  listed: number;
+  /** Up to 20 recorded blob ids the listing doesn't have. Shown, never restored. */
+  missing: string[];
+}
+
+/**
+ * A0 (ADR-0135): what we wrote (`remora_memories`, stored rows) against what `listMemories()`
+ * reports, per namespace. A blob the listing doesn't have is a warning with its id; nothing is
+ * re-written or restored.
+ */
+export function indexCheck(
+  stored: { namespace: string; blobId: string | null }[],
+  rows: Pick<InspectorRow, "namespace" | "blobId">[],
+  namespaces: string[],
+): IndexCheck[] {
+  const listed = new Set(rows.map((x) => x.blobId));
+  return namespaces.map((ns) => {
+    const ids = [
+      ...new Set(stored.filter((m) => m.namespace === ns && m.blobId).map((m) => m.blobId ?? "")),
+    ];
+    const missing = ids.filter((id) => !listed.has(id));
+    return {
+      namespace: ns,
+      written: ids.length,
+      listed: ids.length - missing.length,
+      missing: missing.slice(0, 20),
+    };
+  });
 }

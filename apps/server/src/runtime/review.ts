@@ -322,7 +322,17 @@ export function weeklyReviewHandler(
     const { remoraId } = payload as { remoraId: string };
     const [r] = await deps.db.select().from(remoras).where(eq(remoras.id, remoraId));
     if (!r || r.status === "retired" || r.playground) return;
-    if (r.status === "active") await writeReview(deps, r);
+    // C3 (ADR-0148): a Treasurer's week is its treasury report; it never pays, so practice mode
+    // doesn't hold it back.
+    if (r.template === "treasurer")
+      await (await import("./treasury.ts")).writeTreasuryReport(deps, r);
+    else if (r.status === "active") {
+      await writeReview(deps, r);
+      // A3 (ADR-0147): then it tidies its memory; a failed tidy never costs the review.
+      await (await import("./tidy.ts"))
+        .tidy(deps, r, { trigger: "weekly" })
+        .catch((err) => deps.log.warn("tidy.failed", { remora: r.id, error: err }));
+    }
     await queueWeeklyReview(deps, r, nextMonday9(new Date(), await timezoneOf(r.ownerAddress)));
   };
 }

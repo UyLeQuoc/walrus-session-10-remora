@@ -87,7 +87,24 @@
 >      wallet.
 >    - Every paid door speaks **x402 and MPP** (the Payment HTTP auth scheme, shaped like
 >      `@suimpp/mpp`'s `sui` method).
-> 2. **Memory that learns, and that you can read,** on Walrus Memory (mainnet). Mark a ping 👎 and
+>    - **Pay a `.sui` name**, resolved over Sui's gRPC NameService: you sign for the address, and a
+>      name that moves stops the next payment.
+>    - **A bill from a photo:** the model reads the total into a card (split it, or pay a contact);
+>      only your tap acts, and text in the photo is never an instruction.
+>    - **Found by any x402 agent:** the public facilitator lists the Reef in the x402 discovery
+>      format, and our `disc.fetch` found a service there and paid it on testnet.
+> 2. **Memory that learns, and that you can read,** on Walrus Memory (mainnet).
+>
+>    **The same ten questions, three times.** A Researcher answered ten questions on testnet and paid
+>    for data each time; its owner rated the answers. A replay then planned the same ten questions with
+>    no memory, with the memory it had before its first question, and with today's: **10, 10, then 4
+>    planned services** (0.135, 0.135, then 0.060 USDC). Every skip cites the memory behind it: a rule
+>    it proposed from the owner's ratings and the owner accepted with a tap ("Skip odds unless the
+>    question names a team", citing five notes), or its own note on a service ("0 of 3 rated answers
+>    were useful"). Replays are plans: they never pay, write memory or notify. The Memory Inspector
+>    checks every write against Walrus Memory's own listing (`listMemories()`).
+>
+>    Mark a ping 👎 and
 >    the Wallet watcher writes a rule, then stays quiet the next time. That decision's receipt cites the rule's
 >    blob. A facts ledger tracks which facts still hold and who said them. You can inspect, correct and
 >    export the memory, and use it from Claude Code over MCP.
@@ -121,8 +138,10 @@
 > - Payments run on Sui testnet; memory runs on mainnet (360+ memories).
 > - Remora is built on our earlier project, hippo. The README says what came before the build window.
 >
-> We also enter **Best Walrus Memory** (the loop above, end to end) and **Best Use of Agent
-> Payments** (x402 and MPP, settled on Sui: agents, people and visitors with a wallet).
+> We also enter **Best Walrus Memory** (the replay above: a decision that changes because of what
+> it remembers, each change citing its blob) and **Best Use of Agent Payments** (x402 and MPP, settled
+> on Sui: agents, people by `.sui` name or from a photo of a bill, visitors with a wallet, and any
+> x402 agent that finds the Reef in the discovery catalog).
 
 | Field | Required | Answer |
 |---|---|---|

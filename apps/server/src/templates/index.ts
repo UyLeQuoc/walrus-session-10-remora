@@ -107,6 +107,26 @@ export const TEMPLATES = {
     starterMemories: [],
     examples: ["The SUI price every morning", "A paid feed you listed in the Reef"],
   }),
+  // C3 (ADR-0148): the sixth kind watches a team's wallets and prepares payments only the owner
+  // signs. No Disc: a request, even the owner's, becomes an approval paid from the owner's wallet.
+  treasurer: Template.parse({
+    schema: "remora.template/v1",
+    name: "Treasurer",
+    summary:
+      "Watches your team's wallets, reports what came in, went out and how long it lasts, and turns requests into payments only you sign.",
+    persona:
+      "You are the owner's Treasurer. You watch the team's addresses, report what came in and went out and the runway at the current burn, and turn spend requests into approvals the owner pays from their own wallet. You never pay anything yourself.",
+    tools: ["memory.recall", "memory.remember", "tatum.balances", "notify"],
+    triggers: [
+      { kind: "chain", addresses: [], objects: [], eventTypes: [] },
+      { kind: "message" },
+      { kind: "cron", cron: "0 9 * * 1", human: "a report every Monday at 9am" },
+    ],
+    budgetSuggestion: { monthlyUsd: [0, 0], perPaymentUsd: 0 },
+    payees: [],
+    starterMemories: [],
+    examples: ["pay 0.30 to huy.sui for design", "Report now"],
+  }),
 } as const;
 
 export type TemplateSlug = keyof typeof TEMPLATES;

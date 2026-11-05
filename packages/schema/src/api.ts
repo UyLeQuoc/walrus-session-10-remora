@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { Amount, IsoDateTime, Sha256Hex } from "./common.ts";
 import { MemoryType } from "./memory.ts";
+import { AnchorProof } from "./merkle.ts";
 import { Network } from "./network.ts";
 import { RemoraConfig } from "./remora.ts";
 import { Wake } from "./wake.ts";
@@ -57,6 +58,8 @@ export const FEED_TYPES = [
   "review",
   /** U18 B2: a subscription asked more than the price it remembers. */
   "price_hike",
+  /** C2 (ADR-0138): a bill read from a photo (what was read, never the image). */
+  "bill_read",
 ] as const;
 
 /** One row of the activity feed (`GET /api/feed`); `receiptId` opens its Wake (N4). */
@@ -139,6 +142,8 @@ export const VerifyResult = z.object({
   anchored: z.boolean(),
   wake: Wake,
   checks: z.array(VerifyCheck),
+  /** ADR-0139: a Wake that didn't pay, once its batch's root is onchain; null until then. */
+  anchor: AnchorProof.nullable().default(null),
 });
 
 /** F3 + F6: `GET /api/remoras/:id/memory`. */
@@ -167,6 +172,17 @@ export const InspectorResponse = z.object({
   mismatches: z.array(
     z.object({ namespace: z.string(), written: z.number().int(), relayer: z.number().int() }),
   ),
+  /** A0 (ADR-0135): our stored writes against `listMemories()`, per namespace. */
+  index: z
+    .array(
+      z.object({
+        namespace: z.string(),
+        written: z.number().int().nonnegative(),
+        listed: z.number().int().nonnegative(),
+        missing: z.array(z.string()),
+      }),
+    )
+    .default([]),
   results: z.array(
     z.object({ blobId: z.string(), namespace: z.string(), text: z.string(), distance: z.number() }),
   ),
@@ -183,12 +199,16 @@ export const InspectorResponse = z.object({
     .default([]),
 });
 
-/** E4: `POST /api/approvals/:id/pay-tx`, the owner's one-off payment to sign (ADR-0031). */
+/**
+ * E4: `POST /api/approvals/:id/pay-tx`, the owner's one-off payment to sign (ADR-0031). A payment to
+ * a contact (an Errand's or a Treasurer's, ADR-0125, ADR-0148) has no merchant: `requirements` is null.
+ */
 export const ApprovalPayTx = z.object({
   transaction: z.string().min(1),
   requirements: z
     .object({ amount: Amount, payTo: z.string().min(1), asset: z.string().min(1) })
-    .loose(),
+    .loose()
+    .nullable(),
 });
 
 export type RemoraView = z.infer<typeof RemoraView>;

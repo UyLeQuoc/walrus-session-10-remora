@@ -9,6 +9,7 @@ import { Link } from "react-router";
 import { RemoraAvatar, type RemoraMood } from "@/components/app/remora-avatar";
 import { Hash } from "@/components/hash";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { NamedAddress } from "@/features/names/sui-name";
 import { explorerTx, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
 
@@ -265,6 +266,7 @@ export function Digest({ value, network = "testnet" }: { value: string; network?
 }
 
 /** An address: short and copyable. */
+/** C1 (ADR-0144): with its `.sui` name first, when it has one. */
 export function Address({ value, href }: { value: string; href?: string }) {
-  return <Hash value={value} href={href} label="address" />;
+  return <NamedAddress value={value} {...(href ? { href } : {})} />;
 }

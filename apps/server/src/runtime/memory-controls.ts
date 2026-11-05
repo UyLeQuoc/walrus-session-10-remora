@@ -185,6 +185,20 @@ export async function forgetNamespace(
   };
 }
 
+/** A0 (ADR-0135): the blobs our index recorded as stored, per namespace, for the index check. */
+export async function storedBlobs(db: Db, r: RemoraRef) {
+  return db
+    .select({ namespace: remoraMemories.namespace, blobId: remoraMemories.blobId })
+    .from(remoraMemories)
+    .where(
+      and(
+        eq(remoraMemories.remoraId, r.id),
+        eq(remoraMemories.status, "stored"),
+        isNotNull(remoraMemories.blobId),
+      ),
+    );
+}
+
 /** F4/F5: inspector rows with the owner's controls and the expiry alert. */
 export async function enrichRows(
   db: Db,

@@ -11,6 +11,10 @@ made in the web.
 | `rpc.ts` | JSON-RPC: initialize, tools/list by scope, tools/call with 403, 429 and logging |
 | `routes.ts` | `/api/mcp/tokens*` for the owner, and `/mcp` (Streamable HTTP) for agents |
 | `index.ts` | Wiring to the real runtime |
+| `client.ts` | ADR-0143: the other direction, a remora as an MCP client (Streamable HTTP, no SDK, through `safeFetch`) |
+| `servers.ts` | ADR-0143: a remora's read-only MCP servers (sealed token, ticked tools) and a turn's `mcp_call` |
+| `servers-routes.ts` | ADR-0143: `/api/remoras/:id/mcp*` for the owner, mounted on the runtime routes |
+| `test-server.test-util.ts` | A local MCP server for tests: read-only, write, destructive and injected tools |
 
 The attack evals are in `evals/mcp-attacks.json`; `attacks.test.ts` runs them in CI.
 

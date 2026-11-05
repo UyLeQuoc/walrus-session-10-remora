@@ -26,23 +26,54 @@ const DECIMALS: Record<string, number> = { SUI: 9, USDC: 6 };
 export const decimalsOf = (coinType: string) =>
   DECIMALS[coinType.split("::").pop()?.toUpperCase() ?? ""] ?? 9;
 
-/** Balance changes of watched addresses, as events. */
-export function eventsFrom(cp: WatchCheckpoint, watched: Set<string>): ChainEvent[] {
+/**
+ * Balance changes of watched addresses, as events. With `counterparty`, each event also names the
+ * other side: the largest opposite change of the same coin in that transaction (C3, ADR-0148).
+ */
+export function eventsFrom(
+  cp: WatchCheckpoint,
+  watched: Set<string>,
+  o: { counterparty?: boolean } = {},
+): ChainEvent[] {
   const out: ChainEvent[] = [];
   for (const tx of cp.transactions) {
-    for (const b of tx.balanceChanges ?? []) {
-      if (!b.address || !b.coinType || !b.amount) continue;
-      const address = normalizeSuiAddress(b.address);
+    const changes = (tx.balanceChanges ?? []).flatMap((b) =>
+      b.address && b.coinType && b.amount
+        ? [
+            {
+              address: normalizeSuiAddress(b.address),
+              coinType: b.coinType,
+              amount: BigInt(b.amount),
+            },
+          ]
+        : [],
+    );
+    for (const { address, coinType, amount } of changes) {
       if (!watched.has(address)) continue;
-      const amount = BigInt(b.amount);
       if (amount === 0n) continue;
+      const other = o.counterparty
+        ? changes
+            .filter(
+              (x) =>
+                x.coinType === coinType &&
+                x.address !== address &&
+                x.amount !== 0n &&
+                x.amount > 0n !== amount > 0n,
+            )
+            .sort((x, y) => {
+              const ax = x.amount < 0n ? -x.amount : x.amount;
+              const ay = y.amount < 0n ? -y.amount : y.amount;
+              return ay > ax ? 1 : ay < ax ? -1 : 0;
+            })[0]
+        : undefined;
       out.push({
         address,
         direction: amount > 0n ? "in" : "out",
-        coinType: b.coinType,
+        coinType,
         amount: amount < 0n ? -amount : amount,
-        decimals: decimalsOf(b.coinType),
+        decimals: decimalsOf(coinType),
         digest: tx.digest ?? "",
+        ...(other ? { counterparty: other.address } : {}),
       });
     }
   }
@@ -54,7 +85,10 @@ export interface Watched {
   addresses: string[];
 }
 
-/** Sentinels on a network that should be listening, with the addresses they watch. */
+/**
+ * Sentinels and Treasurers (C3, ADR-0148) on a network that should be listening, with the addresses
+ * they watch. Both keep their addresses in a `chain` trigger, so one set of streams serves both.
+ */
 export async function watchedOn(db: Db, network: SuiNetwork): Promise<Watched[]> {
   const rows = await db
     .select()
@@ -62,7 +96,7 @@ export async function watchedOn(db: Db, network: SuiNetwork): Promise<Watched[]>
     .where(
       and(
         eq(remoras.network, network),
-        eq(remoras.template, "sentinel"),
+        inArray(remoras.template, ["sentinel", "treasurer"]),
         inArray(remoras.status, ["shadow", "active"]),
       ),
     );
@@ -153,7 +187,7 @@ export function startWatcher(o: {
     byAddress: Map<string, string[]>,
     checkpoint: number,
   ) => {
-    for (const e of eventsFrom(cp, new Set(byAddress.keys()))) {
+    for (const e of eventsFrom(cp, new Set(byAddress.keys()), { counterparty: true })) {
       for (const remoraId of byAddress.get(e.address) ?? []) {
         await o
           .onEvent(remoraId, e, checkpoint)

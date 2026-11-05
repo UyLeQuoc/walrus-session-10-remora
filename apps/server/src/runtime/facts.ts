@@ -602,6 +602,8 @@ export async function admitMemories(
   question: string,
   recalled: Recalled[],
   namespaces: string[],
+  /** A1 (ADR-0136): admit as the ledger stood then (a replay with an older memory). */
+  at?: Date,
 ): Promise<AdmittedMemories> {
   let stale = new Map<string, Staleness>();
   let current: FactView[] = [];
@@ -612,6 +614,7 @@ export async function admitMemories(
         r,
         namespaces,
         recalled.map((m) => m.blobId),
+        at,
       ));
     } catch (err) {
       deps.log?.warn("facts.validity_failed", { remora: r.id, error: err });

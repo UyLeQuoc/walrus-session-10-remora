@@ -9,12 +9,17 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { Section } from "@/components/app/page";
 import { Hash } from "@/components/hash";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Problem } from "@/components/visual";
 import { useSignAndRun } from "@/features/funds/sign";
+import { BillPhoto } from "@/features/replay/bill-card";
 import { usdc } from "@/lib/usdc";
+
+const SUI_NAME = /^(?:@[a-z0-9-]{3,63}|(?:[a-z0-9-]{1,63}\.)+sui)$/i;
+
 import { api } from "./api";
 import { useLoad } from "./hooks";
 
@@ -53,13 +58,18 @@ export function ErrandCard({ r, onDone }: { r: RemoraView; onDone?: () => void }
     setError("");
     try {
       const next = [
-        ...contacts.map((c) => ({ name: c.name, address: c.address })),
+        ...contacts.map((c) => ({
+          name: c.name,
+          address: c.address,
+          ...(c.suins ? { suins: c.suins } : {}),
+        })),
         { name: name.trim(), address: address.trim() },
       ];
       const tx = await api.contactsTx(r.id, next);
       if (!tx.ok || !tx.data.transaction) throw new Error(tx.ok ? "Nothing to sign." : tx.error);
       const digest = await run(tx.data.transaction);
-      const done = await api.contactsConfirm(r.id, digest, next);
+      // The server resolved any `.sui` name: confirm exactly what was signed.
+      const done = await api.contactsConfirm(r.id, digest, tx.data.contacts ?? next);
       if (!done.ok) throw new Error(done.error);
       setName("");
       setAddress("");
@@ -98,6 +108,7 @@ export function ErrandCard({ r, onDone }: { r: RemoraView; onDone?: () => void }
             </Button>
           </form>
         )}
+        {readOnly ? null : <BillPhoto r={r} onDone={onDone} />}
         {last ? (
           <div
             className="flex flex-col gap-1 rounded-lg bg-ob-surface-2 p-3 text-md"
@@ -120,6 +131,11 @@ export function ErrandCard({ r, onDone }: { r: RemoraView; onDone?: () => void }
               data-testid="errand-contact"
             >
               <b>{c.name}</b>
+              {c.suins ? (
+                <Badge variant="secondary" data-testid="errand-contact-name">
+                  {c.suins}
+                </Badge>
+              ) : null}
               <Hash value={c.address} label="address" />
               <span className="text-ob-muted">
                 {c.usual ? `usually ${usdc(c.usual)} USDC` : "not paid yet"}
@@ -138,7 +154,7 @@ export function ErrandCard({ r, onDone }: { r: RemoraView; onDone?: () => void }
             />
             <Input
               aria-label="Their Sui address"
-              placeholder="0x…"
+              placeholder="0x… or linh.sui"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
@@ -146,7 +162,9 @@ export function ErrandCard({ r, onDone }: { r: RemoraView; onDone?: () => void }
               type="button"
               variant="outline"
               disabled={
-                busy !== "" || !name.trim() || !/^0x[0-9a-fA-F]{1,64}$/.test(address.trim())
+                busy !== "" ||
+                !name.trim() ||
+                !(/^0x[0-9a-fA-F]{1,64}$/.test(address.trim()) || SUI_NAME.test(address.trim()))
               }
               onClick={() => void add()}
               data-testid="errand-add"

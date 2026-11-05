@@ -237,8 +237,10 @@ export function parseSourceLine(
   text: string,
   observedAt: string,
 ): Omit<FactInput, "assertedBy"> | null {
+  // A3 (ADR-0147): a tidy note restates the latest record and names the notes it merged; the names
+  // aren't part of the value, so the ledger reads it as more evidence for that record.
   const m = /^SOURCE\s+(\S+)\s+·\s+(.+?)(?:\s+·\s+as_of\s+\d{4}-\d{2}-\d{2})?\s*$/.exec(
-    text.trim(),
+    text.trim().replace(/\s+·\s+SOURCE:\s+tidy of\s+.*$/s, ""),
   );
   if (!m?.[1] || !m[2]) return null;
   return {

@@ -3,7 +3,9 @@ import { handleIncoming } from "../chat/turn.ts";
 import { describeFailure } from "../copy/index.ts";
 import { redeemLinkCode } from "../identity/link.ts";
 import { personByChannel, resolvePerson } from "../identity/persons.ts";
+import { readBillPhoto } from "../runtime/bill.ts";
 import { remoraService, runtime, steer } from "../runtime/index.ts";
+import { telegramPhotoHandler } from "./bill-photo.ts";
 import { telegramHandler } from "./handlers.ts";
 import { keepPolling } from "./polling.ts";
 import { createRemoraBot } from "./remora-bot.ts";
@@ -59,6 +61,28 @@ export function telegramAdapter(): ChannelAdapter | null {
       await ctx.reply(describeFailure(err));
     }
   });
+  // C2 (ADR-0138): a photo is a bill for the owner's Errand.
+  bot.on("message:photo", (ctx) =>
+    telegramPhotoHandler({
+      ownerOf: async (id) => (await personByChannel(CHANNEL, id))?.walletAddress ?? null,
+      errandOf: async (owner) =>
+        (await remoraService.list(owner, "testnet")).find(
+          (r) => r.template === "errand" && (r.status === "active" || r.status === "shadow"),
+        ) ?? null,
+      download: async (fileId) => {
+        const file = await bot.api.getFile(fileId);
+        if (!file.file_path) throw new Error("Telegram didn't give the file");
+        const res = await fetch(`https://api.telegram.org/file/bot${bot.token}/${file.file_path}`, {
+          signal: AbortSignal.timeout(20_000),
+        });
+        if (!res.ok) throw new Error(`Telegram answered ${res.status}`);
+        return new Uint8Array(await res.arrayBuffer());
+      },
+      read: async (id, owner, bytes) =>
+        readBillPhoto(runtime, await remoraService.get(id, owner), bytes, "telegram"),
+      webBase: runtime.webBase,
+    })(ctx),
+  );
   bot.on("callback_query:data", async (ctx) => {
     const text = await remora
       .callback({ id: String(ctx.from.id) }, ctx.callbackQuery.data)

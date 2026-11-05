@@ -3,6 +3,7 @@
  * through a contract PR approved by both people, and update fixtures in the same PR.
  */
 export * from "./api.ts";
+export * from "./audit.ts";
 export * from "./channel.ts";
 export * from "./common.ts";
 export * from "./copy-keys.ts";
@@ -17,9 +18,11 @@ export * from "./launch.ts";
 export * from "./learning.ts";
 export * from "./mcp.ts";
 export * from "./memory.ts";
+export * from "./merkle.ts";
 export * from "./models.ts";
 export * from "./network.ts";
 export * from "./ops.ts";
+export * from "./planner-rules.ts";
 export * from "./playground.ts";
 export * from "./remora.ts";
 export * from "./rooms.ts";
@@ -27,4 +30,5 @@ export * from "./statement.ts";
 export * from "./steer.ts";
 export * from "./team.ts";
 export * from "./template.ts";
+export * from "./template-extras.ts";
 export * from "./wake.ts";

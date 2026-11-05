@@ -127,6 +127,16 @@ function ApprovalCard({
               <Button asChild>
                 <Link to={`/remoras/${who.id}?proposal=${a.id}`}>Review</Link>
               </Button>
+            ) : a.kind === "template_update" && who ? (
+              // ADR-0150: a template update is accepted where its diff is shown.
+              <Button asChild>
+                <Link to={`/remoras/${who.id}?update=${a.id}`}>Review</Link>
+              </Button>
+            ) : a.kind === "rule_conflict" && who ? (
+              // ADR-0147: two notes or rules disagree; the owner picks in the Tidied tab.
+              <Button asChild>
+                <Link to={`/memory?tab=tidied&remora=${who.id}`}>Choose</Link>
+              </Button>
             ) : (
               <Button type="button" disabled={!!busy} onClick={() => void decide(true)}>
                 Approve

@@ -18,6 +18,7 @@ import { useLoad, useOwner } from "@/features/remoras/hooks";
 import { WakeDetails } from "@/features/remoras/why-drawer";
 import { currentNetwork } from "@/lib/network";
 import { payeeName } from "@/lib/payee";
+import { AnchorProofCard } from "./anchor-proof";
 import { ShareControl } from "./share-control";
 import { useOwnsWake } from "./use-owns-wake";
 import { allChecksOk, CheckList, ReceiptSummary, VerifyVerdict } from "./verify-result";
@@ -173,6 +174,7 @@ export function VerifyPage() {
                     kind: "pay",
                     amount: r.wake.intent.decision.amount,
                     payee: r.wake.intent.decision.payee,
+                    payTo: r.wake.intent.decision.payTo,
                   }
                 : { kind: r.wake.intent.decision.action }
             }
@@ -186,6 +188,12 @@ export function VerifyPage() {
           <Section title="What we checked">
             <CheckList checks={r.checks} />
           </Section>
+
+          {r.wake.intent.decision.action === "pay" && r.wake.result.tx ? null : (
+            <Section title="Anchored on Sui">
+              <AnchorProofCard wake={r.wake} anchor={r.anchor} />
+            </Section>
+          )}
 
           {owns && r ? (
             <Section title="Share this proof">

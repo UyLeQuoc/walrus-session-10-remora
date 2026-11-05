@@ -90,6 +90,31 @@ route at 1280 and 375 px as `u13-*`.
 The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
 that memory.**
 
+- **The same ten questions, three memories** ([ADR-0136](docs/adr/0136-replay-bench.md)). A
+  Researcher answered ten questions on testnet and paid for data each time; its owner rated the
+  answers. A replay then planned the same ten with no memory, with the memory it had before its first
+  question, and with today's: **10 → 10 → 4 planned services** (0.135 → 0.135 → 0.060 USDC). Each
+  skip cites the note or the rule behind it. A replay never pays, writes memory or notifies.
+- **Rules from outcomes** ([ADR-0137](docs/adr/0137-rule-proposals-narrow-only.md)). A daily check
+  turned three 👎 on odds answers that named no team into *"Skip odds unless the question names a
+  team"*, citing five notes. A rule can only make it spend less or ask more, so a tap accepts it; the
+  next answer said *"I skipped Odds: your rule from Nov 5"*.
+- **Memory narrows the plan.** A service its own notes say was useful in under a third of rated
+  answers is skipped, and the skip cites the note's blob in the answer and the Wake.
+- **The index check** ([ADR-0135](docs/adr/0135-memwal-sdk-0-1-12-index-check.md)): what it wrote
+  against what Walrus Memory lists (`listMemories()`, SDK 0.1.12): "written 13 · on Walrus Memory 13
+  · missing 0".
+- **It tidies, and starts from what you already wrote**
+  ([ADR-0147](docs/adr/0147-tidy-memory.md), [ADR-0146](docs/adr/0146-import-notes.md)). Notes that
+  say the same thing merge into one (5 odds notes became one on testnet); two that disagree become a
+  question you answer. `CLAUDE.md`, `AGENTS.md`, Cursor rules or a ChatGPT export import as lines you
+  tick, each marked with its source and read as data; the next answer cited one.
+- **Anyone can check it** ([ADR-0145](docs/adr/0145-auditor-access-capsule.md),
+  [ADR-0139](docs/adr/0139-merkle-anchors-remora-anchor.md)). Lend an auditor a week of Wakes through
+  a Seal policy on Sui: their browser decrypts them and matched 14 of 14 receipts against Sui, until
+  a revoke. Wakes that didn't pay are anchored hourly as a Merkle root (`remora_anchor`), and
+  `remora verify` checks the proof.
+
 - **The Wallet watcher learns rules from you.** A 👎 on a ping becomes a rule in Walrus Memory. The next event of
   that kind is ignored, and the Wake for that quiet decision cites the rule's blob.
   - The Proof view shows both decisions and the one blob that changed between them.
@@ -165,6 +190,19 @@ that memory.**
     ([ADR-0132](docs/adr/0132-splitter-and-pay-links.md)).
   - A Subscriptions keeper stops on a price it doesn't remember
     ([ADR-0129](docs/adr/0129-subscriptions-keeper.md)).
+  - **Pay a `.sui` name** ([ADR-0144](docs/adr/0144-pay-a-sui-name.md)), resolved over gRPC's
+    NameService. You sign for the address; before each payment the name is checked again, and a name
+    that moved stops the payment.
+  - **A bill from a photo** ([ADR-0138](docs/adr/0138-bill-from-a-photo.md)): the vision model
+    reads the total into a card (split half, or pay a contact); only your tap acts, the photo isn't
+    kept, and text in it is quoted, never followed.
+- **Discoverable by any x402 agent** ([ADR-0141](docs/adr/0141-x402-discovery-catalog.md)). The
+  public facilitator serves the Reef in the x402 Bazaar catalog shape
+  (`/api/facilitator/discovery/resources`), each item with its door's own payment terms and Reef
+  score. On testnet, `disc.fetch` found Sui risk check there and paid it.
+- **Sell an API in one command** ([ADR-0140](docs/adr/0140-create-remora-publishable-packages.md)):
+  `create-remora` scaffolds a paid API (x402 and MPP) from `examples/sell-an-api`, built on the
+  publishable `@getremora/merchant` and `@getremora/disc-sdk` (npm publishing is pending).
 
 ## What it does, with proof
 
@@ -269,13 +307,13 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 | `getCheckpoint` | LedgerService | backfill the checkpoints missed during a reconnect | `apps/server/src/triggers/indexer.ts`, `apps/server/src/triggers/watch.ts` |
 | `getServiceInfo` | LedgerService | the chain tip for health's checkpoint lag and Tatum latency, and diagnose | `apps/server/src/ops/index.ts` |
 | `getObject` | LedgerService | Disc, allowance and cap state; diagnose's Move type checks; Scout's object reads | `apps/merchants/src/sui-risk.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/runtime/remoras.ts` (+2) |
-| `getTransaction` | LedgerService | confirm owner transactions by digest; hatchery events; Wake checks | `apps/facilitator/src/facilitator.ts`, `apps/merchants/src/sui-risk.ts`, `apps/server/src/hatchery/service.ts` (+5) |
-| `executeTransaction` | TransactionExecutionService | remora payments (sponsored) and server-signed transactions | `apps/facilitator/src/facilitator.ts`, `apps/server/src/runtime/approvals.ts` |
+| `getTransaction` | LedgerService | confirm owner transactions by digest; hatchery events; Wake checks | `apps/facilitator/src/facilitator.ts`, `apps/merchants/src/sui-risk.ts`, `apps/server/src/hatchery/service.ts` (+6) |
+| `executeTransaction` | TransactionExecutionService | remora payments (sponsored) and server-signed transactions | `apps/facilitator/src/facilitator.ts`, `apps/server/src/runtime/anchors.ts`, `apps/server/src/runtime/approvals.ts` |
 | `simulateTransaction` | TransactionExecutionService | the gas station and Sonar dry-run before anything is signed | `apps/facilitator/src/facilitator.ts` |
-| `waitForTransaction` | LedgerService | wait for finality before confirming | `apps/facilitator/src/facilitator.ts`, `apps/server/src/playground/index.ts`, `apps/server/src/runtime/approvals.ts` (+1) |
-| `getBalance` | StateService | funds, the playground funder, sponsor gas | `apps/facilitator/src/config.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/playground/index.ts` (+2) |
+| `waitForTransaction` | LedgerService | wait for finality before confirming | `apps/facilitator/src/facilitator.ts`, `apps/server/src/playground/index.ts`, `apps/server/src/runtime/anchors.ts` (+2) |
+| `getBalance` | StateService | funds, the playground funder, sponsor gas | `apps/facilitator/src/config.ts`, `apps/server/src/ops/index.ts`, `apps/server/src/playground/index.ts` (+3) |
 | `listBalances` | StateService | Scout's balance reads | `apps/merchants/src/wallet.ts`, `apps/server/src/runtime/schedules.ts`, `apps/server/src/tools/read.ts` |
-| `listCoins` | StateService | Detect funds (coins → address balance) | `apps/facilitator/src/facilitator.ts`, `apps/server/src/money/funds.ts` |
+| `listCoins` | StateService | Detect funds (coins → address balance) | `apps/facilitator/src/facilitator.ts`, `apps/server/src/money/funds.ts`, `apps/server/src/runtime/anchors.ts` |
 | `signAndExecuteTransaction` | TransactionExecutionService | the SDK's sign-then-execute, for the playground funder and scripts | `apps/server/src/playground/index.ts` |
 <!-- tatum-calls:end -->
 
@@ -296,7 +334,9 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 - **Not yet.**
   - Memory on your own Walrus account, with a delegate per remora. Until then, memories live in
     namespaces of the operator's account ([ADR-0030](docs/adr/0030-w2-memory-mode.md)).
-  - Walrus Sites and SuiNS names ([roadmap](#roadmap-not-built-yet)).
+  - A mainnet Walrus Site on wal.app, and SuiNS subnames per remora. The landing is a **testnet**
+    Walrus Site (object `0x3676fbef…505e`, [ADR-0142](docs/adr/0142-landing-testnet-walrus-site.md));
+    wal.app serves mainnet only, so open it through a local portal. Paying a `.sui` name is built.
   - The cost card's model line is an estimate, from total tokens.
 
 ## Quick start (local)
@@ -385,22 +425,20 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 
 ## Roadmap (not built yet)
 - **Mainnet pass** (U10):
-  - both Move packages on mainnet, with multisig `UpgradeCap`s;
+  - the Move packages on mainnet, with multisig `UpgradeCap`s;
   - owned memory (a delegate per remora on the owner's own account, ADR-0030);
-  - a mainnet Walrus publisher and playground.
-- **More remoras:** Errand, Subscriptions Keeper, Treasurer, Daily Brief, Portfolio Guard, Inbox,
-  Splitter (C3–C9).
-- **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b,
-  D6, D7).
-- **Money:** budget proposals, spend analytics, Reef reputation, the MPP adapter (E5, E6, E10,
-  E12). Remoras selling to remoras, community listings and the public facilitator are built (U17).
-- **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
-- **Proof:** Merkle batch anchors, auditor access (G4, G7).
-- **Channels:** voice and images, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H6, H8, H9). The
-  Telegram Mini App is built (U17).
-- **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge
-  (M2, M8–M12).
-- **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).
+  - a mainnet Walrus publisher and playground;
+  - the landing on wal.app with a SuiNS name (it's a testnet Walrus Site today, ADR-0142).
+- **More remoras:** Daily Brief, Portfolio Guard, Inbox (C6–C8). Errand, Subscriptions keeper,
+  Splitter and Treasurer are built.
+- **Channels:** voice, WhatsApp, EN/VI (H2, H8, H9). Images (a bill from a photo), Discord, Slack and
+  the Telegram Mini App are built.
+- **Identity:** a SuiNS subname per remora (B5). Paying a `.sui` name is built.
+- **Memory:** private namespaces (F12). Imports, tidy, the weekly review and capsules are built.
+- **Developer platform:** publishing `@getremora/*` to npm (built, not published), an outbound API, a
+  docs site (J2–J4).
+- **Discovery for the house services in production:** their doors listen inside the API's container,
+  so the deployed catalog lists community APIs and remoras on sale only (ADR-0141).
 
 ## License
 

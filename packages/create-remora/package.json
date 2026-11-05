@@ -1,0 +1,33 @@
+{
+  "name": "create-remora",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scaffold a paid API that remoras, and any x402 or MPP client, buy in USDC on Sui: npx create-remora my-api.",
+  "license": "MIT",
+  "keywords": [
+    "create",
+    "scaffold",
+    "sui",
+    "x402",
+    "mpp",
+    "hono",
+    "remora"
+  ],
+  "type": "module",
+  "bin": {
+    "create-remora": "./src/cli.ts"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --dir src",
+    "build:npm": "rm -rf dist && tsc -p tsconfig.build.json && cp -R template dist/template && bun ../../scripts/build-npm.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

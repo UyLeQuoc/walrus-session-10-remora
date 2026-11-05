@@ -2,11 +2,12 @@ import type { Hono } from "hono";
 import { mcpRoutes } from "../mcp/index.ts";
 import { moneyRoutes } from "../money/index.ts";
 import { playgroundRoutes } from "../playground/index.ts";
-import { hookRoutes, remoraRoutes } from "../runtime/index.ts";
+import { hookRoutes, remoraRoutes, treasuryRoutes } from "../runtime/index.ts";
 import { authRoutes } from "./auth.ts";
 import { chatRoutes } from "./chat.ts";
 import { connectRoutes } from "./connect.ts";
 import { conversationRoutes } from "./conversations.ts";
+import { discoveryRoutes } from "./discovery.ts";
 import { facilitatorRoutes } from "./facilitator.ts";
 import { healthRoutes } from "./health.ts";
 import { memoryRoutes } from "./memory.ts";
@@ -27,8 +28,12 @@ export const ROUTE_GROUPS = [
   remoraRoutes,
   playgroundRoutes,
   mcpRoutes,
+  // ADR-0141: before facilitatorRoutes, whose guard answers 503 for /api/facilitator/* without one.
+  discoveryRoutes,
   facilitatorRoutes,
   hookRoutes,
+  // C3 (ADR-0148): the Treasurer.
+  treasuryRoutes,
 ] as const;
 
 export function registerRoutes(app: Hono): void {

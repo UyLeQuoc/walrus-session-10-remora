@@ -7,7 +7,7 @@
 import * as ed from "@noble/ed25519";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
-import type { MemoryScope } from "./client.ts";
+import { createClient, type MemoryScope } from "./client.ts";
 
 export interface StatsResult {
   memory_count: number;
@@ -77,6 +77,33 @@ export class RelayerExtras {
     const qs = q.toString();
     return this.signed<MemoriesPage>("GET", `/v1/owners/${owner}/memories${qs ? `?${qs}` : ""}`);
   }
+  /**
+   * ADR-0135: every memory on the account through the SDK's `listMemories()` (0.1.9+), the walk the
+   * relayer documents. Metadata only: no blob fetch, no decryption. `namespace` is filtered on our
+   * side by the SDK, so pages are walked to `has_more`, never by length.
+   */
+  async listAll(opts: { namespace?: string; pageSize?: number } = {}): Promise<MemoryMeta[]> {
+    const client = createClient({ mode: "guest", ...this.scope, namespace: "default" });
+    const out: MemoryMeta[] = [];
+    let cursor: string | undefined;
+    for (let i = 0; i < 100; i++) {
+      const page = await client.listMemories({
+        limit: opts.pageSize ?? 500,
+        ...(cursor ? { cursor } : {}),
+        ...(opts.namespace ? { namespace: opts.namespace } : {}),
+      });
+      for (const m of page.memories)
+        out.push({
+          ...m,
+          package_id: m.package_id ?? "",
+          status: m.status === "expired" ? "expired" : "active",
+        });
+      if (!page.has_more || !page.next_cursor) break;
+      cursor = page.next_cursor;
+    }
+    return out;
+  }
+
   /** Every memory for this owner, all pages. */
   async allMemories(): Promise<MemoryMeta[]> {
     const out: MemoryMeta[] = [];

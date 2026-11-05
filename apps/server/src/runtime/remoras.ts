@@ -184,11 +184,18 @@ export function createRemoraService(deps: RemoraDeps) {
   }
 
   /** ADR-0125: validated contacts, one per name, at most 20. */
-  function contactList(list: { name: string; address: string }[]): Contact[] {
+  function contactList(
+    list: { name: string; address: string; suins?: string; resolvedAt?: string }[],
+  ): Contact[] {
     if (!list.length) throw new RemoraError("contact.none", "Keep at least one person it may pay.");
     if (list.length > 20) throw new RemoraError("contact.too_many", "At most 20 contacts.");
     try {
-      const out = list.map((c) => toContact(c.name, c.address));
+      const out = list.map((c) =>
+        toContact(c.name, c.address, {
+          ...(c.suins ? { suins: c.suins } : {}),
+          ...(c.resolvedAt ? { resolvedAt: c.resolvedAt } : {}),
+        }),
+      );
       if (new Set(out.map((c) => c.ref)).size !== out.length)
         throw new Error("Two contacts have the same name.");
       return out;
@@ -914,7 +921,11 @@ export function createRemoraService(deps: RemoraDeps) {
      * ADR-0125: an Errand's contacts, as the full list it should have. Its Disc's payees become the
      * contacts' addresses (plus any Reef services it already pays), set in place with one signature.
      */
-    async contactsTx(id: string, owner: string, list: { name: string; address: string }[]) {
+    async contactsTx(
+      id: string,
+      owner: string,
+      list: { name: string; address: string; suins?: string; resolvedAt?: string }[],
+    ) {
       const r = await mine(id, owner);
       if (!r.discId) throw new RemoraError("remora.no_disc", "This remora has no spending limit.");
       const contacts = contactList(list);
@@ -932,7 +943,7 @@ export function createRemoraService(deps: RemoraDeps) {
       id: string,
       owner: string,
       digest: string,
-      list: { name: string; address: string }[],
+      list: { name: string; address: string; suins?: string; resolvedAt?: string }[],
     ) {
       const r = await mine(id, owner);
       await ownerTx(r, digest);

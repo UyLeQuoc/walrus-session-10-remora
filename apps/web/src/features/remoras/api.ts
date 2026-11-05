@@ -263,6 +263,8 @@ export const ContactsView = z.object({
       address: z.string(),
       ref: z.string(),
       usual: z.string().nullable(),
+      /** C1 (ADR-0144): the `.sui` name it was added by. */
+      suins: z.string().optional(),
     }),
   ),
 });
@@ -294,6 +296,9 @@ const Ok = z.object({ ok: z.literal(true) });
 const Tx = z.object({ transaction: z.string().nullable() });
 const Remora = z.object({ remora: RemoraView });
 
+/** C1 (ADR-0144): a contact as sent; `address` may be a `.sui` name. */
+export type ContactIn = { name: string; address: string; suins?: string; resolvedAt?: string };
+
 export const api = {
   templates: () =>
     call("GET", "/api/templates", z.object({ templates: z.record(z.string(), Template) })),
@@ -308,9 +313,31 @@ export const api = {
     contacts?: { name: string; address: string }[];
   }) => call("POST", "/api/remoras", CreateRemoraResponse, b),
   contacts: (id: string) => call("GET", `/api/remoras/${id}/contacts`, ContactsView),
-  contactsTx: (id: string, contacts: { name: string; address: string }[]) =>
-    call("POST", `/api/remoras/${id}/contacts`, Tx, { contacts }),
-  contactsConfirm: (id: string, digest: string, contacts: { name: string; address: string }[]) =>
+  contactsTx: (id: string, contacts: ContactIn[]) =>
+    call(
+      "POST",
+      `/api/remoras/${id}/contacts`,
+      Tx.extend({
+        contacts: z
+          .array(
+            z.object({
+              name: z.string(),
+              address: z.string(),
+              suins: z.string().optional(),
+              resolvedAt: z.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+      { contacts },
+    ),
+  resolveName: (name: string) =>
+    call(
+      "GET",
+      `/api/names/resolve?name=${encodeURIComponent(name)}`,
+      z.object({ name: z.string(), address: z.string().nullable() }),
+    ),
+  contactsConfirm: (id: string, digest: string, contacts: ContactIn[]) =>
     call("POST", `/api/remoras/${id}/contacts/confirm`, Remora, { digest, contacts }),
   pay: (id: string, text: string) =>
     call(

@@ -14,6 +14,7 @@ import { Hash } from "@/components/hash";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NamedAddress } from "@/features/names/sui-name";
 import { payeeName } from "@/lib/payee";
 import { explorerTx, usdc } from "@/lib/usdc";
 import type { PublicWake } from "./public-wake";
@@ -66,7 +67,7 @@ export function PublicWakeView({ wake }: { wake: PublicWake }) {
           <Row label="Action">{actionLine(wake.action)}</Row>
           {wake.action.kind === "pay" ? (
             <Row label="Paid to">
-              <Hash value={wake.action.payTo} label="Payee address" />
+              <NamedAddress value={wake.action.payTo} label="Payee address" />
             </Row>
           ) : null}
           <Row label="When">

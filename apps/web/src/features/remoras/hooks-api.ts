@@ -31,6 +31,8 @@ export type PriceTriggerView = z.infer<typeof PriceTriggerView>;
 export const HooksView = z.object({
   /** Whether this kind wakes on a price or a webhook (Researchers and Briefers). */
   wakes: z.boolean(),
+  /** C3 (ADR-0148): false for a Treasurer, which takes webhooks but never wakes on a price. */
+  prices: z.boolean().optional(),
   inbound: z.array(z.object({ id: z.string(), name: z.string().nullable(), url: z.string() })),
   price: z.array(PriceTriggerView),
   out: z.array(OutHook),

@@ -36,6 +36,7 @@ const KIND: Record<FeedItem["type"], EventKind> = {
   proposal: "waiting",
   review: "learned",
   price_hike: "waiting",
+  bill_read: "acted",
 };
 
 /** A sentence for the item; amounts in USDC where the payload has one. */

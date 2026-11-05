@@ -5,6 +5,7 @@
  */
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
+import { BULK_MAX, rememberBulkAccepted } from "./bulk.ts";
 import { createClient, type MemoryScope } from "./client.ts";
 import { buildMemoryText, type MemoryType, replacesBlobId } from "./format.ts";
 import { limiterFor } from "./limiter.ts";
@@ -40,9 +41,32 @@ export interface RecallInput {
   maxDistance?: number;
 }
 
+/** A4 (ADR-0146): one line of a bulk write. */
+export interface RememberBulkItem {
+  type: MemoryType;
+  text: string;
+  channel?: string;
+}
+
+export interface RememberBulkResult {
+  saved: number;
+  /** Lines already in the index (same formatted text, same hash): nothing written. */
+  skipped: number;
+  items: { saved: boolean; textSha256: string; indexId?: string; redacted: string[] }[];
+}
+
 export interface MemoryPort {
   readonly scope: MemoryScope;
   remember(input: RememberInput): Promise<RememberResult>;
+  /**
+   * Up to 20 lines in one `remember_bulk` call with the caller's idempotency key. No semantic
+   * dedupe: a line whose hash is in `knownHashes` (or repeats in the batch) is skipped. Each line is
+   * redacted and indexed through `onWrite` like `remember`.
+   */
+  rememberBulk(
+    items: RememberBulkItem[],
+    opts: { idempotencyKey: string; knownHashes?: ReadonlySet<string> },
+  ): Promise<RememberBulkResult>;
   recall(input: RecallInput): Promise<RecalledMemory[]>;
   /** Resolves once every background write started by this port has settled. */
   flush(): Promise<void>;
@@ -201,6 +225,77 @@ export function createMemoryPort({
         note: `Stored as ${input.type}. It is being written to Walrus now and is recallable within about a minute.`,
         redacted: removed,
         ...(typeof indexId === "string" ? { indexId } : {}),
+      };
+    },
+
+    async rememberBulk(items, opts) {
+      if (items.length > BULK_MAX)
+        throw new Error(`rememberBulk takes at most ${BULK_MAX} lines a call`);
+      const seen = new Set(opts.knownHashes ?? []);
+      const prepared = items.map((item) => {
+        const { text, removed } = redactCredentials(item.text);
+        const line = buildMemoryText({ type: item.type, by, channel: item.channel, text });
+        const sha = bytesToHex(sha256(new TextEncoder().encode(line)));
+        const fresh = !seen.has(sha);
+        seen.add(sha);
+        return { type: item.type, line, sha, removed, fresh };
+      });
+      const fresh = prepared.filter((p) => p.fresh);
+      const indexIds = new Map<string, string>();
+      if (fresh.length) {
+        const { jobIds, settled } = await rememberBulkAccepted(client, {
+          texts: fresh.map((p) => p.line),
+          namespace: scope.namespace,
+          idempotencyKey: opts.idempotencyKey,
+          limiter,
+        });
+        // Recorded at accept time, as `remember` does: a deploy in the write window loses nothing.
+        for (const [i, p] of fresh.entries()) {
+          const indexId = await onWrite?.({
+            scope,
+            type: p.type,
+            blobId: null,
+            jobId: jobIds[i] ?? null,
+            textSha256: p.sha,
+            channel,
+            outcome: "accepted",
+          });
+          if (typeof indexId === "string") indexIds.set(p.sha, indexId);
+        }
+        track(
+          settled.then(async (list) => {
+            for (const [i, p] of fresh.entries()) {
+              const s = list[i];
+              if (s?.status !== "stored" || !s.blobId)
+                console.error(
+                  `[memory] bulk write failed in ${scope.namespace}: ${s?.error ?? "no blob id"}`,
+                );
+              await onWrite?.({
+                scope,
+                type: p.type,
+                blobId: s?.blobId ?? null,
+                jobId: jobIds[i] ?? null,
+                textSha256: p.sha,
+                channel,
+                outcome: s?.status ?? "failed",
+                ...(s?.error ? { error: s.error } : {}),
+              });
+            }
+          }),
+        );
+      }
+      return {
+        saved: fresh.length,
+        skipped: prepared.length - fresh.length,
+        items: prepared.map((p) => {
+          const indexId = p.fresh ? indexIds.get(p.sha) : undefined;
+          return {
+            saved: p.fresh,
+            textSha256: p.sha,
+            redacted: p.removed,
+            ...(indexId ? { indexId } : {}),
+          };
+        }),
       };
     },
 

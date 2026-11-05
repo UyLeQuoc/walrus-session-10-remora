@@ -19,12 +19,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useSignAndRun } from "@/features/funds/sign";
 import { api } from "@/features/remoras/api";
-import { RequireOwner, useLoad } from "@/features/remoras/hooks";
+import { RequireOwner, useLoad, useOwner } from "@/features/remoras/hooks";
 import { useNetwork } from "@/lib/network";
 import { explorerTx } from "@/lib/usdc";
 import { Property, PropertyList } from "@/openbot/pages";
 import { HatchBadge } from "./hatch-badge";
 import { PermissionsList, SafetyPanel, shortAddress } from "./parts";
+import { AuthorAnalytics, RateTemplate, RatingBadge } from "./rating-section";
 
 const aggregator = (network: string, blobId: string) =>
   network === "testnet"
@@ -173,6 +174,8 @@ export function TemplatePage() {
   const consent = useLoad(() => api.consent(id), [id]);
   const l = tpl.data?.listing;
   const c = consent.data?.consent;
+  const { owner } = useOwner();
+  const isAuthor = !!l && !!owner && owner.toLowerCase() === l.author.toLowerCase();
 
   return (
     <Page title={l?.name ?? "Template"} description={l?.description ?? ""}>
@@ -185,6 +188,11 @@ export function TemplatePage() {
               <Badge variant="secondary" data-testid="template-forks">
                 <GitFork /> {l.forks} {l.forks === 1 ? "copy" : "copies"}
               </Badge>
+              {l.rating ? (
+                <Badge variant="outline">
+                  <RatingBadge rating={l.rating} />
+                </Badge>
+              ) : null}
             </span>
           ) : null
         }
@@ -209,6 +217,18 @@ export function TemplatePage() {
       />
       {tpl.error ? <p className="text-md text-ob-danger-text">{tpl.error}</p> : null}
       {!l && !tpl.error ? <Skeleton className="h-48 w-full rounded-ob-card" /> : null}
+      {l?.newer ? (
+        <Alert data-testid="template-newer">
+          <AlertTitle>There's a newer version</AlertTitle>
+          <AlertDescription>
+            Its author published an update.{" "}
+            <Link className="link" to={`/hatchery/${l.newer}`}>
+              See the newest version
+            </Link>
+            . Copies made from this one are offered the update on their page.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {l && params.get("published") ? (
         <Alert variant="success">
           <AlertTitle>Published</AlertTitle>
@@ -336,10 +356,13 @@ export function TemplatePage() {
           ) : null}
         </Section>
       ) : null}
+      {/* D2 (ADR-0149): an owner with a copy rates it; its author sees the numbers behind it. */}
+      {l && owner ? <RateTemplate templateId={id} onRated={() => void tpl.refresh()} /> : null}
+      {isAuthor ? <AuthorAnalytics templateId={id} /> : null}
       {l ? (
         <Section
           title="Share"
-          description="Put this badge in a README, blog or post. Anyone who clicks it lands on this template."
+          description="Put this badge in a README, blog or post. It shows the live hatch count; a click lands on this template."
         >
           <HatchBadge templateId={id} name={l.name} />
         </Section>

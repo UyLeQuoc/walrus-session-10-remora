@@ -1,0 +1,5 @@
+[package]
+name = "remora_anchor"
+edition = "2024"
+
+[dependencies]

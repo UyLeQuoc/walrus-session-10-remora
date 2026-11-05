@@ -1,0 +1,68 @@
+[
+  {
+    "title": "Weekend trip budget",
+    "create_time": 1761984000.0,
+    "current_node": "c1-a1",
+    "mapping": {
+      "c1-root": { "id": "c1-root", "message": null, "parent": null, "children": ["c1-sys"] },
+      "c1-sys": {
+        "id": "c1-sys",
+        "message": {
+          "author": { "role": "system" },
+          "content": { "content_type": "text", "parts": [""] },
+          "create_time": null
+        },
+        "parent": "c1-root",
+        "children": ["c1-u1"]
+      },
+      "c1-u1": {
+        "id": "c1-u1",
+        "message": {
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": [
+              "I live in Da Nang and I prefer trains to buses. Plan a cheap weekend in Hue for me."
+            ]
+          },
+          "create_time": 1761984060.0
+        },
+        "parent": "c1-sys",
+        "children": ["c1-a1"]
+      },
+      "c1-a1": {
+        "id": "c1-a1",
+        "message": {
+          "author": { "role": "assistant" },
+          "content": {
+            "content_type": "text",
+            "parts": ["Take the morning train from Da Nang to Hue; it takes about three hours."]
+          },
+          "create_time": 1761984120.0
+        },
+        "parent": "c1-u1",
+        "children": []
+      }
+    }
+  },
+  {
+    "title": "Coffee",
+    "create_time": 1762243200.0,
+    "current_node": "c2-u1",
+    "mapping": {
+      "c2-u1": {
+        "id": "c2-u1",
+        "message": {
+          "author": { "role": "user" },
+          "content": {
+            "content_type": "text",
+            "parts": ["My usual order is an iced coconut coffee with less sugar."]
+          },
+          "create_time": 1762243260.0
+        },
+        "parent": null,
+        "children": []
+      }
+    }
+  }
+]

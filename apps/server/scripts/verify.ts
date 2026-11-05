@@ -1,6 +1,8 @@
 /**
  * G3 `remora verify <wake-id | tx-digest>`: checks a Wake against the chain through Tatum gRPC and
- * prints each check. Exit code 0 when every check that can run passes, 1 otherwise.
+ * prints each check. A Wake that didn't pay shows its Merkle anchor (ADR-0139): "anchored in
+ * <digest>, proof of N steps", with the proof and the `Anchored` event checked. Exit code 0 when
+ * every check that can run passes, 1 otherwise.
  *
  *   bun run --filter @remora/server verify <ref>
  *
@@ -9,7 +11,7 @@
 import { createDb } from "@remora/db";
 import { loadEnv } from "@remora/memory";
 import { createNetworks } from "../src/money/networks.ts";
-import { verifyWake } from "../src/runtime/verify.ts";
+import { anchorLine, verifyWake } from "../src/runtime/verify.ts";
 
 loadEnv();
 const ref = process.argv[2];
@@ -25,8 +27,8 @@ if (!res.found) {
   process.exit(1);
 }
 const mark = (ok: boolean | null) => (ok === null ? "–" : ok ? "✓" : "✗");
-console.log(
-  `Wake ${res.receiptId} · ${res.wake.intent.decision.action} · ${res.anchored ? "anchored" : "not anchored yet"}`,
-);
+// ADR-0139: a Wake that didn't pay is anchored by its Merkle batch; a payment by its `Paid` event.
+const where = res.anchor ? anchorLine(res.anchor) : res.anchored ? "anchored" : "not anchored yet";
+console.log(`Wake ${res.receiptId} · ${res.wake.intent.decision.action} · ${where}`);
 for (const c of res.checks) console.log(`${mark(c.ok)} ${c.name.padEnd(24)} ${c.detail}`);
 process.exit(res.checks.some((c) => c.ok === false) ? 1 : 0);

@@ -8,6 +8,7 @@ import type { SuiGrpcClient } from "@mysten/sui/grpc";
 import { fetchPage } from "@remora/merchant";
 import type { AnswerTools } from "../runtime/brain.ts";
 import { admitMemories, type FactLedger } from "../runtime/facts.ts";
+import { labelMemory } from "../runtime/import-parse.ts";
 import type { RemoraMemory, RemoraRef } from "../runtime/memory.ts";
 
 const short = (coinType: string) => coinType.split("::").pop() ?? coinType;
@@ -68,7 +69,10 @@ export function readTools(o: {
         hits,
         namespaces,
       );
-      const lines = [...memories.map((h) => `- ${h.text}`), ...facts.map((f) => `- now: ${f}`)];
+      const lines = [
+        ...memories.map((h) => `- ${labelMemory(h.text)}`),
+        ...facts.map((f) => `- now: ${f}`),
+      ];
       return lines.length ? lines.join("\n") : "Nothing remembered.";
     },
   };

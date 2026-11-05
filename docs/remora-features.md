@@ -125,7 +125,7 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | B2 | Create from a plain-language job | An LLM drafts persona, tools, triggers and a budget proposal; the owner reviews **Built in U18** ([ADR-0123](adr/0123-describe-the-job-and-chat-commands.md)): the parse model drafts a validated remora from one sentence; trading and moving your own funds are refused. | W3 |
 | B3 | **Remora creation** | (1) `add_delegate_key`, **relayer-sponsored** (the relayer's allowlist takes exactly one account call per tx, so the user needs no SUI); (2) `propose_for_app` + `disc::issue`, sponsored by Remora. **Stretch:** both in one PTB sponsored by Remora's own gas station. Verify the delegate onchain before activating | W2 |
 | B4 | **Key custody** | Remora keys are envelope-encrypted at rest (master key in a KMS/secret store), never logged, and decrypted only in the signer module | W1 |
-| B5 | SuiNS identity | A subname per remora (e.g. `scout-uy.remora.sui`), via the Enoki subname API or our own parent name | W3 |
+| B5 | SuiNS identity | A subname per remora (e.g. `scout-uy.remora.sui`), via the Enoki subname API or our own parent name **Built in U19** (names, [ADR-0144](adr/0144-pay-a-sui-name.md)): pay a contact by its `.sui` name over gRPC NameService; a moved name stops the payment; names beside addresses. Subnames per remora aren't built. | W3 |
 | B6 | Edit remora | Persona, tools and triggers, versioned | W2 |
 | B7 | Change budget | Revoke + reissue in one owner PTB, showing the memories that motivated it | W2 |
 | B8 | Pause / resume / retire | Disc pause + runtime pause. Retiring revokes the allowance, removes the delegate and archives | W2 |
@@ -140,7 +140,7 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | C2 | **Sentinel** | Watches wallets, a treasury and protocol `UpgradeCap`s through the Tatum gRPC stream, and learns escalation rules | W2 |
 | C3 | Errand | Pays people or merchants on request within its Disc, and asks above it **Built in U18** ([ADR-0125](adr/0125-errand-pays-contacts.md)): contacts are Disc payees; over the cap you pay once, 3x the usual asks first. | W3 |
 | C4 | Subscriptions Keeper | Pays recurring x402 or merchant charges, learns normal amounts, flags price hikes **Built in U18** ([ADR-0129](adr/0129-subscriptions-keeper.md)): reads each 402 first, stops on a 20% hike it doesn't remember. | W3 |
-| C5 | Treasurer | Team treasury watch, weekly report, spend proposals for the owner to sign | W3 |
+| C5 | Treasurer | Team treasury watch, weekly report, spend proposals for the owner to sign **Built in U19** ([ADR-0148](adr/0148-treasurer.md)): no Disc, never pays; a weekly report with runway; requests, even signed webhooks, become approvals the owner pays from their wallet. | W3 |
 | C6 | Daily Brief | Morning digest: wallet changes, prices (Tatum Data API), purchased news | W3 |
 | C7 | Portfolio Guard | Sui lending and LP position health from object reads; alerts; optional top-up within its Disc | W4 |
 | C8 | Inbox | An email-forwarding address: parses bills and receipts, sets reminders, hands off to Errand | W4 |
@@ -155,10 +155,10 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | D4 | Tools | `memory.*`, `tatum.*` (balances, txs, objects, events, coin metadata, SuiNS), `web.fetch` (untrusted), `pay` (`disc.fetch`), `notify`, `handoff`, `schedule` | W2 |
 | D5 | Handoffs | Remoras delegate subtasks to each other through `handoffs` | W3 |
 | D6 | Group chat | Several remoras in one Telegram group, addressed by name | W3 |
-| D7 | Proactive heartbeat | Periodic self-review of goals and memory, then proposals (rate-limited) | W3 |
+| D7 | Proactive heartbeat | Periodic self-review of goals and memory, then proposals (rate-limited) **Built in U19** ([ADR-0137](adr/0137-rule-proposals-narrow-only.md)): a daily heartbeat proposes planner rules from outcomes, citing 2–5 memories; a rule only narrows spending, so a tap accepts. | W3 |
 | D8 | **Gas sponsor** | Sponsor wallet, per-remora gas budget, low-balance alerts, abuse limits | W1 |
 | D9 | Model routing & cost caps | Sonnet for turns, Haiku for triage and extraction; daily token cap per remora | W2 |
-| D10 | MCP connections | Plug any MCP server in as read-only tools | W4 |
+| D10 | MCP connections | Plug any MCP server in as read-only tools **Built in U19** ([ADR-0143](adr/0143-mcp-connections-read-only.md)): read-only tools only (`readOnlyHint`), outputs untrusted and cited in Why?; Context7 used live. | W4 |
 
 ### E. Money: Disc, payments, Reef
 | ID | Feature | Details | Wave |
@@ -186,12 +186,12 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | F3 | **Inspector** | Browse by namespace, search (`recall`), metadata (`created_at`, expiry, importance, size), "used in N decisions" | W2 |
 | F4 | Hide / correct / forget | **There's no way to delete a current memory** (measured by hippo; the Security Delete API only covers legacy V1 blobs). **Hide** one memory with a local `hidden_at` filter, honored by recall and dedupe. **Correct** by writing a `[correction]` that supersedes the old fact. **Forget all** per namespace (`POST /api/forget`, index only). The UI says plainly that blobs stay on Walrus until they expire | W3 |
 | F5 | Expiry display | Show `expires_at` from the read API (about **210 days** for new memories, measured). Renewal is a later concern. Alert under 30 days | W3 |
-| F6 | Index check | Compare what we wrote (`memory_index`) against what the relayer reports, and warn on a mismatch. **`restore()` is not a recovery path** (it reported 0 for namespaces with memories) | W2 |
-| F7 | Import | From Claude Code, Codex, Cursor, a ChatGPT export or Markdown (`analyze` ≤ 64 KiB chunks, `remember_bulk` ≤ 20) | W3 |
+| F6 | Index check | Compare what we wrote (`memory_index`) against what the relayer reports, and warn on a mismatch. **`restore()` is not a recovery path** (it reported 0 for namespaces with memories) **Built in U19** ([ADR-0135](adr/0135-memwal-sdk-0-1-12-index-check.md)): `listMemories()` (SDK 0.1.12) against our stored writes, per namespace, on the inspector and in `diagnose`; missing blob ids shown, never restored. | W2 |
+| F7 | Import | From Claude Code, Codex, Cursor, a ChatGPT export or Markdown (`analyze` ≤ 64 KiB chunks, `remember_bulk` ≤ 20) **Built in U19** ([ADR-0146](adr/0146-import-notes.md)): scrubbed, `analyze` in a staging namespace, ≤100 ticked lines in bulk with `SOURCE: import`, untrusted in prompts; the next answer cited an imported line on testnet. | W3 |
 | F8 | Export | All memories as Markdown/JSON, so there's no lock-in | W3 |
 | F9 | MCP portability | `packages/mcp` + MemWal MCP namespace mapping, so Claude Code and Codex see remora memories | W3 |
 | F10 | Weekly review | "What I learned" per remora: a memory + charts + a Telegram post **Built in U18** ([ADR-0128](adr/0128-weekly-review-written-back-to-memory.md)): from its own numbers, written back to memory, Mondays 09:00. | W3 |
-| F11 | Memory hygiene | Secret scrubber before every write (W2); rule-conflict detection, dedupe, recency weighting (W3) | W2/W3 |
+| F11 | Memory hygiene | Secret scrubber before every write (W2); rule-conflict detection, dedupe, recency weighting (W3) **Tidy built in U19** ([ADR-0147](adr/0147-tidy-memory.md)): same-verdict notes merged, disagreeing notes or rules asked about, newer ratings weigh more. | W2/W3 |
 | F12 | Private namespaces | `MemWalManual` client-side Seal encryption (needs an Enoki Seal key) | W4 |
 | F13 | Memory capsules | Share a subset of memories through a Seal grant (expiring, revocable) **Built in U18** ([ADR-0130](adr/0130-memory-capsules-seal.md)): a testnet Move policy (`remora_capsule`), Seal 2-of-2, revoke in one signature. | W4 |
 | F14 | **MCP v2: agents act** | Scoped, revocable MCP tokens made in the web (Connections page); tools that write memory, pay through the Disc and request over-limit approvals; Streamable HTTP at `/mcp` as well as stdio; every action a Wake with `via` (ADR-0066). **Built in U12** ([ADR-0067](adr/0067-mcp-v2-details.md)): 10 MCP attacks in CI, 0 paid | W3 |
@@ -203,20 +203,20 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 | G1 | Wake schema v1 | `intent` + `result`, stored in `receipts` | W1 |
 | G2 | Intent anchoring | `sha256(intent)` → `Paid.intent` | W1 |
 | G3 | `remora verify` | CLI + web verify page (intent hash, balance change, memory timestamps) | W2 |
-| G4 | Merkle anchoring | Batch non-payment Wakes into an `Anchored` event | W3 |
-| G5 | Proof of Learning | A diff of two decisions shows the memory delta that changed the outcome | W3 |
+| G4 | Merkle anchoring | Batch non-payment Wakes into an `Anchored` event **Built in U19** ([ADR-0139](adr/0139-merkle-anchors-remora-anchor.md)): a testnet `remora_anchor` package; hourly batches of Wakes that didn't pay; proofs in `remora verify` and on the web. | W3 |
+| G5 | Proof of Learning | A diff of two decisions shows the memory delta that changed the outcome **Built in U19** ([ADR-0136](adr/0136-replay-bench.md)): the replay bench plans the same questions with no memory, memory as of T₀ and today’s; each difference cites its memory. Ten questions on testnet: 10 → 10 → 4 planned services. | W3 |
 | G6 | Public proof links | Opt-in, redacted Wake pages that can be shared | W3 |
-| G7 | Auditor access | Seal grant to read Wakes | W4 |
+| G7 | Auditor access | Seal grant to read Wakes **Built in U19** ([ADR-0145](adr/0145-auditor-access-capsule.md)): a capsule grant to the auditor's wallet; the page decrypts in the browser and matched 14 of 14 receipts against Sui; revoked with one signature. | W4 |
 
 ### H. Channels & UI
 | ID | Feature | Details | Wave |
 |---|---|---|---|
 | H1 | Telegram bot | Address remoras by name, inline buttons, commands (`/remoras`, `/budget`, `/pause`, `/teach`) | W2 |
-| H2 | Voice & images | Voice-note transcription; screenshot and receipt understanding | W3 |
+| H2 | Voice & images | Voice-note transcription; screenshot and receipt understanding **Built in U19** (images, [ADR-0138](adr/0138-bill-from-a-photo.md)): a bill from a photo becomes a split or a payment card; text in the image is data. Voice isn't built. | W3 |
 | H3 | **Telegram Mini App** | Dashboard inside Telegram, with one-tap approvals | W3 |
 | H4 | **Web dashboard** | Home, remora page (feed, memory, budget, Wakes), create wizard, settings | W2 |
 | H5 | Notification policy | Priorities, quiet hours, digests | W2 |
-| H6 | **Landing + docs on Walrus Sites** | Hosted on Walrus with a SuiNS domain, served at `*.wal.app` | W3 |
+| H6 | **Landing + docs on Walrus Sites** | Hosted on Walrus with a SuiNS domain, served at `*.wal.app` **Built in U19** (testnet, [ADR-0142](adr/0142-landing-testnet-walrus-site.md)): the landing as a testnet Walrus Site, opened through a local portal; a mainnet site on wal.app with a SuiNS name is Uy's. | W3 |
 | H7 | **Public playground** | Judges try Scout with a **$1 Disc**, which is safe by construction | W3 |
 | H8 | More channels | **Discord + Slack** ported from hippo (W3); WhatsApp (W4) | W3/W4 |
 | H9 | i18n | English + Vietnamese | W3 |
@@ -235,7 +235,7 @@ The ship set covers the demo path, every hackathon requirement and the strongest
 ### J. Developer platform
 | ID | Feature | Details | Wave |
 |---|---|---|---|
-| J1 | npm packages | `@remora/disc-sdk`, `@remora/merchant` | W3 |
+| J1 | npm packages | `@remora/disc-sdk`, `@remora/merchant` **Built in U19** ([ADR-0140](adr/0140-create-remora-publishable-packages.md)): publishable as `@getremora/disc-sdk` and `@getremora/merchant`, plus `create-remora`; publishing to npm is Uy's. | W3 |
 | J2 | `create-remora` CLI | Scaffold a template plus `remora.yaml` | W4 |
 | J3 | Outbound API | Webhooks and REST for remora events **Built in U18** ([ADR-0121](adr/0121-price-and-webhook-triggers-outbound-hooks.md)): signed outbound webhooks with retries. | W4 |
 | J4 | Docs site | Move module, SDKs, facilitator, Reef | W3 |
@@ -271,11 +271,11 @@ can use directly.
 | M5 | **One-click hatch** | Duplicate into your account through an **install-style consent screen**: the permissions it needs (tools, triggers, payees, budget), a review of Reef payees, and *your own* budget. Then it runs the normal creation flow (B3) | W3 |
 | M6 | Onchain provenance | A small Move package `remora_hatchery::hatchery` (ADR-0047): `Template { author, blob_id, version, parent }` + `Published`, `Forked` and `Deprecated` events. Authorship and fork lineage are verifiable, and versions are immutable | W3 |
 | M7 | **Template safety review** | Before publishing *and* before hatching, Sonar scans the persona and prompts for injection and exfiltration patterns. Payees must resolve to Reef entries; unknown addresses are blocked. Permission diff, a report button, and a "verified" badge for templates we've reviewed | W3 |
-| M8 | Template updates | Hatched remoras can follow the template. New versions arrive as a diff the owner accepts or declines; nothing auto-applies | W4 |
+| M8 | Template updates | Hatched remoras can follow the template. New versions arrive as a diff the owner accepts or declines; nothing auto-applies **Built in U19** ([ADR-0150](adr/0150-template-updates.md)): a new version offers a diff; non-money fields apply through config history, money is always a signed transaction. | W4 |
 | M9 | **Public remora** (use without duplicating) | Publish a remora as a service. Visitors either (a) **chat in public mode**, with a separate guest namespace per visitor (hippo's guest pattern), so they never touch the owner's private namespaces, with rate limits and a free quota paid by a **dedicated, capped Disc**; or (b) **call it over x402** (Remora-as-merchant, E11), paying from their own Disc **Built in U18** ([ADR-0126](adr/0126-public-remora-page.md)): (b) only: a public page where anyone pays one answer from their wallet. | W4 |
-| M10 | Author analytics | Hatches, active remoras, public-mode usage, x402 revenue | W4 |
-| M11 | Ratings & reviews | Wallet-signed, one per address, weighted by real usage | W4 |
-| M12 | "Hatch this remora" badge | Embeddable button or card for READMEs, blogs and X posts, which feeds the sharing bonus | W3 |
+| M10 | Author analytics | Hatches, active remoras, public-mode usage, x402 revenue **Built in U19** ([ADR-0149](adr/0149-template-ratings-badge.md)): hatches, active remoras, sales revenue and ratings, for the author. | W4 |
+| M11 | Ratings & reviews | Wallet-signed, one per address, weighted by real usage **Built in U19** ([ADR-0149](adr/0149-template-ratings-badge.md)): a signed personal message, the last one per address wins, weighted by the rater's paid calls. | W4 |
+| M12 | "Hatch this remora" badge | Embeddable button or card for READMEs, blogs and X posts, which feeds the sharing bonus **Built in U19** ([ADR-0149](adr/0149-template-ratings-badge.md)): a plain SVG at `/badge/:id.svg` with the live hatch count, and Markdown/HTML snippets. | W3 |
 
 **Is it worth building?** Yes:
 

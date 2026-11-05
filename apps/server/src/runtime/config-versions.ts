@@ -44,6 +44,8 @@ export const CONFIG_FIELDS: Record<string, { label: string; restore: ConfigResto
   listings: { label: "Listed APIs", restore: "none" },
   crew: { label: "Crew", restore: "none" },
   tools: { label: "Tools", restore: "none" },
+  // A2 (ADR-0137): a rule only narrows spending, so an old set comes back as it was.
+  rules: { label: "Rules", restore: "direct" },
   namespaces: { label: "Memory", restore: "none" },
 };
 

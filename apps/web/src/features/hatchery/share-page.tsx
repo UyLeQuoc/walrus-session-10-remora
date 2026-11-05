@@ -17,7 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Checks } from "@/components/visual";
 import { useSignAndRun } from "@/features/funds/sign";
 import { api } from "@/features/remoras/api";
-import { RequireOwner } from "@/features/remoras/hooks";
+import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { PermissionsList, SafetyPanel } from "./parts";
 
 /** What stays out of the file, in plain words (ADR-0103: the reviewers read `disc:` and `wakes:`). */
@@ -28,10 +28,16 @@ const KEPT: Record<string, string> = {
   wakes: "Receipts and history",
 };
 
-function Share({ id }: { id: string }) {
+function Share({ id, owner }: { id: string; owner: string }) {
   const navigate = useNavigate();
   const run = useSignAndRun();
   const [review, setReview] = useState<ShareReview | null>(null);
+  // D3 (ADR-0150): publish as a new version of one of your templates; its copies are offered it.
+  const gallery = useLoad(() => api.hatchery(), []);
+  const mine = (gallery.data?.templates ?? []).filter(
+    (t) => t.author.toLowerCase() === owner.toLowerCase() && !t.deprecated,
+  );
+  const [parent, setParent] = useState("");
   const [error, setError] = useState("");
   const [step, setStep] = useState("");
   const [signed, setSigned] = useState<string | null>(null);
@@ -53,7 +59,7 @@ function Share({ id }: { id: string }) {
     setError("");
     try {
       setStep("Storing the file on Walrus…");
-      const out = await api.publishTx(review.markdown);
+      const out = await api.publishTx(review.markdown, parent || null);
       if (!out.ok) throw new Error(out.error);
       setStep("Sign once in your wallet: it records you as the author…");
       const digest = await run(out.data.transaction);
@@ -113,6 +119,28 @@ function Share({ id }: { id: string }) {
       {!review && !error ? <Skeleton className="h-64 w-full max-w-3xl rounded-ob-card" /> : null}
       {review ? (
         <>
+          {mine.length ? (
+            <Section
+              title="Publish as"
+              description="A new version keeps its line: copies made from the older one are offered the update, and nothing changes for them until they accept."
+            >
+              <select
+                className="h-9 w-full max-w-md rounded-md border border-ob-border bg-ob-raised px-2 text-md"
+                aria-label="Publish as"
+                value={parent}
+                disabled={!!step}
+                onChange={(e) => setParent(e.target.value)}
+                data-testid="share-parent"
+              >
+                <option value="">A new template</option>
+                {mine.map((t) => (
+                  <option key={t.templateId} value={t.templateId}>
+                    A new version of “{t.name}”
+                  </option>
+                ))}
+              </select>
+            </Section>
+          ) : null}
           <Section title="What it can do" description="This is what people see before they use it.">
             <div className="max-w-3xl">
               <PermissionsList permissions={review.permissions} />
@@ -184,7 +212,7 @@ export function SharePage() {
   const { id = "" } = useParams();
   return (
     <RequireOwner what="sharing this remora" needsWallet>
-      {() => <Share id={id} />}
+      {(owner) => <Share id={id} owner={owner} />}
     </RequireOwner>
   );
 }

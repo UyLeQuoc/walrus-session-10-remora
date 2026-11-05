@@ -8,6 +8,7 @@ import { RemoraAvatar } from "@/components/app/remora-avatar";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Checks, Digest, Receipt } from "@/components/visual";
+import { NamedAddress } from "@/features/names/sui-name";
 import { payeeName } from "@/lib/payee";
 import { usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ export function ReceiptSummary({
 }: {
   remora: string;
   agent: string;
-  action: { kind: string; amount?: string; payee?: string };
+  action: { kind: string; amount?: string; payee?: string; payTo?: string };
   ts: string;
   verified: boolean;
   tx: string | null;
@@ -57,6 +58,12 @@ export function ReceiptSummary({
           verified={verified}
           proof={tx ? <Digest value={tx} network={network} /> : undefined}
         />
+      ) : null}
+      {action.kind === "pay" && action.payTo ? (
+        // C1 (ADR-0144): the address it paid, with its `.sui` name first when it has one.
+        <span className="min-w-0 max-w-full" data-testid="receipt-payto">
+          <NamedAddress value={action.payTo} label="paid to" />
+        </span>
       ) : null}
     </div>
   );
@@ -110,6 +117,9 @@ const PLAIN: Record<string, string> = {
   "decided before paying": "It decided as it paid",
   "signed by the remora": "Its own key signed",
   "saved onchain": "The decision is saved onchain",
+  "in its anchored batch": "Its proof reaches the anchored root",
+  "root onchain": "The root is onchain",
+  "anchored by the remora": "Its own key anchored it",
 };
 
 /**

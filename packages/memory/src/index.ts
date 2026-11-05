@@ -14,12 +14,14 @@ export {
   type Staleness,
   type UsefulnessJudge,
 } from "./admission.ts";
+export { BULK_MAX } from "./bulk.ts";
 export {
   type CapsuleMemory,
   type CapsulePlain,
   decryptCapsule,
   encryptCapsule,
   readFromWalrus,
+  sealToFreshKey,
   storeOnWalrus,
   TESTNET_KEY_SERVERS,
   WALRUS_TESTNET,
@@ -87,6 +89,8 @@ export {
   createMemoryPort,
   type MemoryPort,
   type RecallInput,
+  type RememberBulkItem,
+  type RememberBulkResult,
   type RememberInput,
   type WriteEvent,
 } from "./port.ts";
