@@ -4,9 +4,9 @@
  * - `GET /api/remoras/:id/replay` → past questions and recent runs;
  * - `POST /api/remoras/:id/replay {questions, t0?}` → `{runId}` (one at a time, 3 an hour);
  * - `GET /api/remoras/:id/replay/:runId` → the run so far;
- * - `GET /api/remoras/:id/rules` → accepted rules and the open proposal;
- * - `POST /api/remoras/:id/rules/check` → run the heartbeat now;
- * - `POST /api/remoras/:id/rules/:ruleId/remove`;
+ * - `GET /api/remoras/:id/planner-rules` → accepted rules and the open proposal;
+ * - `POST /api/remoras/:id/planner-rules/check` → run the heartbeat now;
+ * - `POST /api/remoras/:id/planner-rules/:ruleId/remove`;
  * - `POST /api/approvals/:id/rule-accept`, `POST /api/approvals/:id/rule-decline`.
  */
 import type { SuiNetwork } from "@remora/chain";
@@ -78,18 +78,18 @@ export function mountReplay(app: OwnerApp, d: { runtime: RuntimeDeps; service: R
     return c.json(await replayRun(rt, r, uuidParam(c, "runId", "replay")));
   });
 
-  app.get("/api/remoras/:id/rules", async (c) => {
+  app.get("/api/remoras/:id/planner-rules", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     return c.json(await rulesView(rt, r));
   });
 
-  app.post("/api/remoras/:id/rules/check", async (c) => {
+  app.post("/api/remoras/:id/planner-rules/check", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     const out = await heartbeat(rt, r);
     return c.json({ ...out, ...(await rulesView(rt, r)) });
   });
 
-  app.post("/api/remoras/:id/rules/:ruleId/remove", async (c) => {
+  app.post("/api/remoras/:id/planner-rules/:ruleId/remove", async (c) => {
     const r = await service.get(c.req.param("id"), c.get("owner"));
     await removeRule(rt, service, r, c.req.param("ruleId") ?? "");
     return c.json(await rulesView(rt, await service.get(r.id, c.get("owner"))));

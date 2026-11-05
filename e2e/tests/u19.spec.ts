@@ -174,19 +174,31 @@ test("A0–A2: ten paid answers, ratings, a rule from outcomes, the index check,
 }) => {
   test.setTimeout(45 * 60_000);
   await signedIn(page);
-  await retireLeftovers(page, ["Researcher · u19"]);
-  const t0 = new Date(Date.now() - 60_000).toISOString();
-  const id = await create(page, {
-    kind: /^Researcher/,
-    name: "Researcher · u19",
-    monthly: "0.60",
-    cap: "0.03",
-  });
-  save({ researcher: id, t0 });
+  // `U19_RESUME=1` (with `E2E_KEEP_DISCS=1`) picks up an earlier run's Researcher after step 2, so
+  // a rerun doesn't pay for the same ten answers again.
+  const was = prior() as {
+    researcher?: string;
+    t0?: string;
+    a1Answers?: { q: string; eventId: string; paid: string[]; digests: string[] }[];
+  };
+  const resume = process.env.U19_RESUME === "1" && was.researcher && was.t0 && was.a1Answers;
+  if (!resume) await retireLeftovers(page, ["Researcher · u19"]);
+  const t0 = resume ? (was.t0 as string) : new Date(Date.now() - 60_000).toISOString();
+  const id = resume
+    ? (was.researcher as string)
+    : await create(page, {
+        kind: /^Researcher/,
+        name: "Researcher · u19",
+        monthly: "0.60",
+        cap: "0.03",
+      });
+  if (!resume) save({ researcher: id, t0 });
 
   // 1. Ten questions with real payments.
-  const answers: { q: string; eventId: string; paid: string[]; digests: string[] }[] = [];
-  for (const { q } of QUESTIONS) {
+  const answers: { q: string; eventId: string; paid: string[]; digests: string[] }[] = resume
+    ? (was.a1Answers ?? [])
+    : [];
+  for (const { q } of resume ? [] : QUESTIONS) {
     await rotate(page);
     const a = await api<{
       eventId: string;
@@ -205,7 +217,7 @@ test("A0–A2: ten paid answers, ratings, a rule from outcomes, the index check,
   save({ a1Answers: answers });
 
   // 2. The owner rates them.
-  for (const [i, a] of answers.entries()) {
+  for (const [i, a] of resume ? [] : answers.entries()) {
     await rotate(page);
     await api(page, `/api/events/${a.eventId}/feedback`, {
       method: "POST",
@@ -226,7 +238,7 @@ test("A0–A2: ten paid answers, ratings, a rule from outcomes, the index check,
   };
   const proposed = await until<Rules>(
     page,
-    `/api/remoras/${id}/rules/check`,
+    `/api/remoras/${id}/planner-rules/check`,
     (x) => Boolean(x.proposal),
     300_000,
     { method: "POST" },

@@ -51,10 +51,14 @@ export const replayApi = {
       ...(t0 ? { t0 } : {}),
     }),
   run: (id: string, runId: string) => call("GET", `/api/remoras/${id}/replay/${runId}`, ReplayRun),
-  rules: (id: string) => call("GET", `/api/remoras/${id}/rules`, RulesView),
-  checkRules: (id: string) => call("POST", `/api/remoras/${id}/rules/check`, RulesView),
+  rules: (id: string) => call("GET", `/api/remoras/${id}/planner-rules`, RulesView),
+  checkRules: (id: string) => call("POST", `/api/remoras/${id}/planner-rules/check`, RulesView),
   removeRule: (id: string, ruleId: string) =>
-    call("POST", `/api/remoras/${id}/rules/${encodeURIComponent(ruleId)}/remove`, RulesView),
+    call(
+      "POST",
+      `/api/remoras/${id}/planner-rules/${encodeURIComponent(ruleId)}/remove`,
+      RulesView,
+    ),
   accept: (approvalId: string) =>
     call("POST", `/api/approvals/${approvalId}/rule-accept`, z.object({ rule: PlannerRule })),
   decline: (approvalId: string) =>
