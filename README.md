@@ -90,6 +90,21 @@ route at 1280 and 375 px as `u13-*`.
 The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
 that memory.**
 
+- **The same ten questions, three memories** ([ADR-0136](docs/adr/0136-replay-bench.md)). A
+  Researcher answered ten questions on testnet and paid for data each time; its owner rated the
+  answers. A replay then planned the same ten with no memory, with the memory it had before its first
+  question, and with today's: **10 → 10 → 4 planned services** (0.135 → 0.135 → 0.060 USDC). Each
+  skip cites the note or the rule behind it. A replay never pays, writes memory or notifies.
+- **Rules from outcomes** ([ADR-0137](docs/adr/0137-rule-proposals-narrow-only.md)). A daily check
+  turned three 👎 on odds answers that named no team into *"Skip odds unless the question names a
+  team"*, citing five notes. A rule can only make it spend less or ask more, so a tap accepts it; the
+  next answer said *"I skipped Odds: your rule from Nov 5"*.
+- **Memory narrows the plan.** A service its own notes say was useful in under a third of rated
+  answers is skipped, and the skip cites the note's blob in the answer and the Wake.
+- **The index check** ([ADR-0135](docs/adr/0135-memwal-sdk-0-1-12-index-check.md)): what it wrote
+  against what Walrus Memory lists (`listMemories()`, SDK 0.1.12): "written 13 · on Walrus Memory 13
+  · missing 0".
+
 - **The Wallet watcher learns rules from you.** A 👎 on a ping becomes a rule in Walrus Memory. The next event of
   that kind is ignored, and the Wake for that quiet decision cites the rule's blob.
   - The Proof view shows both decisions and the one blob that changed between them.
@@ -165,6 +180,19 @@ that memory.**
     ([ADR-0132](docs/adr/0132-splitter-and-pay-links.md)).
   - A Subscriptions keeper stops on a price it doesn't remember
     ([ADR-0129](docs/adr/0129-subscriptions-keeper.md)).
+  - **Pay a `.sui` name** ([ADR-0144](docs/adr/0144-pay-a-sui-name.md)), resolved over gRPC's
+    NameService. You sign for the address; before each payment the name is checked again, and a name
+    that moved stops the payment.
+  - **A bill from a photo** ([ADR-0138](docs/adr/0138-bill-from-a-photo.md)): the vision model
+    reads the total into a card (split half, or pay a contact); only your tap acts, the photo isn't
+    kept, and text in it is quoted, never followed.
+- **Discoverable by any x402 agent** ([ADR-0141](docs/adr/0141-x402-discovery-catalog.md)). The
+  public facilitator serves the Reef in the x402 Bazaar catalog shape
+  (`/api/facilitator/discovery/resources`), each item with its door's own payment terms and Reef
+  score. On testnet, `disc.fetch` found Sui risk check there and paid it.
+- **Sell an API in one command** ([ADR-0140](docs/adr/0140-create-remora-publishable-packages.md)):
+  `create-remora` scaffolds a paid API (x402 and MPP) from `examples/sell-an-api`, built on the
+  publishable `@getremora/merchant` and `@getremora/disc-sdk` (npm publishing is pending).
 
 ## What it does, with proof
 
@@ -296,7 +324,9 @@ The server-side calls, generated from the code by `bun scripts/tatum-calls.ts` a
 - **Not yet.**
   - Memory on your own Walrus account, with a delegate per remora. Until then, memories live in
     namespaces of the operator's account ([ADR-0030](docs/adr/0030-w2-memory-mode.md)).
-  - Walrus Sites and SuiNS names ([roadmap](#roadmap-not-built-yet)).
+  - A mainnet Walrus Site on wal.app, and SuiNS subnames per remora. The landing is a **testnet**
+    Walrus Site (object `0x3676fbef…505e`, [ADR-0142](docs/adr/0142-landing-testnet-walrus-site.md));
+    wal.app serves mainnet only, so open it through a local portal. Paying a `.sui` name is built.
   - The cost card's model line is an estimate, from total tokens.
 
 ## Quick start (local)
@@ -395,7 +425,7 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 - **Money:** budget proposals, spend analytics, Reef reputation, the MPP adapter (E5, E6, E10,
   E12). Remoras selling to remoras, community listings and the public facilitator are built (U17).
 - **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
-- **Proof:** Merkle batch anchors, auditor access (G4, G7).
+- **Proof:** auditor access (G7). Merkle batch anchors are built (U19).
 - **Channels:** voice and images, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H6, H8, H9). The
   Telegram Mini App is built (U17).
 - **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge

@@ -1,4 +1,4 @@
-# Remora's open economy (U17, U18)
+# Remora's open economy (U17 to U19)
 
 Remoras can buy from more than the eight house services ([ADR-0111](adr/0111-scale-pass.md)). Every
 purchase goes through the same rails: an x402 payment through the remora's Disc, under a limit that
@@ -103,6 +103,18 @@ every 30 s.
   - "settle up" pays what you owe a contact through the Errand. For what others owe you, it makes a
     pay link (`/pay/<token>`): a page they pay from their own wallet, gas sponsored and settled by
     the public facilitator.
+
+## Pay a name, or a photo of a bill ([ADR-0144](adr/0144-pay-a-sui-name.md), [ADR-0138](adr/0138-bill-from-a-photo.md))
+- **A `.sui` name.** An Errand's contact can be added by name (`linh.sui`, `@linh`). The server
+  resolves it over Sui's gRPC NameService and the owner signs for the **address**; the contact keeps
+  the name and when it was resolved. Before each payment the name is resolved again: if it points
+  anywhere else, or can't be checked, nothing is paid and the Errand says what changed. Receipts, the
+  Reef and public receipts show names beside addresses (cached an hour).
+- **A photo of a bill.** On the Errand's card or in Telegram, the vision model reads `{merchant,
+  total, currency, date, items}` into a card: split half (an expense, then a pay link) or pay a
+  contact (the Errand's limits; 3x the usual asks first). An unclear total or another currency makes
+  it ask for the amount. Only the owner's tap acts; text in the photo that asks for anything is quoted
+  on the card and never followed. The photo isn't kept; one line is remembered once the owner acts.
 
 ## Subscriptions that notice a price hike ([ADR-0129](adr/0129-subscriptions-keeper.md))
 A Subscriptions keeper charges its subscriptions every day at 8am. Before each charge it reads the
