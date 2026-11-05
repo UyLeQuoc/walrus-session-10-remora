@@ -1,0 +1,75 @@
+{
+  "site_name": "Remora",
+  "metadata": {
+    "link": "https://getremora.vercel.app",
+    "image_url": "https://getremora.vercel.app/og.png",
+    "description": "Always-on AI agents you own: a budget Sui enforces, memory you can read on Walrus, a receipt for every decision. A testnet Walrus Site.",
+    "project_url": "https://github.com/UyLeQuoc/walrus-session-10-remora",
+    "creator": "Remora"
+  },
+  "headers": {
+    "/index.html": {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-cache"
+    },
+    "/config.js": {
+      "Content-Type": "text/javascript; charset=utf-8",
+      "Cache-Control": "no-cache"
+    },
+    "/favicon.svg": {
+      "Content-Type": "image/svg+xml",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/og.png": {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/memory.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/memory-phone.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/playground.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/playground-phone.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/reef.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/reef-phone.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/remora-overview.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/status.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/status-phone.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/screens/demo-poster.jpg": {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400"
+    },
+    "/media/remora-demo.mp4": {
+      "Content-Type": "video/mp4",
+      "Cache-Control": "public, max-age=86400"
+    }
+  },
+  "routes": {
+    "/about": "/index.html"
+  }
+}
