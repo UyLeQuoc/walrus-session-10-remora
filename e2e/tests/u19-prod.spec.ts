@@ -95,14 +95,6 @@ async function discsOnChain(owner: string) {
   );
 }
 
-async function retire(page: Page, id: string) {
-  await page.goto(`/remoras/${id}`);
-  await page.getByRole("tab", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Retire" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Retire" }).click();
-  await expect(page.getByText("retired").first()).toBeVisible({ timeout: 120_000 });
-}
-
 test.describe.configure({ mode: "serial" });
 
 test("E1: retire the production remoras whose limit is gone, keep @ask-researcher, re-import the crew", async ({
@@ -116,22 +108,46 @@ test("E1: retire the production remoras whose limit is gone, keep @ask-researche
   const live = remoras.filter(
     (r) => r.status === "active" || r.status === "shadow" || r.status === "paused",
   );
+  // The sale's slug is in the config: no per-remora request (production allows 30 writes a minute
+  // and 200 an hour per address).
   const sold: Record<string, string> = {};
   for (const r of live) {
-    const v = await api<{ sale: { slug: string } | null }>(page, `/api/remoras/${r.id}/sell`);
-    if (v.sale?.slug) sold[r.id] = v.sale.slug;
+    const slug = (r.config as { sell?: { slug?: string } }).sell?.slug;
+    if (slug) sold[r.id] = slug;
   }
   const broken = live.filter(
     (r) => r.discId && !onChain.has(r.discId) && !KEEP.has(sold[r.id] ?? ""),
   );
+  const limited = (x: unknown): boolean =>
+    /requests|rate/i.test(JSON.stringify(x ?? "")) && !(x as { remora?: unknown }).remora;
   const retired: { id: string; name: string; slug: string | null }[] = [];
   for (const r of broken) {
-    if (sold[r.id])
-      await api(page, `/api/remoras/${r.id}/sell`, { method: "PUT", body: { on: false } }).catch(
-        () => {},
+    // Its Disc is gone, so there's nothing to sign: the retire answers no transaction and the
+    // confirm retires it (paced, and retried after a rate limit).
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const tx = await api<{ transaction?: string | null }>(page, `/api/remoras/${r.id}/retire`, {
+        method: "POST",
+      });
+      if (limited(tx) && !("transaction" in tx)) {
+        await page.waitForTimeout(65_000);
+        continue;
+      }
+      expect(tx.transaction ?? null, `${r.name} still has a Disc`).toBeNull();
+      await page.waitForTimeout(2_500);
+      const done = await api<{ remora?: { status: string } }>(
+        page,
+        `/api/remoras/${r.id}/retire/confirm`,
+        { method: "POST", body: {} },
       );
-    await retire(page, r.id);
-    retired.push({ id: r.id, name: r.name, slug: sold[r.id] ?? null });
+      if (!done.remora) {
+        await page.waitForTimeout(65_000);
+        continue;
+      }
+      expect(done.remora.status).toBe("retired");
+      retired.push({ id: r.id, name: r.name, slug: sold[r.id] ?? null });
+      break;
+    }
+    await page.waitForTimeout(2_500);
   }
   const kept = live
     .filter((r) => KEEP.has(sold[r.id] ?? ""))
