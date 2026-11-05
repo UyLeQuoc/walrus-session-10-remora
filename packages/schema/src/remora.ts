@@ -121,6 +121,26 @@ export const RemoraConfig = z.object({
   rules: z.array(PlannerRule).optional(),
   /** ADR-0143: read-only MCP servers it may call, with the tools the owner ticked. */
   mcp: z.array(McpServerEntry).max(5).optional(),
+  /**
+   * C3 (ADR-0148): a Treasurer's team addresses (each with the `.sui` name it was added by) and the
+   * limits it checks spend requests against, in smallest USDC units. It holds no Disc.
+   */
+  treasury: z
+    .object({
+      watch: z
+        .array(
+          z.object({
+            address: SuiAddress,
+            label: z.string().max(40).optional(),
+            suins: z.string().max(80).optional(),
+            resolvedAt: z.string().optional(),
+          }),
+        )
+        .max(10),
+      perRequestCap: Amount.optional(),
+      monthlyCap: Amount.optional(),
+    })
+    .optional(),
 });
 
 export type ToolName = z.infer<typeof ToolName>;

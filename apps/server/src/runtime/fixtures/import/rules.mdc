@@ -1,0 +1,9 @@
+---
+description: How this synthetic project writes TypeScript
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+- Prefer a union and an exhaustive switch over boolean flags.
+- No default exports, except where a tool needs one.
+- Parse every request body with zod at the route.

@@ -337,6 +337,7 @@ describe("the model sees the live lists", () => {
       "briefer",
       "errand",
       "keeper",
+      "treasurer",
     ]);
     expect(input.reef.map((r) => r.ref)).toEqual(REEF.map((e) => e.ref));
     expect(input.kinds.find((k) => k.slug === "sentinel")?.spends).toBe(false);

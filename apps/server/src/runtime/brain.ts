@@ -14,6 +14,7 @@ import { isCatalogModel } from "@remora/schema";
 import { generateObject, generateText, type LanguageModel, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import type { ExtractedFact, FactExtractor } from "./facts.ts";
+import { labelMemory } from "./import-parse.ts";
 import { SentinelRule } from "./rules.ts";
 import type { CheckModel } from "./sonar.ts";
 
@@ -385,7 +386,8 @@ export function createBrain(models: {
         system: `${i.persona}\n\n${UNTRUSTED_INSTRUCTION}\nAnswer briefly. Cite the sources you used and what they cost.`,
         prompt: [
           i.memories.length
-            ? `What you remember:\n${i.memories.map((m) => `- ${m}`).join("\n")}`
+            ? // A4 (ADR-0146): an imported line reads as untrusted data that names its file.
+              `What you remember:\n${i.memories.map((m) => `- ${labelMemory(m)}`).join("\n")}`
             : "",
           i.facts?.length
             ? `What's true now (your fact ledger; it replaces older memories about the same thing):\n${i.facts.map((f) => `- ${f}`).join("\n")}`

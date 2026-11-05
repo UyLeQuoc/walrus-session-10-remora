@@ -269,13 +269,20 @@ test("E2: three test owners share counts and make paid calls; the Reef scores tw
   expect(calls.length).toBeGreaterThanOrEqual(20);
   const page = await (await browser.newContext()).newPage();
   await page.goto("/");
-  const reef = await api<{
-    services: {
+  // `/api/reef/services` answers an array of services, each with its 7-day score.
+  const reef = await api<
+    {
       ref: string;
-      score?: { status: string; calls: number; owners: number; usefulPct: number | null };
-    }[];
-  }>(page, "/api/reef/services");
-  const scored = (reef.services ?? []).filter((s) => s.score?.status === "scored");
+      score?: {
+        status: string;
+        calls: number;
+        owners: number;
+        usefulPct: number | null;
+        line: string;
+      } | null;
+    }[]
+  >(page, "/api/reef/services");
+  const scored = reef.filter((s) => s.score?.status === "scored");
   save({
     reef: {
       calls,

@@ -20,6 +20,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { expect, type Page, test } from "@playwright/test";
 import { burner, testnet } from "../support/env";
 import { connectAndSignIn, installTestWallet, WALLET_NAME } from "../support/test-wallet";
+import { b1 } from "./u19-b1.part";
 
 const OUT = "exit-results/u19.json";
 mkdirSync("exit-results", { recursive: true });
@@ -655,4 +656,12 @@ test("B2: one batch anchors the Researcher's Wakes that didn't pay, and a proof 
   await page.goto(`/verify/${receipt}`);
   await expect(page.getByText(/anchored in/i).first()).toBeVisible({ timeout: 60_000 });
   save({ b2: { batch, receipt, anchor: proof?.anchor, checks: proof?.checks } });
+});
+
+test("B1: an auditor reads the Researcher's Wakes, then the burner revokes", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(10 * 60_000);
+  await b1(page, browser, { signedIn, rotate, api, key, save, prior, byName, freshClient });
 });

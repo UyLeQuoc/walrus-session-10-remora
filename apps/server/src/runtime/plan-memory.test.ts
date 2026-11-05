@@ -1,7 +1,13 @@
 import type { PlannerRule } from "@remora/schema";
 import { ruleText, shapesOf } from "@remora/schema";
 import { describe, expect, it } from "vitest";
-import { applyMemory, parseTrackRecord, rulesAt, type TrackRecord } from "./plan-memory.ts";
+import {
+  applyMemory,
+  parseTrackRecord,
+  recencyWeighted,
+  rulesAt,
+  type TrackRecord,
+} from "./plan-memory.ts";
 
 const buy = (ref: string) => ({ entry: { ref }, url: `https://x/${ref}`, reason: ref });
 const rule = (over: Partial<PlannerRule>): PlannerRule => ({
@@ -131,5 +137,54 @@ describe("what memory changes in a plan (A1/A2)", () => {
       noise: 3,
     });
     expect(parseTrackRecord("Hanoi")).toBeNull();
+  });
+});
+
+describe("newer ratings weigh more (A3, ADR-0147)", () => {
+  const at = new Date("2026-11-30T00:00:00Z");
+  const ago = (d: number) => new Date(at.getTime() - d * 86_400_000).toISOString();
+  // Six useful ratings three to four weeks ago, then four noise ratings this week.
+  const versions = [
+    { value: "3 calls · 3 useful · 0 noise", at: ago(28) },
+    { value: "6 calls · 6 useful · 0 noise", at: ago(21) },
+    { value: "8 calls · 6 useful · 2 noise", at: ago(3) },
+    { value: "10 calls · 6 useful · 4 noise", at: ago(1) },
+  ];
+
+  it("weighs each version's new ratings by its age (half-life 14 days)", () => {
+    const w = recencyWeighted(versions, at);
+    expect(w.useful).toBeCloseTo(3 * 0.25 + 3 * 0.5 ** 1.5, 3);
+    expect(w.noise).toBeCloseTo(2 * 0.5 ** (3 / 14) + 2 * 0.5 ** (1 / 14), 3);
+    expect(Math.round((w.useful / (w.useful + w.noise)) * 100)).toBe(33);
+  });
+
+  it("a service that turned bad lately is skipped though most of its ratings were useful", () => {
+    const rec = record({ useful: 6, noise: 4, calls: 10 });
+    const plain = applyMemory({
+      buys: [buy("reef:price")],
+      question: "SUI price?",
+      rules: [],
+      records: [rec],
+    });
+    expect(plain.keep).toHaveLength(1);
+    const recent = [
+      ...versions.slice(0, 2),
+      { value: "10 calls · 6 useful · 4 noise", at: ago(1) },
+    ];
+    const weighted = applyMemory({
+      buys: [buy("reef:price")],
+      question: "SUI price?",
+      rules: [],
+      records: [{ ...rec, weighted: recencyWeighted(recent, at) }],
+    });
+    expect(weighted.keep).toHaveLength(0);
+    expect(weighted.skips[0]?.reason).toMatch(
+      /6 of 10 rated answers.*newer ratings count more, 32% useful/,
+    );
+  });
+
+  it("all ratings on one day decide as the counts do", () => {
+    const same = recencyWeighted([{ value: "4 calls · 1 useful · 3 noise", at: ago(0) }], at);
+    expect(same).toEqual({ useful: 1, noise: 3 });
   });
 });

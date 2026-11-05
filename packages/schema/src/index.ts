@@ -3,6 +3,7 @@
  * through a contract PR approved by both people, and update fixtures in the same PR.
  */
 export * from "./api.ts";
+export * from "./audit.ts";
 export * from "./channel.ts";
 export * from "./common.ts";
 export * from "./copy-keys.ts";
@@ -29,4 +30,5 @@ export * from "./statement.ts";
 export * from "./steer.ts";
 export * from "./team.ts";
 export * from "./template.ts";
+export * from "./template-extras.ts";
 export * from "./wake.ts";

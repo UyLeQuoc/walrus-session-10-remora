@@ -29,6 +29,8 @@ import { Budget } from "@remora/schema";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { placeholders, render } from "../copy/keys.ts";
+import { mountTemplateExtras } from "../hatchery/extras-routes.ts";
+import { RATED_EVENT } from "../hatchery/ratings.ts";
 import {
   confirmDeprecate,
   confirmHatch,
@@ -43,6 +45,7 @@ import {
   shareLinks,
   shareReview,
 } from "../hatchery/service.ts";
+import { declineTemplateUpdate } from "../hatchery/updates.ts";
 import { mountMcpServers } from "../mcp/servers-routes.ts";
 import {
   COMMUNITY_PER_OWNER,
@@ -63,6 +66,7 @@ import { previewSchedule } from "../triggers/schedule.ts";
 import { mountAnchors } from "./anchor-routes.ts";
 import { ANCHOR_EVENT, type AnchorDeps } from "./anchors.ts";
 import { approvalPay, approvalPayTx, listApprovals, rejectApproval } from "./approvals.ts";
+import { mountAudits } from "./audit-routes.ts";
 import { briefNow, briefView, setBriefItems } from "./briefer.ts";
 import {
   acceptCapsule,
@@ -78,6 +82,7 @@ import { crewMembers, crewOf, crewView, pauseCrew } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { errandAsk, usualFor } from "./errand.ts";
 import { giveFeedback } from "./feedback.ts";
+import { mountImportTidy } from "./import-tidy-routes.ts";
 import { type InspectorRow, indexCheck } from "./inspector.ts";
 import {
   acceptPrice,
@@ -133,6 +138,8 @@ import { mountSteer } from "./steer-routes.ts";
 import { applyTeam, confirmTeam, exportTeam, previewTeam } from "./teams.ts";
 import { tgOverview, tgPauseAll } from "./tg.ts";
 import { postMessage, withApprovalState } from "./threads.ts";
+import { dismissConflict } from "./tidy.ts";
+import { spendRequest } from "./treasury.ts";
 import { verifyWake } from "./verify.ts";
 import { publicWake, shareWake, unshareWake } from "./wake-share.ts";
 
@@ -456,6 +463,11 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
         kind: "message",
         ref: "web",
       });
+      return c.json(serialize({ ...res, receiptId: null, outcomes: [] }));
+    }
+    // C3 (ADR-0148): a Treasurer turns the owner's request into an approval, never a payment.
+    if (r.template === "treasurer") {
+      const res = await spendRequest(rt, r, question, { kind: "owner", channel: "web" });
       return c.json(serialize({ ...res, receiptId: null, outcomes: [] }));
     }
     if (!answersQuestions(r.template))
@@ -993,6 +1005,8 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
           // plans, shown on the Replay tab.
           ne(remoraEvents.type, ANCHOR_EVENT),
           ne(remoraEvents.type, "replay.ran"),
+          // ADR-0149: a rating is the template's, not a thing the remora did.
+          ne(remoraEvents.type, RATED_EVENT),
           ...(type ? [inArray(remoraEvents.type, type.split(","))] : []),
           ...(valid(before) ? [lt(remoraEvents.createdAt, new Date(before as string))] : []),
           ...(valid(after) ? [gt(remoraEvents.createdAt, new Date(after as string))] : []),
@@ -1192,6 +1206,21 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
       .from(approvals)
       .where(eq(approvals.id, c.req.param("id")));
     // E5: declining a budget proposal is remembered, with the owner's reason if they gave one.
+    // ADR-0147: declining a conflict leaves both notes or rules as they are.
+    if (a?.kind === "rule_conflict")
+      return c.json(await dismissConflict(rt, c.get("owner"), c.req.param("id")));
+    // ADR-0150: declining a template update is remembered, and that version isn't offered again.
+    if (a?.kind === "template_update") {
+      const b = await body<{ reason?: string }>(c);
+      return c.json(
+        await declineTemplateUpdate(
+          { runtime: rt, service },
+          c.get("owner"),
+          c.req.param("id"),
+          String(b.reason ?? ""),
+        ),
+      );
+    }
     if (a?.kind === "budget_change") {
       const b = await body<{ reason?: string }>(c);
       return c.json(
@@ -1905,6 +1934,12 @@ export function createRemoraRoutes(d: RemoraRouteDeps) {
   // B2 (ADR-0139): anchor the Wakes that didn't pay now.
   if (d.anchors) mountAnchors(app, { service, anchors: d.anchors });
   mountMcpServers(app, { service, runtime: rt });
+  // B1 (ADR-0145): share Wakes with an auditor; `GET /api/audit/:capsuleId` is public.
+  mountAudits(app, { service, runtime: rt });
+  // D2 + D3 (ADR-0149, ADR-0150): ratings, the author's view, the badge, template updates.
+  mountTemplateExtras(app, { hatchery: hatch, owner: d.owner });
+  // A4 + A3 (ADR-0146, ADR-0147): import into memory, and tidy it.
+  mountImportTidy(app, { service, runtime: rt, ...(d.operator ? { operator: d.operator } : {}) });
 
   // Mounted beside the other groups, which carry no typed variables.
   return app as unknown as Hono;

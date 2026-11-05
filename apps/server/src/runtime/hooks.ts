@@ -46,6 +46,7 @@ import { enqueue, type JobHandler } from "./jobs.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { answerButtons } from "./schedules.ts";
 import { scoutAsk } from "./scout.ts";
+import { hookRequestText, spendRequest } from "./treasury.ts";
 
 export const HOOK_JOB = {
   pricePoll: "remora.price_poll",
@@ -76,17 +77,22 @@ const priceStateOf = (r: Pick<Remora, "config">) =>
   (r.config as { priceState?: Record<string, PriceState> }).priceState ?? {};
 
 const newId = () => randomBytes(12).toString("base64url");
+/** C3 (ADR-0148): a Treasurer takes spend requests on a webhook; it never wakes on a price. */
+export const takesWebhooks = (template: string) =>
+  answersQuestions(template) || template === "treasurer";
 const live = (r: Remora) =>
-  answersQuestions(r.template) && (r.status === "active" || r.status === "shadow");
+  takesWebhooks(r.template) && (r.status === "active" || r.status === "shadow");
 
 export const inboundUrl = (base: string, remoraId: string, id: string) =>
   `${base.replace(/\/+$/, "")}/api/hooks/${remoraId}/${id}`;
 
-function mustWake(r: Remora) {
-  if (!answersQuestions(r.template))
+function mustWake(r: Remora, on: "price" | "webhook" = "price") {
+  if (on === "webhook" ? !takesWebhooks(r.template) : !answersQuestions(r.template))
     throw new RemoraError(
       "hooks.unsupported",
-      "Only Researchers and Briefers wake on a price or a webhook.",
+      on === "webhook"
+        ? "Only Researchers and Briefers wake on a webhook, and a Treasurer takes requests on one."
+        : "Only Researchers and Briefers wake on a price or a webhook.",
     );
 }
 
@@ -110,7 +116,7 @@ const webhookView = (h: HooksDeps, r: Remora, w: WebhookTrigger) => ({
 });
 
 export async function addWebhook(h: HooksDeps, r: Remora, name?: string) {
-  mustWake(r);
+  mustWake(r, "webhook");
   if (name !== undefined && !HOOK_NAME.test(name))
     throw new RemoraError(
       "hooks.bad_name",
@@ -493,7 +499,9 @@ export async function sendTest(h: HooksDeps, r: Remora, id: string): Promise<Del
 export function hooksView(h: HooksDeps, r: Remora) {
   const state = priceStateOf(r);
   return {
-    wakes: answersQuestions(r.template),
+    wakes: takesWebhooks(r.template),
+    // C3 (ADR-0148): a Treasurer takes webhooks but never wakes on a price.
+    prices: answersQuestions(r.template),
     inbound: webhooksOf(r).map((w) => webhookView(h, r, w)),
     price: priceTriggersOf(r).flatMap((t) =>
       t.id
@@ -584,6 +592,16 @@ export function hookJobHandlers(h: HooksDeps): Record<string, JobHandler> {
       const r = await load(p.remoraId);
       const w = r && webhooksOf(r).find((x) => x.id === p.hookId);
       if (!r || !w || !live(r)) return;
+      // C3 (ADR-0148): a Treasurer reads the body as a spend request (data, parsed by a fixed
+      // grammar, never a model) and can only turn it into an approval the owner pays.
+      if (r.template === "treasurer") {
+        await spendRequest(h.rt, r, hookRequestText(p.body), {
+          kind: "webhook",
+          hookId: w.id,
+          ...(w.name ? { name: w.name } : {}),
+        });
+        return;
+      }
       const turn = hookTurn({
         hookId: w.id,
         ...(w.name ? { name: w.name } : {}),

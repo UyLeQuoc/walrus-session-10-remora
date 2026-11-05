@@ -5,6 +5,7 @@ import { SharePage } from "@/features/hatchery/share-page";
 import { TemplatePage } from "@/features/hatchery/template-page";
 import { PlaygroundPage } from "@/features/playground/playground-page";
 import { ApprovalsPage } from "../features/approvals/approvals-page";
+import { AuditPage } from "../features/audit/audit-page";
 import { ChangesPage } from "../features/changes/changes-page";
 import { ChatPage } from "../features/chat/chat-page";
 import { ConnectPage } from "../features/connect/connect-page";
@@ -20,6 +21,7 @@ import { PublicRemoraPage } from "../features/public-remora/public-remora-page";
 import { ListApiPage } from "../features/reef/list-api-page";
 import { ReefPage } from "../features/reef/reef-page";
 import { NewRemoraPage } from "../features/remoras/new-remora-page";
+import { PublicReportPage } from "../features/remoras/public-report-page";
 import { RemoraPage } from "../features/remoras/remora-page";
 import { RemorasPage } from "../features/remoras/remoras-page";
 import { SettingsPage } from "../features/settings/settings-page";
@@ -78,6 +80,9 @@ export const APP_ROUTES: AppRoute[] = [
   { path: "p/:token", element: <PublicWakePage /> },
   { path: "r/:slug", element: <PublicRemoraPage /> },
   { path: "pay/:token", element: <PayLinkPage /> },
+  // C3 (ADR-0148): a Treasurer's report, shared redacted.
+  { path: "t/:token", element: <PublicReportPage /> },
+  { path: "audit/:capsuleId", element: <AuditPage /> },
   { path: "statements", element: <StatementsPage /> },
   { path: "changes/:id", element: <ChangesPage /> },
 ];

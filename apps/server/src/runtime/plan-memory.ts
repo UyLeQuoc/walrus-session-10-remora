@@ -10,6 +10,8 @@
  * Nothing here adds a purchase. `asOf` reads both as they were then: rules accepted by that time and
  * the ledger's facts in effect then, which is how a replay plans with an older memory.
  */
+
+import { effectiveAt } from "@remora/memory";
 import {
   type PlannerRule,
   type QuestionShape,
@@ -39,10 +41,43 @@ export interface TrackRecord {
   /** The note's blobs, newest first. */
   blobIds: string[];
   since: string;
+  /**
+   * A3 (ADR-0147): the same ratings with newer ones weighing more, from the record's versions in
+   * the facts ledger. Absent, the counts above decide.
+   */
+  weighted?: { useful: number; noise: number };
 }
 
 /** Skipped on its own notes: at least this many rated answers, under this share useful. */
 export const MEMORY_SKIP = { rated: 3, usefulPct: 34 } as const;
+
+/** A3 (ADR-0147): a rating half as old as this weighs twice as much as one this old. */
+export const RECENCY_HALF_LIFE_DAYS = 14;
+
+/**
+ * Pure: a record's ratings with newer ones weighing more. Each version of the record (oldest first)
+ * adds the ratings since the one before, at the time it took effect, weighed by
+ * `0.5 ^ (age / half-life)` at `at`.
+ */
+export function recencyWeighted(
+  versions: { value: string; at: string }[],
+  at: Date,
+  halfLifeDays: number = RECENCY_HALF_LIFE_DAYS,
+): { useful: number; noise: number } {
+  let prev = { useful: 0, noise: 0 };
+  let useful = 0;
+  let noise = 0;
+  for (const v of [...versions].sort((a, b) => a.at.localeCompare(b.at))) {
+    const c = parseTrackRecord(v.value);
+    if (!c) continue;
+    const ageDays = Math.max(0, (at.getTime() - Date.parse(v.at)) / 86_400_000);
+    const w = 0.5 ** (ageDays / halfLifeDays);
+    useful += Math.max(0, c.useful - prev.useful) * w;
+    noise += Math.max(0, c.noise - prev.noise) * w;
+    prev = { useful: c.useful, noise: c.noise };
+  }
+  return { useful, noise };
+}
 
 const num = (re: RegExp, s: string) => Number(re.exec(s)?.[1] ?? 0);
 
@@ -65,12 +100,33 @@ export async function trackRecords(
   if (!deps.facts) return [];
   try {
     const facts = await deps.facts.list(r, ["sources"], { asOf });
+    // A3 (ADR-0147): every version of each record up to `asOf`, so newer ratings can weigh more.
+    const history = await deps.facts.list(r, ["sources"]).catch(() => facts);
     return facts.flatMap((f) => {
       if (f.predicate !== "track_record" || !/^reef:[a-z0-9-]+$/.test(f.subject) || f.hidden)
         return [];
       const c = parseTrackRecord(f.value);
+      const versions = history
+        .filter(
+          (h) =>
+            h.subject === f.subject &&
+            h.predicate === "track_record" &&
+            Date.parse(effectiveAt(h)) <= asOf.getTime(),
+        )
+        .map((h) => ({ value: h.value, at: effectiveAt(h) }));
       return c
-        ? [{ service: f.subject, ...c, blobIds: f.blobIds, since: f.observedAt.slice(0, 10) }]
+        ? [
+            {
+              service: f.subject,
+              ...c,
+              blobIds: f.blobIds,
+              since: f.observedAt.slice(0, 10),
+              weighted: recencyWeighted(
+                versions.length ? versions : [{ value: f.value, at: effectiveAt(f) }],
+                asOf,
+              ),
+            },
+          ]
         : [];
     });
   } catch (err) {
@@ -122,12 +178,19 @@ export function applyMemory<T extends { entry: { ref: string } }>(input: {
     }
     const rec = input.records.find((x) => x.service === ref);
     const rated = rec ? rec.useful + rec.noise : 0;
-    if (rec && rated >= MEMORY_SKIP.rated && rec.useful * 100 < MEMORY_SKIP.usefulPct * rated) {
+    // A3 (ADR-0147): the share comes from the recency-weighted ratings when the ledger had them.
+    const w = rec?.weighted && rec.weighted.useful + rec.weighted.noise > 0 ? rec.weighted : null;
+    const share = w ? w.useful / (w.useful + w.noise) : rec && rated ? rec.useful / rated : 1;
+    if (rec && rated >= MEMORY_SKIP.rated && share * 100 < MEMORY_SKIP.usefulPct) {
+      const recent =
+        w && Math.round(share * 100) !== Math.round((rec.useful / rated) * 100)
+          ? `; newer ratings count more, ${Math.round(share * 100)}% useful`
+          : "";
       skips.push({
         payee: ref,
         kind: "memory",
         cites: rec.blobIds.slice(0, 3),
-        reason: `skipped ${payeeLabel(ref)}: my notes say ${rec.useful} of ${rated} rated answers from it were useful (since ${day(rec.since)})`,
+        reason: `skipped ${payeeLabel(ref)}: my notes say ${rec.useful} of ${rated} rated answers from it were useful (since ${day(rec.since)}${recent})`,
       });
       continue;
     }

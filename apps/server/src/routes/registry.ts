@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { mcpRoutes } from "../mcp/index.ts";
 import { moneyRoutes } from "../money/index.ts";
 import { playgroundRoutes } from "../playground/index.ts";
-import { hookRoutes, remoraRoutes } from "../runtime/index.ts";
+import { hookRoutes, remoraRoutes, treasuryRoutes } from "../runtime/index.ts";
 import { authRoutes } from "./auth.ts";
 import { chatRoutes } from "./chat.ts";
 import { connectRoutes } from "./connect.ts";
@@ -32,6 +32,8 @@ export const ROUTE_GROUPS = [
   discoveryRoutes,
   facilitatorRoutes,
   hookRoutes,
+  // C3 (ADR-0148): the Treasurer.
+  treasuryRoutes,
 ] as const;
 
 export function registerRoutes(app: Hono): void {

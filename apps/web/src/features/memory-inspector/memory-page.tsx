@@ -6,7 +6,7 @@
  * old `/me`).
  */
 import type { InspectorResponse } from "@remora/schema";
-import { Brain, Fish } from "lucide-react";
+import { Brain, Fish, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { EmptyState } from "@/components/app/empty-state";
@@ -16,13 +16,6 @@ import { Time } from "@/components/app/time";
 import { Hash } from "@/components/hash";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
@@ -33,6 +26,7 @@ import { RequireOwner, useLoad } from "@/features/remoras/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
 import { DataTable, SettingsGroup, SettingsSection } from "@/openbot/pages";
+import { ImportDialog } from "./import-dialog";
 import {
   ClaudeCodeCard,
   CorrectDialog,
@@ -41,6 +35,8 @@ import {
   ForgetButton,
   HideButton,
 } from "./memory-controls";
+import { RemoraSelect } from "./remora-select";
+import { TidiedTab } from "./tidied-tab";
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—");
 const shortDay = (iso: string) =>
@@ -50,7 +46,7 @@ const daysLeft = (iso: string) =>
 const size = (bytes: number) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);
 
 function RemorasTab() {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const remoras = useLoad(() => api.remoras(), []);
   const list = (remoras.data?.remoras ?? []).filter((r) => r.status !== "creating");
   const id = params.get("remora") ?? list[0]?.id ?? "";
@@ -122,25 +118,7 @@ function RemorasTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={id}
-          onValueChange={(value) => {
-            const next = new URLSearchParams(params);
-            next.set("remora", value);
-            setParams(next);
-          }}
-        >
-          <SelectTrigger aria-label="Remora" className="w-48">
-            <SelectValue placeholder="Remora" />
-          </SelectTrigger>
-          <SelectContent>
-            {list.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <RemoraSelect list={list} id={id} />
         <Input
           className="max-w-xs"
           aria-label="Search memory"
@@ -172,6 +150,14 @@ function RemorasTab() {
       {current ? (
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons remoraId={current.id} name={current.name} />
+          {/* A4 (ADR-0146): once written, a search for the source shows the imported lines. */}
+          <ImportDialog
+            remoraId={current.id}
+            onDone={(done) => {
+              setQ(done.source);
+              refresh();
+            }}
+          />
           {active && active !== "me" ? (
             <ForgetButton
               remoraId={current.id}
@@ -422,7 +408,8 @@ function RowFlags({ row }: { row: InspectorResponse["rows"][number] }) {
 
 function Memory() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") === "chat" ? "chat" : "remoras";
+  const asked = params.get("tab");
+  const tab = asked === "chat" || asked === "tidied" ? asked : "remoras";
   return (
     <Page title="Memory" description="What your remoras remember, and what the chat does.">
       <PageHeader
@@ -442,10 +429,16 @@ function Memory() {
           <TabsTrigger value="remoras">
             <Brain /> Remoras
           </TabsTrigger>
+          <TabsTrigger value="tidied">
+            <Sparkles /> Tidied
+          </TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
         <TabsContent value="remoras" className="pt-3">
           <RemorasTab />
+        </TabsContent>
+        <TabsContent value="tidied" className="pt-3">
+          <TidiedTab />
         </TabsContent>
         <TabsContent value="chat" className="pt-3">
           <ChatMemory />

@@ -199,12 +199,16 @@ export const InspectorResponse = z.object({
     .default([]),
 });
 
-/** E4: `POST /api/approvals/:id/pay-tx`, the owner's one-off payment to sign (ADR-0031). */
+/**
+ * E4: `POST /api/approvals/:id/pay-tx`, the owner's one-off payment to sign (ADR-0031). A payment to
+ * a contact (an Errand's or a Treasurer's, ADR-0125, ADR-0148) has no merchant: `requirements` is null.
+ */
 export const ApprovalPayTx = z.object({
   transaction: z.string().min(1),
   requirements: z
     .object({ amount: Amount, payTo: z.string().min(1), asset: z.string().min(1) })
-    .loose(),
+    .loose()
+    .nullable(),
 });
 
 export type RemoraView = z.infer<typeof RemoraView>;

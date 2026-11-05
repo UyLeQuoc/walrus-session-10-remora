@@ -62,6 +62,8 @@ import { createRemoraRoutes } from "./routes.ts";
 import { remoraJobHandlers } from "./schedules.ts";
 import { onChainEvent } from "./sentinel.ts";
 import { createSteer, steerModel } from "./steer.ts";
+import { onTreasuryFlow } from "./treasury.ts";
+import { createTreasuryRoutes } from "./treasury-routes.ts";
 
 const signer = new RemoraSigner(new PgKeyStore(db), parseKek(env.KEY_ENCRYPTION_KEY));
 const merchants = {
@@ -258,6 +260,13 @@ const hooks: HooksDeps = {
   base: env.API_BASE_URL ?? env.WEB_BASE_URL,
   production: !!process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production",
 };
+/** C3 (ADR-0148): the Treasurer's card, setup, reports and its public redacted links. */
+export const treasuryRoutes = createTreasuryRoutes({
+  service: remoraService,
+  runtime,
+  owner: async (c: Context) => (await signedInOwner(c))?.owner ?? null,
+});
+
 export const hookRoutes = createHookRoutes({
   service: remoraService,
   hooks,
@@ -315,7 +324,9 @@ export function startRemoraRuntime(): () => void {
             .select()
             .from(remoras)
             .where(and(eq(remoras.id, remoraId), isNotNull(remoras.address)));
-          if (r) await onChainEvent(runtime, r, e, checkpoint);
+          // C3 (ADR-0148): a Treasurer keeps the flow for its report; a Sentinel triages it.
+          if (r?.template === "treasurer") await onTreasuryFlow(runtime, r, e, checkpoint);
+          else if (r) await onChainEvent(runtime, r, e, checkpoint);
         },
       }),
     );
