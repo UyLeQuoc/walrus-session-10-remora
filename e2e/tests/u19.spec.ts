@@ -823,3 +823,122 @@ test("A3: two notes that disagree become a question, and the owner's answer sett
   });
   save({ a3Conflict: { rated: unrated.map((e) => e.id), tidy: t, conflictId, resolved } });
 });
+
+/** The owner's wallet, in Node: what the page's wallet would sign, signed with the test key. */
+async function signRun(kp: Ed25519Keypair, json: string) {
+  const { Transaction } = await import("@mysten/sui/transactions");
+  const client = testnet();
+  const tx = Transaction.from(json);
+  tx.setSenderIfNotSet(kp.toSuiAddress());
+  const bytes = await tx.build({ client });
+  const { signature } = await kp.signTransaction(bytes);
+  const res = await client.core.executeTransaction({
+    transaction: bytes,
+    signatures: [signature],
+    include: { effects: true },
+  });
+  const done = res.Transaction ?? res.FailedTransaction;
+  if (!done.effects?.status.success) throw new Error(JSON.stringify(done.effects?.status));
+  await client.core.waitForTransaction({ digest: done.digest });
+  return done.digest;
+}
+
+test("D2: burner2 hatches a template, rates it with a signed message, and the badge counts it", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(20 * 60_000);
+  await signedIn(page);
+  const id =
+    (prior() as { researcher?: string }).researcher || (await byName(page, "Researcher · u19"));
+  // The burner publishes its Researcher as a template (one signature).
+  await rotate(page);
+  const review = await api<{ review: { markdown: string } }>(page, `/api/remoras/${id}/share`, {
+    method: "POST",
+    body: {},
+  });
+  await rotate(page);
+  const pub = await api<{ transaction: string }>(page, "/api/hatchery/publish", {
+    method: "POST",
+    body: { markdown: review.review.markdown },
+  });
+  const pubDigest = await signRun(burner(), pub.transaction);
+  await rotate(page);
+  const listed = await api<{ listing: { templateId: string } }>(
+    page,
+    "/api/hatchery/publish/confirm",
+    {
+      method: "POST",
+      body: { digest: pubDigest },
+    },
+  );
+  const tpl = listed.listing.templateId;
+
+  // burner2 hatches it, and its remora answers one paid question.
+  const two = key("E2E_BURNER2_KEY");
+  const b2 = await (await browser.newContext()).newPage();
+  await installTestWallet(b2, two);
+  await b2.context().setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+  await b2.goto("/remoras");
+  await connectAndSignIn(b2);
+  const hatch = await api<{ transaction: string; remoras: string[] }>(
+    b2,
+    `/api/hatchery/${tpl}/hatch`,
+    {
+      method: "POST",
+    },
+  );
+  const hatchDigest = await signRun(two, hatch.transaction);
+  const done = await api<{ remoras: string[] }>(b2, `/api/hatchery/${tpl}/hatch/confirm`, {
+    method: "POST",
+    body: { digest: hatchDigest, remoraIds: hatch.remoras },
+  });
+  const mine = done.remoras[0] as string;
+  await api(b2, `/api/remoras/${mine}/activate`, { method: "POST" });
+  const answered = await api<{ outcomes: { kind: string; digest?: string }[] }>(
+    b2,
+    `/api/remoras/${mine}/ask`,
+    {
+      method: "POST",
+      body: { question: "Is package 0x2 safe to depend on?" },
+    },
+  );
+
+  // The rating: the server writes the message, burner2's wallet signs it.
+  const toSign = await api<{ message: string; text: string; at: string }>(
+    b2,
+    `/api/hatchery/${tpl}/rating/message`,
+    { method: "POST", body: { stars: 4, text: "Clear answers; it skipped what I didn't need." } },
+  );
+  const { signature } = await two.signPersonalMessage(new TextEncoder().encode(toSign.message));
+  const rated = await api(b2, `/api/hatchery/${tpl}/rating`, {
+    method: "POST",
+    body: { stars: 4, text: toSign.text, at: toSign.at, signature },
+  });
+  await b2.context().close();
+
+  // The gallery shows it weighted; the badge counts the hatch.
+  await rotate(page);
+  const gallery = await api<
+    | { templates?: { templateId: string; rating?: unknown }[] }
+    | { templateId: string; rating?: unknown }[]
+  >(page, "/api/hatchery");
+  const list = Array.isArray(gallery) ? gallery : (gallery.templates ?? []);
+  const row = list.find((t) => t.templateId === tpl);
+  const badge = await page.request.get(`http://localhost:8797/badge/${tpl}.svg`);
+  const svg = await badge.text();
+  expect(badge.status()).toBe(200);
+  expect(svg).toContain("1 hatch");
+  save({
+    d2: {
+      template: tpl,
+      publish: pubDigest,
+      hatch: hatchDigest,
+      paid: answered.outcomes?.find((o) => o.kind === "paid")?.digest ?? null,
+      rated,
+      galleryRating: row?.rating ?? null,
+      badge: svg.slice(0, 400),
+    },
+  });
+  expect(row?.rating, JSON.stringify(row).slice(0, 300)).toBeTruthy();
+});
