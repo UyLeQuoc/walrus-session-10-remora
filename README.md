@@ -104,6 +104,16 @@ that memory.**
 - **The index check** ([ADR-0135](docs/adr/0135-memwal-sdk-0-1-12-index-check.md)): what it wrote
   against what Walrus Memory lists (`listMemories()`, SDK 0.1.12): "written 13 · on Walrus Memory 13
   · missing 0".
+- **It tidies, and starts from what you already wrote**
+  ([ADR-0147](docs/adr/0147-tidy-memory.md), [ADR-0146](docs/adr/0146-import-notes.md)). Notes that
+  say the same thing merge into one (5 odds notes became one on testnet); two that disagree become a
+  question you answer. `CLAUDE.md`, `AGENTS.md`, Cursor rules or a ChatGPT export import as lines you
+  tick, each marked with its source and read as data; the next answer cited one.
+- **Anyone can check it** ([ADR-0145](docs/adr/0145-auditor-access-capsule.md),
+  [ADR-0139](docs/adr/0139-merkle-anchors-remora-anchor.md)). Lend an auditor a week of Wakes through
+  a Seal policy on Sui: their browser decrypts them and matched 14 of 14 receipts against Sui, until
+  a revoke. Wakes that didn't pay are anchored hourly as a Merkle root (`remora_anchor`), and
+  `remora verify` checks the proof.
 
 - **The Wallet watcher learns rules from you.** A 👎 on a ping becomes a rule in Walrus Memory. The next event of
   that kind is ignored, and the Wake for that quiet decision cites the rule's blob.
@@ -415,22 +425,20 @@ Remora starts from **hippo**, the team's earlier Walrus Memory chatbot built for
 
 ## Roadmap (not built yet)
 - **Mainnet pass** (U10):
-  - both Move packages on mainnet, with multisig `UpgradeCap`s;
+  - the Move packages on mainnet, with multisig `UpgradeCap`s;
   - owned memory (a delegate per remora on the owner's own account, ADR-0030);
-  - a mainnet Walrus publisher and playground.
-- **More remoras:** Errand, Subscriptions Keeper, Treasurer, Daily Brief, Portfolio Guard, Inbox,
-  Splitter (C3–C9).
-- **More triggers and teamwork:** price and webhook triggers, group chat, a proactive heartbeat (D1b,
-  D6, D7).
-- **Money:** budget proposals, spend analytics, Reef reputation, the MPP adapter (E5, E6, E10,
-  E12). Remoras selling to remoras, community listings and the public facilitator are built (U17).
-- **Memory:** imports, a weekly review, private namespaces, capsules (F7, F10, F12, F13).
-- **Proof:** auditor access (G7). Merkle batch anchors are built (U19).
-- **Channels:** voice and images, Walrus Sites, Discord/Slack/WhatsApp, EN/VI (H2, H6, H8, H9). The
-  Telegram Mini App is built (U17).
-- **Hatchery:** starter memory packs, template updates, public remoras, ratings, analytics, the badge
-  (M2, M8–M12).
-- **Developer platform:** npm packages, a CLI, an outbound API, a docs site (J1–J4).
+  - a mainnet Walrus publisher and playground;
+  - the landing on wal.app with a SuiNS name (it's a testnet Walrus Site today, ADR-0142).
+- **More remoras:** Daily Brief, Portfolio Guard, Inbox (C6–C8). Errand, Subscriptions keeper,
+  Splitter and Treasurer are built.
+- **Channels:** voice, WhatsApp, EN/VI (H2, H8, H9). Images (a bill from a photo), Discord, Slack and
+  the Telegram Mini App are built.
+- **Identity:** a SuiNS subname per remora (B5). Paying a `.sui` name is built.
+- **Memory:** private namespaces (F12). Imports, tidy, the weekly review and capsules are built.
+- **Developer platform:** publishing `@getremora/*` to npm (built, not published), an outbound API, a
+  docs site (J2–J4).
+- **Discovery for the house services in production:** their doors listen inside the API's container,
+  so the deployed catalog lists community APIs and remoras on sale only (ADR-0141).
 
 ## License
 

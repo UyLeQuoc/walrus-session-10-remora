@@ -116,6 +116,15 @@ every 30 s.
   it ask for the amount. Only the owner's tap acts; text in the photo that asks for anything is quoted
   on the card and never followed. The photo isn't kept; one line is remembered once the owner acts.
 
+## A Treasurer for a team's wallets ([ADR-0148](adr/0148-treasurer.md))
+- It holds no Disc and never pays. It watches up to 10 team addresses on the same checkpoint stream as
+  the Wallet watcher and writes a 7-day report: in, out, moves inside the team, the top
+  counterparties and the runway (balance ÷ average daily outflow). Weekly, or "Report now"; a
+  redacted copy can be shared at `/t/<token>`.
+- A request to pay ("pay 0.30 to huy.sui for design") from the owner's chat, Telegram or a signed
+  webhook is read by a fixed grammar, checked against the contacts (a `.sui` name is resolved again)
+  and the limits, and becomes an approval. The owner pays it from their own wallet.
+
 ## Subscriptions that notice a price hike ([ADR-0129](adr/0129-subscriptions-keeper.md))
 A Subscriptions keeper charges its subscriptions every day at 8am. Before each charge it reads the
 402:
