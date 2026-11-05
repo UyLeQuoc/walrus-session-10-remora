@@ -3,6 +3,7 @@ import type { Transaction } from "@mysten/sui/transactions";
 import type { Logger, SuiNetwork } from "@remora/chain";
 import type { Db } from "@remora/db";
 import type { RemoraSigner } from "@remora/signer";
+import type { McpNet } from "../mcp/client.ts";
 import type { Networks } from "../money/networks.ts";
 import type { ResolvedReef } from "../money/reef.ts";
 import type { ReefScore } from "../money/reputation.ts";
@@ -43,4 +44,6 @@ export interface RuntimeDeps {
   reputation?: (network: SuiNetwork) => Map<string, ReefScore>;
   /** Recounts the Reef's scores now (after an owner starts or stops sharing). */
   refreshReputation?: () => Promise<void>;
+  /** ADR-0143: how MCP servers are reached; absent, https to public addresses only. */
+  mcp?: McpNet;
 }

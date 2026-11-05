@@ -77,6 +77,15 @@ function RemorasTab() {
       found: x.relayer + (m?.duplicates ?? []).filter((d) => d.namespace === x.namespace).length,
     }))
     .filter((x) => x.found < x.written);
+  // A0 (ADR-0135): our stored writes against listMemories(), for the namespace shown (or all).
+  const indexRows = (m?.index ?? []).filter((x) => !active || x.namespace === active);
+  const indexTotals = indexRows.length
+    ? {
+        written: indexRows.reduce((n, x) => n + x.written, 0),
+        listed: indexRows.reduce((n, x) => n + x.listed, 0),
+        missing: indexRows.flatMap((x) => x.missing),
+      }
+    : null;
 
   if (remoras.error && !remoras.data) {
     return (
@@ -173,6 +182,26 @@ function RemorasTab() {
         </div>
       ) : null}
 
+      {indexTotals ? (
+        <p
+          className="flex flex-wrap items-center gap-1.5 text-sm text-ob-muted"
+          data-testid="index-check"
+        >
+          <span>
+            written {indexTotals.written} · on Walrus Memory {indexTotals.listed} · missing{" "}
+            {indexTotals.missing.length}
+          </span>
+          <Hint label="About the index check">
+            Each write we record as stored, checked against the list Walrus Memory gives back
+            (listMemories). A missing one is shown with its blob id; nothing is re-written.
+          </Hint>
+          {indexTotals.missing.length ? (
+            <span className="font-mono text-xs" data-ux-skip>
+              {indexTotals.missing.slice(0, 5).join(" · ")}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
       {missing.length ? (
         <p
           className="flex flex-wrap items-center gap-1.5 rounded-ob-lg border border-ob-warning-soft bg-ob-warning-soft px-4 py-2.5 text-md text-ob-warning-text"

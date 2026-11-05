@@ -6,7 +6,8 @@
  * Source counters feed F2 (`source_stats` + `sources` memories via feedback).
  */
 
-import { remoraEvents } from "@remora/db";
+import { and, eq, inArray, remoraEvents, remoraMemories } from "@remora/db";
+import { mcpForTurn } from "../mcp/servers.ts";
 import { isRemoraRef } from "../money/listings.ts";
 import { payeeLabel, type ResolvedReef } from "../money/reef.ts";
 import { skipReason } from "../money/reputation.ts";
@@ -19,6 +20,8 @@ import { assign, crewMembers, isLead } from "./crews.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { admitMemories } from "./facts.ts";
 import { addUsage, REMORA_LIMITS, tokensToday } from "./limits.ts";
+import type { Recalled } from "./memory.ts";
+import { applyMemory, rulesAt, trackRecords } from "./plan-memory.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
 import { intentBase, recordWake, sha256Hex } from "./wake.ts";
 
@@ -352,8 +355,18 @@ export async function scoutAsk(
   const planned: { payee: string; o: PayOutcome }[] = [];
   // ADR-0127: a service most owners rate as noise is skipped, and Why? says so.
   const scores = deps.reputation?.(r.network);
-  const skipped: { payee: string; reason: string }[] = [];
-  for (const b of opts.plan ?? planBuys(question, reef)) {
+  const skipped: { payee: string; reason: string; kind?: string; cites?: string[] }[] = [];
+  // A1/A2 (ADR-0136, ADR-0137): its own memory narrows the plan: the rules its owner accepted and
+  // its notes on each service, each skip citing the blobs it rests on.
+  const rules = rulesAt(r.config);
+  const records = opts.plan ? [] : await trackRecords(deps, r);
+  let buys = opts.plan ?? planBuys(question, reef);
+  if (!opts.plan) {
+    const mp = applyMemory({ buys, question, rules, records });
+    buys = mp.keep;
+    skipped.push(...mp.skips);
+  }
+  for (const b of buys) {
     const why = skipReason(scores?.get(b.entry.ref), payeeLabel(b.entry.ref));
     if (why) skipped.push({ payee: b.entry.ref, reason: why });
     else planned.push({ payee: b.entry.ref, o: await buy(b.entry.ref, b.url, b.reason) });
@@ -372,6 +385,8 @@ export async function scoutAsk(
   const persona = String(
     (r.config as { persona?: string }).persona ?? "You are the owner's Researcher.",
   );
+  // ADR-0143: the owner's ticked read-only MCP tools (never in a sold or playground turn).
+  const mcp = mcpForTurn(deps, r);
   let answer: string;
   let tokens = 0;
   // The Wake records the model that actually answered (D9).
@@ -394,6 +409,17 @@ export async function scoutAsk(
               if (why) {
                 skipped.push({ payee, reason: why });
                 return `Not bought: ${why}.`;
+              }
+              // The model's own follow-ups go through the same rules and notes.
+              const mine = applyMemory({
+                buys: [{ entry: { ref: payee } }],
+                question,
+                rules,
+                records,
+              }).skips[0];
+              if (mine) {
+                skipped.push(mine);
+                return `Not bought: ${mine.reason}.`;
               }
               const o = await buy(payee, url, reason);
               return o.kind === "paid"
@@ -425,6 +451,7 @@ export async function scoutAsk(
               }),
               schedule: ({ when, question: q }) => proposeSchedule(deps, r, when, q),
               handoff: ({ to, question: q }) => handoff(deps, r, to, q),
+              ...(mcp.tool ? { mcp: mcp.tool } : {}),
             },
     });
     answer = res.text;
@@ -457,13 +484,19 @@ export async function scoutAsk(
       x.ok ? `read the capsule from ${x.from}` : `capsule from ${x.from} refused: ${x.reason}`,
     ),
   ].join("; ");
+  // A skip that rests on a rule or a note cites those blobs in the Wake too (ADR-0136).
+  const cited = await citedRecalls(
+    deps,
+    r,
+    skipped.flatMap((x) => x.cites ?? []).filter((b) => !memories.some((m) => m.blobId === b)),
+  );
   const wake = await recordWake(
     { db: deps.db, memory: deps.memory, log: deps.log },
     r,
     intentBase({
       trigger,
       trustedInput: question,
-      memories,
+      memories: [...memories, ...cited],
       model: usedModel,
       prompt: `${persona}\n${question}`,
     }),
@@ -487,6 +520,7 @@ export async function scoutAsk(
         paidPayees,
         ...(skipped.length ? { skipped } : {}),
         ...(capsules.reads.length ? { capsules: capsules.reads } : {}),
+        ...(mcp.used.length ? { mcp: mcp.used } : {}),
         digests: outcomes.flatMap((o) => (o.kind === "paid" && o.digest ? [o.digest] : [])),
         ...(opts.sold ? { sale: { buyer: opts.sold.buyer } } : {}),
         ...(opts.payload ?? {}),
@@ -506,3 +540,24 @@ const chainOnly = ({ balances, object }: ReturnType<typeof readTools>) => ({
   ...(balances ? { balances } : {}),
   ...(object ? { object } : {}),
 });
+
+/** Blob ids a skip cited, as Wake memories with the namespace our index recorded for each. */
+export async function citedRecalls(
+  deps: Pick<RuntimeDeps, "db">,
+  r: { id: string },
+  blobIds: string[],
+): Promise<Recalled[]> {
+  const ids = [...new Set(blobIds)].slice(0, 8);
+  if (!ids.length) return [];
+  const rows = await deps.db
+    .select({ blobId: remoraMemories.blobId, namespace: remoraMemories.namespace })
+    .from(remoraMemories)
+    .where(and(eq(remoraMemories.remoraId, r.id), inArray(remoraMemories.blobId, ids)));
+  const ns = new Map(rows.map((x) => [x.blobId, x.namespace]));
+  return ids.map((blobId) => ({
+    blobId,
+    namespace: ns.get(blobId) ?? "sources",
+    text: "",
+    distance: 0,
+  }));
+}

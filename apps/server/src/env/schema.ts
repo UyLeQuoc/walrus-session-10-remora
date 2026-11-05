@@ -37,6 +37,14 @@ export const serverEnvSchema = operatorEnvSchema.extend({
   FACILITATOR_URL: z.string().url().optional(),
   FACILITATOR_URL_TESTNET: z.string().url().optional(),
   /**
+   * ADR-0139: the gas station's sponsor key per network, which also pays the gas of Merkle anchors
+   * (coins under the facilitator pool's floor only). Unset = no anchors on that network.
+   */
+  SPONSOR_PRIVATE_KEY: z.string().optional(),
+  SPONSOR_PRIVATE_KEY_TESTNET: z.string().optional(),
+  /** The facilitator's per-transaction gas cap; anchors read it for the pool's coin floor. */
+  SPONSOR_MAX_GAS_BUDGET: z.coerce.number().int().positive().default(50_000_000),
+  /**
    * D2 worker, and the D1 checkpoint indexer. The indexer streams from Tatum the whole time it's on,
    * so it's off unless the one instance that indexes sets it (ADR-0058).
    */

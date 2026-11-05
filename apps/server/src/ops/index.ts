@@ -1,6 +1,6 @@
 /** Wires health and `diagnose` (ADR-0052) to the real env. */
 import { type SuiNetwork, suiFallback, tatumCallsLastHour } from "@remora/chain";
-import { jobs, sql } from "@remora/db";
+import { and, eq, gt, jobs, remoraMemories, sql } from "@remora/db";
 import { createClient, RelayerExtras } from "@remora/memory";
 import { DEPLOYMENTS, type Deployment } from "@remora/schema";
 import { db, operator } from "../context.ts";
@@ -125,6 +125,18 @@ export async function liveDiagnose(network: "testnet" | "mainnet") {
         ),
       ]);
       return true;
+    },
+    async memoryIndex() {
+      if (!operator.accountId || !operator.key) return null;
+      const since = new Date(Date.now() - 7 * 86_400_000);
+      const stored = await db
+        .select({ blobId: remoraMemories.blobId })
+        .from(remoraMemories)
+        .where(and(eq(remoraMemories.status, "stored"), gt(remoraMemories.createdAt, since)));
+      const listed = new Set((await new RelayerExtras(operator).listAll()).map((m) => m.blob_id));
+      const ids = [...new Set(stored.flatMap((x) => (x.blobId ? [x.blobId] : [])))];
+      const missing = ids.filter((id) => !listed.has(id));
+      return { written: ids.length, listed: ids.length - missing.length, missing };
     },
     walrus: walrusEndpoints(network),
     fetchStatus: async (url) => (await fetch(url, { signal: AbortSignal.timeout(8_000) })).status,

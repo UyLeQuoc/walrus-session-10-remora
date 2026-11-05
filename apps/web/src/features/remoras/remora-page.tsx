@@ -47,6 +47,8 @@ import { ModelPicker } from "@/features/chat/model-picker";
 import { DEFAULT_MODEL_ID, modelById, priceLabel } from "@/features/chat/models";
 import { useSignAndRun } from "@/features/funds/sign";
 import { LearningSection } from "@/features/learning/learning";
+import { ReplaySection } from "@/features/replay/replay-section";
+import { RuleCard } from "@/features/replay/rule-card";
 import { payeeName } from "@/lib/payee";
 import { parseUsdc, usdc } from "@/lib/usdc";
 import { cn } from "@/lib/utils";
@@ -93,7 +95,7 @@ function useOwnerTx() {
   return { run, busy, go };
 }
 
-type Tab = "overview" | "activity" | "learning" | "settings";
+type Tab = "overview" | "activity" | "learning" | "replay" | "settings";
 
 /** Pause/resume needs the shared signer; kept separate from the menu so the JSX stays flat. */
 function PauseButton({ r, reload }: { r: RemoraView; reload: () => void }) {
@@ -911,6 +913,7 @@ function Remora({ id }: { id: string }) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="learning">Learning</TabsTrigger>
+          {r.template === "scout" ? <TabsTrigger value="replay">Replay</TabsTrigger> : null}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -958,6 +961,9 @@ function Remora({ id }: { id: string }) {
           {r.config.budget && r.discId ? (
             <ProposalCard r={r} onChanged={reload} open={Boolean(params.get("proposal"))} />
           ) : null}
+          {r.template === "scout" && r.config.budget && r.discId ? (
+            <RuleCard r={r} onChanged={reload} />
+          ) : null}
           <div className="grid items-start gap-8 lg:grid-cols-2">
             {r.config.budget ? <BudgetSection r={r} reload={reload} /> : null}
             <CostCard remoraId={r.id} />
@@ -990,6 +996,12 @@ function Remora({ id }: { id: string }) {
           ) : null}
           <LearningSection remoraId={r.id} />
         </TabsContent>
+
+        {r.template === "scout" ? (
+          <TabsContent value="replay" className="flex flex-col gap-8 pt-5">
+            <ReplaySection r={r} />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="settings" className="pt-5">
           <SettingsTab r={r} reload={reload} />

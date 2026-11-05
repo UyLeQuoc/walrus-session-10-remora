@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
+import { NamedAddress } from "@/features/names/sui-name";
 import { usePhone } from "@/hooks/use-phone";
 import { DataTable, SettingsGroup } from "@/openbot/pages";
 import { useReefServices } from "./hooks";
@@ -59,7 +60,7 @@ function ServiceTable({ rows }: { rows: ReefService[] }) {
               <Score service={s} />
             </td>
             <td className="w-64 max-w-64">
-              <Hash value={s.payTo} label={`${s.name} address`} />
+              <NamedAddress value={s.payTo} label={`${s.name} address`} />
             </td>
             <td>
               <Docs service={s} />

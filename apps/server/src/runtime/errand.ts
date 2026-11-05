@@ -13,6 +13,7 @@ import {
   contactsOf,
   findContact,
 } from "../money/contacts.ts";
+import { nameMoved } from "../money/names.ts";
 import { requestPayment } from "../tools/pay.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { type Remora, RemoraError } from "./remoras.ts";
@@ -110,6 +111,38 @@ export async function payContact(
       "network.no_facilitator",
       `${r.network} has no facilitator to settle with.`,
     );
+  // C1 (ADR-0144): a contact added by its `.sui` name is paid only while the name still points at
+  // the address the owner signed for. A moved name, or one that can't be checked, stops the payment.
+  if (contact.suins) {
+    const moved = await nameMoved(deps.networks.client(r.network).core, contact).catch(
+      () => "unchecked" as const,
+    );
+    if (moved) {
+      const short = (a: string | null) => (a ? `${a.slice(0, 8)}…${a.slice(-4)}` : "nobody");
+      const answer =
+        moved === "unchecked"
+          ? `I couldn't check where ${contact.suins} points right now, so I didn't pay ${contact.name}. Try again in a minute.`
+          : `${moved.name} now points to ${short(moved.now)}, not ${short(contact.address)}, the address you signed for, so I didn't pay ${contact.name}. If that's right, add ${contact.name} again (one signature).`;
+      await deps.db.insert(remoraEvents).values({
+        remoraId: r.id,
+        network: r.network,
+        type: "blocked",
+        summary: `Didn't pay ${contact.name}: ${moved === "unchecked" ? "name not checked" : "the name moved"}`,
+        payload: {
+          code: moved === "unchecked" ? "name.unchecked" : "name.moved",
+          name: contact.suins,
+          signed: contact.address,
+          now: moved === "unchecked" ? null : moved.now,
+          payee: contact.ref,
+        },
+      });
+      return {
+        answer,
+        outcome: "blocked",
+        eventId: await reply(deps, r, question, answer, { name: contact.suins }),
+      };
+    }
+  }
   const usual = await usualFor(deps, r, contact);
   if (!opts.confirmed && usual && amount >= usual * UNUSUAL_FACTOR) {
     const [a] = await deps.db

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { Amount, IsoDateTime, ObjectId, ReefRef, SuiAddress } from "./common.ts";
+import { McpServerEntry } from "./mcp.ts";
+import { PlannerRule } from "./planner-rules.ts";
 
 export const TOOL_NAMES = [
   "memory.recall",
@@ -93,7 +95,16 @@ export const RemoraConfig = z.object({
   share: z.object({ stats: z.boolean() }).optional(),
   /** ADR-0125: an Errand's people, each also one of its Disc's payees (`reef:contact-<slug>`). */
   contacts: z
-    .array(z.object({ name: z.string().min(1).max(40), address: SuiAddress, ref: ReefRef }))
+    .array(
+      z.object({
+        name: z.string().min(1).max(40),
+        address: SuiAddress,
+        ref: ReefRef,
+        /** C1 (ADR-0144): the `.sui` name it was added by, resolved again before each payment. */
+        suins: z.string().max(80).optional(),
+        resolvedAt: z.string().optional(),
+      }),
+    )
     .optional(),
   /** ADR-0114: the crew it's in, its lead, and the services it buys for that lead. */
   crew: z
@@ -106,6 +117,10 @@ export const RemoraConfig = z.object({
     .optional(),
   /** ADR-0121: outbound webhooks, signed with a secret derived per remora. */
   hooks: z.object({ out: z.array(OutHook).default([]) }).optional(),
+  /** A2 (ADR-0137): planner rules the owner accepted from outcomes; they only narrow spending. */
+  rules: z.array(PlannerRule).optional(),
+  /** ADR-0143: read-only MCP servers it may call, with the tools the owner ticked. */
+  mcp: z.array(McpServerEntry).max(5).optional(),
 });
 
 export type ToolName = z.infer<typeof ToolName>;

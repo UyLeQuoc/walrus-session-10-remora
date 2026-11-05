@@ -85,6 +85,10 @@ export default defineConfig({
     ...(process.env.U18 === "1"
       ? [{ name: "u18", testMatch: /u18\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // U19 (ADR-0134): the goal's exits on testnet (U19=1; spends well under 1 testnet USDC).
+    ...(process.env.U19 === "1"
+      ? [{ name: "u19", testMatch: /u19\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
+      : []),
     // U18 D: one answer bought on a deployment's public page (U18_LIVE=1, with E2E_BASE_URL).
     ...(process.env.U18_LIVE === "1"
       ? [
