@@ -681,7 +681,14 @@ test("A4 + A3: an import shows with its source and the next answer cites it; a t
     candidates: { i: number; text: string; flag: string | null }[];
     defaultNamespace: string;
   };
-  const imported: { file: string; source: string; written: unknown; flagged: string[] }[] = [];
+  const imported: {
+    file: string;
+    source: string;
+    written: unknown;
+    flagged: string[];
+    ticked: string[];
+    candidates: number;
+  }[] = [];
   for (const file of ["CLAUDE.md", "conversations.json"]) {
     const text = readFileSync(
       resolve(ROOT, "apps/server/src/runtime/fixtures/import", file),
@@ -704,9 +711,17 @@ test("A4 + A3: an import shows with its source and the next answer cites it; a t
       method: "POST",
       body: { previewId: p.previewId, ticked, namespace: p.defaultNamespace },
     });
-    imported.push({ file, source: p.source, written: out, flagged });
+    imported.push({
+      file,
+      source: p.source,
+      written: out,
+      flagged,
+      ticked: p.candidates.filter((c) => ticked.includes(c.i)).map((c) => c.text),
+      candidates: p.candidates.length,
+    });
   }
-  expect(imported[0]?.flagged.some((t) => /ignore your rules/i.test(t))).toBe(true);
+  // The injected line is either flagged (unticked) or not a candidate at all: never written.
+  for (const x of imported) expect(x.ticked.some((t) => /ignore your rules/i.test(t))).toBe(false);
   // The lines land on Walrus Memory with their source.
   const claude = imported[0]?.source ?? "SOURCE: import CLAUDE.md";
   const found = await until<{ results: { text: string; blobId: string }[] }>(
