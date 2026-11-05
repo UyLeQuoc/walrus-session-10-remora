@@ -18,7 +18,7 @@ import { billAction, billOf, readBillPhoto } from "./bill.ts";
 import type { RuntimeDeps } from "./deps.ts";
 import { acceptRule, declineRule, heartbeat, removeRule, rulesView } from "./heartbeat.ts";
 import { RemoraError, type RemoraService } from "./remoras.ts";
-import { pastQuestions, replayRun, replayRuns, startReplay } from "./replay.ts";
+import { defaultT0, pastQuestions, replayRun, replayRuns, startReplay } from "./replay.ts";
 
 type OwnerApp = Hono<{ Variables: { owner: string; network: SuiNetwork } }>;
 
@@ -57,7 +57,7 @@ export function mountReplay(app: OwnerApp, d: { runtime: RuntimeDeps; service: R
     return c.json({
       questions,
       runs,
-      defaultT0: new Date(r.createdAt.getTime() + 86_400_000).toISOString(),
+      defaultT0: defaultT0(r.createdAt).toISOString(),
     });
   });
 

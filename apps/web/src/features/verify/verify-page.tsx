@@ -174,6 +174,7 @@ export function VerifyPage() {
                     kind: "pay",
                     amount: r.wake.intent.decision.amount,
                     payee: r.wake.intent.decision.payee,
+                    payTo: r.wake.intent.decision.payTo,
                   }
                 : { kind: r.wake.intent.decision.action }
             }

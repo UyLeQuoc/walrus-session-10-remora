@@ -20,7 +20,8 @@
   - each skip says why ("skipped odds: your rule from Nov 6 (…)", "my notes say 0 of 3 rated answers
     from it were useful") and cites its blob ids, which also go into the Wake's `memories`.
   - Nothing here adds a purchase; the model's own follow-up buys pass the same check.
-- **The replay bench** (`replay.ts`): up to 12 questions, each planned three ways:
+- **The replay bench** (`replay.ts`): up to 12 questions and a T₀ (default 24 h after the remora was
+  made, or halfway to now for one younger than two days), each question planned three ways:
   - `none`: no recall, facts, rules or notes;
   - `t0`: recall filtered to blobs our index recorded before T₀ (a blob we never recorded is left
     out), admission against the ledger at T₀, rules accepted by T₀, track records in effect at T₀;

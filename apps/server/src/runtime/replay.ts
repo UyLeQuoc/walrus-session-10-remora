@@ -227,6 +227,15 @@ export function totalsOf(questions: ReplayRun["questions"]): ReplayRun["totals"]
   return { none: t("none"), t0: t("t0"), today: t("today") };
 }
 
+/** 24 h after it was made, or halfway to now for a remora younger than two days. */
+export const defaultT0 = (createdAt: Date, now = new Date()) =>
+  new Date(
+    Math.min(
+      createdAt.getTime() + 86_400_000,
+      createdAt.getTime() + (now.getTime() - createdAt.getTime()) / 2,
+    ),
+  );
+
 const running = new Set<string>();
 
 /**
@@ -248,7 +257,7 @@ export async function startReplay(
   if (r.status !== "active" && r.status !== "shadow")
     throw new RemoraError("remora.not_active", `${r.name} is ${r.status}.`, 409);
   const now = opts.now ?? new Date();
-  const t0 = input.t0 ?? new Date(r.createdAt.getTime() + 86_400_000);
+  const t0 = input.t0 ?? defaultT0(r.createdAt, now);
   if (t0.getTime() > now.getTime())
     throw new RemoraError("replay.bad_t0", "T₀ has to be in the past.");
   if (running.has(r.id))

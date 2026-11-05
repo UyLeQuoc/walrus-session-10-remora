@@ -473,10 +473,16 @@ test("C1: the Errand pays burner2's .sui name and the receipt shows it", async (
   const id = (prior() as { errand?: string }).errand || (await byName(page, "Errand · u19"));
   expect(id, "C2 made the Errand").toBeTruthy();
   await rotate(page);
+  const known = await api<{ contacts: { name: string; suins?: string }[] }>(
+    page,
+    `/api/remoras/${id}/contacts`,
+  );
   await page.goto(`/remoras/${id}`);
-  await page.getByLabel("Their name").fill("Linh name");
-  await page.getByLabel("Their Sui address").fill(name);
-  await page.getByTestId("errand-add").click();
+  if (!known.contacts.some((c) => c.suins === name)) {
+    await page.getByLabel("Their name").fill("Linh name");
+    await page.getByLabel("Their Sui address").fill(name);
+    await page.getByTestId("errand-add").click();
+  }
   await expect(page.getByTestId("errand-contact-name").first()).toHaveText(name, {
     timeout: 120_000,
   });
@@ -494,7 +500,7 @@ test("C1: the Errand pays burner2's .sui name and the receipt shows it", async (
   expect(out.outcome, out.answer).toBe("paid");
   await expect.poll(usdc, { timeout: 60_000 }).toBe(before + 50_000n);
   await rotate(page);
-  await page.goto(`/wake/${out.digest}`);
+  await page.goto(`/verify/${out.digest}`);
   await expect(page.getByTestId("sui-name").first()).toHaveText(name, { timeout: 60_000 });
   save({ c1: { name, digest: out.digest, answer: out.answer } });
 });
