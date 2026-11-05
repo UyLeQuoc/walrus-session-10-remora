@@ -89,6 +89,26 @@ export default defineConfig({
     ...(process.env.U19 === "1"
       ? [{ name: "u19", testMatch: /u19\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }]
       : []),
+    // U19 E (ADR-0134): production cleanup and real Reef scores (U19_PROD=1), and the live checks
+    // after the deploy (U19_LIVE=1), both with E2E_BASE_URL.
+    ...(process.env.U19_PROD === "1"
+      ? [
+          {
+            name: "u19prod",
+            testMatch: /u19-prod\.spec\.ts/,
+            use: { ...devices["Desktop Chrome"] },
+          },
+        ]
+      : []),
+    ...(process.env.U19_LIVE === "1"
+      ? [
+          {
+            name: "u19live",
+            testMatch: /u19-live\.spec\.ts/,
+            use: { ...devices["Desktop Chrome"] },
+          },
+        ]
+      : []),
     // U18 D: one answer bought on a deployment's public page (U18_LIVE=1, with E2E_BASE_URL).
     ...(process.env.U18_LIVE === "1"
       ? [
