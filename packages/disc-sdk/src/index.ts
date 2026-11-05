@@ -3,6 +3,7 @@
  * `@remora/chain` (Tatum, Node) and with gRPC-web in the browser. `discFetch` is the x402 and MPP client
  * (E2, ADR-0120).
  */
+export * from "./anchor.ts";
 export * from "./bcs.ts";
 export * from "./builders.ts";
 export * from "./config.ts";

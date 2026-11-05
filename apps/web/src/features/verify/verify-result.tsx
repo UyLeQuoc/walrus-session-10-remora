@@ -110,6 +110,9 @@ const PLAIN: Record<string, string> = {
   "decided before paying": "It decided as it paid",
   "signed by the remora": "Its own key signed",
   "saved onchain": "The decision is saved onchain",
+  "in its anchored batch": "Its proof reaches the anchored root",
+  "root onchain": "The root is onchain",
+  "anchored by the remora": "Its own key anchored it",
 };
 
 /**
