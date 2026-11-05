@@ -786,3 +786,40 @@ test("A4 + A3: an import shows with its source and the next answer cites it; a t
     0,
   );
 });
+
+test("A3: two notes that disagree become a question, and the owner's answer settles it", async ({
+  page,
+}) => {
+  test.setTimeout(15 * 60_000);
+  await signedIn(page);
+  const id =
+    (prior() as { researcher?: string }).researcher || (await byName(page, "Researcher · u19"));
+  // The owner now rates two unrated Sui risk answers noise: its note flips from useful to noise.
+  const feed = await api<{
+    events: { id: string; feedback: string | null; payload: { paidPayees?: string[] } }[];
+  }>(page, `/api/feed?remora=${id}&type=answer&limit=100`);
+  const unrated = feed.events
+    .filter((e) => !e.feedback && (e.payload.paidPayees ?? []).includes("reef:sui-risk"))
+    .slice(0, 2);
+  expect(unrated.length).toBe(2);
+  for (const e of unrated) {
+    await rotate(page);
+    await api(page, `/api/events/${e.id}/feedback`, { method: "POST", body: { verdict: "noise" } });
+  }
+  type Tidy = { conflicts: string[]; note?: string };
+  // The two new notes take about half a minute to land; a tidy is allowed six times an hour.
+  let t: Tidy = { conflicts: [] };
+  for (let i = 0; i < 4 && !t.conflicts?.length; i++) {
+    await page.waitForTimeout(60_000);
+    await rotate(page);
+    t = await api<Tidy>(page, `/api/remoras/${id}/tidy`, { method: "POST" });
+  }
+  expect(t.conflicts?.length, JSON.stringify(t).slice(0, 300)).toBeGreaterThan(0);
+  const conflictId = t.conflicts[0] as string;
+  await rotate(page);
+  const resolved = await api(page, `/api/approvals/${conflictId}/conflict-resolve`, {
+    method: "POST",
+    body: { keep: "a" },
+  });
+  save({ a3Conflict: { rated: unrated.map((e) => e.id), tidy: t, conflictId, resolved } });
+});
