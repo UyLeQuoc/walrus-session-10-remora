@@ -176,6 +176,13 @@ async function notesOn(deps: Pick<RuntimeDeps, "facts">, r: Remora, payee: strin
     .slice(0, HEARTBEAT.maxCites);
 }
 
+/** True when every number in `line` appears in one of the sources (dates and money included). */
+export function numbersFrom(line: string, sources: string[]): boolean {
+  const nums = (t: string) => t.match(/\d+(?:\.\d+)?/g) ?? [];
+  const allowed = new Set(sources.flatMap(nums).map((n) => String(Number(n))));
+  return nums(line).every((n) => allowed.has(String(Number(n))));
+}
+
 export interface RuleProposalPayload {
   kind: "planner_rule";
   rule: RuleDraft["rule"] & { text: string };
@@ -244,7 +251,10 @@ export async function heartbeat(
       memories: notes.map((n) => `${n.at.slice(0, 10)}: ${svc} track record: ${n.value}`),
       data: [{ source: "outcomes", content: fallback }],
     });
-    reason = out.text.replace(/\s+/g, " ").trim().slice(0, 240) || fallback;
+    const line = out.text.replace(/\s+/g, " ").trim().slice(0, 240);
+    // The model may only restate numbers it was given: any other number (a "25 calls" from "5
+    // calls") falls back to the line written from the counts.
+    reason = line && numbersFrom(line, [fallback, ...notes.map((n) => n.value)]) ? line : fallback;
   } catch {
     reason = fallback;
   }

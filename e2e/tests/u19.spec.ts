@@ -498,3 +498,155 @@ test("C1: the Errand pays burner2's .sui name and the receipt shows it", async (
   await expect(page.getByTestId("sui-name").first()).toHaveText(name, { timeout: 60_000 });
   save({ c1: { name, digest: out.digest, answer: out.answer } });
 });
+
+test("C4: disc.fetch finds a house service in the x402 catalog and pays it", async ({ page }) => {
+  test.setTimeout(10 * 60_000);
+  const { createHash } = await import("node:crypto");
+  const { buildIssue, buildRevoke, discFetch } = await import("@remora/disc-sdk");
+  const { DEPLOYMENTS } = await import("@remora/schema");
+  await page.goto("/");
+  type Item = {
+    resource: string;
+    type: string;
+    x402Version: number;
+    accepts: { payTo: string; amount: string }[];
+    metadata: { ref: string; name: string };
+  };
+  const catalog = await api<{ x402Version: number; items: Item[]; pagination: { total: number } }>(
+    page,
+    "/api/facilitator/discovery/resources?limit=100",
+  );
+  const item = catalog.items.find((i) => i.metadata.ref === "reef:sui-risk");
+  expect(item, JSON.stringify(catalog).slice(0, 300)).toBeTruthy();
+  const payTo = item?.accepts[0]?.payTo as string;
+  const amount = BigInt(item?.accepts[0]?.amount ?? "0");
+  const d = DEPLOYMENTS.testnet;
+  const cfg = {
+    packageId: d.remoraPackageId as string,
+    registryId: d.discRegistryId as string,
+    coinType: d.usdcCoinType,
+  };
+  const client = testnet();
+  const owner = burner();
+  const spender = new Ed25519Keypair();
+  const exec = async (transaction: ReturnType<typeof buildIssue>) => {
+    const r = await client.signAndExecuteTransaction({
+      transaction,
+      signer: owner,
+      include: { effects: true, objectTypes: true },
+    });
+    const t = r.Transaction ?? r.FailedTransaction;
+    if (!t.effects?.status.success) throw new Error(JSON.stringify(t.effects?.status));
+    await client.core.waitForTransaction({ digest: t.digest });
+    return t;
+  };
+  const issued = await exec(
+    buildIssue(cfg, {
+      name: `remora-u19-c4-${Date.now()}`,
+      spender: spender.toSuiAddress(),
+      lifetimeCap: amount,
+      expiryMs: Date.now() + 3600_000,
+      payees: [payTo],
+      perPaymentCap: amount,
+    }),
+  );
+  const created = (suffix: string) =>
+    issued.effects?.changedObjects.find(
+      (o) =>
+        o.idOperation === "Created" && (issued.objectTypes?.[o.objectId] ?? "").includes(suffix),
+    )?.objectId ?? "";
+  const disc = {
+    discId: created("::disc::Disc"),
+    allowanceId: created("::allowance::Allowance<"),
+    funder: owner.toSuiAddress(),
+  };
+  const capId = created("::allowance::AllowanceCap<");
+  try {
+    const url = item?.resource.replace(":id", "0x2") as string;
+    const { response, payment } = await discFetch(
+      {
+        network: "testnet",
+        cfg,
+        disc,
+        sender: spender.toSuiAddress(),
+        sign: async (bytes) => (await spender.signTransaction(bytes)).signature,
+        maxAmount: amount,
+        intentFor: (req) => createHash("sha256").update(JSON.stringify(req)).digest(),
+        client,
+      },
+      url,
+    );
+    expect(response.status).toBe(200);
+    expect(payment?.settle?.transaction).toBeTruthy();
+    save({
+      c4: {
+        items: catalog.items.length,
+        x402Version: catalog.x402Version,
+        resource: item?.resource,
+        issued: issued.digest,
+        paid: payment?.settle?.transaction,
+        amount: amount.toString(),
+      },
+    });
+  } finally {
+    const revoked = await exec(
+      buildRevoke(cfg, { discId: disc.discId, capId, allowanceId: disc.allowanceId }),
+    );
+    save({ c4Revoked: revoked.digest });
+  }
+});
+
+test("B2: one batch anchors the Researcher's Wakes that didn't pay, and a proof verifies", async ({
+  page,
+}) => {
+  test.setTimeout(10 * 60_000);
+  await signedIn(page);
+  const id =
+    (prior() as { researcher?: string }).researcher || (await byName(page, "Researcher · u19"));
+  expect(id, "A made the Researcher").toBeTruthy();
+  await rotate(page);
+  const batch = await api<{
+    ok: boolean;
+    digest?: string;
+    root?: string;
+    count?: number;
+    reason?: string;
+    message?: string;
+  }>(page, `/api/remoras/${id}/anchor`, { method: "POST" });
+  expect(batch.ok, JSON.stringify(batch)).toBe(true);
+  // A Wake from this run that didn't pay: the answer after the rule (it paid sui-risk, so take a
+  // memory-only one if there is one, else any receipt the batch anchored).
+  const feed = await api<{ events: { receiptId: string | null; type: string }[] }>(
+    page,
+    `/api/feed?remora=${id}&limit=100`,
+  );
+  let proof: {
+    anchor: { digest: string; steps: number } | null;
+    checks: { name: string; ok: boolean | null; detail: string }[];
+  } | null = null;
+  let receipt = "";
+  for (const e of feed.events) {
+    if (!e.receiptId) continue;
+    await rotate(page);
+    const v = await api<{
+      found: boolean;
+      anchored: boolean;
+      anchor: { digest: string; steps: number } | null;
+      checks: { name: string; ok: boolean | null; detail: string }[];
+    }>(page, `/api/verify/${e.receiptId}`);
+    if (v.anchor) {
+      proof = v;
+      receipt = e.receiptId;
+      break;
+    }
+  }
+  expect(proof?.anchor?.digest, "a Wake of this run is anchored").toBe(batch.digest);
+  expect(
+    proof?.checks.every((c) => c.ok !== false),
+    JSON.stringify(proof?.checks),
+  ).toBe(true);
+  await rotate(page);
+  await page.goto(`/verify/${receipt}`);
+  await expect(page.getByText(/anchored in/i).first()).toBeVisible({ timeout: 60_000 });
+  save({ b2: { batch, receipt, anchor: proof?.anchor, checks: proof?.checks } });
+});

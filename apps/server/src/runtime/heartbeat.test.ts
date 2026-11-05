@@ -11,6 +11,7 @@ import {
   HEARTBEAT,
   heartbeat,
   narrowsOnly,
+  numbersFrom,
   type Outcome,
 } from "./heartbeat.ts";
 
@@ -67,6 +68,15 @@ describe("rule proposals from outcomes (A2)", () => {
         },
       ]),
     ).toBeNull();
+  });
+
+  it("the model's reason may only restate numbers it was given", () => {
+    const src = [
+      "You rated Odds's answers noise 3 times since Nov 5.",
+      "5 calls · 2 useful · 3 noise",
+    ];
+    expect(numbersFrom("Odds was noise 3 times in 5 calls since Nov 5.", src)).toBe(true);
+    expect(numbersFrom("Odds gave 2 useful answers out of 25 calls.", src)).toBe(false);
   });
 
   it("a rule can only narrow: a prefer that adds a service is refused", () => {

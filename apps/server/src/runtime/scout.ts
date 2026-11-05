@@ -407,7 +407,7 @@ export async function scoutAsk(
             pay: async ({ payee, url, reason }: { payee: string; url: string; reason: string }) => {
               const why = skipReason(scores?.get(payee), payeeLabel(payee));
               if (why) {
-                skipped.push({ payee, reason: why });
+                if (!skipped.some((x) => x.payee === payee)) skipped.push({ payee, reason: why });
                 return `Not bought: ${why}.`;
               }
               // The model's own follow-ups go through the same rules and notes.
@@ -418,7 +418,7 @@ export async function scoutAsk(
                 records,
               }).skips[0];
               if (mine) {
-                skipped.push(mine);
+                if (!skipped.some((x) => x.payee === mine.payee)) skipped.push(mine);
                 return `Not bought: ${mine.reason}.`;
               }
               const o = await buy(payee, url, reason);
