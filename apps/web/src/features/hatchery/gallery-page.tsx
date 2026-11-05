@@ -20,6 +20,7 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { kindName } from "@/lib/kind";
 import { GalleryCard } from "@/openbot/pages";
 import { shortAddress } from "./parts";
+import { RatingBadge } from "./rating-section";
 
 const VERDICT: Record<string, { label: string; variant: "success" | "warning" | "destructive" }> = {
   pass: { label: "reviewed", variant: "success" },
@@ -135,6 +136,8 @@ export function HatcheryPage() {
                       <span data-testid="fork-count">{t.forks}</span>
                       <span className="sr-only">{t.forks === 1 ? "copy" : "copies"}</span>
                     </span>
+                    {/* D2 (ADR-0149): weighted by each owner's paid calls. */}
+                    <RatingBadge rating={t.rating} />
                   </>
                 }
               >

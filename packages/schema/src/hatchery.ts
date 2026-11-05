@@ -8,6 +8,7 @@ import { z } from "zod";
 import { BlobId, IsoDateTime, ObjectId, ReefRef, SuiAddress } from "./common.ts";
 import { Network } from "./network.ts";
 import { TeamFile } from "./team.ts";
+import { TemplateRatingSummary } from "./template-extras.ts";
 
 /** M7: what the review found. `block` stops publish and hatch; `warn` shows on the consent screen. */
 export const SafetyFinding = z.object({
@@ -89,6 +90,10 @@ export const HatcheryListing = z.object({
       costPerUsefulUsdc: z.string().nullable(),
     })
     .nullable(),
+  /** D2 (ADR-0149): owners' ratings weighted by their paid calls; null until someone rates it. */
+  rating: TemplateRatingSummary.nullable().optional(),
+  /** D3 (ADR-0150): its author's newest version, when this one has been superseded. */
+  newer: ObjectId.nullable().optional(),
 });
 
 /** M5: the install-style consent screen, before the one signature. */

@@ -1,12 +1,13 @@
 /**
- * M12: an embeddable "Hatch this remora" badge for a template's author. It previews the badge and
- * offers two read-only snippets (Markdown and HTML) that link back to `/hatchery/:templateId` on
- * this site, with copy buttons for each.
+ * M12 (ADR-0149): an embeddable badge for a template. It previews the live SVG (`/badge/:id.svg`: the
+ * name and the hatch count) and offers two read-only snippets (Markdown and HTML) that show it and
+ * link back to `/hatchery/:templateId` on this site, with copy buttons for each.
  */
 import { GitFork } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
+import { badgeUrl } from "./extras-api";
 
 type Kind = "markdown" | "html";
 type Status = { kind: Kind; ok: boolean } | null;
@@ -16,8 +17,11 @@ const COPIED_MS = 2000;
 export function HatchBadge({ templateId, name }: { templateId: string; name: string }) {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const path = `/hatchery/${templateId}`;
-  const markdown = `[Use this remora](${origin}${path})`;
-  const html = `<a href="${origin}${path}">Use this remora</a>`;
+  const img = badgeUrl(origin, templateId);
+  // The name is the author's text: escaped for each snippet's syntax.
+  const alt = `Use this remora: ${name}`;
+  const markdown = `[![${alt.replace(/[[\]\\]/g, "\\$&")}](${img})](${origin}${path})`;
+  const html = `<a href="${origin}${path}"><img src="${img}" alt="${alt.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}" /></a>`;
 
   const [status, setStatus] = useState<Status>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,6 +68,12 @@ export function HatchBadge({ templateId, name }: { templateId: string; name: str
             <span className="truncate text-md text-ob-muted">{name}</span>
           </span>
         </Link>
+        <img
+          src={img}
+          alt={`${name}: hatch count`}
+          className="mt-3 block h-5 w-auto"
+          data-testid="hatch-badge-svg"
+        />
       </div>
 
       <div className="flex flex-col gap-2">

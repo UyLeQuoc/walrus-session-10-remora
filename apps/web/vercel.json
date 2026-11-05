@@ -10,6 +10,10 @@
       "destination": "https://api-production-d2c7.up.railway.app/api/:path*"
     },
     {
+      "source": "/badge/:path*",
+      "destination": "https://api-production-d2c7.up.railway.app/badge/:path*"
+    },
+    {
       "source": "/about",
       "destination": "/landing.html"
     },

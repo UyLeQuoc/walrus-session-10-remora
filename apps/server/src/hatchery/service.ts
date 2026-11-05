@@ -20,6 +20,8 @@ import {
   hatcheryForks,
   hatcheryTemplates,
   inArray,
+  isNotNull,
+  ne,
   remoraEvents,
   sql,
 } from "@remora/db";
@@ -37,7 +39,9 @@ import { type Remora, RemoraError, type RemoraService } from "../runtime/remoras
 import { applyTeam, confirmTeam, exportTeam, parseTeamMarkdown } from "../runtime/teams.ts";
 import { answersQuestions, TEMPLATES } from "../templates/index.ts";
 import { decodeHatcheryEvents, type HatcheryEvent } from "./events.ts";
+import { ratingSummaries } from "./ratings.ts";
 import { privateReason, reviewTemplate } from "./safety.ts";
+import { offerTemplateUpdates } from "./updates.ts";
 import type { WalrusStore } from "./walrus.ts";
 
 export interface HatcheryDeps {
@@ -332,7 +336,15 @@ export async function confirmPublish(
   if (!published || published.author !== normalizeSuiAddress(owner))
     throw new RemoraError("hatchery.no_publish", "That transaction didn't publish a template.");
   await ingest(h, network, published, digest);
+  // D3 (ADR-0150): a new version is offered to the remoras hatched from an older one.
+  if (published.parent) await offerUpdates(h, published.template);
   return listing(h, network, published.template);
+}
+
+async function offerUpdates(h: HatcheryDeps, templateId: string) {
+  await offerTemplateUpdates(h, templateId).catch((err) =>
+    h.runtime.log.warn("hatchery.update_offer_failed", { template: templateId, error: err }),
+  );
 }
 
 // ── M4: gallery ──────────────────────────────────────────────────────────────
@@ -364,6 +376,10 @@ async function toListings(h: HatcheryDeps, rows: Row[]): Promise<HatcheryListing
         .where(inArray(remoraEvents.remoraId, remoraIds))
         .groupBy(remoraEvents.remoraId)
     : [];
+  // D2 (ADR-0149): owners' ratings, weighted by their paid calls.
+  const ratings = await ratingSummaries(h.runtime.db, ids);
+  // D3 (ADR-0150): the author's newest version of each, when there's a newer one.
+  const newer = await newestVersions(h.runtime.db, rows);
   return rows.map((row) => {
     const team = TeamFile.safeParse(row.team);
     const mine = hatched.filter((f) => f.templateId === row.templateId);
@@ -392,8 +408,53 @@ async function toListings(h: HatcheryDeps, rows: Row[]): Promise<HatcheryListing
             costPerUsefulUsdc: useful ? (spent / 1e6 / useful).toFixed(4) : null,
           }
         : null,
+      rating: ratings.get(row.templateId) ?? null,
+      newer: newer.get(row.templateId) ?? null,
     };
   });
+}
+
+/**
+ * For each row, its author's newest live version further down its line (children by the same author,
+ * not deprecated or blocked), if any. One query for every derived template on those networks.
+ */
+async function newestVersions(db: HatcheryDeps["runtime"]["db"], rows: Row[]) {
+  const out = new Map<string, string>();
+  if (!rows.length) return out;
+  const children = await db
+    .select({
+      id: hatcheryTemplates.templateId,
+      parent: hatcheryTemplates.parent,
+      author: hatcheryTemplates.author,
+      network: hatcheryTemplates.network,
+      at: hatcheryTemplates.publishedAt,
+    })
+    .from(hatcheryTemplates)
+    .where(
+      and(
+        isNotNull(hatcheryTemplates.parent),
+        inArray(hatcheryTemplates.network, [...new Set(rows.map((r) => r.network))]),
+        eq(hatcheryTemplates.deprecated, false),
+        ne(hatcheryTemplates.verdict, "block"),
+      ),
+    )
+    .orderBy(desc(hatcheryTemplates.publishedAt));
+  if (!children.length) return out;
+  for (const row of rows) {
+    let at = row.templateId;
+    let newest: string | null = null;
+    for (let hop = 0; hop < 20; hop++) {
+      // Newest first, so a template with two children follows the later one.
+      const child = children.find(
+        (c) => c.parent === at && c.author === row.author && c.network === row.network,
+      );
+      if (!child) break;
+      newest = child.id;
+      at = child.id;
+    }
+    if (newest) out.set(row.templateId, newest);
+  }
+  return out;
 }
 
 export async function gallery(
@@ -416,7 +477,8 @@ export async function gallery(
     }
     return true;
   });
-  return toListings(h, picked);
+  // D3 (ADR-0150): one card per line of versions, its newest; older ones stay reachable by link.
+  return (await toListings(h, picked)).filter((l) => !l.newer);
 }
 
 export async function listing(h: HatcheryDeps, network: SuiNetwork, templateId: string) {
@@ -648,9 +710,14 @@ export async function onIndexedEvents(
   for (const { digest, events: list } of events) {
     for (const e of list) {
       if (e.type === "Published") {
-        await ingest(h, network, e, digest).catch((err) =>
-          h.runtime.log.warn("hatchery.ingest_failed", { template: e.template, error: err }),
+        const ok = await ingest(h, network, e, digest).then(
+          () => true,
+          (err) => {
+            h.runtime.log.warn("hatchery.ingest_failed", { template: e.template, error: err });
+            return false;
+          },
         );
+        if (ok && e.parent) await offerUpdates(h, e.template);
       } else if (e.type === "Forked") {
         await h.runtime.db
           .insert(hatcheryForks)
