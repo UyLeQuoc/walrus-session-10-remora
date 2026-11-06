@@ -30,6 +30,7 @@ function fakeDeps() {
   const writes: { ns: string; key: string; items: RememberBulkItem[] }[] = [];
   const events: { summary: string; payload: Record<string, unknown> }[] = [];
   let forgot = 0;
+  const staged: string[][] = [];
   const deps: ImportCommitDeps = {
     log,
     writer: (_r, ns) => ({
@@ -49,11 +50,12 @@ function fakeDeps() {
     }),
     knownHashes: async () => new Set(),
     record: async (_r, summary, payload) => void events.push({ summary, payload }),
-    forgetStaging: async () => {
+    forgetStaging: async (_r, jobIds) => {
       forgot++;
+      staged.push(jobIds);
     },
   };
-  return { deps, writes, events, forgot: () => forgot };
+  return { deps, writes, events, forgot: () => forgot, staged };
 }
 
 describe("preview (A4)", () => {
@@ -123,6 +125,32 @@ describe("commit (A4)", () => {
         "me",
       ]),
     ).rejects.toThrow(/Upload the file again/);
+  });
+
+  it("hands the staged analyze jobs to the forget, without waiting on it (ADR-0153)", async () => {
+    const p = await prepareImport({ fileName: "CLAUDE.md", text: fixture("CLAUDE.md") });
+    const stored = savePreview(
+      { ...p, stagedJobs: ["job-1", "job-2"] },
+      { owner: OWNER, remoraId: R.id },
+    );
+    const f = fakeDeps();
+    let release = () => {};
+    f.deps.forgetStaging = (_r, jobIds) => {
+      f.staged.push(jobIds);
+      return new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    };
+    const out = await commitImport(
+      f.deps,
+      R,
+      OWNER,
+      { previewId: stored.id, ticked: [0], namespace: "me" },
+      ["me"],
+    );
+    expect(out.written).toBe(1);
+    expect(f.staged).toEqual([["job-1", "job-2"]]);
+    release();
   });
 
   it("the same lines give the same keys (a retried call lands on the same jobs)", async () => {

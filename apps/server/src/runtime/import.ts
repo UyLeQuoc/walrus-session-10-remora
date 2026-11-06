@@ -6,8 +6,10 @@
  *    and cut into chunks of at most 64 KiB. The relayer's `analyze` reads up to 8 chunks (newest
  *    first, each with `occurredAt` when the file has dates); every other chunk, or one `analyze`
  *    can't read, is split into its lines. `analyze` stores what it extracts, so it runs in a staging
- *    namespace no turn ever recalls (`remora:<id>:import-staging`). The relayer is asked to forget it
- *    on commit, best effort: measured, its forget dropped nothing, so nothing reading it is the guard.
+ *    namespace no turn ever recalls (`remora:<id>:import-staging`). On commit the server waits for
+ *    those `analyze` jobs to settle, then asks the relayer to forget the namespace, in the background
+ *    and best effort (a forget before they settle drops nothing, ADR-0153); nothing reading it stays
+ *    the guard.
  *    Candidates live in this process for 30 minutes; their text never goes into Postgres.
  * 2. **Commit:** the ticked lines (at most 100) go to one of the remora's namespaces through
  *    `remember_bulk`, 20 a call with an idempotency key, each ending
@@ -76,6 +78,8 @@ export interface PreparedImport {
   /** What the scrubber took out, by kind. */
   scrubbed: string[];
   candidates: Candidate[];
+  /** ADR-0153: the `analyze` jobs writing to the staging namespace, waited for before its forget. */
+  stagedJobs?: string[];
 }
 
 /** Parse, scrub, chunk, analyze (or split), and build the candidates. No storage. */
@@ -245,8 +249,8 @@ export interface ImportCommitDeps {
   knownHashes: (r: RemoraRef, ns: string) => Promise<Set<string>>;
   /** The feed's line: counts, file name and namespace, never the text. */
   record: (r: RemoraRef, summary: string, payload: Record<string, unknown>) => Promise<void>;
-  /** Drops the staging namespace from the relayer's index (best effort). */
-  forgetStaging?: (r: RemoraRef) => Promise<void>;
+  /** Drops the staging namespace from the relayer's index once its jobs settle (best effort). */
+  forgetStaging?: (r: RemoraRef, jobIds: string[]) => Promise<void>;
 }
 
 export interface ImportCommitted {
@@ -285,8 +289,9 @@ export async function commitImport(
     }
   }
   dropPreview(p.id);
-  await deps
-    .forgetStaging?.(r)
+  // In the background: waiting for the staged jobs mustn't hold up the owner's commit.
+  void deps
+    .forgetStaging?.(r, p.stagedJobs ?? [])
     .catch((err) => deps.log.warn("import.staging_forget_failed", { remora: r.id, error: err }));
   const where = plan.namespace;
   await deps.record(

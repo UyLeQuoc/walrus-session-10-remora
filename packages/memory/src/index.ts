@@ -105,7 +105,13 @@ export {
   type RelayerConfig,
   readAccount,
 } from "./registry.ts";
-export { type MemoryMeta, RelayerExtras, type StatsResult } from "./relayer.ts";
+export {
+  forgetSettled,
+  type MemoryMeta,
+  RelayerExtras,
+  type SettledForget,
+  type StatsResult,
+} from "./relayer.ts";
 export {
   addDelegateKeyTx,
   createAccountTx,

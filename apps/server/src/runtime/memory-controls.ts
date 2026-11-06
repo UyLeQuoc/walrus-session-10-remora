@@ -2,8 +2,8 @@
  * F4, F5, F8 (ADR-0046, ADR-0048): what an owner can do with a remora's memory, honestly.
  * - **Hide** one memory: our own filter on recall and dedupe (the blob stays on Walrus; it can be undone).
  * - **Correct** a fact: a `[correction]` that names the blob it replaces; the old one stops being recalled.
- * - **Forget all** in a namespace: the relayer drops that namespace's index; blobs stay until they expire,
- *   and the facts read from them are retracted (F15).
+ * - **Forget all** in a namespace: the relayer drops that namespace's index once its pending writes
+ *   settle (ADR-0153); blobs stay until they expire, and the facts read from them are retracted (F15).
  * - **Expiry**: from the relayer's read API, flagged under 30 days.
  * - **Export**: metadata always, text when recall returns it, verified against the hash we recorded.
  * - **Duplicates**: a write skipped because it matched a stored memory is shown, never silent (ADR-0086).
@@ -20,7 +20,13 @@ import {
   or,
   remoraMemories,
 } from "@remora/db";
-import { createMemoryPort, type MemoryType, RelayerExtras, type WriteEvent } from "@remora/memory";
+import {
+  createMemoryPort,
+  forgetSettled,
+  type MemoryType,
+  RelayerExtras,
+  type WriteEvent,
+} from "@remora/memory";
 import type { InspectorResponse, RemoraMemoryExport } from "@remora/schema";
 import { MEMORY_TYPES } from "@remora/schema";
 import { recoverText } from "../memory/export.ts";
@@ -154,13 +160,22 @@ export async function correct(
   return { corrects: input.blobId, saved: res.saved, note: res.note };
 }
 
-/** F4: forget a whole namespace. The relayer drops its index; the blobs stay until they expire. */
+/** How long "forget all" waits for the namespace's writes still running (ADR-0153). */
+export const FORGET_WAIT_MS = 30_000;
+
+/**
+ * F4: forget a whole namespace. The relayer drops its index; the blobs stay until they expire. Its
+ * forget drops only what it has indexed, so the writes still running are waited for first
+ * (ADR-0153); any that outlast the wait are hidden by our own filter (the rows below), so recall
+ * skips them when they land.
+ */
 export async function forgetNamespace(
   db: Db,
   operator: { key: string; accountId: string; serverUrl: string },
   r: RemoraRef,
   namespaces: string[],
   ns: string,
+  relayer: Pick<RelayerExtras, "forget" | "waitForJobs"> = new RelayerExtras(operator),
 ) {
   assertNamespace(namespaces, ns);
   if (ns === "me")
@@ -168,7 +183,23 @@ export async function forgetNamespace(
       "memory.shared",
       "“me” is shared by all your remoras; hide single memories there instead.",
     );
-  await new RelayerExtras(operator).forget(namespaceFor(r, ns));
+  const running = await db
+    .select({ jobId: remoraMemories.jobId })
+    .from(remoraMemories)
+    .where(
+      and(
+        eq(remoraMemories.remoraId, r.id),
+        eq(remoraMemories.namespace, ns),
+        eq(remoraMemories.status, "pending"),
+        isNotNull(remoraMemories.jobId),
+      ),
+    );
+  const { deleted, pending } = await forgetSettled(
+    relayer,
+    namespaceFor(r, ns),
+    running.flatMap((x) => (x.jobId ? [x.jobId] : [])),
+    { timeoutMs: FORGET_WAIT_MS },
+  );
   await db
     .update(remoraMemories)
     .set({ hiddenAt: new Date() })
@@ -181,7 +212,9 @@ export async function forgetNamespace(
     );
   return {
     namespace: ns,
-    note: "Recall no longer finds these memories. Walrus Memory can't delete a stored blob, so they stay encrypted on Walrus until they expire.",
+    deleted,
+    pending,
+    note: `Recall no longer finds these memories (Walrus Memory dropped ${deleted} from its index${pending ? `; ${pending} still being written are hidden when they land` : ""}). Walrus Memory can't delete a stored blob, so they stay encrypted on Walrus until they expire.`,
   };
 }
 

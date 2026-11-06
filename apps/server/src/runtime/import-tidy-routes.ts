@@ -12,6 +12,7 @@ import { and, eq, isNotNull, ne, remoraEvents, remoraMemories } from "@remora/db
 import {
   createClient,
   createMemoryPort,
+  forgetSettled,
   limiterFor,
   RelayerExtras,
   runLimited,
@@ -58,8 +59,11 @@ const approvalId = (c: Context) => {
   return v;
 };
 
-/** The relayer's `analyze`, writing its extractions only to the staging namespace. */
-function analyzerFor(operator: Operator, r: RemoraRef): Analyzer {
+/**
+ * The relayer's `analyze`, writing its extractions only to the staging namespace. Each fact is
+ * stored by a background job; their ids go into `staged` so the commit can forget them (ADR-0153).
+ */
+function analyzerFor(operator: Operator, r: RemoraRef, staged: string[]): Analyzer {
   const namespace = stagingNamespace(r);
   const client = createClient({ mode: "guest", ...operator, namespace });
   const limiter = limiterFor(operator.key);
@@ -68,6 +72,7 @@ function analyzerFor(operator: Operator, r: RemoraRef): Analyzer {
     const out = await runLimited(limiter, () =>
       client.analyze(text, { namespace, signal, ...(occurredAt ? { occurredAt } : {}) }),
     );
+    staged.push(...(out.job_ids ?? []));
     return out.facts.map((f) => f.text);
   };
 }
@@ -98,11 +103,15 @@ export function mountImportTidy(
         );
       if (!rt.limiter.take(`import:${r.id}`, { limit: 6, ms: 3_600_000 }).allowed)
         throw new RemoraError("rate_limited", "Six imports an hour: try again later.", 409);
+      const stagedJobs: string[] = [];
       const prepared = await prepareImport(
         { ...(body.data.fileName ? { fileName: body.data.fileName } : {}), text: body.data.text },
-        d.operator ? analyzerFor(d.operator, r) : undefined,
+        d.operator ? analyzerFor(d.operator, r, stagedJobs) : undefined,
       ).catch(importError);
-      const stored = savePreview(prepared, { owner: c.get("owner"), remoraId: r.id });
+      const stored = savePreview(
+        { ...prepared, stagedJobs },
+        { owner: c.get("owner"), remoraId: r.id },
+      );
       const namespaces = importNamespaces(service.config(r).namespaces);
       return c.json({
         previewId: stored.id,
@@ -167,8 +176,17 @@ export function mountImportTidy(
             .insert(remoraEvents)
             .values({ remoraId: ref.id, network: r.network, type: "action", summary, payload });
         },
-        forgetStaging: async (ref) => {
-          await new RelayerExtras(operator).forget(stagingNamespace(ref));
+        forgetStaging: async (ref, jobIds) => {
+          const out = await forgetSettled(
+            new RelayerExtras(operator),
+            stagingNamespace(ref),
+            jobIds,
+          );
+          rt.log.info("import.staging_forgot", {
+            remora: ref.id,
+            deleted: out.deleted,
+            pending: out.pending,
+          });
         },
       },
       r,

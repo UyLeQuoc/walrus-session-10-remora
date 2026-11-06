@@ -20,6 +20,31 @@ export interface ForgetResult {
   namespace: string;
   owner: string;
 }
+export interface SettledForget extends ForgetResult {
+  /** Jobs still running when the wait gave up: what they write is indexed after this forget. */
+  pending: number;
+}
+
+/**
+ * ADR-0153: `POST /api/forget` drops only what the relayer has already indexed. A `remember` or
+ * `analyze` job still running is indexed after it and stays recallable. Measured on Nov 6: a forget
+ * right after `analyze` answered `deleted: 0`, then both facts were indexed and recalled; the same
+ * forget once the jobs had settled answered `deleted: 2` and recall found nothing. So wait first.
+ */
+export async function forgetSettled(
+  relayer: Pick<RelayerExtras, "forget" | "waitForJobs">,
+  namespace: string,
+  jobIds: readonly string[],
+  opts: { timeoutMs?: number } = {},
+): Promise<SettledForget> {
+  const pending = jobIds.length
+    ? await relayer
+        .waitForJobs(namespace, jobIds, opts.timeoutMs ?? 120_000)
+        .catch(() => jobIds.length)
+    : 0;
+  return { ...(await relayer.forget(namespace)), pending };
+}
+
 export interface WhoamiResult {
   account_id: string;
   owner: string;
@@ -61,6 +86,17 @@ export class RelayerExtras {
   }
   forget(namespace: string): Promise<ForgetResult> {
     return this.signed<ForgetResult>("POST", "/api/forget", { namespace });
+  }
+  /** How many of `jobIds` are still running after waiting up to `timeoutMs` (0: all settled). */
+  async waitForJobs(namespace: string, jobIds: readonly string[], timeoutMs: number) {
+    if (!jobIds.length) return 0;
+    const client = createClient({ mode: "guest", ...this.scope, namespace });
+    const out = await client.waitForRememberJobs(
+      [...jobIds],
+      jobIds.map(() => namespace),
+      { timeoutMs },
+    );
+    return out.results.filter((x) => x.status === "timeout").length;
   }
   whoami(): Promise<WhoamiResult> {
     return this.signed<WhoamiResult>("GET", "/api/whoami");
