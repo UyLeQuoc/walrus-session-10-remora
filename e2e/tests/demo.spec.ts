@@ -320,6 +320,10 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
     }
   };
 
+  const want = (n: string) => !only || only.includes(n);
+  const rotate = (page: Page) =>
+    page.context().setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
+
   // 1. A first visit: no wallet, a $1 Disc, a paid answer over x402, a receipt that verifies.
   const visitor = await newPage(browser, false);
   await visitor.goto("/");
@@ -540,7 +544,8 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       await s.page.getByRole("button", { name: "Go live" }).click();
       await expect(s.page.getByText("active").first()).toBeVisible({ timeout: 30_000 });
     },
-    true,
+    // Made off camera only when the brief is filmed: a partial re-capture shouldn't make a Briefer.
+    want("brief"),
   );
   if (brieferId)
     await shot("brief", owner, async (s) => {
@@ -665,6 +670,71 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
       await s.hold(5000, "learning");
     });
 
+  // 5b. It gets better (ADR-0152): the U19 run's Researcher, which paid for ten answers, turned the
+  // owner's ratings into a rule, and replayed the same ten questions with no memory, memory as of T₀
+  // and today's. The shot opens that replay; nothing here pays (a replay never does, ADR-0136).
+  type Past = { runId: string; status: string; totals?: Record<string, { services: number }> };
+  let replayed: { id: string; runId: string } | null = null;
+  if (want("replay"))
+    for (const r of (await remoras(owner)).filter(
+      (x) => x.status !== "retired" && x.name === "Researcher · u19",
+    )) {
+      await rotate(owner);
+      const { runs } = (await owner.evaluate(
+        async (p) =>
+          (await fetch(p, { headers: { "x-remora-network": "testnet" } })).json() as Promise<{
+            runs: Past[];
+          }>,
+        `/api/remoras/${r.id}/replay`,
+      )) as { runs: Past[] };
+      const best = runs.find(
+        (x) =>
+          x.status === "done" &&
+          x.totals &&
+          (x.totals.today?.services ?? 0) < (x.totals.none?.services ?? 0),
+      );
+      if (best) {
+        replayed = { id: r.id, runId: best.runId };
+        break;
+      }
+    }
+  if (replayed) {
+    const { id } = replayed;
+    await shot("replay", owner, async (s) => {
+      await rotate(s.page);
+      await go(s, `/remoras/${id}`);
+      const rule = s.page.getByTestId("rule-card").getByTestId("rule-row").first();
+      await rule.evaluate((el) => el.scrollIntoView({ block: "center" }));
+      await s.hold(1000, "rule");
+      await s.box("rule", rule);
+      await s.hold(2600);
+      await s.click(s.page.getByRole("tab", { name: "Replay" }), "Replay");
+      const bench = s.page.getByTestId("replay-bench");
+      await bench.waitFor({ timeout: 30_000 });
+      await s.hold(1200, "bench");
+      const past = s.page.getByTestId("replay-past").first();
+      await s.click(past, "past");
+      const totals = s.page.getByTestId("replay-totals");
+      await expect(s.page.getByTestId("replay-services-today")).toBeVisible({ timeout: 30_000 });
+      s.mark("replay-open");
+      // The run opens below the questions: bring its totals and first difference into one frame.
+      await s.page
+        .getByLabel("More questions, one per line")
+        .evaluate((el) => el.scrollIntoView({ block: "start" }));
+      await s.hold(600);
+      await s.box("totals", s.page.getByTestId("replay-label"), totals);
+      await s.hold(3800, "totals");
+      const diff = s.page
+        .getByTestId("replay-question")
+        .filter({ has: s.page.getByTestId("replay-diff") })
+        .first();
+      await s.hold(400, "diff");
+      await s.box("diff", diff);
+      await s.to(diff.getByTestId("replay-cite").first(), "cite");
+      await s.hold(3800, "cited");
+    });
+  }
+
   // 6. Memory: every blob on Walrus, and the writes skipped as duplicates.
   await shot("memory", owner, async (s) => {
     await go(s, `/memory${scout ? `?remora=${scout.id}` : ""}`);
@@ -763,9 +833,6 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
   // 10. U17 (ADR-0118): remoras pay remoras, and a crew. Set up unfilmed: the burner's Researcher on
   // sale as @uy-researcher, a second test owner's Researcher (E2E_BURNER2_KEY), and the Research crew
   // imported with one signature and live.
-  const want = (n: string) => !only || only.includes(n);
-  const rotate = (page: Page) =>
-    page.context().setExtraHTTPHeaders({ "x-forwarded-for": freshClient() });
   const makeResearcher = async (page: Page, name: string) => {
     await rotate(page);
     await page.goto("/remoras/new");
@@ -912,7 +979,17 @@ test("demo capture: the real app on testnet", async ({ browser }) => {
   // Every shot asked for was recorded (all of them, without DEMO_SHOTS).
   expect(done).toEqual(
     expect.arrayContaining(
-      only ?? ["playground", "create", "thread", "brief", "claude", "more", "buy", "crew"],
+      only ?? [
+        "playground",
+        "create",
+        "thread",
+        "brief",
+        "claude",
+        "replay",
+        "more",
+        "buy",
+        "crew",
+      ],
     ),
   );
 });

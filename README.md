@@ -41,7 +41,7 @@ the data it needs. Every remora has three things most agents don't:
 | What | Where |
 |---|---|
 | **Entry** | *Total Recall*, **Track 2: Smart Agents for Real Life**. Also **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui, [ADR-0084](docs/adr/0084-enter-best-use-of-agent-payments.md)) |
-| **Watch** | The demo video: **[video URL]** (2:45, [script](docs/remora-plan.md#demo-script-245)) |
+| **Watch** | The demo video: **[video URL]** (2:55, [scenes](docs/launch/demo/README.md)) |
 | **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Researcher with a $1 spending limit, no wallet needed (testnet). Signed out, the same site opens on the [landing page](https://getremora.vercel.app/about) |
 | **Read** | The blog post, **[blog URL]** ([draft](docs/launch/blog-draft.md)), then [the docs](docs/README.md) |
 | **Walrus Memory on mainnet** | **360 memories** on Oct 31 (`bun run diagnose:memory` reads the account) |
@@ -275,7 +275,8 @@ flowchart LR
   - The account holds 360 memories on mainnet (Oct 31).
 - **Walrus blobs** hold the Hatchery's templates. These are `remora.team/v1` files, stored as permanent
   blobs on testnet and read back through the aggregator before every hatch.
-- **Walrus Sites** will mirror the landing page and docs (H6, roadmap).
+- **Walrus Sites** host the landing as a testnet site ([ADR-0142](docs/adr/0142-landing-testnet-walrus-site.md)); wal.app serves mainnet
+  sites only, so it opens through a portal. The mainnet site is on the roadmap.
 
 ## How Remora uses Tatum
 Every Sui read, stream and transaction on the server side goes through **Tatum's Sui gRPC**. It uses a

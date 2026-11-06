@@ -2,13 +2,13 @@
 
 *Rails Before Robots, Part 2*
 
-> **Draft for L3.** It gets published after the U9 deploy. Uy edits it and publishes it
-> ([ADR-0081](../adr/0081-launch-story.md)).
-> - Replace every **[deploy]** with a number or digest from the deployed run, and every **[dogfood]**
->   with data from the days of dogfooding.
+> **Draft for L3.** Uy edits it and publishes it ([ADR-0081](../adr/0081-launch-story.md)).
+> - The `[deploy]` and `[dogfood]` markers were filled on Nov 6 from recorded runs: a paid answer on
+>   the deployed playground, a key rotation on testnet, and the U19 run's numbers. Where a step ran
+>   only on the local stack or in tests, the post says so.
 > - Every other number comes from a recorded run in `docs/spikes/`, and every digest opens on an
 >   explorer.
-> - Charts come from `GET /api/learning/export`.
+> - Charts, if any, come from `GET /api/learning/export`.
 
 On Oct 15 I published an audit of what agent products need from a chain. One row stayed half green:
 **spending limits.** Sui had just shipped app-bound allowances, a native way to let an app spend from
@@ -36,7 +36,11 @@ Each has a budget I set with one signature. Four moments show what that buys.
 - I once told it, in plain words, "check airdrops with my Researcher", so it also hands the event over.
 - My Researcher pays **0.01 USDC** from its own budget for a risk report on the token's package. It tells me what
   it found and what it cost.
-- The receipt checks out onchain. **[deploy]**
+- The receipt checks out onchain. On the deployed playground on Nov 6, a Researcher paid 0.01 USDC
+  for a risk report on package `0x2`
+  ([`ECNRUJqW…`](https://suiscan.xyz/testnet/tx/ECNRUJqWpCF9HmPqdpjEmdFd8x88YpfSLqQe2qddKRds)), and
+  [`/verify`](https://getremora.vercel.app/verify/ECNRUJqWpCF9HmPqdpjEmdFd8x88YpfSLqQe2qddKRds) says
+  *"Verified: the receipt matches the chain."*
 
 **2. I mark a dust ping 👎.**
 - The Wallet watcher writes a rule to Walrus Memory: *"ignore incoming SUI under 0.002"*.
@@ -54,7 +58,9 @@ Each has a budget I set with one signature. Four moments show what that buys.
 **4. A key pays without a decision.**
 - If my Researcher's key ever signs a payment Remora didn't decide, I hear about it within minutes. That's how a
   leaked key shows itself.
-- I rotate the key with one signature. **[deploy]**
+- I rotate the key with one signature: a `rotate` on the Disc gives the remora a new key, and the old
+  one can't pay anymore. One rotation on testnet:
+  [`EwmhZH9j…`](https://suiscan.xyz/testnet/tx/EwmhZH9jueKyffHks7dNs28HAotipzuUhJPUgf1nMsdR).
 
 **After.**
 - The noise is quiet, because I said so once.
@@ -123,6 +129,17 @@ messages anyone:
 Each of the six differences cites a blob on Walrus Memory: the rule's notes or the Prices note. The
 odds question that named Arsenal and Chelsea still buys odds, because the rule doesn't apply to it.
 
+**What that run cost,** from its recorded payments, with no smoothing:
+- The ten answers paid **0.135 USDC**. I rated four of them useful, so each useful answer cost about
+  **0.034 USDC**, and 0.075 USDC went to answers I rated noise.
+- With today's memory, the same ten questions plan **0.060 USDC** and keep all four useful purchases:
+  about **0.015 USDC** per useful answer. Those are plans from the replay, not payments.
+- Three kinds of memory changed those decisions: the rule, which skipped odds on three questions; the
+  note on Prices (*"0 of 3 rated answers from it were useful"*), which skipped Prices on three; and
+  five notes on odds, which the rule cites.
+- What I don't have is weeks of real pings, so there's no daily noise rate for the Wallet watcher yet.
+  The Proof of Learning above is one ping, not a trend.
+
 ### Remembering is the easy part
 Rules were the easy case. Scores are harder.
 
@@ -169,14 +186,11 @@ We took the core of it and left the rest. We read the article and
 - **The fix:**
   - Structured records like scores now skip dedupe, and the ledger decides which one holds.
   - Every write that's still skipped is logged and listed next to the memory it matched. The inspector
-    says how many later writes each memory absorbed. **[deploy]**
+    says how many later writes each memory absorbed.
+  - Since U19 the inspector also checks our index against the relayer's own list. Before the Nov 5
+    deploy it read *"written 203 · on Walrus Memory 203 · missing 0"* over seven days.
 - The Researcher had stopped learning about a source after its first lesson. We fixed it the same day, but the
   scores lost before then can't be recovered.
-
-**[dogfood]** Built only from recorded events, with no smoothing:
-- the Wallet watcher's noise rate per day (pings marked 👎 out of all pings);
-- the Researcher's cost per useful answer;
-- three real memories next to the decisions they changed.
 
 ## How it uses Walrus
 - **Readable.**
@@ -251,13 +265,16 @@ only allowlisted payees, within the caps.
   - Walrus Memory runs on **mainnet**.
   - All Sui I/O goes through Tatum.
 - **Ours, and labeled as ours.**
-  - The three Reef services are our demo merchants. `odds` is a cached snapshot, and it says so.
+  - The eight house services in the Reef are our demo merchants. Seven read live sources; `odds` is a
+    cached snapshot, and it says so. Remoras on sale and community APIs are their owners'.
   - The playground's $1 budgets come from our funder.
-- **Tested before the deploy, not on it.** The airdrop handoff (moment 1) and the reality check (moment
-  4) pass in our test suite against a fake chain. **[deploy]**
+- **Tested, not yet run on the deployed app.** The airdrop handoff (moment 1) and the reality check
+  (moment 4) pass in our test suite against a fake chain. The key rotation in moment 4 ran on testnet
+  from our local stack.
 - **Not yet.**
   - Memory on your own Walrus account. For now, memories live in namespaces of the operator's account.
-  - Walrus Sites, SuiNS names and the Telegram Mini App are on the roadmap.
+  - A mainnet Walrus Site on wal.app with a SuiNS name. The landing is a testnet Walrus Site today, and
+    wal.app serves mainnet sites only. Paying a `.sui` name and the Telegram Mini App are built.
   - The cost card's model line is an estimate.
 - **Built before the window.** The money rails, the Researcher (Scout in the code) and the Wallet watcher (Sentinel) were built on Oct 19, the day before
   the build window opened. The README names the cutoff commit, and git confirms it.
@@ -286,12 +303,15 @@ For Dewee, we read the write-up and the docs, not any code.
 
 ## Try it
 - **`/playground`** gives you a Researcher with a **$1 spending limit**, no wallet needed. The worst case is a dollar,
-  enforced by Sui, and the Disc is revoked when your session ends. **[deploy]**
-- **The code is public:** **[repo URL]**. Every decision has an ADR, and every exit run has its digests.
+  enforced by Sui, and the Disc is revoked when your session ends. Its first paid answer on Nov 6 is
+  the receipt in moment 1.
+- **The code is public:**
+  [github.com/UyLeQuoc/walrus-session-10-remora](https://github.com/UyLeQuoc/walrus-session-10-remora).
+  Every decision has an ADR, and every exit run has its digests.
 - **Next:**
-  - more remoras (Errand, Treasurer, Daily Brief);
-  - price and webhook triggers;
-  - memory on your own Walrus account;
-  - batched onchain anchors for Wakes.
+  - the mainnet pass: the Move packages on mainnet, and memory on your own Walrus account;
+  - more remoras (Daily Brief, Portfolio Guard, Inbox);
+  - the `@getremora/*` packages on npm;
+  - a SuiNS subname per remora.
 
 Built by Uy and Huấn for *Total Recall*, with thanks to Tatum and the Walrus Foundation.

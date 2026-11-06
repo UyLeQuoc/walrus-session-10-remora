@@ -46,7 +46,7 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 `Researcher · examples` remoras earlier runs left, so the sidebar isn't a column of old ones. A partial
 re-capture (`DEMO_SHOTS`) without `create` keeps them.
 
-## Scenes (179.6 s; re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md); the network added Nov 5, [ADR-0118](../../adr/0118-video-network-scenes.md))
+## Scenes (175.0 s; re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md); the network added Nov 5, [ADR-0118](../../adr/0118-video-network-scenes.md); the replay added Nov 6, [ADR-0152](../../adr/0152-video-leads-with-the-replay.md))
 | Scene | What it shows |
 |---|---|
 | Hook | "Always-on agents you actually own.", what Remora is in four pills |
@@ -54,20 +54,25 @@ re-capture (`DEMO_SHOTS`) without `create` keeps them.
 | 01 · Try it, no wallet | Home's "What's a remora?", then `/playground`: a 1 USDC limit onchain, eight question cards with Reef prices, a paid answer as a receipt card, and the payment's receipt, verified |
 | 02 · Your own remora | `/remoras/new`: 0.50 a month, ≤ 0.015 a payment, one signature, practice mode, Go live |
 | 03 · One question, three services | In its thread, one question buys a Sui risk check, a wallet X-ray and prices: three receipts. Then "What does a Sui upgrade cap do?" is answered free |
-| 04 · It learns from you | A Wallet watcher is taught in plain words. The capture then sends a real 0.001 SUI to the address it watches, and the new rule ignores it |
+| 04 · It gets better | The U19 run's Researcher ([ADR-0136](../../adr/0136-replay-bench.md)): its rule from your ratings ("✓ you said yes · Skip odds unless the question names a team"), then its replay of the same ten questions: no memory 10 services, memory at T₀ 10, today's memory 4, "nothing was bought". The first difference and the five memory blobs it cites ([ADR-0152](../../adr/0152-video-leads-with-the-replay.md)) |
 | 05 · A brief every morning | A Briefer's list (prices, weather, a repo), Run now, and one brief with a receipt for each purchase |
 | 06 · An attack, live | `DEMO_ATTACK=1` ([ADR-0110](../../adr/0110-live-attack-bait-and-switch.md)): "Market data" demands payment to the attacker's address. The safety check blocks it before signing, and Why? shows the address it refused |
 | The attack, in layers | The safety check, the gas station, the spending limit onchain; 28 attacks in CI with 0 overspends; the onchain abort `7NYf3QGE…` |
 | 07 · Claude Code pays too | A terminal frame with the real `claude -p` command and output, recorded in the capture (the token is in a temp `remora.json`, deleted after). Then the payment in the remora's thread |
 | 08 · Memory you can read | `/memory`: every blob on Walrus, matched writes shown, search |
-| 09 · You stay in control | `/funds`: your USDC stays in your address; Pause all |
-| 10 · Remoras pay remoras | A second owner's Researcher sees `@uy-researcher` on sale and lets it pay with one signature. "ask @uy-researcher is package 0x2 safe to depend on?" pays 0.01 USDC, and the chip shows the chain: → it paid Sui risk check 0.01 ([ADR-0118](../../adr/0118-video-network-scenes.md)) |
-| 11 · A crew of remoras | The Research crew (one signature). The lead's answer lists three members' receipts, and the Crew card shows each member's spend |
+| 09 · Remoras pay remoras | A second owner's Researcher sees `@uy-researcher` on sale and lets it pay with one signature. "ask @uy-researcher is package 0x2 safe to depend on?" pays 0.01 USDC, and the chip shows the chain: → it paid Sui risk check 0.01 ([ADR-0118](../../adr/0118-video-network-scenes.md)) |
+| 10 · A crew of remoras | The Research crew (one signature). The lead's answer lists three members' receipts, and the Crew card shows each member's spend |
 | Why Remora | Bounded, Accountable, Learns, Yours |
 | Lockup | "Give an agent a budget, not your wallet."; the playground |
 
-**Cut for time in this version:** "Where the money goes" and "06 · Over the cap, it asks". Both stay
-in the app and the README.
+**Cut for time in this version:** "Where the money goes", "06 · Over the cap, it asks", "04 · It
+learns from you" (the Wallet watcher taught in plain words) and "09 · You stay in control" (`/funds`,
+Pause all). All stay in the app and the README.
+
+**The replay shot** films a Researcher the `U19=1` run made in the local database (one named
+"Researcher · u19" with a finished replay that planned fewer services today than with no memory). To
+re-film only it, without spending: `DEMO=1 E2E_KEEP_DISCS=1 DEMO_SHOTS=replay bun run --filter
+@remora/e2e e2e -- --project=demo tests/demo.spec.ts`.
 
 **Capture with the attacker:** `DEMO=1 DEMO_ATTACK=1 bun run --filter @remora/e2e e2e -- --project=demo`.
 `claude` must be signed in; without it, the scene says "an MCP client".
