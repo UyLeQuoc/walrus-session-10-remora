@@ -236,8 +236,8 @@ demo's story ([ADR-0081](adr/0081-launch-story.md)) and names x402 on Sui
 - [x] Walrus Memory writing on **mainnet**, ≥10 memories (Oct 31: `bun run diagnose:memory` shows 360)
 - [x] Tatum Sui RPC in the core path (gRPC stream + dry-run/execute + facilitator), documented in the
       README ("How Remora uses Tatum")
-- [ ] **Flip the repo to public** (`UyLeQuoc/walrus-session-10-remora`, [ADR-0017](adr/0017-github-repo-private-until-submission.md)) by Nov 9,
-      after a final review of the docs and a clean `bun run secrets:history` ([ADR-0085](adr/0085-scan-history-before-public.md))
+- [x] **Flip the repo to public** (`UyLeQuoc/walrus-session-10-remora`, [ADR-0017](adr/0017-github-repo-private-until-submission.md)): Nov 6,
+      after a clean `bun run secrets:history` ([ADR-0085](adr/0085-scan-history-before-public.md), [ADR-0151](adr/0151-repo-public-nov-6.md))
 - [ ] Public repo, Apache-2.0/MIT, `.env.example`, one-command dev, Move tests, evals and CI
 - [ ] README section **"Built on prior work"** (hippo, commit `66fb33a`), listing what was reused and what's new
 - [ ] Working demo URL + playground + Walrus Sites URL + a 2–3 minute video

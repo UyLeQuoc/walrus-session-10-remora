@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). Left: the demo path twice on it (U9 exit) | "Working demo", the blog's `[deploy]` markers | Uy |
 | 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is re-captured and re-rendered on Nov 4 from the visual-first app ([ADR-0103](../adr/0103-visual-first-ui-pass.md)), then re-cut around live proof ([ADR-0106](../adr/0106-wow-pass-more-uses.md)): one question buying three services, a free answer, a Briefer's morning brief, an attack blocked live, Claude Code paying over MCP, a remora buying another owner's remora's answer and a crew splitting one question (ADR-0118): 179.6 s, 1080p, every caption ten words or fewer, at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored; the master is `remora-demo.mp4`); the landing page plays the same file after the next deploy. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
-| 3 | **The repo made public** ([ADR-0017](../adr/0017-github-repo-private-until-submission.md)), right after a clean `bun run secrets:history` (clean on Oct 31, [ADR-0085](../adr/0085-scan-history-before-public.md)) | A required field and requirement 5 | Uy, Nov 9 |
+| 3 | ~~The repo made public~~: public on Nov 6, right after a clean `bun run secrets:history` over a mirror clone ([ADR-0151](../adr/0151-repo-public-nov-6.md)) | A required field and requirement 5 | Done |
 | 4 | **The blog published** ([draft](blog-draft.md)), with the `[deploy]` and `[dogfood]` markers replaced | Requirement 4 | Uy |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
 | 6 | Tatum ID, read from the dashboard | A required field | Uy |
@@ -25,7 +25,7 @@
 | At least 10 memories on mainnet | ✅ | The same run: **360 memories** visible on the read API, soonest expiry 197 days away |
 | Tatum RPC for onchain data | ✅ | All Sui I/O goes through Tatum's gRPC (12 kinds of call, README "How Remora uses Tatum"), plus the Data API for SUI/USD. The free plan ran out during development, so a public fullnode stands in while Tatum answers 402 (ADR-0097) |
 | A published blog post (what it does, Tatum + Walrus, how it learned) | ❌ | The [draft](blog-draft.md) covers all three; it isn't published |
-| A working demo and a public repo | Half | The demo is live at <https://getremora.vercel.app> (testnet money, mainnet memory). The repo goes public on Nov 9 |
+| A working demo and a public repo | ✅ | The demo is live at <https://getremora.vercel.app> (testnet money, mainnet memory). The repo is public since Nov 6 ([ADR-0151](../adr/0151-repo-public-nov-6.md)) |
 | Optional: Tatum AI Builder | Not used | Remora is hand-written |
 
 ## Contact (Uy)
@@ -146,7 +146,7 @@
 | Field | Required | Answer |
 |---|---|---|
 | Short demo video (2–3 min) | Yes | ⏳ Rendered (179.6 s, Nov 5, with the network scenes of ADR-0118, `docs/launch/demo/out/remora-demo-web.mp4`), not uploaded yet. Paste the link once Uy uploads it |
-| GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora`. It's private until Nov 9 |
+| GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora` (public since Nov 6) |
 | Additional documentation | No | The landing page, <https://getremora.vercel.app/about> ([ADR-0100](../adr/0100-landing-and-app-one-site.md)), and the blog URL once it's out |
 
 ## Feedback
