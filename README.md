@@ -45,7 +45,9 @@ the data it needs. Every remora has three things most agents don't:
 | **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Researcher with a $1 spending limit, no wallet needed (testnet). Signed out, the same site opens on the [landing page](https://getremora.vercel.app/about) |
 | **Read** | The blog post on X, **[I gave an agent a wallet it can't drain](https://x.com/UyLeQuoc/status/2120049969600307237)** (Part 2 of [Rails Before Robots](https://x.com/UyLeQuoc/status/2110740488223662114), the Oct 15 audit of Sui's agent stack), its [longer repo version](docs/launch/blog-draft.md), then [the docs](docs/README.md) |
 | **Walrus Memory on mainnet** | **1,008 memories** on Nov 10 (360 on Oct 31; `bun run diagnose:memory` reads the account) |
-| **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas |
+| **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas. Our free plan ran out, so while Tatum answers `402` the same gRPC calls go to the public fullnode, and [/status](https://getremora.vercel.app/status) says which one serves ([ADR-0097](docs/adr/0097-public-fullnode-fallback-when-tatum-is-out-of-credits.md)) |
+| **Requirements** | ✅ Walrus Memory writing on mainnet · ✅ 1,008 memories (10+ required) · ✅ Tatum RPC for onchain data · ✅ [published blog](https://x.com/UyLeQuoc/status/2120049969600307237) · ✅ [working demo](https://getremora.vercel.app) · ✅ public repo |
+| **Shared on X** | [The launch post](https://x.com/UyLeQuoc/status/2120073312437215397), tagging @WalrusProtocol and @tatum_io |
 | **Honest about** | [What's real, what isn't](#whats-real-what-isnt), and the [work done before the window](#built-on-prior-work) |
 
 <a href="https://youtu.be/_ioDZcXperI"><img src="docs/assets/readme/demo-thumbnail.jpg" width="100%" alt="Watch the 2:55 Remora demo on YouTube: the real app on Sui testnet, memory on Walrus mainnet"></a>
@@ -87,18 +89,16 @@ Frames from the [demo video](https://youtu.be/_ioDZcXperI) (the real app on Sui 
 | **Two checks block an injected payment; forced past both, Sui aborts** | **Claude Code asks a remora over MCP, inside the same limit** |
 | ![Assume the model obeys. Make sure the money can't: the safety check, the gas station and the Disc](docs/assets/readme/attack-blocked.jpg) | ![A terminal running claude -p with the remora_ask tool and its answer](docs/assets/readme/claude-code-mcp.jpg) |
 
-From the audit pass:
+The app itself (Sui testnet, the frozen demo build of Nov 4). It wears openbot's UI since U13
+([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)), redrawn visual-first in U14
+([ADR-0103](docs/adr/0103-visual-first-ui-pass.md)). The audit's light and dark screenshots of every page are in
+[docs/e2e/screenshots](docs/e2e/screenshots).
 
-The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)).
-These are from the signed-in audit pass on Oct 31 (`AUDIT=1`, [ADR-0089](docs/adr/0089-ux-pass-retired-remora-and-status-label.md)),
-in light and dark. The full set is in [docs/e2e/screenshots](docs/e2e/screenshots): `audit-*`, plus every
-route at 1280 and 375 px as `u13-*`.
-
-| First visit: try a Researcher with no wallet | A remora: ask, budget, cost |
+| Try a Researcher, no wallet: a 1 USDC limit, a paid answer, its receipt | A remora: ask, its budget, what each answer cost |
 |---|---|
-| ![Home signed out: Try Scout, no wallet, and Check a receipt](docs/e2e/screenshots/audit-light-home-signed-out.png) | ![A remora's page: what it does, its cost card and activity](docs/e2e/screenshots/audit-light-remora-overview.png) |
-| **Memory: every blob, and writes skipped as duplicates** | **The Reef: what a remora may pay over x402** |
-| ![The memory inspector with a "1 later write matched this" badge](docs/e2e/screenshots/audit-light-memory.png) | ![The Reef directory in dark mode](docs/e2e/screenshots/audit-dark-reef.png) |
+| ![The playground: a Researcher with a 1 USDC limit answers and pays 0.01 USDC to Sui risk check](apps/landing/public/screens/playground.jpg) | ![A Researcher's overview: a paid answer, its monthly limit and per-payment cap, and a cost card](apps/landing/public/screens/remora-overview.jpg) |
+| **Memory on Walrus: every blob, its expiry, and writes skipped as duplicates** | **Services: what a remora may pay over x402, and who gets paid** |
+| ![The memory inspector: blobs on Walrus Memory with status, expiry, hide and correct, and writes skipped as already known](apps/landing/public/screens/memory.jpg) | ![The Services directory: eight paid services with category, price per call and payee](apps/landing/public/screens/reef.jpg) |
 
 ## How it learns
 The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
@@ -380,7 +380,22 @@ bun run e2e                     # Playwright on testnet with a burner wallet
   and [docs index](docs/README.md).
 
 ## Repo layout
-See [docs/remora-spec.md §5](docs/remora-spec.md#5-architecture).
+| Path | What it is |
+|---|---|
+| [`apps/server`](apps/server) | The always-on Hono API, the remora runtime (triggers, Sonar, Wakes, approvals) and the Telegram, Discord and Slack adapters |
+| [`apps/web`](apps/web) | The Vite + React app: chat, remoras, memory inspector, playground, Hatchery, Services, Mini App |
+| [`apps/landing`](apps/landing) | The landing page, served at `/about` and as a testnet Walrus Site |
+| [`apps/facilitator`](apps/facilitator) | The x402 `exact` facilitator for Sui and the gas station |
+| [`apps/merchants`](apps/merchants) | The eight house services in the Reef, each a paid x402 and MPP door |
+| [`apps/reef`](apps/reef) | The service directory API, with snapshots published to Walrus |
+| [`packages/move`](packages/move) | Move packages: `remora` (the `disc` module, a spending limit on app-bound allowances), `hatchery`, `anchor`, `capsule` |
+| [`packages/disc-sdk`](packages/disc-sdk), [`packages/merchant`](packages/merchant), [`packages/create-remora`](packages/create-remora) | Pay and sell x402 and MPP services on Sui |
+| [`packages/memory`](packages/memory), [`packages/core`](packages/core), [`packages/mcp`](packages/mcp) | The Walrus Memory client, the agent loop, and Remora as an MCP server |
+| [`packages/chain`](packages/chain), [`packages/sonar`](packages/sonar), [`packages/signer`](packages/signer) | Tatum's Sui gRPC client, the pre-action policy check, and envelope-encrypted keys |
+| [`packages/schema`](packages/schema), [`packages/db`](packages/db) | The shared contracts between backend and UI, and the Postgres schema |
+| [`evals`](evals), [`e2e`](e2e), [`examples`](examples) | The red team (28 attacks), the Playwright suite on testnet, and a paid API in about 20 lines |
+
+The architecture is in [docs/remora-spec.md §5](docs/remora-spec.md#5-architecture).
 - Every directory has a README naming its owner ([docs/team-split.md](docs/team-split.md)).
 - The interfaces between the backend and the UI live in [`packages/schema`](packages/schema).
 
