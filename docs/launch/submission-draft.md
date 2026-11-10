@@ -10,10 +10,10 @@
 ## What's still missing
 | # | Item | Blocks | Who |
 |---|---|---|---|
-| 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). **On Nov 10 the landing's demo section had no video:** the U19 deploy was built from a clean worktree, and the video is gitignored, so `apps/landing/build.ts` skipped it. A web redeploy from a checkout that has `docs/launch/demo/out/remora-demo-web.mp4` fixes it, along with the forget fix (ADR-0153) and the Nov 10 numbers | "Working demo" | Uy (deploy) |
-| 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is re-captured and re-rendered on Nov 4 from the visual-first app ([ADR-0103](../adr/0103-visual-first-ui-pass.md)), then re-cut around live proof ([ADR-0106](../adr/0106-wow-pass-more-uses.md)): one question buying three services, a free answer, a Briefer's morning brief, an attack blocked live, Claude Code paying over MCP, a remora buying another owner's remora's answer and a crew splitting one question (ADR-0118). Re-cut on Nov 6 to show the replay, the same ten questions planned 10 → 10 → 4 ([ADR-0152](../adr/0152-video-leads-with-the-replay.md)): 175.0 s, 1080p, every caption ten words or fewer, at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored; the master is `remora-demo.mp4`); the landing page plays the same file after the next deploy. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
+| 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). **Fixed Nov 10** ([ADR-0154](../adr/0154-submission-day-publish-and-redeploy.md)): the landing's demo section had no video, because the U19 deploy was built from a clean worktree, and the video is gitignored, so `apps/landing/build.ts` skipped it. A web redeploy from a checkout that has `docs/launch/demo/out/remora-demo-web.mp4` fixes it, along with the forget fix (ADR-0153) and the Nov 10 numbers | \"Working demo\" | Done: Railway `ee2c857c`, Vercel `getremora-j9z39i7bo` (narrated video) |
+| 2 | ~~Upload the demo video~~: **<https://youtu.be/_ioDZcXperI>**, public on Nov 10, narrated with ElevenLabs ([ADR-0155](../adr/0155-narrated-video-and-x-article.md)); the silent cut `6CgJ6HKZjDs` is unlisted | A required field | Done |
 | 3 | ~~The repo made public~~: public on Nov 6, right after a clean `bun run secrets:history` over a mirror clone ([ADR-0151](../adr/0151-repo-public-nov-6.md)) | A required field and requirement 5 | Done |
-| 4 | **The blog published** ([draft](blog-draft.md)); the markers were filled on Nov 6. Then put its URL in the README's For judges table and in Additional documentation | Requirement 4 | Uy |
+| 4 | ~~The blog published~~: the X Article **<https://x.com/UyLeQuoc/status/2120049969600307237>** (Nov 10; Uy's Nov 7 draft, corrected, with a cover and seven frames, ADR-0155). The README links it; [blog-draft.md](blog-draft.md) is the longer version | Requirement 4 | Done |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
 | 6 | Tatum ID, read from the dashboard | A required field | Uy |
 | 7 | The contact fields and the consent checkbox | Required fields | Uy |
@@ -24,7 +24,7 @@
 | Walrus Memory writing on mainnet | ✅ | `bun run diagnose:memory` on Nov 10: the mainnet relayer is healthy, and the account is active with the server's delegate key registered onchain. Production uses the same account and delegate |
 | At least 10 memories on mainnet | ✅ | **1,008 memories** on the read API on Nov 10, soonest expiry 188 days away (360 on Oct 31) |
 | Tatum RPC for onchain data | ✅ | All Sui I/O goes through Tatum's gRPC (12 kinds of call, README "How Remora uses Tatum"), plus the Data API for SUI/USD. The free plan ran out during development, so a public fullnode stands in while Tatum answers 402 (ADR-0097) |
-| A published blog post (what it does, Tatum + Walrus, how it learned) | ❌ | The [draft](blog-draft.md) covers all three; it isn't published |
+| A published blog post (what it does, Tatum + Walrus, how it learned) | ✅ | <https://x.com/UyLeQuoc/status/2120049969600307237>, published Nov 10: what it does, the Tatum and Walrus stack, "How it learned over time" with the replay |
 | A working demo and a public repo | ✅ | The demo is live at <https://getremora.vercel.app> (testnet money, mainnet memory). The repo is public since Nov 6 ([ADR-0151](../adr/0151-repo-public-nov-6.md)) |
 | Optional: Tatum AI Builder | Not used | Remora is hand-written |
 
@@ -145,9 +145,9 @@
 
 | Field | Required | Answer |
 |---|---|---|
-| Short demo video (2–3 min) | Yes | ⏳ Rendered (175.0 s, Nov 6, with the replay of ADR-0152 and the network scenes of ADR-0118, `docs/launch/demo/out/remora-demo-web.mp4`), not uploaded yet. Paste the link once Uy uploads it |
+| Short demo video (2–3 min) | Yes | <https://youtu.be/_ioDZcXperI> (2:55, narrated) |
 | GitHub repo | Yes | `https://github.com/UyLeQuoc/walrus-session-10-remora` (public since Nov 6) |
-| Additional documentation | No | The landing page, <https://getremora.vercel.app/about> ([ADR-0100](../adr/0100-landing-and-app-one-site.md)), and the blog URL once it's out |
+| Additional documentation | No | Blog: <https://x.com/UyLeQuoc/status/2120049969600307237> · Landing: <https://getremora.vercel.app/about> · For judges: <https://github.com/UyLeQuoc/walrus-session-10-remora#for-judges> |
 
 ## Feedback
 **How was your experience building with Walrus?** (draft)

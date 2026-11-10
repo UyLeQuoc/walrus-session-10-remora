@@ -1,6 +1,6 @@
 # ADR-0154: Submission day: the video on YouTube, the blog as an X Article, a web and API redeploy
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-0155](0155-narrated-video-and-x-article.md) (the narrated video, and Uy's X draft as the article)
 - **Date:** 2026-11-10
 - **Deciders:** Uy
 

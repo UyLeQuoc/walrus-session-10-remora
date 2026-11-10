@@ -41,12 +41,14 @@ the data it needs. Every remora has three things most agents don't:
 | What | Where |
 |---|---|
 | **Entry** | *Total Recall*, **Track 2: Smart Agents for Real Life**. Also **Best Walrus Memory** and **Best Use of Agent Payments** (x402 on Sui, [ADR-0084](docs/adr/0084-enter-best-use-of-agent-payments.md)) |
-| **Watch** | The demo video: **[video URL]** (2:55, [scenes](docs/launch/demo/README.md)) |
+| **Watch** | The demo video: **[youtu.be/_ioDZcXperI](https://youtu.be/_ioDZcXperI)** (2:55, narrated, [scenes](docs/launch/demo/README.md)) |
 | **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Researcher with a $1 spending limit, no wallet needed (testnet). Signed out, the same site opens on the [landing page](https://getremora.vercel.app/about) |
-| **Read** | The blog post, **[blog URL]** ([draft](docs/launch/blog-draft.md)), then [the docs](docs/README.md) |
+| **Read** | The blog post on X, **[I gave an agent a wallet it can't drain](https://x.com/UyLeQuoc/status/2120049969600307237)** (Part 2 of [Rails Before Robots](https://x.com/UyLeQuoc/status/2110740488223662114), the Oct 15 audit of Sui's agent stack), its [longer repo version](docs/launch/blog-draft.md), then [the docs](docs/README.md) |
 | **Walrus Memory on mainnet** | **1,008 memories** on Nov 10 (360 on Oct 31; `bun run diagnose:memory` reads the account) |
 | **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas |
 | **Honest about** | [What's real, what isn't](#whats-real-what-isnt), and the [work done before the window](#built-on-prior-work) |
+
+<a href="https://youtu.be/_ioDZcXperI"><img src="docs/assets/readme/demo-thumbnail.jpg" width="100%" alt="Watch the 2:55 Remora demo on YouTube: the real app on Sui testnet, memory on Walrus mainnet"></a>
 
 ## In one minute
 1. **An unknown token lands in your wallet.**
@@ -63,6 +65,8 @@ the data it needs. Every remora has three things most agents don't:
 4. **If the remora's key ever pays without a decision,** you're told within minutes. You rotate the key
    with one signature.
 
+![Without a limit, one injected sentence drains the wallet. With a Disc, Sui aborts the payment onchain (testnet tx 7NYf3QGE…, EPayeeNotAllowed)](docs/assets/readme/key-vs-limit.jpg)
+
 ## Try it
 - **No wallet:** open `/playground`. You get your own Researcher with a **$1 spending limit** for a few questions
   ([ADR-0051](docs/adr/0051-playground.md)).
@@ -74,6 +78,16 @@ the data it needs. Every remora has three things most agents don't:
   - hatch a remora from the **Hatchery**.
 
 ## Screenshots
+
+Frames from the [demo video](https://youtu.be/_ioDZcXperI) (the real app on Sui testnet, Nov 6):
+
+| A paid answer's receipt, verified against Sui | One question buys three services over x402 |
+|---|---|
+| ![The playground's receipt: Verified, the receipt matches the chain](docs/assets/readme/receipt-verified.jpg) | ![A Researcher's thread: one question, three paid services, three receipts](docs/assets/readme/three-services.jpg) |
+| **Two checks block an injected payment; forced past both, Sui aborts** | **Claude Code asks a remora over MCP, inside the same limit** |
+| ![Assume the model obeys. Make sure the money can't: the safety check, the gas station and the Disc](docs/assets/readme/attack-blocked.jpg) | ![A terminal running claude -p with the remora_ask tool and its answer](docs/assets/readme/claude-code-mcp.jpg) |
+
+From the audit pass:
 
 The web wears openbot's UI since U13 ([ADR-0069](docs/adr/0069-openbot-ui-ported-under-polyform.md)).
 These are from the signed-in audit pass on Oct 31 (`AUDIT=1`, [ADR-0089](docs/adr/0089-ux-pass-retired-remora-and-status-label.md)),
@@ -89,6 +103,8 @@ route at 1280 and 375 px as `u13-*`.
 ## How it learns
 The learning loop: **your signal → a memory on Walrus → a different decision → a receipt that cites
 that memory.**
+
+![The replay: the same ten questions planned with no memory (10 services), the memory at the start (10) and today's memory (4); every skip cites its memory on Walrus](docs/assets/readme/replay-10-10-4.jpg)
 
 - **The same ten questions, three memories** ([ADR-0136](docs/adr/0136-replay-bench.md)). A
   Researcher answered ten questions on testnet and paid for data each time; its owner rated the

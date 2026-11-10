@@ -1,0 +1,93 @@
+[
+  {
+    "id": "hook",
+    "at": 0.4,
+    "max": 6.2,
+    "text": "This is Remora: always-on agents you actually own."
+  },
+  {
+    "id": "split",
+    "at": 7.1,
+    "max": 9.1,
+    "text": "Today, an agent holds your key, or asks about every click. A remora gets a spending limit, and Sui enforces it."
+  },
+  {
+    "id": "play",
+    "at": 17.0,
+    "max": 23.4,
+    "text": "Try it with no wallet. The playground sets a one-dollar limit onchain. Your Researcher decides a risk report is worth buying, pays one cent in USDC over x402, settled on Sui, and answers. Every payment comes back as a receipt anyone can verify."
+  },
+  {
+    "id": "create",
+    "at": 41.2,
+    "max": 12.6,
+    "text": "Your own remora takes one signature: fifty cents a month, at most one and a half cents a payment, and only the services you list."
+  },
+  {
+    "id": "multi",
+    "at": 54.6,
+    "max": 15.2,
+    "text": "One question can buy three services at once: a risk check, a wallet X-ray, and prices. Three receipts. A question it can answer itself costs nothing."
+  },
+  {
+    "id": "better",
+    "at": 70.6,
+    "max": 14.7,
+    "text": "And it gets better. Your ratings become a rule you approve. Replay the same ten questions: with no memory, it buys ten services. With today's memory, four. Every skip cites its memory on Walrus."
+  },
+  {
+    "id": "brief",
+    "at": 86.1,
+    "max": 9.9,
+    "text": "A Briefer runs every weekday morning, or right now, and buys each item for your brief, with a receipt for each."
+  },
+  {
+    "id": "live",
+    "at": 96.8,
+    "max": 14.1,
+    "text": "Now, an attack, live. A service asks to be paid at the attacker's address. The safety check blocks it before signing, and Why? shows the address it refused."
+  },
+  {
+    "id": "attack",
+    "at": 111.8,
+    "max": 8.8,
+    "text": "Assume the model obeys. Make sure the money can't. Forced past both checks, Sui itself aborts the payment."
+  },
+  {
+    "id": "claude-term",
+    "at": 121.4,
+    "max": 7.7,
+    "text": "Claude Code can ask your remora too, over MCP, and it pays inside the same limit."
+  },
+  {
+    "id": "claude",
+    "at": 129.7,
+    "max": 4.5,
+    "text": "Here's that payment, in the remora's own thread."
+  },
+  {
+    "id": "memory",
+    "at": 134.8,
+    "max": 9.2,
+    "text": "Its memory lives on Walrus, and you can read every blob. A repeat isn't stored twice, and you can see that."
+  },
+  {
+    "id": "net",
+    "at": 144.7,
+    "max": 8.0,
+    "text": "Remoras pay remoras. Another owner's Researcher is on sale, and yours can buy its answer."
+  },
+  {
+    "id": "crew",
+    "at": 153.4,
+    "max": 7.9,
+    "text": "A crew splits one question: three members pay. Three receipts, one answer."
+  },
+  {
+    "id": "why",
+    "at": 162.0,
+    "max": 6.1,
+    "text": "Agents you can trust with money: bounded, accountable, and they learn."
+  },
+  { "id": "lock", "at": 168.8, "max": 5.9, "text": "Give an agent a budget, not your wallet." }
+]

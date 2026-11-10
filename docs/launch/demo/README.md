@@ -46,6 +46,12 @@ bun docs/launch/demo/render.ts --from 40 --to 70 --sub 1 --fps 30               
 `Researcher · examples` remoras earlier runs left, so the sidebar isn't a column of old ones. A partial
 re-capture (`DEMO_SHOTS`) without `create` keeps them.
 
+## Narration (Nov 10, [ADR-0155](../../adr/0155-narrated-video-and-x-article.md))
+- Sixteen lines, one per scene, in [narration/script.json](narration/script.json), each starting at its scene's `at` second and fitting inside it.
+- `python3 -I docs/launch/demo/narration/tts.py docs/launch/demo/narration/script.json docs/launch/demo/out/narration` makes the clips with ElevenLabs (voice Eric, `eleven_multilingual_v2`; needs `ELEVENLABS_API_KEY` in `.env`).
+- `python3 -I docs/launch/demo/narration/mix.py <silent master>` ducks the soundtrack under the voice, normalizes to −14 LUFS and muxes the mix onto `out/remora-demo.mp4` and `out/remora-demo-web.mp4` without re-encoding the video. The silent Nov 6 files are in `out/backup-nov6-175s-novoice/`.
+- On YouTube: <https://youtu.be/_ioDZcXperI> (narrated, public). The silent cut, `6CgJ6HKZjDs`, is unlisted. The description credits "Voice: ElevenLabs" (free plan).
+
 ## Scenes (175.0 s; re-cut Nov 4 around live proof, [ADR-0106](../../adr/0106-wow-pass-more-uses.md); the network added Nov 5, [ADR-0118](../../adr/0118-video-network-scenes.md); the replay added Nov 6, [ADR-0152](../../adr/0152-video-leads-with-the-replay.md))
 | Scene | What it shows |
 |---|---|
