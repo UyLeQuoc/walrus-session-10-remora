@@ -6,6 +6,8 @@
 > - The links are filled (Nov 10). Tag @tatum_io and @WalrusProtocol on X (the event page's X link), Tatum and Walrus Foundation on LinkedIn.
 
 ## X thread
+> **Posted instead (Nov 10):** one quote post of the blog article, <https://x.com/UyLeQuoc/status/2120073312437215397>. It tags @WalrusProtocol and @tatum_io; @WalrusFoundation doesn't exist on X.
+
 1. I gave an AI agent a wallet it can't drain and a memory you can read.
 
    Remora: always-on agents with an onchain budget on Sui, receipts for every action, and memory on

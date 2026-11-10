@@ -14,7 +14,7 @@
 | 2 | ~~Upload the demo video~~: **<https://youtu.be/_ioDZcXperI>**, public on Nov 10, narrated with ElevenLabs ([ADR-0155](../adr/0155-narrated-video-and-x-article.md)); the silent cut `6CgJ6HKZjDs` is unlisted | A required field | Done |
 | 3 | ~~The repo made public~~: public on Nov 6, right after a clean `bun run secrets:history` over a mirror clone ([ADR-0151](../adr/0151-repo-public-nov-6.md)) | A required field and requirement 5 | Done |
 | 4 | ~~The blog published~~: the X Article **<https://x.com/UyLeQuoc/status/2120049969600307237>** (Nov 10; Uy's Nov 7 draft, corrected, with a cover and seven frames, ADR-0155). The README links it; [blog-draft.md](blog-draft.md) is the longer version | Requirement 4 | Done |
-| 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
+| 5 | The X post is out: <https://x.com/UyLeQuoc/status/2120073312437215397>. LinkedIn ([draft](social-drafts.md)) is not posted | Optional bonus points | Uy (LinkedIn) |
 | 6 | Tatum ID, read from the dashboard | A required field | Uy |
 | 7 | The contact fields and the consent checkbox | Required fields | Uy |
 
@@ -199,5 +199,5 @@ strong candidate.
 
 | Field | Required | Answer |
 |---|---|---|
-| Social post links | No (extra points) | The X and LinkedIn links, once posted |
+| Social post links | No (extra points) | X: <https://x.com/UyLeQuoc/status/2120073312437215397> (Nov 10, quotes the blog, tags @WalrusProtocol and @tatum_io; @WalrusFoundation doesn't exist on X). LinkedIn: not posted |
 | The 18+ and terms checkbox | Yes | Uy ticks it |
