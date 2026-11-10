@@ -1,8 +1,8 @@
 # Draft: the submission form, field by field (Uy fills and sends it)
 
-> **Draft only.** Uy submits the form once (one submission per person), target Nov 9. It was checked
-> against the live form at [recall-tatum-walrus.vercel.app](https://recall-tatum-walrus.vercel.app) on
-> Oct 31, 2026. Nothing has been filled in or sent.
+> **Draft only.** Uy submits the form once (one submission per person) by **Nov 10, 17:00 UTC**. It was
+> checked against the live form at [recall-tatum-walrus.vercel.app](https://recall-tatum-walrus.vercel.app)
+> on Oct 31 and again on Nov 10 (same fields, no new rules). Nothing has been filled in or sent.
 > - The form has no field for a track or a prize, so the description names them
 >   ([ADR-0084](../adr/0084-enter-best-use-of-agent-payments.md)).
 > - Personal fields are left blank here on purpose.
@@ -10,10 +10,10 @@
 ## What's still missing
 | # | Item | Blocks | Who |
 |---|---|---|---|
-| 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). Left: the demo path twice on it (U9 exit) | "Working demo", the blog's `[deploy]` markers | Uy |
+| 1 | ~~The deployed demo URL and the playground~~: live on Nov 3 at <https://getremora.vercel.app>, playground included ([ADR-0099](../adr/0099-first-deploy-one-railway-service.md)). **On Nov 10 the landing's demo section had no video:** the U19 deploy was built from a clean worktree, and the video is gitignored, so `apps/landing/build.ts` skipped it. A web redeploy from a checkout that has `docs/launch/demo/out/remora-demo-web.mp4` fixes it, along with the forget fix (ADR-0153) and the Nov 10 numbers | "Working demo" | Uy (deploy) |
 | 2 | **Upload the demo video** and paste its link. The [real-app demo](demo/README.md) is re-captured and re-rendered on Nov 4 from the visual-first app ([ADR-0103](../adr/0103-visual-first-ui-pass.md)), then re-cut around live proof ([ADR-0106](../adr/0106-wow-pass-more-uses.md)): one question buying three services, a free answer, a Briefer's morning brief, an attack blocked live, Claude Code paying over MCP, a remora buying another owner's remora's answer and a crew splitting one question (ADR-0118). Re-cut on Nov 6 to show the replay, the same ten questions planned 10 → 10 → 4 ([ADR-0152](../adr/0152-video-leads-with-the-replay.md)): 175.0 s, 1080p, every caption ten words or fewer, at `docs/launch/demo/out/remora-demo-web.mp4` (gitignored; the master is `remora-demo.mp4`); the landing page plays the same file after the next deploy. The [motion-graphics showreel](showreel/README.md) (180 s, ADR-0090) is the alternative | A required field | Uy |
 | 3 | ~~The repo made public~~: public on Nov 6, right after a clean `bun run secrets:history` over a mirror clone ([ADR-0151](../adr/0151-repo-public-nov-6.md)) | A required field and requirement 5 | Done |
-| 4 | **The blog published** ([draft](blog-draft.md)), with the `[deploy]` and `[dogfood]` markers replaced | Requirement 4 | Uy |
+| 4 | **The blog published** ([draft](blog-draft.md)); the markers were filled on Nov 6. Then put its URL in the README's For judges table and in Additional documentation | Requirement 4 | Uy |
 | 5 | The X and LinkedIn posts ([drafts](social-drafts.md)) | Optional bonus points | Uy |
 | 6 | Tatum ID, read from the dashboard | A required field | Uy |
 | 7 | The contact fields and the consent checkbox | Required fields | Uy |
@@ -21,8 +21,8 @@
 ## The requirements
 | Requirement | Status | Evidence |
 |---|---|---|
-| Walrus Memory writing on mainnet | ✅ | `bun run diagnose:memory` on Oct 31: the mainnet relayer is healthy, and the account is active with the server's delegate key registered onchain |
-| At least 10 memories on mainnet | ✅ | The same run: **360 memories** visible on the read API, soonest expiry 197 days away |
+| Walrus Memory writing on mainnet | ✅ | `bun run diagnose:memory` on Nov 10: the mainnet relayer is healthy, and the account is active with the server's delegate key registered onchain. Production uses the same account and delegate |
+| At least 10 memories on mainnet | ✅ | **1,008 memories** on the read API on Nov 10, soonest expiry 188 days away (360 on Oct 31) |
 | Tatum RPC for onchain data | ✅ | All Sui I/O goes through Tatum's gRPC (12 kinds of call, README "How Remora uses Tatum"), plus the Data API for SUI/USD. The free plan ran out during development, so a public fullnode stands in while Tatum answers 402 (ADR-0097) |
 | A published blog post (what it does, Tatum + Walrus, how it learned) | ❌ | The [draft](blog-draft.md) covers all three; it isn't published |
 | A working demo and a public repo | ✅ | The demo is live at <https://getremora.vercel.app> (testnet money, mainnet memory). The repo is public since Nov 6 ([ADR-0151](../adr/0151-repo-public-nov-6.md)) |
@@ -135,7 +135,7 @@
 > tries Tatum again every 10 minutes, and health shows which one is serving.
 >
 > **What's real.**
-> - Payments run on Sui testnet; memory runs on mainnet (360+ memories).
+> - Payments run on Sui testnet; memory runs on mainnet (1,008 memories on Nov 10).
 > - Remora is built on our earlier project, hippo. The README says what came before the build window.
 >
 > We also enter **Best Walrus Memory** (the replay above: a decision that changes because of what
@@ -155,22 +155,25 @@
 > **What worked.**
 > - Walrus Memory gave each agent its own namespace, with blobs we could list, expire and export.
 > - The delegate-key model fits agents well.
-> - Mainnet worked from day one: we have 360+ memories there.
+> - Mainnet worked from day one. The account holds 1,008 memories (Nov 10).
 >
 > **What cost us time,** with numbers:
 > 1. **`/health` hid a broken memory.** On Oct 22, about 14:00–14:32 UTC, `/health` answered 200 while
 >    every remember and recall failed behind it with an embedding 401.
 > 2. **Writes aren't searchable right away.** A write is accepted in about 2 s, but recall finds it only
 >    after 25–32 s, so a fact saved in one turn often isn't there in the next.
-> 3. **One memory can't be deleted or replaced.** Forget works per namespace, so we hide memories
+> 3. **Forget races pending writes.** `POST /api/forget` drops only what the relayer has indexed.
+>    Measured on mainnet on Nov 6: it deleted 0 right after an analyze, and both facts were recalled
+>    later. It deleted 2 once the jobs settled ([ADR-0153](../adr/0153-forget-after-writes-settle.md)).
+> 4. **One memory can't be deleted or replaced.** Forget works per namespace, so we hide memories
 >    locally and write a correction.
-> 4. **The account budget is shared.** About 1,000 weighted requests an hour covers every agent on an
+> 5. **The account budget is shared.** About 1,000 weighted requests an hour covers every agent on an
 >    account, and our test suite spent it in an afternoon.
-> 5. **The package ID was hard to pin down.** The docs name an older package, and `/config` has no
+> 6. **The package ID was hard to pin down.** The docs name an older package, and `/config` has no
 >    registry ID.
 >
-> **Requests:** a deep health check, a "searchable" status, a supported way to supersede one memory,
-> and per-delegate budgets.
+> **Requests:** a deep health check, a "searchable" status, forget that covers pending jobs, a
+> supported way to supersede one memory, and per-delegate budgets.
 
 **How was your experience building with the Tatum AI Builder?** (draft)
 

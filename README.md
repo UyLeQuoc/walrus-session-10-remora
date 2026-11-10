@@ -44,7 +44,7 @@ the data it needs. Every remora has three things most agents don't:
 | **Watch** | The demo video: **[video URL]** (2:55, [scenes](docs/launch/demo/README.md)) |
 | **Try** | **[getremora.vercel.app/playground](https://getremora.vercel.app/playground)**: a Researcher with a $1 spending limit, no wallet needed (testnet). Signed out, the same site opens on the [landing page](https://getremora.vercel.app/about) |
 | **Read** | The blog post, **[blog URL]** ([draft](docs/launch/blog-draft.md)), then [the docs](docs/README.md) |
-| **Walrus Memory on mainnet** | **360 memories** on Oct 31 (`bun run diagnose:memory` reads the account) |
+| **Walrus Memory on mainnet** | **1,008 memories** on Nov 10 (360 on Oct 31; `bun run diagnose:memory` reads the account) |
 | **Tatum** | Every server-side Sui call goes over Tatum's gRPC: the 12 calls listed [below](#how-remora-uses-tatum), generated from the code. The Data API prices gas |
 | **Honest about** | [What's real, what isn't](#whats-real-what-isnt), and the [work done before the window](#built-on-prior-work) |
 
@@ -272,7 +272,7 @@ flowchart LR
   and receipts.
   - Recall feeds every turn, through admission ([How it learns](#how-it-learns)).
   - The inspector shows every blob with its expiry, and any writes skipped as duplicates.
-  - The account holds 360 memories on mainnet (Oct 31).
+  - The account holds 1,008 memories on mainnet (Nov 10; 360 on Oct 31).
 - **Walrus blobs** hold the Hatchery's templates. These are `remora.team/v1` files, stored as permanent
   blobs on testnet and read back through the aggregator before every hatch.
 - **Walrus Sites** host the landing as a testnet site ([ADR-0142](docs/adr/0142-landing-testnet-walrus-site.md)); wal.app serves mainnet

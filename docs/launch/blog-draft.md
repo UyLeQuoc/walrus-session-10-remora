@@ -196,7 +196,7 @@ We took the core of it and left the rest. We read the article and
 - **Readable.**
   - Each remora writes rules, sources, episodes and receipts to its own namespace.
   - The inspector lists every blob with its expiry, about 210 days at write time.
-  - On Oct 31 the account held **360 memories on mainnet**.
+  - On Nov 10 the account held **1,008 memories on mainnet** (360 on Oct 31).
 - **Controllable.**
   - You can hide a memory, correct it, forget a namespace, or export to Markdown or JSON.
   - In our export check, 4 of 4 memories matched the hash recorded at write time.
